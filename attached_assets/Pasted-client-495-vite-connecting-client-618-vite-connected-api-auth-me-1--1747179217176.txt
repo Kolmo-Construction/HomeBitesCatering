@@ -1,0 +1,63 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)
+/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)
+/menu-items:1 [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) <input data-replit-metadata=​"client/​src/​pages/​login.tsx:​90:​14" data-component-name=​"input" type=​"password" class=​"w-full px-3 py-2 border border-gray-300 rounded-md focus:​outline-none focus:​ring-2 focus:​ring-purple-500" placeholder=​"Enter your password" required value=​"admin123">​
+login.tsx:30 Login successful: Object
+hook.js:608 Warning: validateDOMNesting(...): <a> cannot appear as a descendant of <a>. Error Component Stack
+    at a (<anonymous>)
+    at a (<anonymous>)
+    at wouter.js?v=9623da5d:337:18
+    at li (<anonymous>)
+    at ul (<anonymous>)
+    at nav (<anonymous>)
+    at aside (<anonymous>)
+    at Sidebar (Sidebar.tsx:18:22)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at Layout (Layout.tsx:9:34)
+    at div (<anonymous>)
+    at QueryClientProvider (@tanstack_react-query.js?v=9623da5d:2805:3)
+    at App (App.tsx?v=auMG_igBE4N5J7mrMnVrN:31:27)
+overrideMethod @ hook.js:608
+client:223 [vite] hot updated: /src/App.tsx?v=g0VwhSrg5EYNkMUrNYtZL
+client:223 [vite] hot updated: /src/index.css?v=g0VwhSrg5EYNkMUrNYtZL
+chunk-RPCDYKBN.js?v=9623da5d:377 [Violation] 'message' handler took 181ms
+chunk-RPCDYKBN.js?v=9623da5d:18625 [Violation] 'setTimeout' handler took 79ms
+queryClient.ts:15 
+            
+            
+           POST https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/api/leads 400 (Bad Request)
+apiRequest @ queryClient.ts:15
+mutationFn @ LeadForm.tsx:192
+fn @ @tanstack_react-query.js?v=9623da5d:1189
+run @ @tanstack_react-query.js?v=9623da5d:494
+start @ @tanstack_react-query.js?v=9623da5d:536
+execute @ @tanstack_react-query.js?v=9623da5d:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=9623da5d:2630
+(anonymous) @ @tanstack_react-query.js?v=9623da5d:3295
+onSubmit @ LeadForm.tsx:223
+(anonymous) @ chunk-4BFJKWC4.js?v=9623da5d:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=9623da5d:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=9623da5d:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=9623da5d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=9623da5d:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=9623da5d:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=9623da5d:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=9623da5d:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=9623da5d:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=9623da5d:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=9623da5d:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=9623da5d:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=9623da5d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=9623da5d:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=9623da5d:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=9623da5d:5449
