@@ -20,8 +20,17 @@ import { useAuth } from "@/hooks/use-auth";
 function Router() {
   const { user, loading } = useAuth();
 
+  console.log("Auth state:", { user, loading });
+
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   // For non-authenticated users, show the login screen
