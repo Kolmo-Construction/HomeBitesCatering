@@ -1,4 +1,44 @@
+import { useState } from "react";
+
 export default function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('Login successful:', userData);
+        
+        // Redirect to dashboard
+        window.location.href = '/';
+      } else {
+        const errorData = await response.json();
+        setLoginError(errorData.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('An error occurred during login. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-[#8A2BE2]/5 to-[#4169E1]/5 py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
@@ -16,13 +56,23 @@ export default function Login() {
         
         <div className="bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-center">Login</h2>
-          <form className="space-y-4">
+          
+          {loginError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+              {loginError}
+            </div>
+          )}
+          
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
               <input 
                 type="text" 
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" 
                 placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
               />
             </div>
             
@@ -32,14 +82,18 @@ export default function Login() {
                 type="password" 
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" 
                 placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
             
             <button 
               type="submit"
               className="w-full bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity"
+              disabled={isLoading}
             >
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
           

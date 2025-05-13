@@ -155,7 +155,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async listLeadsBySource(source: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(eq(leads.source, source));
+    return await db.select().from(leads).where(eq(leads.leadSource, source));
   }
   
   // For menu items
@@ -350,7 +350,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(events)
-      .where(gte(events.startDate, now));
+      .where(gte(events.eventDate, now));
   }
 }
 
