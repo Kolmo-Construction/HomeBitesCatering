@@ -63,6 +63,9 @@ function App() {
               <Route path="/leads/:id" component={Leads} />
               <Route path="/leads/:id/edit" component={Leads} />
               <Route path="/clients" component={Clients} />
+              <Route path="/clients/new" component={Clients} />
+              <Route path="/clients/:id" component={Clients} />
+              <Route path="/clients/:id/edit" component={Clients} />
               <Route path="/estimates" component={Estimates} />
               <Route>
                 <Dashboard />

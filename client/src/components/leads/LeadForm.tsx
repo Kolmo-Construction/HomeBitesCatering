@@ -92,10 +92,17 @@ export default function LeadForm({ lead, isEditing = false, onCancel }: LeadForm
     staleTime: 30000, // 30 seconds
   });
 
-  // Set up the form with default values
+  // Set up the form with default values and handle date conversion
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: lead || {
+    defaultValues: lead ? {
+      ...lead,
+      // Convert ISO date string to Date object for the date picker
+      eventDate: lead.eventDate ? new Date(lead.eventDate) : null,
+      // Handle client association for editing
+      assignToExistingClient: !!lead.clientId,
+      clientId: lead.clientId ? String(lead.clientId) : "",
+    } : {
       firstName: "",
       lastName: "",
       email: "",
