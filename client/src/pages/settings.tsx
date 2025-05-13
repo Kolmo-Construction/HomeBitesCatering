@@ -1,0 +1,640 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { 
+  CheckCircle2, 
+  UserCog, 
+  Key, 
+  Building, 
+  Users, 
+  LayoutGrid
+} from "lucide-react";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+
+// Password change form schema
+const passwordFormSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Confirm password is required"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type PasswordFormValues = z.infer<typeof passwordFormSchema>;
+
+// Profile form schema
+const profileFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+export default function Settings() {
+  const [activeTab, setActiveTab] = useState("profile");
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Get user data
+  const { data: userData, isLoading } = useQuery({
+    queryKey: ["/api/auth/me"],
+  });
+  
+  // Get user list for admin tab
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["/api/users"],
+    enabled: user?.role === "admin" && activeTab === "users",
+  });
+  
+  // Profile form setup
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      firstName: userData?.firstName || "",
+      lastName: userData?.lastName || "",
+      email: userData?.email || "",
+      phone: "",
+    },
+    values: {
+      firstName: userData?.firstName || "",
+      lastName: userData?.lastName || "",
+      email: userData?.email || "",
+      phone: "",
+    },
+  });
+  
+  // Password form setup
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordFormSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+  
+  // Profile update mutation
+  const profileMutation = useMutation({
+    mutationFn: async (values: ProfileFormValues) => {
+      const res = await apiRequest("PATCH", `/api/users/${userData.id}`, values);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update profile: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Password update mutation
+  const passwordMutation = useMutation({
+    mutationFn: async (values: PasswordFormValues) => {
+      const res = await apiRequest("POST", "/api/auth/change-password", {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+      passwordForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to change password: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle profile form submission
+  const onProfileSubmit = (values: ProfileFormValues) => {
+    profileMutation.mutate(values);
+  };
+  
+  // Handle password form submission
+  const onPasswordSubmit = (values: PasswordFormValues) => {
+    passwordMutation.mutate(values);
+  };
+  
+  // User list columns for admin tab
+  const userColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: "username",
+      header: "Username",
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <span>{row.original.firstName} {row.original.lastName}</span>
+      ),
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+    },
+    {
+      accessorKey: "role",
+      header: "Role",
+      cell: ({ row }) => (
+        <span className="capitalize">{row.original.role}</span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: () => (
+        <Button variant="ghost" size="sm">
+          Edit
+        </Button>
+      ),
+    },
+  ];
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple"></div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-poppins text-2xl font-bold text-neutral-900">Settings</h1>
+        <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="profile" className="flex items-center">
+            <UserCog className="mr-2 h-4 w-4" />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="password" className="flex items-center">
+            <Key className="mr-2 h-4 w-4" />
+            Password
+          </TabsTrigger>
+          <TabsTrigger value="company" className="flex items-center">
+            <Building className="mr-2 h-4 w-4" />
+            Company
+          </TabsTrigger>
+          {user?.role === "admin" && (
+            <TabsTrigger value="users" className="flex items-center">
+              <Users className="mr-2 h-4 w-4" />
+              Users
+            </TabsTrigger>
+          )}
+          {user?.role === "admin" && (
+            <TabsTrigger value="integrations" className="flex items-center">
+              <LayoutGrid className="mr-2 h-4 w-4" />
+              Integrations
+            </TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="profile" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>
+                Manage your personal information and contact details.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={profileForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={profileForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={profileForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={profileForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <div className="font-semibold">Username</div>
+                      <div className="text-sm text-muted-foreground">(cannot be changed)</div>
+                    </div>
+                    <div className="mt-1 p-2 border rounded-md bg-gray-50">
+                      {userData?.username}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <div className="font-semibold">Role</div>
+                    </div>
+                    <div className="mt-1 p-2 border rounded-md bg-gray-50 capitalize">
+                      {userData?.role}
+                    </div>
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
+                    disabled={profileMutation.isPending}
+                  >
+                    {profileMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="password" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Password</CardTitle>
+              <CardDescription>
+                Change your password to keep your account secure.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...passwordForm}>
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                  <FormField
+                    control={passwordForm.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Password must be at least 6 characters long.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button
+                    type="submit"
+                    className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
+                    disabled={passwordMutation.isPending}
+                  >
+                    {passwordMutation.isPending ? "Updating..." : "Update Password"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="company" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Information</CardTitle>
+              <CardDescription>
+                Update your company details that appear on estimates and client communications.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Name
+                    </label>
+                    <Input defaultValue="Home Bites Catering" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <Input defaultValue="(206) 555-1234" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <Input defaultValue="info@homebites.net" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Website
+                    </label>
+                    <Input defaultValue="https://www.homebites.net" />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <Input defaultValue="123 Main Street" className="mb-2" />
+                  <div className="grid grid-cols-3 gap-4">
+                    <Input defaultValue="Seattle" placeholder="City" />
+                    <Input defaultValue="WA" placeholder="State" />
+                    <Input defaultValue="98101" placeholder="ZIP" />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tax Information
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input defaultValue="9.5%" placeholder="Sales Tax Rate %" />
+                    <Input defaultValue="12-3456789" placeholder="Tax ID" />
+                  </div>
+                </div>
+                
+                <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+                  Save Company Information
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {user?.role === "admin" && (
+          <TabsContent value="users" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>
+                    Manage user accounts and permissions.
+                  </CardDescription>
+                </div>
+                <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+                  Add User
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={userColumns}
+                  data={users}
+                  searchKey="username"
+                  loading={isLoadingUsers}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+        
+        {user?.role === "admin" && (
+          <TabsContent value="integrations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>API Integrations</CardTitle>
+                <CardDescription>
+                  Configure integrations with external services and APIs.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Lead Sources Integration</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Connect with external lead sources to automatically import leads.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="border rounded-md p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="text-green-500 h-5 w-5" />
+                            <h4 className="font-medium">Website Form Integration</h4>
+                          </div>
+                          <div>
+                            <Badge className="bg-green-100 text-green-800">Active</Badge>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Automatically create leads from website contact form submissions.
+                        </p>
+                        <div className="flex justify-end mt-4">
+                          <Button variant="outline" size="sm">Configure</Button>
+                        </div>
+                      </div>
+                      
+                      <div className="border rounded-md p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <h4 className="font-medium">Third-Party Lead Providers</h4>
+                          </div>
+                          <div>
+                            <Badge variant="outline">Not Connected</Badge>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Connect with external lead providers like The Knot, WeddingWire, etc.
+                        </p>
+                        <div className="flex justify-end mt-4">
+                          <Button variant="outline" size="sm">Connect</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Calendar Integration</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Sync events with external calendar services.
+                    </p>
+                    
+                    <div className="border rounded-md p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium">Google Calendar</h4>
+                        </div>
+                        <div>
+                          <Badge variant="outline">Not Connected</Badge>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Sync events with Google Calendar to manage your schedule in one place.
+                      </p>
+                      <div className="flex justify-end mt-4">
+                        <Button variant="outline" size="sm">Connect</Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">API Access</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Manage API keys for external integrations.
+                    </p>
+                    
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <h4 className="font-medium mb-2">API Webhook URL</h4>
+                      <div className="flex">
+                        <Input 
+                          value="https://api.homebites.net/webhooks/leads" 
+                          readOnly 
+                          className="rounded-r-none"
+                        />
+                        <Button 
+                          variant="outline" 
+                          className="rounded-l-none"
+                          onClick={() => {
+                            navigator.clipboard.writeText("https://api.homebites.net/webhooks/leads");
+                            toast({
+                              title: "Copied!",
+                              description: "API webhook URL copied to clipboard",
+                            });
+                          }}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+                  Save Integration Settings
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
+  );
+}

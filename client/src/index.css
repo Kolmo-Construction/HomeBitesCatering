@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 270 60% 50%; /* #8A2BE2 purple */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 60% 50%; /* #4169E1 blue */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 15 100% 70%; /* #FFA07A */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 270 60% 50%; /* matching primary */
+  --radius: 0.5rem;
+
+  /* Home Bites custom colors */
+  --primary-purple: 270 60% 50%;
+  --primary-blue: 225 60% 50%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 270 60% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 60% 50%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 15 100% 70%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 270 60% 50%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-neutral-100 text-foreground;
+  }
+}
+
+/* Home Bites custom styles */
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #8A2BE2 0%, #4169E1 100%);
+}
+
+/* Calendar styles */
+.rbc-calendar {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rbc-header {
+  background-color: #f9fafb;
+  padding: 8px;
+  font-weight: 500;
+}
+
+.rbc-event {
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+/* Print styles for estimates */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-area, .print-area * {
+    visibility: visible;
+  }
+  
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  .print-hide {
+    display: none !important;
+  }
+}
