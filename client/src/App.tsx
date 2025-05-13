@@ -59,6 +59,9 @@ function App() {
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/leads" component={Leads} />
+              <Route path="/leads/new" component={Leads} />
+              <Route path="/leads/:id" component={Leads} />
+              <Route path="/leads/:id/edit" component={Leads} />
               <Route path="/clients" component={Clients} />
               <Route path="/estimates" component={Estimates} />
               <Route>
