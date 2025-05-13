@@ -346,11 +346,16 @@ export class DatabaseStorage implements IStorage {
   }
   
   async listUpcomingEvents(): Promise<Event[]> {
-    const now = new Date();
-    return await db
-      .select()
-      .from(events)
-      .where(gte(events.eventDate, now));
+    try {
+      const now = new Date();
+      return await db
+        .select()
+        .from(events)
+        .where(gte(events.eventDate, now));
+    } catch (error) {
+      console.error("Error in listUpcomingEvents:", error);
+      return [];
+    }
   }
 }
 

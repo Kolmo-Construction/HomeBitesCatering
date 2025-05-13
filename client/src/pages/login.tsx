@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-export default function Login() {
+interface LoginProps {
+  onLoginSuccess?: (userData: any) => void;
+}
+
+export default function Login({ onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -25,8 +29,13 @@ export default function Login() {
         const userData = await response.json();
         console.log('Login successful:', userData);
         
-        // Redirect to dashboard
-        window.location.href = '/';
+        // Call the success callback if provided
+        if (onLoginSuccess) {
+          onLoginSuccess(userData);
+        } else {
+          // Fallback to redirect if no callback
+          window.location.href = '/';
+        }
       } else {
         const errorData = await response.json();
         setLoginError(errorData.message || 'Login failed. Please check your credentials.');

@@ -1,19 +1,39 @@
 import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import Login from "@/pages/login";
+import Dashboard from "@/pages/dashboard";
+import Leads from "@/pages/leads";
+import Clients from "@/pages/clients";
+import Estimates from "@/pages/estimates";
+import Layout from "@/components/layout/Layout";
 
 function App() {
+  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    // Check if user is logged in
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    checkAuth();
   }, []);
   
   if (isLoading) {
@@ -31,7 +51,22 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-gray-50">
         <Toaster />
-        <Login />
+        
+        {!user ? (
+          <Login onLoginSuccess={(userData) => setUser(userData)} />
+        ) : (
+          <Layout>
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/leads" component={Leads} />
+              <Route path="/clients" component={Clients} />
+              <Route path="/estimates" component={Estimates} />
+              <Route>
+                <Dashboard />
+              </Route>
+            </Switch>
+          </Layout>
+        )}
       </div>
     </QueryClientProvider>
   );
