@@ -168,10 +168,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/leads', isAuthenticated, async (req, res) => {
     try {
-      const leadData = insertLeadSchema.parse(req.body);
+      // Extract client assignment preference
+      const { assignToExistingClient, clientId, ...leadDataRaw } = req.body;
+      
+      // Validate lead data
+      const leadData = insertLeadSchema.parse(leadDataRaw);
+      
+      // Create the lead
       const lead = await storage.createLead(leadData);
-      res.status(201).json(lead);
+      
+      // Handle client association
+      let client;
+      
+      if (assignToExistingClient && clientId) {
+        // If explicitly assigning to an existing client
+        client = await storage.getClient(Number(clientId));
+        if (!client) {
+          return res.status(404).json({ message: 'Client not found' });
+        }
+        
+        // Update lead with client ID
+        await storage.updateLead(lead.id, { 
+          clientId: client.id 
+        });
+      } else {
+        // Auto-associate or create client based on email/phone
+        let existingClient = null;
+        
+        // Check if client with this email already exists
+        if (leadData.email) {
+          existingClient = await storage.getClientByEmail(leadData.email);
+        }
+        
+        // Check if client with this phone already exists (if no email match)
+        if (!existingClient && leadData.phone) {
+          existingClient = await storage.getClientByPhone(leadData.phone);
+        }
+        
+        if (existingClient) {
+          // Associate lead with existing client
+          client = existingClient;
+          await storage.updateLead(lead.id, { 
+            clientId: client.id 
+          });
+        } else {
+          // Create a new client from lead data
+          const clientData = {
+            firstName: leadData.firstName,
+            lastName: leadData.lastName,
+            email: leadData.email,
+            phone: leadData.phone,
+            leadId: lead.id
+          };
+          
+          client = await storage.createClient(clientData);
+          
+          // Update lead with the new client ID
+          await storage.updateLead(lead.id, { 
+            clientId: client.id 
+          });
+        }
+      }
+      
+      // Return the lead with associated client
+      const updatedLead = await storage.getLead(lead.id);
+      res.status(201).json(updatedLead);
     } catch (error) {
+      console.error("Error creating lead:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }

@@ -35,6 +35,7 @@ export const leads = pgTable("leads", {
   status: text("status").default("new").notNull(), // new, contacted, qualified, proposal, booked, archived
   leadSource: text("lead_source"), // website, referral, google, social, etc.
   assignedTo: integer("assigned_to").references(() => users.id),
+  clientId: integer("client_id").references(() => clients.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -42,7 +43,8 @@ export const leads = pgTable("leads", {
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
+  clientId: true
 });
 
 // Menu Items
