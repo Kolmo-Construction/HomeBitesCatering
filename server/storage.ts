@@ -1,14 +1,16 @@
 import {
-  users, User, InsertUser,
-  leads, Lead, InsertLead,
-  menuItems, MenuItem, InsertMenuItem,
-  menus, Menu, InsertMenu,
-  clients, Client, InsertClient,
-  estimates, Estimate, InsertEstimate,
-  events, Event, InsertEvent
+  users, leads, menuItems, menus, clients, estimates, events,
+  type User, type InsertUser,
+  type Lead, type InsertLead,
+  type MenuItem, type InsertMenuItem,
+  type Menu, type InsertMenu,
+  type Client, type InsertClient,
+  type Estimate, type InsertEstimate,
+  type Event, type InsertEvent
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, gte } from "drizzle-orm";
 
-// Storage interface
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -69,417 +71,288 @@ export interface IStorage {
   listUpcomingEvents(): Promise<Event[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private leads: Map<number, Lead>;
-  private menuItems: Map<number, MenuItem>;
-  private menus: Map<number, Menu>;
-  private clients: Map<number, Client>;
-  private estimates: Map<number, Estimate>;
-  private events: Map<number, Event>;
-  
-  // Counters for IDs
-  private userIdCounter: number;
-  private leadIdCounter: number;
-  private menuItemIdCounter: number;
-  private menuIdCounter: number;
-  private clientIdCounter: number;
-  private estimateIdCounter: number;
-  private eventIdCounter: number;
-
-  constructor() {
-    this.users = new Map();
-    this.leads = new Map();
-    this.menuItems = new Map();
-    this.menus = new Map();
-    this.clients = new Map();
-    this.estimates = new Map();
-    this.events = new Map();
-    
-    this.userIdCounter = 1;
-    this.leadIdCounter = 1;
-    this.menuItemIdCounter = 1;
-    this.menuIdCounter = 1;
-    this.clientIdCounter = 1;
-    this.estimateIdCounter = 1;
-    this.eventIdCounter = 1;
-
-    // Initialize with admin user
-    this.createUser({
-      username: "admin",
-      password: "admin123", // In production, this should be hashed
-      firstName: "Admin",
-      lastName: "User",
-      email: "admin@homebites.net",
-      role: "admin"
-    });
-
-    // Add some sample menu items
-    this.initializeSampleData();
-  }
-
-  private initializeSampleData() {
-    // Sample menu items
-    const menuItems = [
-      {
-        name: "Caprese Skewers",
-        description: "Fresh mozzarella, cherry tomatoes, and basil with balsamic glaze",
-        category: "appetizer",
-        price: 450, // $4.50
-        ingredients: "Mozzarella, cherry tomatoes, basil, balsamic glaze, olive oil, salt, pepper",
-        isVegetarian: true,
-        isGlutenFree: true
-      },
-      {
-        name: "Grilled Salmon",
-        description: "Lemon-herb grilled salmon fillet",
-        category: "entree",
-        price: 1250, // $12.50
-        ingredients: "Salmon, lemon, herbs, olive oil, garlic, salt, pepper",
-        isGlutenFree: true,
-        isDairyFree: true
-      },
-      {
-        name: "Roasted Vegetables",
-        description: "Seasonal vegetables roasted with herbs",
-        category: "side",
-        price: 550, // $5.50
-        ingredients: "Zucchini, bell peppers, carrots, onions, herbs, olive oil, salt, pepper",
-        isVegetarian: true,
-        isVegan: true,
-        isGlutenFree: true,
-        isDairyFree: true
-      }
-    ];
-
-    menuItems.forEach(item => {
-      this.createMenuItem(item as InsertMenuItem);
-    });
-  }
-
-  // Users
+// DatabaseStorage implementation using PostgreSQL
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const now = new Date();
-    const newUser: User = {
-      ...user,
-      id,
-      createdAt: now
-    };
-    this.users.set(id, newUser);
+    const [newUser] = await db
+      .insert(users)
+      .values(user)
+      .returning();
     return newUser;
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
-    const user = await this.getUser(id);
-    if (!user) return undefined;
-    
-    const updatedUser: User = {
-      ...user,
-      ...userData
-    };
-    this.users.set(id, updatedUser);
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
     return updatedUser;
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    return this.users.delete(id);
+    await db
+      .delete(users)
+      .where(eq(users.id, id));
+    return true;
   }
 
   async listUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return await db.select().from(users);
   }
 
-  // Leads
+  // For leads
   async getLead(id: number): Promise<Lead | undefined> {
-    return this.leads.get(id);
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead || undefined;
   }
-
+  
   async createLead(lead: InsertLead): Promise<Lead> {
-    const id = this.leadIdCounter++;
-    const now = new Date();
-    const newLead: Lead = {
-      ...lead,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.leads.set(id, newLead);
+    const [newLead] = await db
+      .insert(leads)
+      .values(lead)
+      .returning();
     return newLead;
   }
-
+  
   async updateLead(id: number, leadData: Partial<Lead>): Promise<Lead | undefined> {
-    const lead = await this.getLead(id);
-    if (!lead) return undefined;
-    
-    const updatedLead: Lead = {
-      ...lead,
-      ...leadData,
-      updatedAt: new Date()
-    };
-    this.leads.set(id, updatedLead);
+    const [updatedLead] = await db
+      .update(leads)
+      .set(leadData)
+      .where(eq(leads.id, id))
+      .returning();
     return updatedLead;
   }
-
+  
   async deleteLead(id: number): Promise<boolean> {
-    return this.leads.delete(id);
+    await db
+      .delete(leads)
+      .where(eq(leads.id, id));
+    return true;
   }
-
+  
   async listLeads(): Promise<Lead[]> {
-    return Array.from(this.leads.values()).sort((a, b) => 
-      b.createdAt.getTime() - a.createdAt.getTime()
-    );
+    return await db.select().from(leads);
   }
-
+  
   async listLeadsByStatus(status: string): Promise<Lead[]> {
-    return Array.from(this.leads.values())
-      .filter(lead => lead.status === status)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db.select().from(leads).where(eq(leads.status, status));
   }
-
+  
   async listLeadsBySource(source: string): Promise<Lead[]> {
-    return Array.from(this.leads.values())
-      .filter(lead => lead.leadSource === source)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db.select().from(leads).where(eq(leads.source, source));
   }
-
-  // Menu Items
+  
+  // For menu items
   async getMenuItem(id: number): Promise<MenuItem | undefined> {
-    return this.menuItems.get(id);
+    const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
+    return menuItem || undefined;
   }
-
+  
   async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
-    const id = this.menuItemIdCounter++;
-    const now = new Date();
-    const newMenuItem: MenuItem = {
-      ...item,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.menuItems.set(id, newMenuItem);
+    const [newMenuItem] = await db
+      .insert(menuItems)
+      .values(item)
+      .returning();
     return newMenuItem;
   }
-
+  
   async updateMenuItem(id: number, itemData: Partial<MenuItem>): Promise<MenuItem | undefined> {
-    const item = await this.getMenuItem(id);
-    if (!item) return undefined;
-    
-    const updatedItem: MenuItem = {
-      ...item,
-      ...itemData,
-      updatedAt: new Date()
-    };
-    this.menuItems.set(id, updatedItem);
+    const [updatedItem] = await db
+      .update(menuItems)
+      .set(itemData)
+      .where(eq(menuItems.id, id))
+      .returning();
     return updatedItem;
   }
-
+  
   async deleteMenuItem(id: number): Promise<boolean> {
-    return this.menuItems.delete(id);
+    await db
+      .delete(menuItems)
+      .where(eq(menuItems.id, id));
+    return true;
   }
-
+  
   async listMenuItems(): Promise<MenuItem[]> {
-    return Array.from(this.menuItems.values());
+    return await db.select().from(menuItems);
   }
-
+  
   async listMenuItemsByCategory(category: string): Promise<MenuItem[]> {
-    return Array.from(this.menuItems.values())
-      .filter(item => item.category === category);
+    return await db.select().from(menuItems).where(eq(menuItems.category, category));
   }
-
-  // Menus
+  
+  // For menus
   async getMenu(id: number): Promise<Menu | undefined> {
-    return this.menus.get(id);
+    const [menu] = await db.select().from(menus).where(eq(menus.id, id));
+    return menu || undefined;
   }
-
+  
   async createMenu(menu: InsertMenu): Promise<Menu> {
-    const id = this.menuIdCounter++;
-    const now = new Date();
-    const newMenu: Menu = {
-      ...menu,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.menus.set(id, newMenu);
+    const [newMenu] = await db
+      .insert(menus)
+      .values(menu)
+      .returning();
     return newMenu;
   }
-
+  
   async updateMenu(id: number, menuData: Partial<Menu>): Promise<Menu | undefined> {
-    const menu = await this.getMenu(id);
-    if (!menu) return undefined;
-    
-    const updatedMenu: Menu = {
-      ...menu,
-      ...menuData,
-      updatedAt: new Date()
-    };
-    this.menus.set(id, updatedMenu);
+    const [updatedMenu] = await db
+      .update(menus)
+      .set(menuData)
+      .where(eq(menus.id, id))
+      .returning();
     return updatedMenu;
   }
-
+  
   async deleteMenu(id: number): Promise<boolean> {
-    return this.menus.delete(id);
+    await db
+      .delete(menus)
+      .where(eq(menus.id, id));
+    return true;
   }
-
+  
   async listMenus(): Promise<Menu[]> {
-    return Array.from(this.menus.values());
+    return await db.select().from(menus);
   }
-
-  // Clients
+  
+  // For clients
   async getClient(id: number): Promise<Client | undefined> {
-    return this.clients.get(id);
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client || undefined;
   }
-
+  
   async getClientByEmail(email: string): Promise<Client | undefined> {
-    return Array.from(this.clients.values())
-      .find(client => client.email === email);
+    const [client] = await db.select().from(clients).where(eq(clients.email, email));
+    return client || undefined;
   }
-
+  
   async createClient(client: InsertClient): Promise<Client> {
-    const id = this.clientIdCounter++;
-    const now = new Date();
-    const newClient: Client = {
-      ...client,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.clients.set(id, newClient);
+    const [newClient] = await db
+      .insert(clients)
+      .values(client)
+      .returning();
     return newClient;
   }
-
+  
   async updateClient(id: number, clientData: Partial<Client>): Promise<Client | undefined> {
-    const client = await this.getClient(id);
-    if (!client) return undefined;
-    
-    const updatedClient: Client = {
-      ...client,
-      ...clientData,
-      updatedAt: new Date()
-    };
-    this.clients.set(id, updatedClient);
+    const [updatedClient] = await db
+      .update(clients)
+      .set(clientData)
+      .where(eq(clients.id, id))
+      .returning();
     return updatedClient;
   }
-
+  
   async deleteClient(id: number): Promise<boolean> {
-    return this.clients.delete(id);
+    await db
+      .delete(clients)
+      .where(eq(clients.id, id));
+    return true;
   }
-
+  
   async listClients(): Promise<Client[]> {
-    return Array.from(this.clients.values());
+    return await db.select().from(clients);
   }
-
-  // Estimates
+  
+  // For estimates
   async getEstimate(id: number): Promise<Estimate | undefined> {
-    return this.estimates.get(id);
+    const [estimate] = await db.select().from(estimates).where(eq(estimates.id, id));
+    return estimate || undefined;
   }
-
+  
   async createEstimate(estimate: InsertEstimate): Promise<Estimate> {
-    const id = this.estimateIdCounter++;
-    const now = new Date();
-    const newEstimate: Estimate = {
-      ...estimate,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.estimates.set(id, newEstimate);
+    const [newEstimate] = await db
+      .insert(estimates)
+      .values(estimate)
+      .returning();
     return newEstimate;
   }
-
+  
   async updateEstimate(id: number, estimateData: Partial<Estimate>): Promise<Estimate | undefined> {
-    const estimate = await this.getEstimate(id);
-    if (!estimate) return undefined;
-    
-    const updatedEstimate: Estimate = {
-      ...estimate,
-      ...estimateData,
-      updatedAt: new Date()
-    };
-    this.estimates.set(id, updatedEstimate);
+    const [updatedEstimate] = await db
+      .update(estimates)
+      .set(estimateData)
+      .where(eq(estimates.id, id))
+      .returning();
     return updatedEstimate;
   }
-
+  
   async deleteEstimate(id: number): Promise<boolean> {
-    return this.estimates.delete(id);
+    await db
+      .delete(estimates)
+      .where(eq(estimates.id, id));
+    return true;
   }
-
+  
   async listEstimates(): Promise<Estimate[]> {
-    return Array.from(this.estimates.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db.select().from(estimates);
   }
-
+  
   async listEstimatesByStatus(status: string): Promise<Estimate[]> {
-    return Array.from(this.estimates.values())
-      .filter(estimate => estimate.status === status)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db.select().from(estimates).where(eq(estimates.status, status));
   }
-
+  
   async listEstimatesByClient(clientId: number): Promise<Estimate[]> {
-    return Array.from(this.estimates.values())
-      .filter(estimate => estimate.clientId === clientId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db.select().from(estimates).where(eq(estimates.clientId, clientId));
   }
-
-  // Events
+  
+  // For events
   async getEvent(id: number): Promise<Event | undefined> {
-    return this.events.get(id);
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event || undefined;
   }
-
+  
   async createEvent(event: InsertEvent): Promise<Event> {
-    const id = this.eventIdCounter++;
-    const now = new Date();
-    const newEvent: Event = {
-      ...event,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.events.set(id, newEvent);
+    const [newEvent] = await db
+      .insert(events)
+      .values(event)
+      .returning();
     return newEvent;
   }
-
+  
   async updateEvent(id: number, eventData: Partial<Event>): Promise<Event | undefined> {
-    const event = await this.getEvent(id);
-    if (!event) return undefined;
-    
-    const updatedEvent: Event = {
-      ...event,
-      ...eventData,
-      updatedAt: new Date()
-    };
-    this.events.set(id, updatedEvent);
+    const [updatedEvent] = await db
+      .update(events)
+      .set(eventData)
+      .where(eq(events.id, id))
+      .returning();
     return updatedEvent;
   }
-
+  
   async deleteEvent(id: number): Promise<boolean> {
-    return this.events.delete(id);
+    await db
+      .delete(events)
+      .where(eq(events.id, id));
+    return true;
   }
-
+  
   async listEvents(): Promise<Event[]> {
-    return Array.from(this.events.values())
-      .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime());
+    return await db.select().from(events);
   }
-
+  
   async listUpcomingEvents(): Promise<Event[]> {
     const now = new Date();
-    return Array.from(this.events.values())
-      .filter(event => event.eventDate > now)
-      .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime());
+    return await db
+      .select()
+      .from(events)
+      .where(gte(events.startDate, now));
   }
 }
 
-export const storage = new MemStorage();
+// Export an instance of the DatabaseStorage
+export const storage = new DatabaseStorage();
