@@ -1,7 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertLeadSchema } from "@shared/schema";
@@ -15,6 +16,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,12 +28,14 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, X } from "lucide-react";
+import { AlertCircle, CalendarIcon, X, UserPlus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, formatDate } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Extend the lead schema with validation
+// Create an extended schema for our form that includes UI-specific fields
 const formSchema = insertLeadSchema.extend({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -43,6 +47,9 @@ const formSchema = insertLeadSchema.extend({
   venue: z.string().optional(),
   notes: z.string().optional(),
   leadSource: z.string().optional(),
+  // Additional fields for client association - these won't be part of the API schema
+  assignToExistingClient: z.boolean().default(false),
+  clientId: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,10 +60,37 @@ interface LeadFormProps {
   onCancel?: () => void;
 }
 
+interface Client {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  company?: string;
+}
+
 export default function LeadForm({ lead, isEditing = false, onCancel }: LeadFormProps) {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [emailCheck, setEmailCheck] = useState<{loading: boolean, client?: Client | null}>({
+    loading: false,
+    client: null
+  });
+  const [phoneCheck, setPhoneCheck] = useState<{loading: boolean, client?: Client | null}>({
+    loading: false,
+    client: null
+  });
+
+  // Fetch all clients for dropdown
+  const { data: clients = [] } = useQuery({
+    queryKey: ['/api/clients'],
+    queryFn: async () => {
+      const res = await fetch('/api/clients');
+      if (!res.ok) throw new Error('Failed to fetch clients');
+      return res.json();
+    },
+    staleTime: 30000, // 30 seconds
+  });
 
   // Set up the form with default values
   const form = useForm<FormValues>({
@@ -73,32 +107,103 @@ export default function LeadForm({ lead, isEditing = false, onCancel }: LeadForm
       notes: "",
       leadSource: "",
       status: "new",
+      assignToExistingClient: false,
+      clientId: "",
     },
   });
+
+  // Handle when email or phone field changes to check for existing clients
+  const watchEmail = form.watch("email");
+  const watchPhone = form.watch("phone");
+  const watchAssignToExistingClient = form.watch("assignToExistingClient");
+
+  // Check for existing client when email changes
+  const checkExistingClientByEmail = async (email: string) => {
+    if (!email) return;
+    setEmailCheck({loading: true});
+    try {
+      // We're simulating the check by filtering the clients we have
+      // In a real app, you might have a dedicated API endpoint for this
+      const existingClient = clients.find((client: Client) => 
+        client.email.toLowerCase() === email.toLowerCase()
+      );
+      
+      setEmailCheck({
+        loading: false,
+        client: existingClient || null
+      });
+    } catch (error) {
+      setEmailCheck({loading: false});
+      console.error("Error checking client by email:", error);
+    }
+  };
+
+  // Check for existing client when phone changes
+  const checkExistingClientByPhone = async (phone: string) => {
+    if (!phone) return;
+    setPhoneCheck({loading: true});
+    try {
+      // We're simulating the check by filtering the clients we have
+      // In a real app, you might have a dedicated API endpoint for this
+      const existingClient = clients.find((client: Client) => 
+        client.phone === phone
+      );
+      
+      setPhoneCheck({
+        loading: false,
+        client: existingClient || null
+      });
+    } catch (error) {
+      setPhoneCheck({loading: false});
+      console.error("Error checking client by phone:", error);
+    }
+  };
+
+  // React hook to watch for changes in the email and phone fields
+  useEffect(() => {
+    if (watchEmail && !isEditing) {
+      checkExistingClientByEmail(watchEmail);
+    }
+  }, [watchEmail, isEditing]);
+
+  useEffect(() => {
+    if (watchPhone && !isEditing) {
+      checkExistingClientByPhone(watchPhone);
+    }
+  }, [watchPhone, isEditing]);
 
   // Create or update lead mutation
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
+      const { assignToExistingClient, clientId, ...leadValues } = values;
+      
       if (isEditing && lead) {
         // Update existing lead
-        const res = await apiRequest("PATCH", `/api/leads/${lead.id}`, values);
+        const res = await apiRequest("PATCH", `/api/leads/${lead.id}`, leadValues);
         return res.json();
       } else {
         // Create new lead
-        const res = await apiRequest("POST", "/api/leads", values);
+        const payload = {
+          ...leadValues,
+          assignToExistingClient: values.assignToExistingClient,
+          clientId: values.assignToExistingClient ? values.clientId : undefined
+        };
+
+        const res = await apiRequest("POST", "/api/leads", payload);
         return res.json();
       }
     },
-    onSuccess: () => {
-      // Invalidate leads query to refetch data
+    onSuccess: (data) => {
+      // Invalidate leads and clients queries to refetch data
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       
       // Show success message and redirect
       toast({
         title: isEditing ? "Lead updated" : "Lead created",
         description: isEditing 
           ? "The lead has been updated successfully." 
-          : "The new lead has been created successfully.",
+          : `The new lead has been created successfully${data.clientId ? ' and linked to a client' : ''}.`,
       });
       
       // Navigate back to leads list
@@ -117,6 +222,10 @@ export default function LeadForm({ lead, isEditing = false, onCancel }: LeadForm
   const onSubmit = (values: FormValues) => {
     mutation.mutate(values);
   };
+  
+  // Determine if we have any existing client matches
+  const existingClient = emailCheck.client || phoneCheck.client;
+  const showExistingClientAlert = !isEditing && existingClient && !watchAssignToExistingClient;
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -328,6 +437,94 @@ export default function LeadForm({ lead, isEditing = false, onCancel }: LeadForm
               )}
             />
               
+            {showExistingClientAlert && (
+              <Alert className="my-4 border-amber-500 bg-amber-50">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 font-medium">
+                  Existing client found
+                </AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  {emailCheck.client && phoneCheck.client ? (
+                    <span>
+                      A client with this email and phone number already exists: 
+                      <strong> {existingClient?.firstName} {existingClient?.lastName}</strong>
+                    </span>
+                  ) : emailCheck.client ? (
+                    <span>
+                      A client with this email already exists: 
+                      <strong> {existingClient?.firstName} {existingClient?.lastName}</strong>
+                    </span>
+                  ) : (
+                    <span>
+                      A client with this phone number already exists: 
+                      <strong> {existingClient?.firstName} {existingClient?.lastName}</strong>
+                    </span>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {!isEditing && (
+              <div className="space-y-4 border border-border rounded-md p-4 bg-muted/20">
+                <FormField
+                  control={form.control}
+                  name="assignToExistingClient"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg p-2">
+                      <div className="space-y-0.5">
+                        <FormLabel>Assign to Existing Client</FormLabel>
+                        <FormDescription>
+                          Choose whether to connect this lead to an existing client
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                {watchAssignToExistingClient && (
+                  <FormField
+                    control={form.control}
+                    name="clientId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Client</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a client" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {clients.map((client: any) => (
+                              <SelectItem 
+                                key={client.id} 
+                                value={client.id.toString()}
+                              >
+                                {client.firstName} {client.lastName} {client.company ? `(${client.company})` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          The lead will be associated with this client
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            )}
+            
             <FormField
               control={form.control}
               name="notes"
