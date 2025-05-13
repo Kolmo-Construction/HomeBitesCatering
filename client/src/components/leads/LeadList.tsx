@@ -12,6 +12,11 @@ import { EyeIcon, PenIcon, PlusIcon } from "lucide-react";
 export default function LeadList() {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["/api/leads"],
+    queryFn: async () => {
+      const res = await fetch('/api/leads');
+      if (!res.ok) throw new Error('Failed to fetch leads');
+      return res.json();
+    }
   });
 
   const columns: ColumnDef<Lead>[] = [

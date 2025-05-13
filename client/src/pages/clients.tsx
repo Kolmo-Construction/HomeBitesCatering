@@ -31,13 +31,23 @@ export default function Clients() {
   // Fetch client data if editing or viewing
   const { data: client, isLoading: isLoadingClient } = useQuery({
     queryKey: ["/api/clients", selectedClientId],
+    queryFn: async () => {
+      const res = await fetch(`/api/clients/${selectedClientId}`);
+      if (!res.ok) throw new Error('Failed to fetch client details');
+      return res.json();
+    },
     enabled: (mode === "edit" || mode === "view") && !!selectedClientId,
   });
   
   // Fetch estimates for the client if viewing
   const { data: clientEstimates = [], isLoading: isLoadingEstimates } = useQuery({
-    queryKey: ["/api/estimates"],
-    select: (data) => data.filter((estimate: any) => estimate.clientId === selectedClientId),
+    queryKey: ["/api/estimates", selectedClientId],
+    queryFn: async () => {
+      const res = await fetch('/api/estimates');
+      if (!res.ok) throw new Error('Failed to fetch estimates');
+      const data = await res.json();
+      return data.filter((estimate: any) => estimate.clientId === selectedClientId);
+    },
     enabled: mode === "view" && !!selectedClientId,
   });
   

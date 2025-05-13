@@ -24,11 +24,21 @@ import { useToast } from "@/hooks/use-toast";
 export default function ClientList() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["/api/clients"],
+    queryFn: async () => {
+      const res = await fetch('/api/clients');
+      if (!res.ok) throw new Error('Failed to fetch clients');
+      return res.json();
+    }
   });
   
   // Get estimates to show count per client
   const { data: estimates = [] } = useQuery({
     queryKey: ["/api/estimates"],
+    queryFn: async () => {
+      const res = await fetch('/api/estimates');
+      if (!res.ok) throw new Error('Failed to fetch estimates');
+      return res.json();
+    }
   });
   
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);

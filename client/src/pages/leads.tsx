@@ -29,7 +29,12 @@ export default function Leads() {
   // Fetch lead data if editing or viewing
   const { data: lead, isLoading } = useQuery({
     queryKey: ["/api/leads", selectedLeadId],
-    enabled: mode === "edit" || mode === "view",
+    queryFn: async () => {
+      const res = await fetch(`/api/leads/${selectedLeadId}`);
+      if (!res.ok) throw new Error('Failed to fetch lead details');
+      return res.json();
+    },
+    enabled: (mode === "edit" || mode === "view") && !!selectedLeadId,
   });
   
   // Render appropriate component based on mode
