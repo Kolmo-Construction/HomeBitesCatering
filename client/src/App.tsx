@@ -10,6 +10,7 @@ import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
 import MenuItems from "@/pages/menu-items";
 import Menus from "@/pages/menus";
+import Calendar from "@/pages/calendar";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -57,6 +58,7 @@ function AppContent() {
             <Route path="/menus/new" component={Menus} />
             <Route path="/menus/:id" component={Menus} />
             <Route path="/menus/:id/edit" component={Menus} />
+            <Route path="/calendar" component={Calendar} />
             <Route>
               <Dashboard />
             </Route>

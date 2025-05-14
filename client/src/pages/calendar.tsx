@@ -1,383 +1,343 @@
-import { useState } from "react";
-import EventCalendar from "@/components/calendar/EventCalendar";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { insertEventSchema } from "@shared/schema";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { Calendar as BigCalendar, Views } from 'react-big-calendar';
+import { format, parseISO, isValid, startOfWeek } from 'date-fns';
+import { dateFnsLocalizer } from 'react-big-calendar/lib/localizers/date-fns';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn, formatDate } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
-// Extend the event schema with validation
-const formSchema = insertEventSchema.extend({
-  clientId: z.number().min(1, "Client is required"),
-  eventType: z.string().min(1, "Event type is required"),
-  guestCount: z.coerce.number().int().positive("Guest count must be positive"),
-  venue: z.string().min(1, "Venue is required"),
-  eventDate: z.date(),
-  startTime: z.date(),
-  endTime: z.date(),
-  notes: z.string().optional(),
-  status: z.string(),
-});
+// Date-fns localizer for react-big-calendar
+const localizerFormats = {
+  dateFormat: 'PP',
+  dayFormat: 'dd EEE',
+  monthHeaderFormat: 'MMMM yyyy',
+  timeGutterFormat: 'p',
+  weekdayFormat: 'EEE'
+};
 
-type FormValues = z.infer<typeof formSchema>;
+const localizer = dateFnsLocalizer({
+  format,
+  parse: parseISO,
+  startOfWeek: () => startOfWeek(new Date()),
+  getDay: (date: Date) => date.getDay(),
+  locales: { 'en-US': undefined } // No need for locale import in this case
+}, localizerFormats);
 
-export default function CalendarPage() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  // Get clients for dropdown
-  const { data: clients = [] } = useQuery({
-    queryKey: ["/api/clients"],
-  });
-  
-  // Set up form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      clientId: undefined,
-      eventType: "",
-      guestCount: 0,
-      venue: "",
-      eventDate: new Date(),
-      startTime: new Date(),
-      endTime: new Date(new Date().setHours(new Date().getHours() + 4)),
-      notes: "",
-      status: "confirmed",
+// Define event source types for color coding
+type EventSourceType = 'lead' | 'confirmedEvent' | 'estimate';
+
+// Event object structure for the calendar
+interface CalendarEvent {
+  id: number;
+  title: string;
+  start: Date;
+  end: Date;
+  sourceType: EventSourceType;
+  sourceId: number;
+  allDay?: boolean;
+  status?: string;
+  clientName?: string;
+}
+
+// Color mapping based on event source type
+const eventStyleGetter = (event: CalendarEvent) => {
+  let backgroundColor = '';
+  let borderColor = '';
+
+  switch (event.sourceType) {
+    case 'lead':
+      backgroundColor = '#d1e9fc';
+      borderColor = '#2196f3';
+      break;
+    case 'confirmedEvent':
+      backgroundColor = '#c8facd';
+      borderColor = '#00a152';
+      break;
+    case 'estimate':
+      backgroundColor = '#fff7cd';
+      borderColor = '#b78103';
+      break;
+    default:
+      backgroundColor = '#e0e0e0';
+      borderColor = '#9e9e9e';
+  }
+
+  // Apply different styling for different statuses
+  if (event.status === 'pending') {
+    backgroundColor = '#ffecb3';
+    borderColor = '#ffa000';
+  } else if (event.status === 'cancelled') {
+    backgroundColor = '#ffcdd2';
+    borderColor = '#d32f2f';
+  }
+
+  return {
+    style: {
+      backgroundColor,
+      borderColor,
+      borderLeft: `4px solid ${borderColor}`,
+      color: '#212121',
     },
-  });
-  
-  // Create event mutation
-  const mutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      const res = await apiRequest("POST", "/api/events", values);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/events/upcoming"] });
-      toast({
-        title: "Event created",
-        description: "The event has been added to the calendar."
-      });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create event: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Handle form submission
-  const onSubmit = (values: FormValues) => {
-    mutation.mutate(values);
   };
-  
+};
+
+const Calendar = () => {
+  const navigate = useNavigate();
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [viewMode, setViewMode] = useState<string>('month');
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Fetch leads
+  const { data: leads = [] } = useQuery({
+    queryKey: ['/api/leads'],
+  });
+
+  // Fetch confirmed events
+  const { data: events = [] } = useQuery({
+    queryKey: ['/api/events'],
+  });
+
+  // Fetch estimates
+  const { data: estimates = [] } = useQuery({
+    queryKey: ['/api/estimates'],
+  });
+
+  // Convert API data to calendar events
+  const calendarEvents = useMemo(() => {
+    const allEvents: CalendarEvent[] = [];
+
+    // Add leads with eventDate
+    leads.forEach((lead: any) => {
+      if (lead.eventDate && isValid(new Date(lead.eventDate))) {
+        const eventDate = new Date(lead.eventDate);
+        allEvents.push({
+          id: lead.id,
+          title: `Lead: ${lead.firstName} ${lead.lastName}`,
+          start: eventDate,
+          end: new Date(eventDate.getTime() + 1 * 60 * 60 * 1000), // Default 1 hour
+          sourceType: 'lead',
+          sourceId: lead.id,
+          allDay: false,
+          status: lead.status,
+        });
+      }
+    });
+
+    // Add confirmed events
+    events.forEach((event: any) => {
+      if (event.eventDate && isValid(new Date(event.eventDate))) {
+        const eventDate = new Date(event.eventDate);
+        // Create end time (default to 2 hours after start if not specified)
+        let endDate;
+        if (event.endTime) {
+          endDate = new Date(event.endTime);
+        } else {
+          endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000);
+        }
+
+        allEvents.push({
+          id: event.id,
+          title: `Event: ${event.eventType}`,
+          start: eventDate,
+          end: endDate,
+          sourceType: 'confirmedEvent',
+          sourceId: event.id,
+          allDay: event.allDay || false,
+          status: event.status,
+          clientName: event.clientName,
+        });
+      }
+    });
+
+    // Add estimates
+    estimates.forEach((estimate: any) => {
+      if (estimate.eventDate && isValid(new Date(estimate.eventDate))) {
+        const eventDate = new Date(estimate.eventDate);
+        allEvents.push({
+          id: estimate.id,
+          title: `Estimate: ${estimate.clientId ? `Client #${estimate.clientId}` : 'No Client'}`,
+          start: eventDate,
+          end: new Date(eventDate.getTime() + 1 * 60 * 60 * 1000),
+          sourceType: 'estimate',
+          sourceId: estimate.id,
+          allDay: false,
+          status: estimate.status,
+        });
+      }
+    });
+
+    return allEvents;
+  }, [leads, events, estimates]);
+
+  // Handle event selection
+  const handleEventSelect = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setDialogOpen(true);
+  };
+
+  // Navigate to the appropriate page based on event type
+  const navigateToEventSource = () => {
+    if (!selectedEvent) return;
+
+    switch (selectedEvent.sourceType) {
+      case 'lead':
+        navigate(`/leads/${selectedEvent.sourceId}`);
+        break;
+      case 'confirmedEvent':
+        navigate(`/events/${selectedEvent.sourceId}`);
+        break;
+      case 'estimate':
+        navigate(`/estimates/${selectedEvent.sourceId}`);
+        break;
+    }
+    setDialogOpen(false);
+  };
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="font-poppins text-2xl font-bold text-neutral-900">Event Calendar</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
-              <PlusIcon className="mr-1 h-4 w-4" />
-              Add Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Event</DialogTitle>
-            </DialogHeader>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client</FormLabel>
-                      <Select 
-                        onValueChange={(value) => field.onChange(parseInt(value, 10))} 
-                        defaultValue={field.value?.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select client" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {clients.map((client: any) => (
-                            <SelectItem key={client.id} value={client.id.toString()}>
-                              {client.firstName} {client.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="eventType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Event Type</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select event type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Wedding">Wedding</SelectItem>
-                          <SelectItem value="Corporate">Corporate</SelectItem>
-                          <SelectItem value="Birthday">Birthday</SelectItem>
-                          <SelectItem value="Anniversary">Anniversary</SelectItem>
-                          <SelectItem value="Fundraiser">Fundraiser</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="guestCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Guest Count</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Number of guests"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="in-progress">In Progress</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="venue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location/Venue</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Event location or venue" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="eventDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Event Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                formatDate(field.value)
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value instanceof Date 
-                              ? `${field.value.getHours().toString().padStart(2, '0')}:${field.value.getMinutes().toString().padStart(2, '0')}`
-                              : undefined
-                            }
-                            onChange={(e) => {
-                              const [hours, minutes] = e.target.value.split(':').map(Number);
-                              const date = new Date(field.value);
-                              date.setHours(hours, minutes);
-                              field.onChange(date);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="endTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            value={field.value instanceof Date 
-                              ? `${field.value.getHours().toString().padStart(2, '0')}:${field.value.getMinutes().toString().padStart(2, '0')}`
-                              : undefined
-                            }
-                            onChange={(e) => {
-                              const [hours, minutes] = e.target.value.split(':').map(Number);
-                              const date = new Date(field.value);
-                              date.setHours(hours, minutes);
-                              field.onChange(date);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Additional notes about the event"
-                          className="resize-none" 
-                          rows={3}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
-                    disabled={mutation.isPending}
-                  >
-                    {mutation.isPending ? "Adding..." : "Add Event"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+    <div className="container py-6 space-y-6 min-h-screen">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/leads/new')}>
+            New Lead
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/events/new')}>
+            New Event
+          </Button>
+        </div>
       </div>
-      
-      <EventCalendar />
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Event Calendar</CardTitle>
+          <div className="flex items-center space-x-2 mt-2">
+            <Badge variant="outline" className="bg-[#d1e9fc] text-primary border-primary">
+              Leads
+            </Badge>
+            <Badge variant="outline" className="bg-[#c8facd] text-[#00a152] border-[#00a152]">
+              Confirmed Events
+            </Badge>
+            <Badge variant="outline" className="bg-[#fff7cd] text-[#b78103] border-[#b78103]">
+              Estimates
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="month" onValueChange={setViewMode}>
+            <TabsList>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="agenda">Agenda</TabsTrigger>
+            </TabsList>
+            <TabsContent value={viewMode} className="pt-4">
+              <div style={{ height: 700 }}>
+                <BigCalendar
+                  localizer={localizer as any}
+                  events={calendarEvents}
+                  startAccessor="start"
+                  endAccessor="end"
+                  views={{
+                    month: true,
+                    week: true,
+                    day: true,
+                    agenda: true,
+                  }}
+                  view={viewMode as any}
+                  onView={(view) => setViewMode(view)}
+                  eventPropGetter={eventStyleGetter}
+                  onSelectEvent={handleEventSelect}
+                  popup
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Event Details Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+            <DialogDescription>
+              {selectedEvent?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEvent && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-medium">Date:</span>
+                <span className="col-span-3">
+                  {format(selectedEvent.start, 'PPP')}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-medium">Time:</span>
+                <span className="col-span-3">
+                  {format(selectedEvent.start, 'p')} - {format(selectedEvent.end, 'p')}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="font-medium">Type:</span>
+                <span className="col-span-3 capitalize">
+                  {selectedEvent.sourceType}
+                </span>
+              </div>
+              {selectedEvent.status && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <span className="font-medium">Status:</span>
+                  <span className="col-span-3">
+                    <Badge
+                      variant={
+                        selectedEvent.status === 'confirmed' || selectedEvent.status === 'approved'
+                          ? 'success'
+                          : selectedEvent.status === 'cancelled'
+                          ? 'destructive'
+                          : 'outline'
+                      }
+                    >
+                      {selectedEvent.status}
+                    </Badge>
+                  </span>
+                </div>
+              )}
+              {selectedEvent.clientName && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <span className="font-medium">Client:</span>
+                  <span className="col-span-3">{selectedEvent.clientName}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={navigateToEventSource}>
+              View Details
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
+
+export default Calendar;
