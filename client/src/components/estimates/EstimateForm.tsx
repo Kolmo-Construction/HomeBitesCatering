@@ -43,6 +43,7 @@ const formSchema = insertEstimateSchema.extend({
   tax: z.coerce.number().int().min(0, "Tax must be positive"),
   total: z.coerce.number().int().min(0, "Total must be positive"),
   notes: z.string().optional(),
+  zipCode: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +72,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   );
   const [clientPortalUrl, setClientPortalUrl] = useState<string>("");
   const [showPortalLink, setShowPortalLink] = useState<boolean>(false);
+  const [zipCode, setZipCode] = useState<string>(estimate?.zipCode || "");
   
   // Get clients for dropdown
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
@@ -204,9 +206,10 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       }
     },
     onError: (error) => {
+      console.error("Form submission error:", error);
       toast({
         title: "Error",
-        description: `Failed to ${isEditing ? "update" : "create"} estimate: ${error.message}`,
+        description: `Failed to ${isEditing ? "update" : "create"} quote: ${error.message}`,
         variant: "destructive"
       });
     }
