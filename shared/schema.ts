@@ -20,6 +20,9 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true
 });
 
+// Priority enum for opportunities
+export const opportunityPriorityEnum = pgEnum("opportunity_priority", ['hot', 'high', 'medium', 'low']);
+
 // Opportunities (forward reference to clients handled later)
 export const opportunities = pgTable("opportunities", {
   id: serial("id").primaryKey(),
@@ -34,6 +37,7 @@ export const opportunities = pgTable("opportunities", {
   notes: text("notes"),
   status: text("status").default("new").notNull(), // new, contacted, qualified, proposal, booked, archived
   opportunitySource: text("opportunity_source"), // website, referral, google, social, etc.
+  priority: opportunityPriorityEnum("priority").default('medium'), // NEW FIELD for prioritizing opportunities
   assignedTo: integer("assigned_to").references(() => users.id),
   clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -42,6 +46,8 @@ export const opportunities = pgTable("opportunities", {
 
 export const insertOpportunitySchema = createInsertSchema(opportunities, {
   eventDate: z.string().nullable().transform(date => date ? new Date(date) : null),
+  priority: z.enum(opportunityPriorityEnum.enumValues).optional(), // Make it optional on creation, defaults to 'medium'
+  opportunitySource: z.string().optional(),
 }).omit({
   id: true,
   createdAt: true,

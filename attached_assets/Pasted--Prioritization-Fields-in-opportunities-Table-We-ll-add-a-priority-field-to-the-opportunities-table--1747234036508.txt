@@ -1,0 +1,60 @@
+ Prioritization Fields in opportunities Table
+We'll add a priority field to the opportunities table. An enum is a good choice for predefined priority levels.
+
+File: shared/schema.ts
+
+TypeScript
+
+// Add this pgEnum definition at the top or near your other enums
+export const opportunityPriorityEnum = pgEnum("opportunity_priority", ['hot', 'high', 'medium', 'low']);
+
+// Modify the 'opportunities' table (previously 'leads')
+export const opportunities = pgTable("opportunities", {
+  id: serial("id").primaryKey(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  eventType: text("event_type").notNull(),
+  eventDate: timestamp("event_date"),
+  guestCount: integer("guest_count"),
+  venue: text("venue"),
+  notes: text("notes"),
+  status: text("status").default("new").notNull(), // Consider if 'new' status here means 'new_opportunity'
+  // leadSource: text("lead_source"), // This might now be 'opportunitySource' or reflect the original raw lead's source
+  opportunitySource: text("opportunity_source"), // More explicit naming for the opportunity
+  priority: opportunityPriorityEnum("priority").default('medium'), // <-- NEW FIELD
+  assignedTo: integer("assigned_to").references(() => users.id),
+  // opportunityId: integer("opportunity_id"), // This was probably a typo, should be clientId
+  clientId: integer("client_id").references(() => clients.id), // Link to client if converted from a raw lead or directly created
+  // If you have a raw_leads table, you might link it here:
+  // rawLeadId: integer("raw_lead_id").references(() => rawLeads.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Update the insertOpportunitySchema to include the new priority field
+// and adjust any other fields like leadSource -> opportunitySource
+export const insertOpportunitySchema = createInsertSchema(opportunities, {
+  eventDate: z.string().nullable().transform(date => date ? new Date(date) : null),
+  priority: z.enum(opportunityPriorityEnum.enumValues).optional(), // Make it optional on creation, defaults to 'medium'
+  opportunitySource: z.string().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  // clientId: true, // Decide if this should be here or set separately
+});
+// export type Opportunity = typeof opportunities.$inferSelect; // Already defined
+// export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>; // Already defined
+
+// Make sure to update foreign key references in other tables if you renamed 'leadId' to 'opportunityId'
+// Example for contactIdentifiers:
+// export const contactIdentifiers = pgTable("contact_identifiers", {
+//   // ...
+//   opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'cascade' }),
+//   // ...
+// });
+Action:
+
+After saving shared/schema.ts, run your database migration: npm run db:push

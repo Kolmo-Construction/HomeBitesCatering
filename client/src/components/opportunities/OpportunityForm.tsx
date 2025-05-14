@@ -47,6 +47,7 @@ const formSchema = insertOpportunitySchema.extend({
   venue: z.string().optional(),
   notes: z.string().optional(),
   opportunitySource: z.string().optional(),
+  priority: z.enum(['hot', 'high', 'medium', 'low']).default('medium'),
   // Additional fields for client association - these won't be part of the API schema
   assignToExistingClient: z.boolean().default(false),
   clientId: z.string().optional(),
