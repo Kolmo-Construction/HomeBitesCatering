@@ -21,17 +21,23 @@ export default function OpportunityList() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   
   const { data: opportunities = [], isLoading } = useQuery({
-    queryKey: ["/api/opportunities"],
-    queryFn: async () => {
-      const res = await fetch('/api/opportunities');
+    queryKey: ["/api/opportunities", { priority: priorityFilter }],
+    queryFn: async ({ queryKey }) => {
+      const params = queryKey[1] as Record<string, string | null>;
+      const searchParams = new URLSearchParams();
+      
+      if (params.priority) {
+        searchParams.append('priority', params.priority);
+      }
+      
+      const queryString = searchParams.toString();
+      const url = queryString ? `/api/opportunities?${queryString}` : '/api/opportunities';
+      
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch opportunities');
       return res.json();
     }
   });
-  
-  const filteredOpportunities = priorityFilter 
-    ? opportunities.filter((opp: Opportunity) => opp.priority === priorityFilter) 
-    : opportunities;
 
   const columns: ColumnDef<Opportunity>[] = [
     {
@@ -131,9 +137,7 @@ export default function OpportunityList() {
     },
   ];
 
-  const handlePriorityChange = (value: string) => {
-    setPriorityFilter(value === "all" ? null : value);
-  };
+  // Priority filtering is now handled directly through the API query
 
   return (
     <div className="space-y-4">
@@ -147,28 +151,31 @@ export default function OpportunityList() {
         </Link>
       </div>
       
-      <div className="flex items-center space-x-2 mb-4">
+      <div className="flex items-center py-4 gap-2">
         <div className="flex items-center">
           <FilterIcon className="h-4 w-4 mr-2 text-gray-500" />
           <span className="text-sm font-medium">Filter by:</span>
         </div>
-        <Select onValueChange={handlePriorityChange} defaultValue="all">
+        <Select 
+          value={priorityFilter || 'all'} 
+          onValueChange={(value) => setPriorityFilter(value === 'all' ? null : value)}
+        >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Priority" />
+            <SelectValue placeholder="Filter by priority" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Priorities</SelectItem>
-            <SelectItem value="hot">Hot Priority</SelectItem>
-            <SelectItem value="high">High Priority</SelectItem>
-            <SelectItem value="medium">Medium Priority</SelectItem>
-            <SelectItem value="low">Low Priority</SelectItem>
+            <SelectItem value="hot">Hot</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <DataTable 
         columns={columns} 
-        data={filteredOpportunities} 
+        data={opportunities} 
         searchKey="name"
         loading={isLoading}
         emptyMessage="No opportunities found. Create your first opportunity to get started."
