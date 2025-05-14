@@ -75,12 +75,12 @@ export default function RecentEstimatesTable() {
       header: "Action",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
-          <Link href={`/estimates/${row.original.id}/view`}>
+          <Link to={`/estimates/${row.original.id}/view`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
             </div>
           </Link>
-          <Link href={`/estimates/${row.original.id}/edit`}>
+          <Link to={`/estimates/${row.original.id}/edit`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
             </div>
