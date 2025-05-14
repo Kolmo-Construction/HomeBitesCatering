@@ -388,7 +388,7 @@ export class GmailSyncService {
   private timeoutId: NodeJS.Timeout | null = null;
   private processingInterval: number;
   private aiSummaryEnabled: boolean;
-  private targetEmail: string;
+  public targetEmail: string = "";
   
   // Accessor methods for external status checks
   public isRunning(): boolean {

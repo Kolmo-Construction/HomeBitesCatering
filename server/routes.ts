@@ -23,6 +23,17 @@ import { GmailSyncService } from './services/emailSyncService'; // Import the se
 const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize and configure email sync service
+  const gmailSyncService = new GmailSyncService(5 * 60 * 1000); // 5-minute interval
+  app.set('gmailSyncService', gmailSyncService);
+  
+  // Configure Gmail sync service with the target email from environment
+  const targetEmail = process.env.SYNC_TARGET_EMAIL_ADDRESS || 'hello@eathomebites.com';
+  gmailSyncService.targetEmail = targetEmail;
+  
+  // Start the Gmail Sync service if we have OAuth credentials
+  console.log("Gmail Sync Service configured. It will start polling if authorized.");
+  
   // Authentication middleware
   const SessionStore = MemoryStore(session);
   app.use(session({
@@ -1198,6 +1209,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create HTTP server
+  
+  // Start the email sync service if oauth credentials are present
+  const syncService = app.get('gmailSyncService');
+  if (syncService) {
+    // Attempt to start the service (it will only start if properly configured)
+    syncService.start();
+  }
 
   const httpServer = createServer(app);
   return httpServer;
