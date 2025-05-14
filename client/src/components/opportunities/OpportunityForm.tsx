@@ -287,7 +287,8 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
         const payload = {
           ...opportunityValues,
           assignToExistingClient: values.assignToExistingClient,
-          clientId: values.assignToExistingClient ? values.clientId : undefined
+          clientId: values.assignToExistingClient ? values.clientId : undefined,
+          rawLeadId: rawLeadId // Include the raw lead ID if applicable
         };
 
         const res = await apiRequest("POST", "/api/opportunities", payload);

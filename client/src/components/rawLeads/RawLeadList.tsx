@@ -177,16 +177,33 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
                     </TableCell>
                     <TableCell>{getStatusBadge(lead.status)}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/raw-leads/${lead.id}`);
-                        }}
-                      >
-                        View
-                      </Button>
+                      {lead.createdOpportunityId ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="success" className="bg-green-500 hover:bg-green-600">Converted</Badge>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/opportunities/${lead.createdOpportunityId}`);
+                            }}
+                          >
+                            View Opportunity
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/raw-leads/${lead.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

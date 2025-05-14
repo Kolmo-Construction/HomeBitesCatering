@@ -146,13 +146,20 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
           <CardTitle>
             {rawLead.extractedName || 'Unnamed Lead'}{' '}
             <Badge>{rawLead.source}</Badge>
+            {rawLead.createdOpportunityId && (
+              <Badge className="ml-2 bg-green-500 hover:bg-green-600">Converted to Opportunity</Badge>
+            )}
           </CardTitle>
           <CardDescription>
             Received on {format(new Date(rawLead.receivedAt), 'MMMM d, yyyy hh:mm a')}
           </CardDescription>
         </div>
         <div className="flex space-x-2">
-          <Select value={status} onValueChange={handleStatusChange}>
+          <Select 
+            value={status} 
+            onValueChange={handleStatusChange}
+            disabled={!!rawLead.createdOpportunityId}
+          >
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -183,13 +190,14 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
           {rawLead.createdOpportunityId && (
             <div>
               <h3 className="text-sm font-medium text-gray-500">Linked Opportunity</h3>
-              <p>
+              <p className="flex items-center space-x-2">
+                <span className="font-medium">#{rawLead.createdOpportunityId}</span>
                 <Button
                   variant="link"
                   className="p-0 h-auto"
                   onClick={() => navigate(`/opportunities/${rawLead.createdOpportunityId}`)}
                 >
-                  View Opportunity #{rawLead.createdOpportunityId}
+                  View Opportunity
                 </Button>
               </p>
             </div>
@@ -228,6 +236,15 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
         {!rawLead.createdOpportunityId && status !== 'junk' && (
           <Button onClick={handleConvertClick}>
             Convert to Opportunity
+          </Button>
+        )}
+        {rawLead.createdOpportunityId && (
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`/opportunities/${rawLead.createdOpportunityId}`)}
+            className="text-green-600 border-green-600 hover:bg-green-50"
+          >
+            View Linked Opportunity #{rawLead.createdOpportunityId}
           </Button>
         )}
       </CardFooter>

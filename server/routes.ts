@@ -171,8 +171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/opportunities', isAuthenticated, async (req, res) => {
     try {
-      // Extract client assignment preference
-      const { assignToExistingClient, clientId, ...opportunityDataRaw } = req.body;
+      // Extract client assignment preference and raw lead ID
+      const { assignToExistingClient, clientId, rawLeadId, ...opportunityDataRaw } = req.body;
       
       // Validate opportunity data
       const opportunityData = insertOpportunitySchema.parse(opportunityDataRaw);
@@ -229,6 +229,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Update opportunity with the new client ID
           await storage.updateOpportunity(opportunity.id, { 
             clientId: client.id 
+          });
+        }
+      }
+      
+      // If this opportunity was created from a raw lead, update the raw lead
+      if (rawLeadId && !isNaN(Number(rawLeadId))) {
+        const leadId = Number(rawLeadId);
+        // Check if the raw lead exists
+        const rawLead = await storage.getRawLeadById(leadId);
+        if (rawLead) {
+          // Update the raw lead with qualified status and link it to the created opportunity
+          await storage.updateRawLead(leadId, {
+            status: 'qualified',
+            createdOpportunityId: opportunity.id
           });
         }
       }
