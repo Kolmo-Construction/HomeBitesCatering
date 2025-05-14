@@ -168,7 +168,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       const payload = {
         ...values,
         items: itemsJson,
-        menuId: selectedMenuId,
+        menuId: selectedMenuId === null ? null : selectedMenuId,
         createdBy: 1, // In production, this would be the current user ID
         status: isEditing ? values.status : "draft",
       };
@@ -235,22 +235,43 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   
   // Handle form submission
   const onSubmit = (values: FormValues) => {
-    mutation.mutate(values);
+    // Make sure financial values are included
+    const estimateSubtotal = subtotal || 0;
+    const estimateTax = tax || 0;
+    const estimateTotal = total || 0;
+    
+    mutation.mutate({
+      ...values,
+      subtotal: estimateSubtotal,
+      tax: estimateTax,
+      total: estimateTotal
+    });
   };
   
   // Handle sending estimate
   const handleSendEstimate = () => {
     const values = form.getValues();
     
+    // Make sure we have the required financial values
+    const estimateSubtotal = subtotal || 0;
+    const estimateTax = tax || 0;
+    const estimateTotal = total || 0;
+    
     // Update status to 'sent'
     form.setValue("status", "sent");
     form.setValue("sentAt", new Date());
+    form.setValue("subtotal", estimateSubtotal);
+    form.setValue("tax", estimateTax);
+    form.setValue("total", estimateTotal);
     
-    // Submit the form
+    // Submit the form with all required fields
     mutation.mutate({
       ...values,
       status: "sent",
       sentAt: new Date(),
+      subtotal: estimateSubtotal,
+      tax: estimateTax, 
+      total: estimateTotal
     });
   };
   
