@@ -25,10 +25,20 @@ export default function EmailSyncToggle() {
     queryKey: ['/api/email-sync/status'],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/email-sync/status');
+        const res = await fetch('/api/email-sync/status', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+          credentials: 'include', // Important: send cookies for authentication
+        });
         if (!res.ok) {
           if (res.status === 404) {
             return { enabled: false, configured: false };
+          }
+          if (res.status === 401 || res.status === 403) {
+            console.warn('User not authenticated or not authorized to check email sync status');
+            return { enabled: false, configured: false, unauthorized: true };
           }
           throw new Error('Failed to fetch email sync status');
         }
@@ -56,12 +66,15 @@ export default function EmailSyncToggle() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        credentials: 'include', // Important: send cookies for authentication
         body: JSON.stringify({ enabled }),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to toggle email sync');
+        const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || 'Failed to toggle email sync');
       }
 
       return res.json();
