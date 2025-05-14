@@ -941,6 +941,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/auth/google/callback', async (req, res) => { // No isAuthenticated here, Google redirects to it
+    // Check if there's an error in the callback
+    if (req.query.error) {
+      console.error("OAuth Error:", req.query.error);
+      return res.status(400).send(`
+        <h1>Authentication Error</h1>
+        <p>Error: ${req.query.error}</p>
+        <p>Error description: ${req.query.error_description || 'No description provided'}</p>
+        <p>Please check your Google Cloud Console OAuth configuration. Make sure the redirect URI exactly matches:</p>
+        <pre>${process.env.GOOGLE_REDIRECT_URI}</pre>
+        <p><a href="/api/auth/google/initiate">Try again</a></p>
+      `);
+    }
+    
     const code = req.query.code as string;
     
     console.log("Received OAuth callback with code:", code ? "Code received" : "No code");
@@ -970,7 +983,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error('Error in Google OAuth callback:', error);
-      res.status(500).send(`Error during Google authentication callback: ${error.message}`);
+      res.status(500).send(`
+        <h1>Error During Authentication</h1>
+        <p>An error occurred while processing your request:</p>
+        <pre>${error.message}</pre>
+        <p>Please check the server logs for more details.</p>
+        <p><a href="/api/auth/google/initiate">Try again</a></p>
+      `);
     }
   });
 
