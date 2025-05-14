@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X } from "lucide-react";
 import { z } from "zod";
-import { Lead, ContactIdentifier, Communication } from "@/types/lead";
+// Import types directly with relative path since the alias isn't working
+import { Lead, ContactIdentifier, Communication } from "../../types/lead";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -663,7 +664,7 @@ export default function LeadDetailPage() {
                         <Badge variant="outline" className="capitalize">{comm.direction}</Badge>
                       </div>
                       <div className="text-sm text-gray-500">
-                        {format(new Date(comm.date), "PPP")}
+                        {comm.date ? format(new Date(comm.date), "PPP") : "No date"}
                       </div>
                     </div>
                     {comm.subject && (
