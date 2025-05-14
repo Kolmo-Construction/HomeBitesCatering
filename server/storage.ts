@@ -1,8 +1,8 @@
 // server/storage.ts
 import {
-  users, leads, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
+  users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   type User, type InsertUser,
-  type Lead, type InsertLead,
+  type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
   type Menu as DrizzleMenu, type InsertMenu, // Alias original Menu to DrizzleMenu to avoid naming conflict
   type Client, type InsertClient,
@@ -40,14 +40,14 @@ export interface IStorage {
   deleteUser(id: number): Promise<boolean>;
   listUsers(): Promise<User[]>;
 
-  // Leads
-  getLead(id: number): Promise<Lead | undefined>;
-  createLead(lead: InsertLead): Promise<Lead>;
-  updateLead(id: number, lead: Partial<Lead>): Promise<Lead | undefined>;
-  deleteLead(id: number): Promise<boolean>;
-  listLeads(): Promise<Lead[]>;
-  listLeadsByStatus(status: string): Promise<Lead[]>;
-  listLeadsBySource(source: string): Promise<Lead[]>;
+  // Opportunities
+  getOpportunity(id: number): Promise<Opportunity | undefined>;
+  createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity>;
+  updateOpportunity(id: number, opportunity: Partial<Opportunity>): Promise<Opportunity | undefined>;
+  deleteOpportunity(id: number): Promise<boolean>;
+  listOpportunities(): Promise<Opportunity[]>;
+  listOpportunitiesByStatus(status: string): Promise<Opportunity[]>;
+  listOpportunitiesBySource(source: string): Promise<Opportunity[]>;
 
   // Menu Items
   getMenuItem(id: number): Promise<MenuItem | undefined>;
@@ -92,14 +92,14 @@ export interface IStorage {
   
   // Contact Identifiers
   createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier>;
-  getContactIdentifiers(owner: { leadId?: number; clientId?: number }): Promise<ContactIdentifier[]>;
+  getContactIdentifiers(owner: { opportunityId?: number; clientId?: number }): Promise<ContactIdentifier[]>;
   updateContactIdentifier(id: number, identifier: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined>;
   deleteContactIdentifier(id: number): Promise<boolean>;
-  findLeadOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ lead?: Lead, client?: Client } | null>;
+  findOpportunityOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ opportunity?: Opportunity, client?: Client } | null>;
   
   // Communications
   createCommunication(communication: InsertCommunication): Promise<Communication>;
-  getCommunicationsForLead(leadId: number): Promise<Communication[]>;
+  getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
 }
 
@@ -148,46 +148,46 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
-  // For leads
-  async getLead(id: number): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
-    return lead || undefined;
+  // For opportunities
+  async getOpportunity(id: number): Promise<Opportunity | undefined> {
+    const [opportunity] = await db.select().from(opportunities).where(eq(opportunities.id, id));
+    return opportunity || undefined;
   }
 
-  async createLead(lead: InsertLead): Promise<Lead> {
-    const [newLead] = await db
-      .insert(leads)
-      .values(lead)
+  async createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity> {
+    const [newOpportunity] = await db
+      .insert(opportunities)
+      .values(opportunity)
       .returning();
-    return newLead;
+    return newOpportunity;
   }
 
-  async updateLead(id: number, leadData: Partial<Lead>): Promise<Lead | undefined> {
-    const [updatedLead] = await db
-      .update(leads)
-      .set(leadData)
-      .where(eq(leads.id, id))
+  async updateOpportunity(id: number, opportunityData: Partial<Opportunity>): Promise<Opportunity | undefined> {
+    const [updatedOpportunity] = await db
+      .update(opportunities)
+      .set(opportunityData)
+      .where(eq(opportunities.id, id))
       .returning();
-    return updatedLead;
+    return updatedOpportunity;
   }
 
-  async deleteLead(id: number): Promise<boolean> {
+  async deleteOpportunity(id: number): Promise<boolean> {
     await db
-      .delete(leads)
-      .where(eq(leads.id, id));
+      .delete(opportunities)
+      .where(eq(opportunities.id, id));
     return true;
   }
 
-  async listLeads(): Promise<Lead[]> {
-    return await db.select().from(leads);
+  async listOpportunities(): Promise<Opportunity[]> {
+    return await db.select().from(opportunities);
   }
 
-  async listLeadsByStatus(status: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(eq(leads.status, status));
+  async listOpportunitiesByStatus(status: string): Promise<Opportunity[]> {
+    return await db.select().from(opportunities).where(eq(opportunities.status, status));
   }
 
-  async listLeadsBySource(source: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(eq(leads.leadSource, source));
+  async listOpportunitiesBySource(source: string): Promise<Opportunity[]> {
+    return await db.select().from(opportunities).where(eq(opportunities.leadSource, source));
   }
 
   // For menu items
@@ -511,14 +511,14 @@ export class DatabaseStorage implements IStorage {
     return newIdentifier;
   }
 
-  async getContactIdentifiers(owner: { leadId?: number; clientId?: number }): Promise<ContactIdentifier[]> {
-    if (owner.leadId) {
-      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.leadId, owner.leadId));
+  async getContactIdentifiers(owner: { opportunityId?: number; clientId?: number }): Promise<ContactIdentifier[]> {
+    if (owner.opportunityId) {
+      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.opportunityId, owner.opportunityId));
     }
     if (owner.clientId) {
       return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, owner.clientId));
     }
-    return []; // Return empty array if neither leadId nor clientId is provided
+    return []; // Return empty array if neither opportunityId nor clientId is provided
   }
 
   async updateContactIdentifier(id: number, identifierData: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined> {
@@ -537,7 +537,7 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async findLeadOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ lead?: Lead, client?: Client } | null> {
+  async findOpportunityOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ opportunity?: Opportunity, client?: Client } | null> {
     const foundIdentifiers = await db
       .select()
       .from(contactIdentifiers)
@@ -547,15 +547,15 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
 
-    // Prioritize client if both lead and client are linked, or take the first found
+    // Prioritize client if both opportunity and client are linked, or take the first found
     for (const identifier of foundIdentifiers) {
       if (identifier.clientId) {
         const [client] = await db.select().from(clients).where(eq(clients.id, identifier.clientId));
         if (client) return { client };
       }
-      if (identifier.leadId) {
-        const [lead] = await db.select().from(leads).where(eq(leads.id, identifier.leadId));
-        if (lead) return { lead }; // Return lead if client not found for this identifier
+      if (identifier.opportunityId) {
+        const [opportunity] = await db.select().from(opportunities).where(eq(opportunities.id, identifier.opportunityId));
+        if (opportunity) return { opportunity }; // Return opportunity if client not found for this identifier
       }
     }
     return null;
@@ -570,11 +570,11 @@ export class DatabaseStorage implements IStorage {
     return newCommunication;
   }
 
-  async getCommunicationsForLead(leadId: number): Promise<Communication[]> {
+  async getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]> {
     return db
       .select()
       .from(communications)
-      .where(eq(communications.leadId, leadId))
+      .where(eq(communications.opportunityId, opportunityId))
       .orderBy(desc(communications.timestamp)); // Order by most recent first
   }
 

@@ -20,8 +20,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true
 });
 
-// Leads (forward reference to clients handled later)
-export const leads = pgTable("leads", {
+// Opportunities (forward reference to clients handled later)
+export const opportunities = pgTable("opportunities", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
@@ -40,7 +40,7 @@ export const leads = pgTable("leads", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertLeadSchema = createInsertSchema(leads, {
+export const insertOpportunitySchema = createInsertSchema(opportunities, {
   eventDate: z.string().nullable().transform(date => date ? new Date(date) : null),
 }).omit({
   id: true,
@@ -104,7 +104,7 @@ export const clients = pgTable("clients", {
   state: text("state"),
   zip: text("zip"),
   notes: text("notes"),
-  leadId: integer("lead_id").references(() => leads.id),
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -112,7 +112,7 @@ export const clients = pgTable("clients", {
 // The proper way to handle circular references in Drizzle is to declare both tables
 // without circular foreign keys first, then use the relations API instead of trying to
 // add the reference after the fact. We'll keep it simple in this case by just documenting
-// that leads.clientId refers to clients.id.
+// that opportunities.clientId refers to clients.id.
 
 export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
@@ -197,7 +197,7 @@ export const identifierTypeEnum = pgEnum("identifier_type", ["email", "phone"]);
 
 export const contactIdentifiers = pgTable("contact_identifiers", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id, { onDelete: 'cascade' }), // Link to lead
+  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'cascade' }), // Link to opportunity
   clientId: integer("client_id").references(() => clients.id, { onDelete: 'cascade' }), // Link to client
   type: identifierTypeEnum("type").notNull(), // 'email' or 'phone'
   value: text("value").notNull(), // The actual email address or phone number
@@ -217,7 +217,7 @@ export const communicationDirectionEnum = pgEnum("communication_direction", ["in
 
 export const communications = pgTable("communications", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id, { onDelete: 'set null' }), // Link to lead
+  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }), // Link to opportunity
   clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }), // Link to client
   userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }), // User who created/logged this, or involved internal user
   type: communicationTypeEnum("type").notNull(),
@@ -250,8 +250,8 @@ export const insertCommunicationSchema = createInsertSchema(communications, {
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export type Lead = typeof leads.$inferSelect;
-export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type Opportunity = typeof opportunities.$inferSelect;
+export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>;
 
 export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;

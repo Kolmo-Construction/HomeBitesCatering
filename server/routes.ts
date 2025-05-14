@@ -7,7 +7,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import {
   insertUserSchema, 
-  insertLeadSchema, 
+  insertOpportunitySchema, 
   insertMenuItemSchema, 
   insertMenuSchema, 
   insertClientSchema, 
@@ -159,26 +159,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Lead routes
-  app.get('/api/leads', isAuthenticated, async (req, res) => {
+  // Opportunity routes
+  app.get('/api/opportunities', isAuthenticated, async (req, res) => {
     try {
-      const leads = await storage.listLeads();
-      res.json(leads);
+      const opportunities = await storage.listOpportunities();
+      res.json(opportunities);
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
     }
   });
 
-  app.post('/api/leads', isAuthenticated, async (req, res) => {
+  app.post('/api/opportunities', isAuthenticated, async (req, res) => {
     try {
       // Extract client assignment preference
-      const { assignToExistingClient, clientId, ...leadDataRaw } = req.body;
+      const { assignToExistingClient, clientId, ...opportunityDataRaw } = req.body;
       
-      // Validate lead data
-      const leadData = insertLeadSchema.parse(leadDataRaw);
+      // Validate opportunity data
+      const opportunityData = insertOpportunitySchema.parse(opportunityDataRaw);
       
-      // Create the lead
-      const lead = await storage.createLead(leadData);
+      // Create the opportunity
+      const opportunity = await storage.createOpportunity(opportunityData);
       
       // Handle client association
       let client;
@@ -190,8 +190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: 'Client not found' });
         }
         
-        // Update lead with client ID
-        await storage.updateLead(lead.id, { 
+        // Update opportunity with client ID
+        await storage.updateOpportunity(opportunity.id, { 
           clientId: client.id 
         });
       } else {
@@ -199,45 +199,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let existingClient = null;
         
         // Check if client with this email already exists
-        if (leadData.email) {
-          existingClient = await storage.getClientByEmail(leadData.email);
+        if (opportunityData.email) {
+          existingClient = await storage.getClientByEmail(opportunityData.email);
         }
         
         // Check if client with this phone already exists (if no email match)
-        if (!existingClient && leadData.phone) {
-          existingClient = await storage.getClientByPhone(leadData.phone);
+        if (!existingClient && opportunityData.phone) {
+          existingClient = await storage.getClientByPhone(opportunityData.phone);
         }
         
         if (existingClient) {
-          // Associate lead with existing client
+          // Associate opportunity with existing client
           client = existingClient;
-          await storage.updateLead(lead.id, { 
+          await storage.updateOpportunity(opportunity.id, { 
             clientId: client.id 
           });
         } else {
-          // Create a new client from lead data
+          // Create a new client from opportunity data
           const clientData = {
-            firstName: leadData.firstName,
-            lastName: leadData.lastName,
-            email: leadData.email,
-            phone: leadData.phone,
-            leadId: lead.id
+            firstName: opportunityData.firstName,
+            lastName: opportunityData.lastName,
+            email: opportunityData.email,
+            phone: opportunityData.phone,
+            opportunityId: opportunity.id
           };
           
           client = await storage.createClient(clientData);
           
-          // Update lead with the new client ID
-          await storage.updateLead(lead.id, { 
+          // Update opportunity with the new client ID
+          await storage.updateOpportunity(opportunity.id, { 
             clientId: client.id 
           });
         }
       }
       
-      // Return the lead with associated client
-      const updatedLead = await storage.getLead(lead.id);
-      res.status(201).json(updatedLead);
+      // Return the opportunity with associated client
+      const updatedOpportunity = await storage.getOpportunity(opportunity.id);
+      res.status(201).json(updatedOpportunity);
     } catch (error) {
-      console.error("Error creating lead:", error);
+      console.error("Error creating opportunity:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
@@ -245,42 +245,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/leads/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/opportunities/:id', isAuthenticated, async (req, res) => {
     try {
-      const lead = await storage.getLead(Number(req.params.id));
-      if (!lead) {
-        return res.status(404).json({ message: 'Lead not found' });
+      const opportunity = await storage.getOpportunity(Number(req.params.id));
+      if (!opportunity) {
+        return res.status(404).json({ message: 'Opportunity not found' });
       }
-      res.json(lead);
+      res.json(opportunity);
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
     }
   });
 
-  app.patch('/api/leads/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/opportunities/:id', isAuthenticated, async (req, res) => {
     try {
-      const leadId = Number(req.params.id);
-      const lead = await storage.getLead(leadId);
-      if (!lead) {
-        return res.status(404).json({ message: 'Lead not found' });
+      const opportunityId = Number(req.params.id);
+      const opportunity = await storage.getOpportunity(opportunityId);
+      if (!opportunity) {
+        return res.status(404).json({ message: 'Opportunity not found' });
       }
       
-      const updatedLead = await storage.updateLead(leadId, req.body);
-      res.json(updatedLead);
+      const updatedOpportunity = await storage.updateOpportunity(opportunityId, req.body);
+      res.json(updatedOpportunity);
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
     }
   });
 
-  app.delete('/api/leads/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/opportunities/:id', isAuthenticated, async (req, res) => {
     try {
-      const leadId = Number(req.params.id);
-      const lead = await storage.getLead(leadId);
-      if (!lead) {
-        return res.status(404).json({ message: 'Lead not found' });
+      const opportunityId = Number(req.params.id);
+      const opportunity = await storage.getOpportunity(opportunityId);
+      if (!opportunity) {
+        return res.status(404).json({ message: 'Opportunity not found' });
       }
       
-      await storage.deleteLead(leadId);
+      await storage.deleteOpportunity(opportunityId);
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
@@ -785,12 +785,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/contact-identifiers - Create a new contact identifier
   app.post('/api/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Validate that either leadId or clientId is provided, but not both for simplicity here.
-      if (!req.body.leadId && !req.body.clientId) {
-        return res.status(400).json({ message: 'Either leadId or clientId must be provided.' });
+      // Validate that either opportunityId or clientId is provided, but not both for simplicity here.
+      if (!req.body.opportunityId && !req.body.clientId) {
+        return res.status(400).json({ message: 'Either opportunityId or clientId must be provided.' });
       }
-      if (req.body.leadId && req.body.clientId) {
-        return res.status(400).json({ message: 'Contact identifier cannot be linked to both a lead and a client simultaneously through this endpoint.' });
+      if (req.body.opportunityId && req.body.clientId) {
+        return res.status(400).json({ message: 'Contact identifier cannot be linked to both an opportunity and a client simultaneously through this endpoint.' });
       }
 
       const identifierData = insertContactIdentifierSchema.parse(req.body);
@@ -805,17 +805,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/leads/:leadId/contact-identifiers - Get identifiers for a lead
-  app.get('/api/leads/:leadId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+  // GET /api/opportunities/:opportunityId/contact-identifiers - Get identifiers for an opportunity
+  app.get('/api/opportunities/:opportunityId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const leadId = Number(req.params.leadId);
-      if (isNaN(leadId)) {
-        return res.status(400).json({ message: 'Invalid lead ID.' });
+      const opportunityId = Number(req.params.opportunityId);
+      if (isNaN(opportunityId)) {
+        return res.status(400).json({ message: 'Invalid opportunity ID.' });
       }
-      const identifiers = await storage.getContactIdentifiers({ leadId });
+      const identifiers = await storage.getContactIdentifiers({ opportunityId });
       res.json(identifiers);
     } catch (error) {
-      console.error("Error fetching contact identifiers for lead:", error);
+      console.error("Error fetching contact identifiers for opportunity:", error);
       res.status(500).json({ message: 'Server error fetching contact identifiers' });
     }
   });
