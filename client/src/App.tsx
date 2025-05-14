@@ -11,6 +11,9 @@ import Estimates from "@/pages/estimates";
 import MenuItems from "@/pages/menu-items";
 import Menus from "@/pages/menus";
 import Calendar from "@/pages/calendar";
+import RawLeadsPage from "@/pages/rawLeadsPage";
+import RawLeadFormPage from "@/pages/rawLeadFormPage";
+import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -59,6 +62,9 @@ function AppContent() {
             <Route path="/menus/:id" component={Menus} />
             <Route path="/menus/:id/edit" component={Menus} />
             <Route path="/calendar" component={Calendar} />
+            <Route path="/raw-leads" component={RawLeadsPage} />
+            <Route path="/raw-leads/new" component={RawLeadFormPage} />
+            <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
             <Route>
               <Dashboard />
             </Route>

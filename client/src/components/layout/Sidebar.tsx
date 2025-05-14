@@ -11,7 +11,8 @@ import {
   Calendar,
   BarChart2,
   Settings,
-  ExternalLink
+  ExternalLink,
+  Inbox
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -20,6 +21,7 @@ export default function Sidebar() {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Incoming Leads", href: "/raw-leads", icon: Inbox },
     { name: "Opportunities", href: "/opportunities", icon: Filter },
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Menu Items", href: "/menu-items", icon: Utensils },

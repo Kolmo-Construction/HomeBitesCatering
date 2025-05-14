@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import {
   Table,
   TableBody,
@@ -9,132 +10,97 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNavigate } from 'wouter';
 import { format } from 'date-fns';
-import { RawLead } from '../../../shared/schema';
+import { RawLead } from '@/../../shared/schema';
 
-export default function RawLeadList() {
-  const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [sourceFilter, setSourceFilter] = useState<string>('');
+interface RawLeadListProps {
+  initialFilter?: string;
+}
 
-  // Build the query string based on filters
-  const queryString = new URLSearchParams();
-  if (statusFilter) queryString.append('status', statusFilter);
-  if (sourceFilter) queryString.append('source', sourceFilter);
-  
-  const filterQueryPart = queryString.toString() ? `?${queryString.toString()}` : '';
+export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
+  const [, navigate] = useLocation();
+  const [statusFilter, setStatusFilter] = useState<string>(initialFilter);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const { data: rawLeads, isLoading, error } = useQuery<RawLead[]>({
-    queryKey: ['/api/raw-leads', statusFilter, sourceFilter],
+  useEffect(() => {
+    if (initialFilter) {
+      setStatusFilter(initialFilter);
+    }
+  }, [initialFilter]);
+
+  const { data: rawLeads, isLoading } = useQuery<RawLead[]>({
+    queryKey: ['/api/raw-leads', statusFilter],
     queryFn: async () => {
-      const response = await fetch(`/api/raw-leads${filterQueryPart}`);
+      const params = new URLSearchParams();
+      if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+      const response = await fetch(`/api/raw-leads?${params.toString()}`);
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error('Failed to fetch raw leads');
       }
       return response.json();
     },
   });
 
-  const handleReviewClick = (rawLeadId: number) => {
-    navigate(`/opportunities/new?fromRawLeadId=${rawLeadId}`);
-  };
+  const filteredLeads = rawLeads
+    ? rawLeads.filter(
+        (lead) =>
+          searchTerm === '' ||
+          (lead.extractedName && lead.extractedName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (lead.extractedEmail && lead.extractedEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (lead.eventSummary && lead.eventSummary.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+    : [];
 
-  // Generate status badge with appropriate color
   const getStatusBadge = (status: string) => {
-    const statusColors: Record<string, string> = {
-      'new': 'bg-blue-500',
-      'under_review': 'bg-yellow-500',
-      'qualified': 'bg-green-500',
-      'archived': 'bg-gray-500',
-      'junk': 'bg-red-500',
-    };
-    
-    return (
-      <Badge className={statusColors[status] || 'bg-gray-500'}>
-        {status.replace('_', ' ')}
-      </Badge>
-    );
+    switch (status) {
+      case 'new':
+        return <Badge variant="default">New</Badge>;
+      case 'under_review':
+        return <Badge variant="secondary">Under Review</Badge>;
+      case 'qualified':
+        return <Badge variant="success" className="bg-green-500 hover:bg-green-600">Qualified</Badge>;
+      case 'archived':
+        return <Badge variant="outline">Archived</Badge>;
+      case 'junk':
+        return <Badge variant="destructive">Junk</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
-
-  // Function to get a source badge with appropriate color
-  const getSourceBadge = (source: string) => {
-    const sourceColors: Record<string, string> = {
-      'website_form': 'bg-purple-500',
-      'gmail_sync': 'bg-red-400',
-      'weddingwire': 'bg-pink-500',
-      'manual_entry': 'bg-blue-400',
-      'theknot': 'bg-green-400',
-    };
-    
-    return (
-      <Badge className={sourceColors[source] || 'bg-gray-400'}>
-        {source.replace('_', ' ')}
-      </Badge>
-    );
-  };
-
-  // Handle loading state
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Raw Leads</CardTitle>
-          <CardDescription>Review incoming lead requests</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-40 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Handle error state
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Raw Leads</CardTitle>
-          <CardDescription>Error loading raw leads</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 text-red-500">
-            Failed to load raw leads. Please try again later.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Raw Leads</CardTitle>
-        <CardDescription>Review incoming lead requests</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex space-x-4 mb-4">
-          <div>
-            <label className="text-sm font-medium">Status</label>
+        <div className="flex flex-col md:flex-row justify-between gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search leads by name, email, or summary..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Filter:</span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Statuses" />
@@ -149,71 +115,85 @@ export default function RawLeadList() {
               </SelectContent>
             </Select>
           </div>
-          
-          <div>
-            <label className="text-sm font-medium">Source</label>
-            <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Sources" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Sources</SelectItem>
-                <SelectItem value="gmail_sync">Gmail Sync</SelectItem>
-                <SelectItem value="website_form">Website Form</SelectItem>
-                <SelectItem value="weddingwire">Wedding Wire</SelectItem>
-                <SelectItem value="theknot">The Knot</SelectItem>
-                <SelectItem value="manual_entry">Manual Entry</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Source</TableHead>
-              <TableHead>Contact Info</TableHead>
-              <TableHead>Event Summary</TableHead>
-              <TableHead>Received</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rawLeads && rawLeads.length > 0 ? (
-              rawLeads.map((lead) => (
-                <TableRow key={lead.id}>
-                  <TableCell>{getSourceBadge(lead.source)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      {lead.extractedName && <span className="font-medium">{lead.extractedName}</span>}
-                      {lead.extractedEmail && <span className="text-sm text-blue-500">{lead.extractedEmail}</span>}
-                      {lead.extractedPhone && <span className="text-sm">{lead.extractedPhone}</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell>{lead.eventSummary || 'No summary available'}</TableCell>
-                  <TableCell>{format(new Date(lead.receivedAt), 'MMM d, yyyy')}</TableCell>
-                  <TableCell>{getStatusBadge(lead.status)}</TableCell>
-                  <TableCell>
-                    <Button
-                      onClick={() => handleReviewClick(lead.id)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Review & Convert
-                    </Button>
-                  </TableCell>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : filteredLeads.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-gray-500">No leads found matching your criteria.</p>
+            <Button 
+              variant="link" 
+              onClick={() => {
+                setStatusFilter('');
+                setSearchTerm('');
+              }}
+            >
+              Clear filters
+            </Button>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Name / Email</TableHead>
+                  <TableHead>Date Received</TableHead>
+                  <TableHead>Event Summary</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-4">
-                  No raw leads found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.map((lead) => (
+                  <TableRow 
+                    key={lead.id} 
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => navigate(`/raw-leads/${lead.id}`)}
+                  >
+                    <TableCell className="font-medium">{lead.source}</TableCell>
+                    <TableCell>
+                      <div>
+                        <span className="font-medium">{lead.extractedName || 'Unnamed'}</span>
+                      </div>
+                      {lead.extractedEmail && <div className="text-gray-500 text-sm">{lead.extractedEmail}</div>}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(lead.receivedAt), 'MMM d, yyyy')}
+                      <div className="text-gray-500 text-sm">
+                        {format(new Date(lead.receivedAt), 'h:mm a')}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {lead.eventSummary || 'No summary'}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(lead.status)}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/raw-leads/${lead.id}`);
+                        }}
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
