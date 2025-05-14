@@ -1,5 +1,5 @@
 // Test script for the AI service
-const { aiService } = require('./server/services/aiService');
+import { aiService } from './server/services/aiService.js';
 
 // A sample message to analyze (simulating an email)
 const testMessage = `
