@@ -1,7 +1,17 @@
 // server/services/emailSyncService.ts
 import { google, Auth, gmail_v1 } from 'googleapis';
 import { storage } from '../storage'; // Your existing storage instance
-import { InsertCommunication, InsertContactIdentifier } from '@shared/schema';
+import { 
+  InsertCommunication, 
+  InsertContactIdentifier, 
+  Communication, 
+  InsertRawLead,
+  rawLeadStatusEnum,
+  leadScoreEnum,
+  leadQualityCategoryEnum,
+  budgetIndicationEnum,
+  sentimentEnum
+} from '@shared/schema';
 import { simpleParser, ParsedMail } from 'mailparser'; // For parsing email content
 
 // A simple in-memory or DB store for tokens (for a single-user backend service)
@@ -308,17 +318,47 @@ export class GmailSyncService {
       if (direction === 'incoming' && fromEmail) { // Only create for incoming from new contacts
         console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new raw lead.`);
         try {
-            // Create a raw lead instead of directly creating an opportunity
-            const rawLead = await storage.createRawLead({
+            // First, use AI to analyze the email content
+            const aiAnalysisResults = this.aiSummaryEnabled ? 
+              await aiService.analyzeLeadMessage(bodyText) : null;
+            
+            console.log("GmailSyncService: AI Analysis completed for incoming email.");
+              
+            // Create enriched raw lead with AI-extracted data
+            const rawLeadData = {
               source: 'gmail_sync',
-              extractedName: fromHeader?.name || '',
+              extractedName: fromHeader?.name || aiAnalysisResults?.extractedName || '',
               extractedEmail: fromEmail,
-              extractedPhone: null,
+              extractedPhone: aiAnalysisResults?.extractedPhone || null,
               eventSummary: subject,
               rawData: parsedMail, // Store the full parsed email as raw data
-              status: 'new',
-              notes: `Auto-created from incoming email with subject: ${subject}`
-            });
+              status: this.aiSummaryEnabled ? 'under_review' : 'new',
+              notes: `Auto-created from incoming email with subject: ${subject}`,
+              
+              // Add AI-extracted fields if available
+              extractedEventType: aiAnalysisResults?.extractedEventType,
+              extractedEventDate: aiAnalysisResults?.extractedEventDate,
+              extractedEventTime: aiAnalysisResults?.extractedEventTime,
+              extractedGuestCount: aiAnalysisResults?.extractedGuestCount,
+              extractedVenue: aiAnalysisResults?.extractedVenue,
+              extractedMessageSummary: aiAnalysisResults?.extractedMessageSummary,
+              leadSourcePlatform: 'email',
+              
+              // Add AI assessment fields
+              aiUrgencyScore: aiAnalysisResults?.aiUrgencyScore,
+              aiBudgetIndication: aiAnalysisResults?.aiBudgetIndication,
+              aiBudgetValue: aiAnalysisResults?.aiBudgetValue,
+              aiClarityOfRequestScore: aiAnalysisResults?.aiClarityOfRequestScore,
+              aiDecisionMakerLikelihood: aiAnalysisResults?.aiDecisionMakerLikelihood,
+              aiKeyRequirements: aiAnalysisResults?.aiKeyRequirements,
+              aiPotentialRedFlags: aiAnalysisResults?.aiPotentialRedFlags,
+              aiOverallLeadQuality: aiAnalysisResults?.aiOverallLeadQuality,
+              aiSuggestedNextStep: aiAnalysisResults?.aiSuggestedNextStep,
+              aiSentiment: aiAnalysisResults?.aiSentiment,
+              aiConfidenceScore: aiAnalysisResults?.aiConfidenceScore
+            };
+            
+            const rawLead = await storage.createRawLead(rawLeadData);
             
             console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail}`);
             
