@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { GmailSyncService } from './services/emailSyncService'; // Ensure this path is correct
 
 const app = express();
 app.use(express.json());
@@ -54,6 +55,23 @@ app.use((req, res, next) => {
     await setupVite(app, server);
   } else {
     serveStatic(app);
+  }
+
+  // Initialize Gmail Sync Service
+  if (app.get("env") !== "test") {
+    const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+    const AI_SUMMARY_ENABLED = true; // Or from env var
+
+    if (process.env.GOOGLE_CLIENT_ID && process.env.SYNC_TARGET_EMAIL_ADDRESS) {
+      const gmailService = new GmailSyncService(SYNC_INTERVAL_MS, AI_SUMMARY_ENABLED);
+      // The service will try to use stored tokens. If none, it won't start polling effectively.
+      // Admin needs to visit /api/auth/google/initiate once to authorize.
+      gmailService.start();
+      console.log("Gmail Sync Service configured. It will start polling if authorized.");
+    } else {
+      console.warn("Gmail Sync Service: Google Client ID or Sync Target Email missing in env. Service not started.");
+      console.log("To authorize, ensure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, and SYNC_TARGET_EMAIL_ADDRESS are set, then have an admin visit: /api/auth/google/initiate");
+    }
   }
 
   // ALWAYS serve the app on port 5000
