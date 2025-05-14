@@ -272,13 +272,26 @@ export class GmailSyncService {
   // Key differences: how you determine direction might need to check against this.targetEmail
   private async processParsedEmail(parsedMail: ParsedMail): Promise<void> {
     const subject = parsedMail.subject || '(No Subject)';
-    const fromHeader = parsedMail.from?.value[0];
-    const toHeader = parsedMail.to?.value;
-    const ccHeader = parsedMail.cc?.value;
+    // Safe extraction of email address fields with proper type checking
+    // Handle both single address object and array of address objects
+    const getAddressesFrom = (addressField: any): { address?: string; name?: string }[] => {
+      if (!addressField) return [];
+      // If it's an array, return it
+      if (Array.isArray(addressField)) return addressField;
+      // If it has a 'value' property that's an array, return that
+      if (addressField.value && Array.isArray(addressField.value)) return addressField.value;
+      // If it's a single address object, wrap it in an array
+      return [addressField];
+    };
 
+    const fromAddresses = getAddressesFrom(parsedMail.from);
+    const toAddresses = getAddressesFrom(parsedMail.to);
+    const ccAddresses = getAddressesFrom(parsedMail.cc);
+
+    const fromHeader = fromAddresses[0]; // First from address
     const fromEmail = fromHeader?.address?.toLowerCase();
-    const toEmails = toHeader?.map(addr => addr.address?.toLowerCase()).filter(Boolean) as string[] || [];
-    const ccEmails = ccHeader?.map(addr => addr.address?.toLowerCase()).filter(Boolean) as string[] || [];
+    const toEmails = toAddresses.map(addr => addr?.address?.toLowerCase()).filter(Boolean) as string[];
+    const ccEmails = ccAddresses.map(addr => addr?.address?.toLowerCase()).filter(Boolean) as string[];
 
     const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
     const messageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}`;
@@ -287,9 +300,10 @@ export class GmailSyncService {
     let bodyText = parsedMail.text || '';
     if (!bodyText && parsedMail.html) {
         // Basic HTML to text conversion, consider a library for robustness
-        bodyText = parsedMail.html.replace(/<style[^>]*>.*<\/style>/gms, '') // Remove R\style> tags
-                                 .replace(/<[^>]+>/g, ' ') // Remove all other HTML tags
-                                 .replace(/\s+/g, ' ').trim();
+        bodyText = parsedMail.html
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/g, '') // Remove style tags and their content
+          .replace(/<[^>]+>/g, ' ') // Remove all other HTML tags
+          .replace(/\s+/g, ' ').trim();
     }
     if (!bodyText) bodyText = '(No Content)';
 
@@ -323,16 +337,43 @@ export class GmailSyncService {
               await aiService.analyzeLeadMessage(bodyText) : null;
             
             console.log("GmailSyncService: AI Analysis completed for incoming email.");
-              
-            // Create enriched raw lead with AI-extracted data
-            const rawLeadData = {
+            
+            // Helper function to validate score against enum values
+            const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
+              if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
+              return score as typeof leadScoreEnum.enumValues[number];
+            };
+            
+            // Helper function to validate budget indication against enum values
+            const validateBudgetIndication = (indication: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
+              if (!indication || !budgetIndicationEnum.enumValues.includes(indication as any)) return undefined;
+              return indication as typeof budgetIndicationEnum.enumValues[number];
+            };
+            
+            // Helper function to validate lead quality against enum values
+            const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
+              if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
+              return quality as typeof leadQualityCategoryEnum.enumValues[number];
+            };
+            
+            // Helper function to validate sentiment against enum values
+            const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
+              if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
+              return sentiment as typeof sentimentEnum.enumValues[number];
+            };
+            
+            // Create enriched raw lead with AI-extracted data (with type-safe values)
+            const rawLeadData: InsertRawLead = {
               source: 'gmail_sync',
               extractedName: fromHeader?.name || aiAnalysisResults?.extractedName || '',
               extractedEmail: fromEmail,
               extractedPhone: aiAnalysisResults?.extractedPhone || null,
               eventSummary: subject,
               rawData: parsedMail, // Store the full parsed email as raw data
-              status: this.aiSummaryEnabled ? 'under_review' : 'new',
+              // Use the enum values directly for status
+              status: this.aiSummaryEnabled ? 
+                rawLeadStatusEnum.enumValues[1] : // 'under_review'
+                rawLeadStatusEnum.enumValues[0],  // 'new'
               notes: `Auto-created from incoming email with subject: ${subject}`,
               
               // Add AI-extracted fields if available
@@ -344,17 +385,17 @@ export class GmailSyncService {
               extractedMessageSummary: aiAnalysisResults?.extractedMessageSummary,
               leadSourcePlatform: 'email',
               
-              // Add AI assessment fields
-              aiUrgencyScore: aiAnalysisResults?.aiUrgencyScore,
-              aiBudgetIndication: aiAnalysisResults?.aiBudgetIndication,
+              // Add AI assessment fields (with type validation)
+              aiUrgencyScore: validateLeadScore(aiAnalysisResults?.aiUrgencyScore),
+              aiBudgetIndication: validateBudgetIndication(aiAnalysisResults?.aiBudgetIndication),
               aiBudgetValue: aiAnalysisResults?.aiBudgetValue,
-              aiClarityOfRequestScore: aiAnalysisResults?.aiClarityOfRequestScore,
-              aiDecisionMakerLikelihood: aiAnalysisResults?.aiDecisionMakerLikelihood,
-              aiKeyRequirements: aiAnalysisResults?.aiKeyRequirements,
-              aiPotentialRedFlags: aiAnalysisResults?.aiPotentialRedFlags,
-              aiOverallLeadQuality: aiAnalysisResults?.aiOverallLeadQuality,
+              aiClarityOfRequestScore: validateLeadScore(aiAnalysisResults?.aiClarityOfRequestScore),
+              aiDecisionMakerLikelihood: validateLeadScore(aiAnalysisResults?.aiDecisionMakerLikelihood),
+              aiKeyRequirements: aiAnalysisResults?.aiKeyRequirements || [],
+              aiPotentialRedFlags: aiAnalysisResults?.aiPotentialRedFlags || [],
+              aiOverallLeadQuality: validateLeadQuality(aiAnalysisResults?.aiOverallLeadQuality),
               aiSuggestedNextStep: aiAnalysisResults?.aiSuggestedNextStep,
-              aiSentiment: aiAnalysisResults?.aiSentiment,
+              aiSentiment: validateSentiment(aiAnalysisResults?.aiSentiment),
               aiConfidenceScore: aiAnalysisResults?.aiConfidenceScore
             };
             
