@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter'; // Added Link
 import {
   Table,
   TableBody,
@@ -22,13 +22,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/card'; // Card components are not used here, but kept if needed elsewhere
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { RawLead } from '@/../../shared/schema';
+import { EyeIcon } from 'lucide-react'; // Added EyeIcon for view button
 
 interface RawLeadListProps {
   initialFilter?: string;
@@ -36,21 +37,23 @@ interface RawLeadListProps {
 
 export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
   const [, navigate] = useLocation();
-  const [statusFilter, setStatusFilter] = useState<string>(initialFilter);
+  // If initialFilter is an empty string (from "All Leads" tab), treat it as "all" for Select value
+  // but keep it as "" for API query.
+  const [statusFilter, setStatusFilter] = useState<string>(initialFilter === "all" || initialFilter === "" ? "" : initialFilter);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
-    if (initialFilter) {
-      setStatusFilter(initialFilter);
-    }
+    // When initialFilter prop changes (e.g., from Tabs in RawLeadsPage)
+    setStatusFilter(initialFilter === "all" || initialFilter === "" ? "" : initialFilter);
   }, [initialFilter]);
 
   const { data: rawLeads, isLoading } = useQuery<RawLead[]>({
-    queryKey: ['/api/raw-leads', statusFilter],
-    queryFn: async () => {
+    queryKey: ['/api/raw-leads', statusFilter], // statusFilter will be "" for "all"
+    queryFn: async ({ queryKey }) => {
+      const currentStatusFilter = queryKey[1] as string;
       const params = new URLSearchParams();
-      if (statusFilter) {
-        params.append('status', statusFilter);
+      if (currentStatusFilter) { // Only append if there's a filter
+        params.append('status', currentStatusFilter);
       }
       const response = await fetch(`/api/raw-leads?${params.toString()}`);
       if (!response.ok) {
@@ -73,11 +76,11 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'new':
-        return <Badge variant="default">New</Badge>;
+        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">New</Badge>;
       case 'under_review':
-        return <Badge variant="secondary">Under Review</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-black">Under Review</Badge>;
       case 'qualified':
-        return <Badge variant="success" className="bg-green-500 hover:bg-green-600">Qualified</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600">Qualified</Badge>;
       case 'archived':
         return <Badge variant="outline">Archived</Badge>;
       case 'junk':
@@ -101,12 +104,16 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Filter:</span>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            {/* The Select value is "all" when statusFilter is "", otherwise it's statusFilter */}
+            <Select
+              value={statusFilter === "" ? "all" : statusFilter}
+              onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem> {/* Changed value to "all" */}
                 <SelectItem value="new">New</SelectItem>
                 <SelectItem value="under_review">Under Review</SelectItem>
                 <SelectItem value="qualified">Qualified</SelectItem>
@@ -129,10 +136,10 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
         ) : filteredLeads.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-gray-500">No leads found matching your criteria.</p>
-            <Button 
-              variant="link" 
+            <Button
+              variant="link"
               onClick={() => {
-                setStatusFilter('');
+                setStatusFilter(''); // This represents "all" for the API
                 setSearchTerm('');
               }}
             >
@@ -149,13 +156,13 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
                   <TableHead>Date Received</TableHead>
                   <TableHead>Event Summary</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredLeads.map((lead) => (
-                  <TableRow 
-                    key={lead.id} 
+                  <TableRow
+                    key={lead.id}
                     className="cursor-pointer hover:bg-gray-50"
                     onClick={() => navigate(`/raw-leads/${lead.id}`)}
                   >
@@ -176,34 +183,18 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
                       {lead.eventSummary || 'No summary'}
                     </TableCell>
                     <TableCell>{getStatusBadge(lead.status)}</TableCell>
-                    <TableCell>
-                      {lead.createdOpportunityId ? (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="success" className="bg-green-500 hover:bg-green-600">Converted</Badge>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/opportunities/${lead.createdOpportunityId}`);
-                            }}
-                          >
-                            View Opportunity
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
+                    <TableCell className="text-right">
+                      <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/raw-leads/${lead.id}`);
+                              e.stopPropagation(); // Prevent row click
+                              navigate(`/raw-leads/${lead.id}`);
                           }}
-                        >
-                          View
-                        </Button>
-                      )}
+                          aria-label="View lead details"
+                      >
+                          <EyeIcon className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

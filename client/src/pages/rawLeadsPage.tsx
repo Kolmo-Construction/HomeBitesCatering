@@ -1,17 +1,22 @@
 import React from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from '@/components/ui/tabs';
 import RawLeadList from '@/components/rawLeads/RawLeadList';
 import { PlusCircle } from 'lucide-react';
 
 export default function RawLeadsPage() {
   const [, navigate] = useLocation();
+
+  // Determine the active tab from the URL or default to "all"
+  // This part is more complex if you want deep linking for tabs.
+  // For simplicity, we'll just use the Tabs component's defaultValue.
+  // Or, you can manage tab state here and pass it to RawLeadList.
 
   return (
     <div className="container mx-auto py-6">
@@ -30,26 +35,32 @@ export default function RawLeadsPage() {
           <TabsTrigger value="under_review">Under Review</TabsTrigger>
           <TabsTrigger value="qualified">Qualified</TabsTrigger>
           <TabsTrigger value="archived">Archived</TabsTrigger>
+          <TabsTrigger value="junk">Junk</TabsTrigger> {/* Added Junk tab trigger */}
         </TabsList>
-        
+
         <TabsContent value="all">
-          <RawLeadList />
+          {/* Pass "all" so RawLeadList knows to set its internal filter to "" */}
+          <RawLeadList initialFilter="all" />
         </TabsContent>
-        
+
         <TabsContent value="new">
           <RawLeadList initialFilter="new" />
         </TabsContent>
-        
+
         <TabsContent value="under_review">
           <RawLeadList initialFilter="under_review" />
         </TabsContent>
-        
+
         <TabsContent value="qualified">
           <RawLeadList initialFilter="qualified" />
         </TabsContent>
-        
+
         <TabsContent value="archived">
           <RawLeadList initialFilter="archived" />
+        </TabsContent>
+
+        <TabsContent value="junk">  {/* Added Junk tab content */}
+          <RawLeadList initialFilter="junk" />
         </TabsContent>
       </Tabs>
     </div>

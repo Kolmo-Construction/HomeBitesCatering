@@ -282,7 +282,14 @@ export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 
 // Raw Leads module
-export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'archived', 'junk']);
+// Add new enum types for leads scoring and quality assessment
+export const leadScoreEnum = pgEnum("lead_score", ['1', '2', '3', '4', '5']);
+export const leadQualityCategoryEnum = pgEnum("lead_quality_category", ['hot', 'warm', 'cold', 'nurture']);
+export const budgetIndicationEnum = pgEnum("budget_indication", ['not_mentioned', 'low', 'medium', 'high', 'specific_amount']);
+export const sentimentEnum = pgEnum("sentiment", ['positive', 'neutral', 'negative', 'urgent']);
+
+// Updated status enum to include new statuses
+export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'archived', 'junk', 'parsing_failed', 'needs_manual_review']);
 
 export const rawLeads = pgTable("raw_leads", {
   id: serial("id").primaryKey(),
@@ -298,6 +305,29 @@ export const rawLeads = pgTable("raw_leads", {
   createdOpportunityId: integer("created_opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
   notes: text("internal_notes"), // For internal notes about this raw lead
   assignedToUserId: integer("assigned_to_user_id").references(() => users.id), // Optional: if raw leads can be assigned for review
+  
+  // New fields for AI-parsed event details
+  extractedEventType: text("extracted_event_type"),
+  extractedEventDate: text("extracted_event_date"),
+  extractedEventTime: text("extracted_event_time"),
+  extractedGuestCount: integer("extracted_guest_count"),
+  extractedVenue: text("extracted_venue"),
+  extractedMessageSummary: text("extracted_message_summary"),
+  leadSourcePlatform: text("lead_source_platform"),
+  
+  // New fields for AI assessment and scoring
+  aiUrgencyScore: leadScoreEnum("ai_urgency_score"),
+  aiBudgetIndication: budgetIndicationEnum("ai_budget_indication"),
+  aiBudgetValue: integer("ai_budget_value"),
+  aiClarityOfRequestScore: leadScoreEnum("ai_clarity_of_request_score"),
+  aiDecisionMakerLikelihood: leadScoreEnum("ai_decision_maker_likelihood"),
+  aiKeyRequirements: jsonb("ai_key_requirements"),
+  aiPotentialRedFlags: jsonb("ai_potential_red_flags"),
+  aiOverallLeadQuality: leadQualityCategoryEnum("ai_overall_lead_quality"),
+  aiSuggestedNextStep: text("ai_suggested_next_step"),
+  aiSentiment: sentimentEnum("ai_sentiment"),
+  aiConfidenceScore: doublePrecision("ai_confidence_score"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -305,6 +335,27 @@ export const rawLeads = pgTable("raw_leads", {
 export const insertRawLeadSchema = createInsertSchema(rawLeads, {
   rawData: z.any().optional(),
   receivedAt: z.coerce.date().optional(),
+  
+  // Add the new fields to schema with proper validation
+  extractedEventType: z.string().optional().nullable(),
+  extractedEventDate: z.string().optional().nullable(),
+  extractedEventTime: z.string().optional().nullable(),
+  extractedGuestCount: z.number().int().optional().nullable(),
+  extractedVenue: z.string().optional().nullable(),
+  extractedMessageSummary: z.string().optional().nullable(),
+  leadSourcePlatform: z.string().optional().nullable(),
+  
+  aiUrgencyScore: z.enum(leadScoreEnum.enumValues).optional().nullable(),
+  aiBudgetIndication: z.enum(budgetIndicationEnum.enumValues).optional().nullable(),
+  aiBudgetValue: z.number().int().optional().nullable(),
+  aiClarityOfRequestScore: z.enum(leadScoreEnum.enumValues).optional().nullable(),
+  aiDecisionMakerLikelihood: z.enum(leadScoreEnum.enumValues).optional().nullable(),
+  aiKeyRequirements: z.array(z.string()).optional().nullable(),
+  aiPotentialRedFlags: z.array(z.string()).optional().nullable(),
+  aiOverallLeadQuality: z.enum(leadQualityCategoryEnum.enumValues).optional().nullable(),
+  aiSuggestedNextStep: z.string().optional().nullable(),
+  aiSentiment: z.enum(sentimentEnum.enumValues).optional().nullable(),
+  aiConfidenceScore: z.number().min(0).max(1).optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,

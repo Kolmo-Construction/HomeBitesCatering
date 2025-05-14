@@ -1,0 +1,32 @@
+Update Database Schema for Raw Leads
+
+File: shared/schema.ts
+Task: Modify the rawLeads table definition to include new fields for detailed AI-parsed information and quality assessment metrics. Also, add new enum types for scores and categories.
+Details:
+Add new pgEnum for:
+leadScoreEnum (e.g., '1' to '5')
+leadQualityCategoryEnum (e.g., 'hot', 'warm', 'cold', 'nurture')
+budgetIndicationEnum (e.g., 'not_mentioned', 'low', 'medium', 'high', 'specific_amount')
+sentimentEnum (e.g., 'positive', 'neutral', 'negative', 'urgent')
+Add new columns to rawLeads table:
+extractedEventType: text("extracted_event_type").nullable()
+extractedEventDate: text("extracted_event_date").nullable() (Store as text from AI, parse/validate later if needed)
+extractedEventTime: text("extracted_event_time").nullable()
+extractedGuestCount: integer("extracted_guest_count").nullable()
+extractedVenue: text("extracted_venue").nullable()
+extractedMessageSummary: text("extracted_message_summary").nullable()
+leadSourcePlatform: text("lead_source_platform").nullable()
+aiUrgencyScore: leadScoreEnum("ai_urgency_score").nullable()
+aiBudgetIndication: budgetIndicationEnum("ai_budget_indication").nullable()
+aiBudgetValue: integer("ai_budget_value").nullable() (in cents or whole units, decide and be consistent)
+aiClarityOfRequestScore: leadScoreEnum("ai_clarity_of_request_score").nullable()
+aiDecisionMakerLikelihood: leadScoreEnum("ai_decision_maker_likelihood").nullable()
+aiKeyRequirements: jsonb("ai_key_requirements").nullable() (will store an array of strings)
+aiPotentialRedFlags: jsonb("ai_potential_red_flags").nullable() (will store an array of strings)
+aiOverallLeadQuality: leadQualityCategoryEnum("ai_overall_lead_quality").nullable()
+aiSuggestedNextStep: text("ai_suggested_next_step").nullable()
+aiSentiment: sentimentEnum("ai_sentiment").nullable()
+aiConfidenceScore: doublePrecision("ai_confidence_score").nullable() (e.g., 0.0 to 1.0)
+Update rawLeadStatusEnum to include 'parsing_failed' and 'needs_manual_review'.
+Update insertRawLeadSchema (Zod schema) to include these new fields, making them optional (.optional().nullable()) as AI parsing might not always yield all fields. Define aiKeyRequirements and aiPotentialRedFlags as z.array(z.string()).optional().nullable().
+Action: After schema changes, run the database migration: npm run db:push.
