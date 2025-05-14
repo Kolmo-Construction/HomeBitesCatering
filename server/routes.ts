@@ -12,7 +12,9 @@ import {
   insertMenuSchema, 
   insertClientSchema, 
   insertEstimateSchema, 
-  insertEventSchema
+  insertEventSchema,
+  insertContactIdentifierSchema, // New
+  insertCommunicationSchema      // New
 } from "@shared/schema";
 
 const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
@@ -774,6 +776,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // --- NEW: Contact Identifier Routes ---
+
+  // POST /api/contact-identifiers - Create a new contact identifier
+  app.post('/api/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Validate that either leadId or clientId is provided, but not both for simplicity here.
+      if (!req.body.leadId && !req.body.clientId) {
+        return res.status(400).json({ message: 'Either leadId or clientId must be provided.' });
+      }
+      if (req.body.leadId && req.body.clientId) {
+        return res.status(400).json({ message: 'Contact identifier cannot be linked to both a lead and a client simultaneously through this endpoint.' });
+      }
+
+      const identifierData = insertContactIdentifierSchema.parse(req.body);
+      const newIdentifier = await storage.createContactIdentifier(identifierData);
+      res.status(201).json(newIdentifier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error("Error creating contact identifier:", error);
+      res.status(500).json({ message: 'Server error creating contact identifier' });
+    }
+  });
+
+  // GET /api/leads/:leadId/contact-identifiers - Get identifiers for a lead
+  app.get('/api/leads/:leadId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = Number(req.params.leadId);
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID.' });
+      }
+      const identifiers = await storage.getContactIdentifiers({ leadId });
+      res.json(identifiers);
+    } catch (error) {
+      console.error("Error fetching contact identifiers for lead:", error);
+      res.status(500).json({ message: 'Server error fetching contact identifiers' });
+    }
+  });
+
+  // GET /api/clients/:clientId/contact-identifiers - Get identifiers for a client
+  app.get('/api/clients/:clientId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const clientId = Number(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID.' });
+      }
+      const identifiers = await storage.getContactIdentifiers({ clientId });
+      res.json(identifiers);
+    } catch (error) {
+      console.error("Error fetching contact identifiers for client:", error);
+      res.status(500).json({ message: 'Server error fetching contact identifiers' });
+    }
+  });
+  
+  // DELETE /api/contact-identifiers/:id - Delete a contact identifier
+  app.delete('/api/contact-identifiers/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid identifier ID.' });
+      }
+      await storage.deleteContactIdentifier(id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting contact identifier:", error);
+      res.status(500).json({ message: 'Server error deleting contact identifier' });
+    }
+  });
+
+
+  // --- NEW: Communication Routes ---
+
+  // POST /api/communications - Create a new communication log (manual entry)
+  app.post('/api/communications', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Parse the request data with timestamp handling
+      const communicationData = insertCommunicationSchema.parse({
+        ...req.body,
+        timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(), // Ensure timestamp is a Date
+      });
+      const newCommunication = await storage.createCommunication(communicationData);
+      res.status(201).json(newCommunication);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error("Error creating communication log:", error);
+      res.status(500).json({ message: 'Server error creating communication log' });
+    }
+  });
+
+  // GET /api/leads/:leadId/communications - Get communication timeline for a lead
+  app.get('/api/leads/:leadId/communications', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = Number(req.params.leadId);
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID.' });
+      }
+      const communications = await storage.getCommunicationsForLead(leadId);
+      res.json(communications);
+    } catch (error) {
+      console.error("Error fetching communications for lead:", error);
+      res.status(500).json({ message: 'Server error fetching communications' });
+    }
+  });
+
+  // GET /api/clients/:clientId/communications - Get communication timeline for a client
+  app.get('/api/clients/:clientId/communications', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const clientId = Number(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID.' });
+      }
+      const communications = await storage.getCommunicationsForClient(clientId);
+      res.json(communications);
+    } catch (error) {
+      console.error("Error fetching communications for client:", error);
+      res.status(500).json({ message: 'Server error fetching communications' });
+    }
+  });
+
+  // --- NEW: Route for finding lead/client by contact info ---
+  app.post('/api/contacts/find', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { value, type } = req.body;
+      if (!value || (type !== 'email' && type !== 'phone')) {
+        return res.status(400).json({ message: 'Invalid value or type for contact lookup.' });
+      }
+      const result = await storage.findLeadOrClientByContactIdentifier(value, type);
+      if (!result) {
+        return res.status(404).json({ message: 'No matching lead or client found.' });
+      }
+      res.json(result);
+    } catch (error) {
+      console.error("Error finding contact:", error);
+      res.status(500).json({ message: 'Server error finding contact' });
     }
   });
 

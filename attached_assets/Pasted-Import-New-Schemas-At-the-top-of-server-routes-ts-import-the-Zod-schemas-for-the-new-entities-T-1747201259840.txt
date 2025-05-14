@@ -1,0 +1,196 @@
+Import New Schemas:
+
+At the top of server/routes.ts, import the Zod schemas for the new entities:
+
+TypeScript
+
+// server/routes.ts
+// ... (other imports: Express, Request, Response, storage, z, bcrypt, session, etc.)
+import {
+  insertUserSchema,
+  insertLeadSchema,
+  insertMenuItemSchema,
+  insertMenuSchema,
+  insertClientSchema,
+  insertEstimateSchema,
+  insertEventSchema,
+  insertContactIdentifierSchema, // <<< NEW
+  insertCommunicationSchema      // <<< NEW
+} from "@shared/schema";
+
+// ... (rest of the imports and MS_IN_ONE_DAY constant)
+B. Add New Routes within registerRoutes function:
+
+Place these new route groups logically within your registerRoutes function. For example, Contact Identifier routes could go near Client or Lead routes, and Communication routes could also be associated with Leads and Clients.
+
+TypeScript
+
+// server/routes.ts
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // ... (existing session setup, isAuthenticated, isAdmin middleware)
+
+  // ... (existing Auth routes, User routes, Lead routes, Menu Item routes, Menu routes, Client routes, Estimate routes, Event routes)
+
+
+  // --- NEW: Contact Identifier Routes ---
+
+  // POST /api/contact-identifiers - Create a new contact identifier
+  app.post('/api/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Validate that either leadId or clientId is provided, but not both for simplicity here.
+      // You might have more complex logic if an identifier can be initially unlinked or linked to multiple.
+      if (!req.body.leadId && !req.body.clientId) {
+        return res.status(400).json({ message: 'Either leadId or clientId must be provided.' });
+      }
+      if (req.body.leadId && req.body.clientId) {
+        return res.status(400).json({ message: 'Contact identifier cannot be linked to both a lead and a client simultaneously through this endpoint.' });
+      }
+
+      const identifierData = insertContactIdentifierSchema.parse(req.body);
+      const newIdentifier = await storage.createContactIdentifier(identifierData);
+      res.status(201).json(newIdentifier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error("Error creating contact identifier:", error);
+      res.status(500).json({ message: 'Server error creating contact identifier' });
+    }
+  });
+
+  // GET /api/leads/:leadId/contact-identifiers - Get identifiers for a lead
+  app.get('/api/leads/:leadId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = Number(req.params.leadId);
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID.' });
+      }
+      const identifiers = await storage.getContactIdentifiers({ leadId });
+      res.json(identifiers);
+    } catch (error) {
+      console.error("Error fetching contact identifiers for lead:", error);
+      res.status(500).json({ message: 'Server error fetching contact identifiers' });
+    }
+  });
+
+  // GET /api/clients/:clientId/contact-identifiers - Get identifiers for a client
+  app.get('/api/clients/:clientId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const clientId = Number(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID.' });
+      }
+      const identifiers = await storage.getContactIdentifiers({ clientId });
+      res.json(identifiers);
+    } catch (error) {
+      console.error("Error fetching contact identifiers for client:", error);
+      res.status(500).json({ message: 'Server error fetching contact identifiers' });
+    }
+  });
+  
+  // DELETE /api/contact-identifiers/:id - Delete a contact identifier
+  app.delete('/api/contact-identifiers/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid identifier ID.' });
+      }
+      await storage.deleteContactIdentifier(id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting contact identifier:", error);
+      res.status(500).json({ message: 'Server error deleting contact identifier' });
+    }
+  });
+
+
+  // --- NEW: Communication Routes ---
+
+  // POST /api/communications - Create a new communication log (manual entry)
+  app.post('/api/communications', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const communicationData = insertCommunicationSchema.parse({
+        ...req.body,
+        userId: req.session.userId, // Automatically set the creator for manual logs
+        timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(), // Ensure timestamp is a Date
+      });
+      const newCommunication = await storage.createCommunication(communicationData);
+      res.status(201).json(newCommunication);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error("Error creating communication log:", error);
+      res.status(500).json({ message: 'Server error creating communication log' });
+    }
+  });
+
+  // GET /api/leads/:leadId/communications - Get communication timeline for a lead
+  app.get('/api/leads/:leadId/communications', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = Number(req.params.leadId);
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID.' });
+      }
+      const communications = await storage.getCommunicationsForLead(leadId);
+      res.json(communications);
+    } catch (error) {
+      console.error("Error fetching communications for lead:", error);
+      res.status(500).json({ message: 'Server error fetching communications' });
+    }
+  });
+
+  // GET /api/clients/:clientId/communications - Get communication timeline for a client
+  app.get('/api/clients/:clientId/communications', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const clientId = Number(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID.' });
+      }
+      const communications = await storage.getCommunicationsForClient(clientId);
+      res.json(communications);
+    } catch (error) {
+      console.error("Error fetching communications for client:", error);
+      res.status(500).json({ message: 'Server error fetching communications' });
+    }
+  });
+
+  // --- NEW: Route for finding lead/client by contact info ---
+  // This would primarily be used by backend services (email/call sync)
+  // but can be exposed if needed, protected appropriately.
+  app.post('/api/contacts/find', isAuthenticated, async (req: Request, res: Response) => { // Consider isAdmin or service-to-service auth
+    try {
+      const { value, type } = req.body;
+      if (!value || (type !== 'email' && type !== 'phone')) {
+        return res.status(400).json({ message: 'Invalid value or type for contact lookup.' });
+      }
+      const result = await storage.findLeadOrClientByContactIdentifier(value, type);
+      if (!result) {
+        return res.status(404).json({ message: 'No matching lead or client found.' });
+      }
+      res.json(result);
+    } catch (error) {
+      console.error("Error finding contact:", error);
+      res.status(500).json({ message: 'Server error finding contact' });
+    }
+  });
+
+
+  // ... (existing httpServer creation and return)
+  const httpServer = createServer(app);
+  return httpServer;
+}
+Explanation of New Routes:
+
+Contact Identifier Routes:
+POST /api/contact-identifiers: Creates a new email/phone identifier and links it to a lead or client.
+GET /api/leads/:leadId/contact-identifiers: Retrieves all identifiers for a specific lead.
+GET /api/clients/:clientId/contact-identifiers: Retrieves all identifiers for a specific client.
+DELETE /api/contact-identifiers/:id: Deletes a specific contact identifier.
+Communication Routes:
+POST /api/communications: Allows manual creation of communication logs (e.g., a note, a manually logged call). It automatically assigns the currently logged-in user (req.session.userId) as the userId for the communication.
+GET /api/leads/:leadId/communications: Fetches the communication history for a specific lead, ordered by the most recent.
+GET /api/clients/:clientId/communications: Fetches the communication history for a specific client.
+Contact Lookup Route:
+POST /api/contacts/find: An endpoint that takes an email or phone number (value and type) and uses the storage.findLeadOrClientByContactIdentifier method to see if it matches an existing lead or client. This will be useful for your backend services when processing incoming emails or calls. For now, it's isAuthenticated, but for service-to-service communication, you might use API keys or other auth mechanisms.
