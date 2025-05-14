@@ -59,8 +59,18 @@ export default function Menus() {
   // Fetch selected menu data
   const { data: selectedMenu, isLoading: isLoadingMenu } = useQuery({
     queryKey: ["/api/menus", selectedMenuId],
+    queryFn: async () => {
+      const response = await fetch(`/api/menus/${selectedMenuId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu');
+      }
+      return response.json();
+    },
     enabled: (mode === "edit" || mode === "view") && !!selectedMenuId,
   });
+  
+  // Debug selected menu data
+  console.log("Selected menu data:", selectedMenu);
   
   // Fetch menu items for reference
   const { data: menuItems = [] } = useQuery({

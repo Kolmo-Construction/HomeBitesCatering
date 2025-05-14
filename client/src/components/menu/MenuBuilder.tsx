@@ -107,18 +107,42 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State for selected items
-  const [selectedItems, setSelectedItems] = useState<MenuItemWithQuantity[]>(
-    menu?.items 
-      ? menu.items.map((item: any) => ({
+  // For debugging
+  console.log("Menu data in MenuBuilder:", menu);
+  
+  // Parse menu items from JSON if needed
+  const getMenuItems = () => {
+    if (!menu || !menu.items) return [];
+    
+    try {
+      // Parse items if it's a string, otherwise use as is
+      const itemsData = typeof menu.items === 'string' 
+        ? JSON.parse(menu.items) 
+        : menu.items;
+        
+      console.log("Parsed menu items:", itemsData);
+      
+      // If items is an array, map it to the required format
+      if (Array.isArray(itemsData)) {
+        // We need to look up additional data from the menuItems list
+        return itemsData.map((item: any) => ({
           id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          category: item.category
-        }))
-      : []
-  );
+          name: item.name || `Item #${item.id}`, // Fallback name
+          price: item.price || 0,
+          quantity: item.quantity || 1,
+          category: item.category || 'standard'
+        }));
+      }
+      
+      return [];
+    } catch (error) {
+      console.error("Error parsing menu items:", error);
+      return [];
+    }
+  };
+
+  // State for selected items
+  const [selectedItems, setSelectedItems] = useState<MenuItemWithQuantity[]>(getMenuItems());
   
   // Get all menu items
   const { data: menuItems = [], isLoading: isLoadingMenuItems } = useQuery({
