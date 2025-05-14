@@ -1,0 +1,59 @@
+Add OAuth Routes in server/routes.ts
+
+You need endpoints to initiate the OAuth flow and handle the callback from Google.
+
+TypeScript
+
+// server/routes.ts
+// ... (other imports)
+import { GmailSyncService } from './services/emailSyncService'; // Import the service
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // ... (session, auth middleware, other routes)
+
+  // --- NEW: Google OAuth Routes for Gmail Sync ---
+  app.get('/api/auth/google/initiate', isAuthenticated, isAdmin, (req, res) => { // Protect this
+    const authUrl = GmailSyncService.getOAuthClient().generateAuthUrl({
+      access_type: 'offline', // Important to get a refresh token
+      scope: [
+        'https://www.googleapis.com/auth/gmail.readonly', // Start with readonly
+        // 'https://www.googleapis.com/auth/gmail.modify', // To mark as read or move
+        'https://www.googleapis.com/auth/userinfo.email', // To verify the user if needed
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ],
+      prompt: 'consent' // Force consent screen to ensure refresh token is granted on first auth
+    });
+    res.redirect(authUrl);
+  });
+
+  app.get('/api/auth/google/callback', async (req, res) => { // No isAuthenticated here, Google redirects to it
+    const code = req.query.code as string;
+    if (!code) {
+      return res.status(400).send('Authorization code missing.');
+    }
+    try {
+      const success = await GmailSyncService.setTokensFromCode(code);
+      if (success) {
+        // Optionally, immediately start the sync service if it wasn't running or re-initialize it
+        // This depends on how you manage the service instance.
+        // For now, we assume it will pick up the tokens on its next scheduled run or on server restart.
+        res.send(`
+          <h1>Google Authentication Successful!</h1>
+          <p>Tokens obtained. The email sync service will now use these credentials.</p>
+          <p>You can close this window.</p>
+          <p>IMPORTANT: If a new Refresh Token was logged in your server console, update your .env/Secrets with it for persistence.</p>
+        `);
+      } else {
+        res.status(500).send('Failed to obtain tokens from Google.');
+      }
+    } catch (error) {
+      console.error('Error in Google OAuth callback:', error);
+      res.status(500).send('Error during Google authentication callback.');
+    }
+  });
+
+  // ... (your other routes: contact identifiers, communications, etc.)
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
