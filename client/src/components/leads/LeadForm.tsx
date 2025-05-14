@@ -82,6 +82,20 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
     client: null
   });
 
+  // Fetch lead data if leadIdForEdit is provided
+  const { data: fetchedLead, isLoading: isLoadingLead } = useQuery({
+    queryKey: ['/api/leads', leadIdForEdit],
+    queryFn: async () => {
+      const res = await fetch(`/api/leads/${leadIdForEdit}`);
+      if (!res.ok) throw new Error('Failed to fetch lead');
+      return res.json();
+    },
+    enabled: !!leadIdForEdit && !lead, // Only fetch if leadIdForEdit is provided and lead is not already passed
+  });
+
+  // Use the fetched lead if available
+  const leadData = lead || fetchedLead;
+
   // Fetch all clients for dropdown
   const { data: clients = [] } = useQuery({
     queryKey: ['/api/clients'],
@@ -96,13 +110,13 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
   // Set up the form with default values and handle date conversion
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: lead ? {
-      ...lead,
+    defaultValues: leadData ? {
+      ...leadData,
       // Convert ISO date string to Date object for the date picker
-      eventDate: lead.eventDate ? new Date(lead.eventDate) : null,
+      eventDate: leadData.eventDate ? new Date(leadData.eventDate) : null,
       // Handle client association for editing
-      assignToExistingClient: !!lead.clientId,
-      clientId: lead.clientId ? String(lead.clientId) : "",
+      assignToExistingClient: !!leadData.clientId,
+      clientId: leadData.clientId ? String(leadData.clientId) : "",
     } : {
       firstName: "",
       lastName: "",
@@ -234,6 +248,15 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
   // Determine if we have any existing client matches
   const existingClient = emailCheck.client || phoneCheck.client;
   const showExistingClientAlert = !isEditing && existingClient && !watchAssignToExistingClient;
+
+  // Show loading state while fetching lead data
+  if (isLoadingLead) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
