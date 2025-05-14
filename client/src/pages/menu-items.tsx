@@ -32,6 +32,13 @@ export default function MenuItems() {
   // Fetch menu item data if editing or viewing
   const { data: menuItem, isLoading } = useQuery({
     queryKey: ["/api/menu-items", selectedItemId],
+    queryFn: async () => {
+      const response = await fetch(`/api/menu-items/${selectedItemId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu item');
+      }
+      return response.json();
+    },
     enabled: (mode === "edit" || mode === "view") && !!selectedItemId,
   });
   
@@ -64,8 +71,18 @@ export default function MenuItems() {
     );
   }
   
+  // Log menuItem data for debugging
+  console.log("MenuItem data for edit mode:", menuItem);
+  
   if (mode === "edit" && menuItem) {
-    return <MenuItemForm menuItem={menuItem} isEditing={true} />;
+    // Format price from cents to dollars before passing to form
+    const formattedMenuItem = {
+      ...menuItem,
+      // Make sure price is correctly formatted if it's stored in cents
+      price: typeof menuItem.price === 'number' ? menuItem.price : 0
+    };
+    
+    return <MenuItemForm menuItem={formattedMenuItem} isEditing={true} />;
   }
   
   if (mode === "view" && menuItem) {
