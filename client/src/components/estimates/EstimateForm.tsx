@@ -171,13 +171,32 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       // Prepare items JSON
       const itemsJson = JSON.stringify(customItems);
       
+      // Parse date strings into proper Date objects or null
+      // This is crucial for Zod validation on the server side
+      const eventDate = values.eventDate ? new Date(values.eventDate) : null;
+      const sentAt = values.sentAt ? new Date(values.sentAt) : null;
+      const expiresAt = values.expiresAt ? new Date(values.expiresAt) : null;
+      const viewedAt = values.viewedAt ? new Date(values.viewedAt) : null;
+      const acceptedAt = values.acceptedAt ? new Date(values.acceptedAt) : null;
+      const declinedAt = values.declinedAt ? new Date(values.declinedAt) : null;
+      
       const payload = {
         ...values,
+        // Override with proper date objects
+        eventDate,
+        sentAt,
+        expiresAt,
+        viewedAt,
+        acceptedAt,
+        declinedAt,
         items: itemsJson,
         menuId: selectedMenuId === null ? null : selectedMenuId,
         createdBy: 1, // In production, this would be the current user ID
         status: isEditing ? values.status : "draft",
       };
+      
+      // For debugging - remove in production
+      console.log('Submitting payload:', payload);
       
       if (isEditing && estimate) {
         const res = await apiRequest("PATCH", `/api/estimates/${estimate.id}`, payload);
@@ -247,19 +266,18 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     const estimateTax = tax || 0;
     const estimateTotal = total || 0;
     
-    // Prepare values with properly handled date fields
-    const preparedValues = {
+    console.log("Form values before submission:", values);
+    
+    // Let the mutation function handle proper date conversion
+    // We just ensure we have all the correct values
+    const updatedValues = {
       ...values,
-      // Ensure eventDate is a proper Date object or null
-      eventDate: values.eventDate instanceof Date ? values.eventDate : null,
-      // Ensure sentAt is a proper Date object or null
-      sentAt: values.sentAt instanceof Date ? values.sentAt : null,
       subtotal: estimateSubtotal,
       tax: estimateTax,
       total: estimateTotal
     };
     
-    mutation.mutate(preparedValues);
+    mutation.mutate(updatedValues);
   };
   
   // Handle sending estimate
@@ -272,27 +290,15 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     const estimateTotal = total || 0;
     const currentDate = new Date();
     
-    // Update status to 'sent'
+    // Update form with current values for submission
     form.setValue("status", "sent");
     form.setValue("sentAt", currentDate);
     form.setValue("subtotal", estimateSubtotal);
     form.setValue("tax", estimateTax);
     form.setValue("total", estimateTotal);
     
-    // Prepare date values properly
-    const preparedValues = {
-      ...values,
-      status: "sent",
-      sentAt: currentDate,
-      // Make sure eventDate is properly handled as a Date object
-      eventDate: values.eventDate instanceof Date ? values.eventDate : null,
-      subtotal: estimateSubtotal,
-      tax: estimateTax, 
-      total: estimateTotal
-    };
-    
-    // Submit the form with all required fields and proper Date objects
-    mutation.mutate(preparedValues);
+    // Simply submit the form - the date conversions are handled in the mutation function
+    onSubmit(form.getValues());
   };
   
   return (

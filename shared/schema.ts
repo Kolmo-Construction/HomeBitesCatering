@@ -142,7 +142,15 @@ export const estimates = pgTable("estimates", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertEstimateSchema = createInsertSchema(estimates).omit({
+export const insertEstimateSchema = createInsertSchema(estimates, {
+  // Ensure proper handling of dates
+  eventDate: z.coerce.date().nullable(),
+  sentAt: z.coerce.date().nullable(),
+  expiresAt: z.coerce.date().nullable(),
+  viewedAt: z.coerce.date().nullable(),
+  acceptedAt: z.coerce.date().nullable(),
+  declinedAt: z.coerce.date().nullable(),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true
