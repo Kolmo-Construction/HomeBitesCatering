@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import BadgePriority from "@/components/ui/badge-priority";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -283,6 +284,13 @@ export default function OpportunityDetailPage() {
                   <Badge variant={opportunity.status === "new" ? "default" : opportunity.status === "contacted" ? "outline" : "secondary"}>
                     {opportunity.status.charAt(0).toUpperCase() + opportunity.status.slice(1)}
                   </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Priority</Label>
+                <div>
+                  <BadgePriority priority={opportunity.priority || "medium"} />
                 </div>
               </div>
               
