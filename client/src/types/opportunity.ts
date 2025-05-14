@@ -10,6 +10,7 @@ export interface Opportunity {
   venue?: string | null;
   notes?: string | null;
   status: string;
+  priority?: 'hot' | 'high' | 'medium' | 'low';
   opportunitySource?: string; // Renamed from leadSource
   assignedTo?: number | null;
   clientId?: number | null;

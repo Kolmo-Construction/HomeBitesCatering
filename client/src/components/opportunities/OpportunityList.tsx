@@ -4,12 +4,22 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
+import BadgePriority from "@/components/ui/badge-priority";
 import { Button } from "@/components/ui/button";
 import { Opportunity } from "../../types/opportunity";
 import { formatDate } from "@/lib/utils";
-import { EyeIcon, PenIcon, PlusIcon } from "lucide-react";
+import { EyeIcon, PenIcon, PlusIcon, FilterIcon } from "lucide-react";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 export default function OpportunityList() {
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+  
   const { data: opportunities = [], isLoading } = useQuery({
     queryKey: ["/api/opportunities"],
     queryFn: async () => {
@@ -18,6 +28,10 @@ export default function OpportunityList() {
       return res.json();
     }
   });
+  
+  const filteredOpportunities = priorityFilter 
+    ? opportunities.filter((opp: Opportunity) => opp.priority === priorityFilter) 
+    : opportunities;
 
   const columns: ColumnDef<Opportunity>[] = [
     {
@@ -64,6 +78,11 @@ export default function OpportunityList() {
       cell: ({ row }) => <BadgeStatus status={row.original.status} />,
     },
     {
+      accessorKey: "priority",
+      header: "Priority",
+      cell: ({ row }) => <BadgePriority priority={row.original.priority || "medium"} />,
+    },
+    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
@@ -83,6 +102,10 @@ export default function OpportunityList() {
     },
   ];
 
+  const handlePriorityChange = (value: string) => {
+    setPriorityFilter(value === "all" ? null : value);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -94,10 +117,29 @@ export default function OpportunityList() {
           </Button>
         </Link>
       </div>
+      
+      <div className="flex items-center space-x-2 mb-4">
+        <div className="flex items-center">
+          <FilterIcon className="h-4 w-4 mr-2 text-gray-500" />
+          <span className="text-sm font-medium">Filter by:</span>
+        </div>
+        <Select onValueChange={handlePriorityChange} defaultValue="all">
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="hot">Hot Priority</SelectItem>
+            <SelectItem value="high">High Priority</SelectItem>
+            <SelectItem value="medium">Medium Priority</SelectItem>
+            <SelectItem value="low">Low Priority</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <DataTable 
         columns={columns} 
-        data={opportunities} 
+        data={filteredOpportunities} 
         searchKey="name"
         loading={isLoading}
         emptyMessage="No opportunities found. Create your first opportunity to get started."
