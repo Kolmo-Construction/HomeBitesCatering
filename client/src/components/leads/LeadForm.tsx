@@ -69,7 +69,7 @@ interface Client {
   company?: string;
 }
 
-export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCancel }: LeadFormProps) {
+export default function LeadForm({ lead: initialLead, isEditing = false, leadIdForEdit, onCancel }: LeadFormProps) {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -83,18 +83,18 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
   });
 
   // Fetch lead data if leadIdForEdit is provided
-  const { data: fetchedLead, isLoading: isLoadingLead } = useQuery({
+  const { data: fetchedLeadData, isLoading: isLoadingFetchedLead } = useQuery<FormValues>({
     queryKey: ['/api/leads', leadIdForEdit],
     queryFn: async () => {
+      if (!leadIdForEdit) return undefined; // Should not happen if enabled is true
       const res = await fetch(`/api/leads/${leadIdForEdit}`);
       if (!res.ok) throw new Error('Failed to fetch lead');
       return res.json();
     },
-    enabled: !!leadIdForEdit && !lead, // Only fetch if leadIdForEdit is provided and lead is not already passed
+    enabled: isEditing && !!leadIdForEdit && !initialLead, // Only fetch if editing, ID provided, and no initialLead
   });
 
-  // Use the fetched lead if available
-  const leadData = lead || fetchedLead;
+  const leadToEdit = initialLead || fetchedLeadData;
 
   // Fetch all clients for dropdown
   const { data: clients = [] } = useQuery({
@@ -107,17 +107,10 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
     staleTime: 30000, // 30 seconds
   });
 
-  // Set up the form with default values and handle date conversion
+  // Set up the form with default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: leadData ? {
-      ...leadData,
-      // Convert ISO date string to Date object for the date picker
-      eventDate: leadData.eventDate ? new Date(leadData.eventDate) : null,
-      // Handle client association for editing
-      assignToExistingClient: !!leadData.clientId,
-      clientId: leadData.clientId ? String(leadData.clientId) : "",
-    } : {
+    defaultValues: {
       firstName: "",
       lastName: "",
       email: "",
@@ -133,6 +126,39 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
       clientId: "",
     },
   });
+  
+  // Update form values when leadToEdit changes
+  useEffect(() => {
+    if (leadToEdit) {
+      form.reset({
+        ...leadToEdit,
+        eventDate: leadToEdit.eventDate ? new Date(leadToEdit.eventDate) : null,
+        assignToExistingClient: !!leadToEdit.clientId,
+        clientId: leadToEdit.clientId ? String(leadToEdit.clientId) : "",
+      });
+    } else if (!isEditing) { // Reset for new form
+      form.reset({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        eventType: "",
+        eventDate: null,
+        guestCount: null,
+        venue: "",
+        notes: "",
+        leadSource: "",
+        status: "new",
+        assignToExistingClient: false,
+        clientId: "",
+      });
+    }
+  }, [leadToEdit, form, isEditing]);
+
+  // Show loading state while fetching lead data
+  if (isLoadingFetchedLead && isEditing && !!leadIdForEdit && !initialLead) {
+    return <div className="text-center p-4">Loading lead data for editing...</div>;
+  }
 
   // Handle when email or phone field changes to check for existing clients
   const watchEmail = form.watch("email");
@@ -199,9 +225,9 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
     mutationFn: async (values: FormValues) => {
       const { assignToExistingClient, clientId, ...leadValues } = values;
       
-      if (isEditing && lead) {
+      if (isEditing && leadToEdit) {
         // Update existing lead
-        const res = await apiRequest("PATCH", `/api/leads/${lead.id}`, leadValues);
+        const res = await apiRequest("PATCH", `/api/leads/${leadToEdit.id}`, leadValues);
         return res.json();
       } else {
         // Create new lead
@@ -248,15 +274,6 @@ export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCan
   // Determine if we have any existing client matches
   const existingClient = emailCheck.client || phoneCheck.client;
   const showExistingClientAlert = !isEditing && existingClient && !watchAssignToExistingClient;
-
-  // Show loading state while fetching lead data
-  if (isLoadingLead) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
