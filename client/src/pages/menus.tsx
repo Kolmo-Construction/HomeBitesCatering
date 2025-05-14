@@ -120,8 +120,17 @@ export default function Menus() {
       accessorKey: "itemCount",
       header: "Items",
       cell: ({ row }) => {
-        const items = JSON.parse(row.original.items);
-        return <span>{items.length} items</span>;
+        let items;
+        try {
+          // Check if items is already an object or needs to be parsed
+          items = typeof row.original.items === 'string' 
+            ? JSON.parse(row.original.items) 
+            : row.original.items;
+        } catch (error) {
+          console.error("Error parsing menu items:", error);
+          return <span>Error loading items</span>;
+        }
+        return <span>{items?.length || 0} items</span>;
       },
     },
     {
@@ -177,25 +186,27 @@ export default function Menus() {
           emptyMessage="No menus found. Create your first menu to get started."
         />
         
-        <AlertDialog>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the menu "{menuToDelete?.name}". This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setMenuToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDelete}
-                className="bg-red-500 hover:bg-red-600"
-              >
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {menuToDelete && (
+          <AlertDialog open={!!menuToDelete} onOpenChange={(open) => !open && setMenuToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the menu "{menuToDelete?.name}". This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setMenuToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDelete}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     );
   }
@@ -229,19 +240,25 @@ export default function Menus() {
   if (mode === "view" && selectedMenu) {
     // Get menu items details
     const menuItemsDetails = [];
-    if (selectedMenu.items) {
-      const items = typeof selectedMenu.items === 'string' 
-        ? JSON.parse(selectedMenu.items) 
-        : selectedMenu.items;
+    if (selectedMenu?.items) {
+      try {
+        const items = typeof selectedMenu.items === 'string' 
+          ? JSON.parse(selectedMenu.items) 
+          : selectedMenu.items;
         
-      for (const item of items) {
-        const menuItem = menuItems.find((mi: any) => mi.id === item.id);
-        if (menuItem) {
-          menuItemsDetails.push({
-            ...menuItem,
-            quantity: item.quantity
-          });
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            const menuItem = menuItems.find((mi: any) => mi.id === item.id);
+            if (menuItem) {
+              menuItemsDetails.push({
+                ...menuItem,
+                quantity: item.quantity
+              });
+            }
+          }
         }
+      } catch (error) {
+        console.error("Error parsing menu items in menu details:", error);
       }
     }
     
