@@ -51,15 +51,15 @@ export default function EstimateList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       toast({
-        title: "Estimate deleted",
-        description: "The estimate has been deleted successfully."
+        title: "Quote deleted",
+        description: "The quote has been deleted successfully."
       });
       setEstimateToDelete(null);
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to delete estimate: ${error.message}`,
+        description: `Failed to delete quote: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -76,8 +76,8 @@ export default function EstimateList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       toast({
-        title: "Estimate sent",
-        description: "The estimate has been sent to the client."
+        title: "Quote sent",
+        description: "The quote has been sent to the client."
       });
       setEstimateToSend(null);
     },
@@ -189,11 +189,11 @@ export default function EstimateList() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="font-poppins text-2xl font-bold text-neutral-900">Estimates</h1>
+        <h1 className="font-poppins text-2xl font-bold text-neutral-900">Quotes</h1>
         <Link href="/estimates/new">
           <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
             <PlusIcon className="mr-1 h-4 w-4" />
-            New Estimate
+            New Quote
           </Button>
         </Link>
       </div>
@@ -203,7 +203,7 @@ export default function EstimateList() {
         data={estimates} 
         searchKey="client"
         loading={isLoading}
-        emptyMessage="No estimates found. Create your first estimate to get started."
+        emptyMessage="No quotes found. Create your first quote to get started."
       />
 
       <AlertDialog open={!!estimateToDelete}>
@@ -211,7 +211,7 @@ export default function EstimateList() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this estimate. This action cannot be undone.
+              This will permanently delete this quote. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -229,9 +229,9 @@ export default function EstimateList() {
       <AlertDialog open={!!estimateToSend}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Send Estimate</AlertDialogTitle>
+            <AlertDialogTitle>Send Quote</AlertDialogTitle>
             <AlertDialogDescription>
-              This will send the estimate to the client. The status will be changed to "Sent".
+              This will send the quote to the client. The status will be changed to "Sent".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -240,7 +240,7 @@ export default function EstimateList() {
               onClick={handleSend}
               className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
             >
-              {sendMutation.isPending ? "Sending..." : "Send Estimate"}
+              {sendMutation.isPending ? "Sending..." : "Send Quote"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
