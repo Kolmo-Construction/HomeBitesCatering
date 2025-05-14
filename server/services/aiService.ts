@@ -10,15 +10,16 @@ const openRouter = new OpenAI({
   }
 });
 
-// DeepSeek V3 0324 model ID for Open Router
-const DEEPSEEK_MODEL_ID = 'deepseek/deepseek-v3-0324';
+// Model ID for Open Router
+// Initial choice was DeepSeek V3 0324, but switched to Claude Haiku for availability
+const AI_MODEL_ID = 'anthropic/claude-3-haiku';
 
 /**
- * AI Service that provides various AI capabilities using DeepSeek via Open Router
+ * AI Service that provides various AI capabilities using Claude via Open Router
  */
 export class AIService {
   /**
-   * Generates a summary of a text using DeepSeek
+   * Generates a summary of a text using Claude
    */
   async generateSummary(text: string): Promise<string> {
     try {
@@ -26,10 +27,10 @@ export class AIService {
         return "No content to summarize.";
       }
 
-      console.log(`AI Summarization: Sending text of length ${text.length} to DeepSeek...`);
+      console.log(`AI Summarization: Sending text of length ${text.length} to Claude via OpenRouter...`);
       
       const response = await openRouter.chat.completions.create({
-        model: DEEPSEEK_MODEL_ID,
+        model: AI_MODEL_ID,
         messages: [
           {
             role: 'system',
@@ -83,7 +84,7 @@ export class AIService {
         return {};
       }
 
-      console.log(`AI Lead Analysis: Sending message of length ${message.length} to DeepSeek...`);
+      console.log(`AI Lead Analysis: Sending message of length ${message.length} to Claude via OpenRouter...`);
       
       const prompt = `
 You are a lead analysis assistant for a catering business. 
@@ -117,7 +118,7 @@ Here's the message to analyze:
 ${message}`;
 
       const response = await openRouter.chat.completions.create({
-        model: DEEPSEEK_MODEL_ID,
+        model: AI_MODEL_ID,
         messages: [
           {
             role: 'user',
