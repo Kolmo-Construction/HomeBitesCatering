@@ -104,6 +104,7 @@ export interface IStorage {
   createCommunication(communication: InsertCommunication): Promise<Communication>;
   getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
+  getCommunicationsByExternalId(externalId: string): Promise<Communication[]>;
   
   // Raw Leads
   createRawLead(data: InsertRawLead): Promise<RawLead>;
@@ -597,6 +598,13 @@ export class DatabaseStorage implements IStorage {
       .from(communications)
       .where(eq(communications.clientId, clientId))
       .orderBy(desc(communications.timestamp)); // Order by most recent first
+  }
+  
+  async getCommunicationsByExternalId(externalId: string): Promise<Communication[]> {
+    return db
+      .select()
+      .from(communications)
+      .where(eq(communications.externalId, externalId));
   }
 
   // Raw Leads
