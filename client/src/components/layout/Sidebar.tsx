@@ -41,9 +41,9 @@ export default function Sidebar() {
             return (
               <li key={item.name}>
                 <Link href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "flex items-center p-2 rounded-lg transition",
+                      "flex items-center p-2 rounded-lg transition cursor-pointer",
                       isActive
                         ? "text-neutral-900 bg-neutral-200"
                         : "text-neutral-700 hover:bg-neutral-200"
@@ -51,7 +51,7 @@ export default function Sidebar() {
                   >
                     <item.icon className="w-5 h-5 md:mr-3 text-center" />
                     <span className="hidden md:inline">{item.name}</span>
-                  </a>
+                  </div>
                 </Link>
               </li>
             );

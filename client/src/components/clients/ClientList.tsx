@@ -119,10 +119,10 @@ export default function ClientList() {
         
         return (
           <Link href={`/estimates?clientId=${row.original.id}`}>
-            <a className="flex items-center text-primary-purple hover:text-primary-blue">
+            <div className="flex items-center text-primary-purple hover:text-primary-blue cursor-pointer">
               <FileIcon className="h-4 w-4 mr-1" />
               <span>{count}</span>
-            </a>
+            </div>
           </Link>
         );
       },
@@ -133,23 +133,21 @@ export default function ClientList() {
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
           <Link href={`/clients/${row.original.id}`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
           <Link href={`/clients/${row.original.id}/edit`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
-          <AlertDialogTrigger asChild>
-            <button 
-              className="text-red-500 hover:text-red-700 transition"
-              onClick={() => setClientToDelete(row.original)}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
-          </AlertDialogTrigger>
+          <button 
+            className="text-red-500 hover:text-red-700 transition"
+            onClick={() => setClientToDelete(row.original)}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
         </div>
       ),
     },
@@ -175,25 +173,27 @@ export default function ClientList() {
         emptyMessage="No clients found. Create your first client to get started."
       />
 
-      <AlertDialog>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the client "{clientToDelete?.firstName} {clientToDelete?.lastName}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {clientToDelete && (
+        <AlertDialog open={!!clientToDelete} onOpenChange={(open) => !open && setClientToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the client "{clientToDelete.firstName} {clientToDelete.lastName}". This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
