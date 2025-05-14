@@ -570,8 +570,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if the estimate status is being updated to "sent"
       const beingSent = req.body.status === 'sent' && estimate.status !== 'sent';
       
+      // Validate the update data with the schema
+      // Using partial because we're only updating some fields
+      const partialSchema = z.object({
+        // Add the fields we want to update with proper types
+        eventDate: z.coerce.date().nullable().optional(),
+        eventType: z.string().optional(),
+        guestCount: z.number().optional(),
+        venue: z.string().optional(),
+        zipCode: z.string().optional(),
+        menuId: z.number().nullable().optional(),
+        items: z.string().optional(),
+        additionalServices: z.string().nullable().optional(),
+        subtotal: z.number().optional(),
+        tax: z.number().optional(),
+        total: z.number().optional(),
+        status: z.string().optional(),
+        notes: z.string().nullable().optional(),
+        expiresAt: z.coerce.date().nullable().optional(),
+        sentAt: z.coerce.date().nullable().optional(),
+        viewedAt: z.coerce.date().nullable().optional(),
+        acceptedAt: z.coerce.date().nullable().optional(),
+        declinedAt: z.coerce.date().nullable().optional(),
+      });
+      
+      // Validate and parse the data
+      const updateData = partialSchema.parse(req.body);
+      
       // Update the estimate
-      const updatedEstimate = await storage.updateEstimate(estimateId, req.body);
+      const updatedEstimate = await storage.updateEstimate(estimateId, updateData);
       
       // If the estimate is being sent, generate a client portal link
       if (beingSent) {
@@ -589,12 +616,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ 
           ...updatedEstimate, 
           clientPortalUrl: portalUrl,
-          message: "Estimate updated and client portal link generated"
+          message: "Quote updated and client portal link generated"
         });
       }
       
       res.json(updatedEstimate);
     } catch (error) {
+      console.error("Error updating estimate:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
