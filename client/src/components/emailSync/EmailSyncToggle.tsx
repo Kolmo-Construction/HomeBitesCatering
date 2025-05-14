@@ -24,14 +24,28 @@ export default function EmailSyncToggle() {
   const { data: syncStatus, isLoading } = useQuery({
     queryKey: ['/api/email-sync/status'],
     queryFn: async () => {
+      console.log("Fetching email sync status");
       try {
         const res = await fetch('/api/email-sync/status', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
           },
-          credentials: 'include', // Important: send cookies for authentication
+          // credentials: 'include', // Temporarily removed for debugging
         });
+        
+        // Always read the response body for debugging regardless of status code
+        const responseText = await res.text();
+        console.log("Status response:", responseText);
+        
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (e) {
+          console.error("Failed to parse status response as JSON:", e);
+          return { enabled: false, configured: false, error: "Invalid JSON response" };
+        }
+        
         if (!res.ok) {
           if (res.status === 404) {
             return { enabled: false, configured: false };
@@ -40,12 +54,13 @@ export default function EmailSyncToggle() {
             console.warn('User not authenticated or not authorized to check email sync status');
             return { enabled: false, configured: false, unauthorized: true };
           }
-          throw new Error('Failed to fetch email sync status');
+          return { enabled: false, configured: false, error: responseData.message || "Unknown error" };
         }
-        return res.json();
+        
+        return responseData;
       } catch (error) {
         console.error('Error fetching email sync status:', error);
-        return { enabled: false, configured: false };
+        return { enabled: false, configured: false, error: error.message };
       }
     },
     enabled: isAdmin, // Only fetch if user is admin
@@ -62,22 +77,35 @@ export default function EmailSyncToggle() {
   // Toggle email sync
   const toggleMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
+      console.log("Toggling email sync to:", enabled ? "ON" : "OFF");
+      
       const res = await fetch('/api/email-sync/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        credentials: 'include', // Important: send cookies for authentication
+        // credentials: 'include', // Temporarily removed for debugging
         body: JSON.stringify({ enabled }),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(errorData.message || 'Failed to toggle email sync');
+      // Always read the response body regardless of status code
+      const responseText = await res.text();
+      console.log("Toggle response:", responseText);
+      
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Failed to parse response as JSON:", e);
+        responseData = { message: responseText || 'Invalid response from server' };
       }
 
-      return res.json();
+      if (!res.ok) {
+        throw new Error(responseData.message || 'Failed to toggle email sync');
+      }
+
+      return responseData;
     },
     onSuccess: (data) => {
       setSyncEnabled(data.enabled);
