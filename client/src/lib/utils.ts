@@ -63,7 +63,24 @@ export function generateRandomColor(seed: string): string {
   return colors[colorIndex];
 }
 
-export function calculateTax(amount: number, taxRate: number = 0.095): number {
+export function calculateTax(amount: number, zipCode?: string | null): number {
+  // Default tax rate is 9.5%
+  let taxRate = 0.095;
+  
+  // If zipCode is provided, we can implement different tax rates by zip code
+  if (zipCode) {
+    // Example implementation - you can expand this with a more comprehensive zip code tax rate database
+    const firstDigit = zipCode.charAt(0);
+    
+    // Just as an example of how you might vary tax rates by region
+    if (firstDigit === '9') taxRate = 0.095;  // 9.5% (California)
+    else if (firstDigit === '8') taxRate = 0.07;  // 7% (Colorado, etc.)
+    else if (firstDigit === '7') taxRate = 0.0625; // 6.25% (Texas, etc.)
+    else if (firstDigit === '1') taxRate = 0.0625; // 6.25% (Massachusetts, etc.)
+    else if (firstDigit === '2') taxRate = 0.06;   // 6% (DC area)
+    else taxRate = 0.08;  // 8% default for other regions
+  }
+  
   return amount * taxRate;
 }
 

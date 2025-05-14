@@ -112,6 +112,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       total: 0,
       notes: "",
       status: "draft",
+      zipCode: "",
     },
   });
   
@@ -147,8 +148,11 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       estimateSubtotal += item.price * item.quantity;
     });
     
-    // Calculate tax and total
-    const estimateTax = calculateTax(estimateSubtotal);
+    // Get current zipCode value from form
+    const currentZipCode = form.getValues("zipCode");
+    
+    // Calculate tax and total based on zipCode
+    const estimateTax = calculateTax(estimateSubtotal, currentZipCode);
     const estimateTotal = calculateTotal(estimateSubtotal, estimateTax);
     
     setSubtotal(estimateSubtotal);
@@ -159,7 +163,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     form.setValue("subtotal", estimateSubtotal);
     form.setValue("tax", Math.round(estimateTax));
     form.setValue("total", Math.round(estimateTotal));
-  }, [selectedMenu, customItems, form.watch("guestCount")]);
+  }, [selectedMenu, customItems, form.watch("guestCount"), form.watch("zipCode")]);
   
   // Mutation for creating/updating estimate
   const mutation = useMutation({
