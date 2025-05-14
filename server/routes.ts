@@ -920,6 +920,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // --- Raw Leads Routes ---
+  // Create a new raw lead
+  app.post('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertRawLeadSchema.parse(req.body);
+      const rawLead = await storage.createRawLead(validatedData);
+      res.status(201).json(rawLead);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating raw lead:", error);
+      res.status(500).json({ message: 'Server error creating raw lead' });
+    }
+  });
+
+  // Get a list of raw leads with optional filters
+  app.get('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const filters: { status?: string; source?: string } = {};
+      
+      if (req.query.status) {
+        filters.status = req.query.status as string;
+      }
+      
+      if (req.query.source) {
+        filters.source = req.query.source as string;
+      }
+      
+      const rawLeads = await storage.listRawLeads(filters);
+      res.json(rawLeads);
+    } catch (error) {
+      console.error("Error listing raw leads:", error);
+      res.status(500).json({ message: 'Server error listing raw leads' });
+    }
+  });
+
+  // Get a specific raw lead by ID
+  app.get('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid ID format' });
+      }
+      
+      const rawLead = await storage.getRawLeadById(id);
+      if (!rawLead) {
+        return res.status(404).json({ message: 'Raw lead not found' });
+      }
+      
+      res.json(rawLead);
+    } catch (error) {
+      console.error(`Error fetching raw lead ID ${req.params.id}:`, error);
+      res.status(500).json({ message: 'Server error fetching raw lead' });
+    }
+  });
+
+  // Update a raw lead (e.g., change status, add notes)
+  app.put('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid ID format' });
+      }
+      
+      // Check if the raw lead exists
+      const existingRawLead = await storage.getRawLeadById(id);
+      if (!existingRawLead) {
+        return res.status(404).json({ message: 'Raw lead not found' });
+      }
+      
+      // Update the raw lead
+      const updatedRawLead = await storage.updateRawLead(id, req.body);
+      res.json(updatedRawLead);
+    } catch (error) {
+      console.error(`Error updating raw lead ID ${req.params.id}:`, error);
+      res.status(500).json({ message: 'Server error updating raw lead' });
+    }
+  });
+
   // --- NEW: Google OAuth Routes for Gmail Sync ---
   app.get('/api/auth/google/initiate', isAuthenticated, isAdmin, (req, res) => { // Protect this
     // Log the redirect URI being used

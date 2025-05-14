@@ -296,25 +296,34 @@ export class GmailSyncService {
       opportunityId = existingContact.opportunity.id;
     } else {
       if (direction === 'incoming' && fromEmail) { // Only create for incoming from new contacts
-        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new opportunity.`);
+        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new raw lead.`);
         try {
-            const newOpportunity = await storage.createOpportunity({
-              firstName: fromHeader?.name || 'New',
-              lastName: 'Opportunity (from Email)',
-              email: fromEmail,
-              status: 'new', // Or a specific status like 'new_email_inquiry'
-              opportunitySource: 'gmail_sync',
-              eventType: 'Unknown',
+            // Create a raw lead instead of directly creating an opportunity
+            const rawLead = await storage.createRawLead({
+              source: 'gmail_sync',
+              extractedName: fromHeader?.name || '',
+              extractedEmail: fromEmail,
+              extractedPhone: null,
+              eventSummary: subject,
+              rawData: parsedMail, // Store the full parsed email as raw data
+              status: 'new',
+              notes: `Auto-created from incoming email with subject: ${subject}`
             });
-            opportunityId = newOpportunity.id;
-            await storage.createContactIdentifier({ opportunityId, type: 'email', value: fromEmail, isPrimary: true, source: 'gmail_sync' });
-            console.log(`GmailSyncService: Created new opportunity ID ${opportunityId} for ${fromEmail}`);
-        } catch (opportunityCreationError) {
-            console.error("GmailSyncService: Error creating new opportunity:", opportunityCreationError);
-            return; // Stop processing this email if opportunity creation fails
+            
+            console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail}`);
+            
+            // We'll still create a communication, but it will be linked to existing contact if found
+            if (existingContact?.opportunity) {
+              opportunityId = existingContact.opportunity.id;
+            } else if (existingContact?.client) {
+              clientId = existingContact.client.id;
+            }
+        } catch (rawLeadCreationError) {
+            console.error("GmailSyncService: Error creating new raw lead:", rawLeadCreationError);
+            return; // Stop processing this email if raw lead creation fails
         }
       } else {
-        console.log(`GmailSyncService: Outgoing email to unknown contact ${contactEmailToSearch} or no 'fromEmail' for incoming. Skipping auto-opportunity creation.`);
+        console.log(`GmailSyncService: Outgoing email to unknown contact ${contactEmailToSearch} or no 'fromEmail' for incoming. Skipping auto-raw lead creation.`);
       }
     }
 
