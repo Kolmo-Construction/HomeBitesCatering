@@ -70,7 +70,7 @@ interface Client {
 }
 
 export default function OpportunityForm({ opportunity: initialOpportunity, isEditing = false, opportunityIdForEdit, onCancel }: OpportunityFormProps) {
-  const [_, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [emailCheck, setEmailCheck] = useState<{loading: boolean, client?: Client | null}>({
@@ -80,6 +80,31 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
   const [phoneCheck, setPhoneCheck] = useState<{loading: boolean, client?: Client | null}>({
     loading: false,
     client: null
+  });
+  const [rawLeadId, setRawLeadId] = useState<number | null>(null);
+
+  // Extract fromRawLeadId from URL query parameters if present
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const fromRawLeadId = searchParams.get('fromRawLeadId');
+    if (fromRawLeadId) {
+      const leadId = parseInt(fromRawLeadId);
+      if (!isNaN(leadId)) {
+        setRawLeadId(leadId);
+      }
+    }
+  }, [location]);
+
+  // Fetch raw lead data if fromRawLeadId is provided
+  const { data: rawLeadData, isLoading: isLoadingRawLead } = useQuery({
+    queryKey: ['/api/raw-leads', rawLeadId],
+    queryFn: async () => {
+      if (!rawLeadId) return undefined;
+      const res = await fetch(`/api/raw-leads/${rawLeadId}`);
+      if (!res.ok) throw new Error('Failed to fetch raw lead');
+      return res.json();
+    },
+    enabled: !!rawLeadId && !isEditing, // Only fetch if we have a lead ID and not in edit mode
   });
 
   // Fetch opportunity data if opportunityIdForEdit is provided
@@ -127,16 +152,40 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
     },
   });
   
-  // Update form values when opportunityToEdit changes
+  // Update form values when opportunityToEdit or rawLeadData changes
   useEffect(() => {
     if (opportunityToEdit) {
+      // If editing existing opportunity
       form.reset({
         ...opportunityToEdit,
         eventDate: opportunityToEdit.eventDate ? new Date(opportunityToEdit.eventDate) : null,
         assignToExistingClient: !!opportunityToEdit.clientId,
         clientId: opportunityToEdit.clientId ? String(opportunityToEdit.clientId) : "",
       });
-    } else if (!isEditing) { // Reset for new form
+    } else if (rawLeadData && !isEditing) {
+      // If creating from raw lead
+      form.reset({
+        firstName: rawLeadData.extractedName?.split(' ')[0] || "",
+        lastName: rawLeadData.extractedName?.split(' ').slice(1).join(' ') || "",
+        email: rawLeadData.extractedEmail || "",
+        phone: rawLeadData.extractedPhone || "",
+        eventType: "",
+        eventDate: null,
+        guestCount: null,
+        venue: "",
+        notes: rawLeadData.notes || "",
+        opportunitySource: rawLeadData.source || "email",
+        status: "new",
+        assignToExistingClient: false,
+        clientId: "",
+      });
+      // Display toast to notify user
+      toast({
+        title: "Lead Data Loaded",
+        description: "Form has been pre-filled with lead information.",
+      });
+    } else if (!isEditing) {
+      // Reset for new form (no raw lead data)
       form.reset({
         firstName: "",
         lastName: "",
@@ -153,11 +202,15 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
         clientId: "",
       });
     }
-  }, [opportunityToEdit, form, isEditing]);
+  }, [opportunityToEdit, rawLeadData, form, isEditing, toast]);
 
-  // Show loading state while fetching opportunity data
+  // Show loading states while fetching data
   if (isLoadingFetchedOpportunity && isEditing && !!opportunityIdForEdit && !initialOpportunity) {
     return <div className="text-center p-4">Loading opportunity data for editing...</div>;
+  }
+  
+  if (isLoadingRawLead && !!rawLeadId && !isEditing) {
+    return <div className="text-center p-4">Loading raw lead data...</div>;
   }
 
   // Handle when email or phone field changes to check for existing clients
