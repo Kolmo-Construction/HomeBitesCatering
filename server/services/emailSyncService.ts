@@ -282,51 +282,51 @@ export class GmailSyncService {
     let contactEmailToSearch = direction === 'incoming' ? fromEmail : (toEmails.find(email => email !== this.targetEmail.toLowerCase()) || ccEmails.find(email => email !== this.targetEmail.toLowerCase()));
 
     if (!contactEmailToSearch) {
-        console.warn("GmailSyncService: Could not determine a contact email (from/to) to search for lead/client.", {fromEmail, toEmails, target: this.targetEmail});
+        console.warn("GmailSyncService: Could not determine a contact email (from/to) to search for opportunity/client.", {fromEmail, toEmails, target: this.targetEmail});
         return;
     }
 
-    let leadId: number | undefined = undefined;
+    let opportunityId: number | undefined = undefined;
     let clientId: number | undefined = undefined;
 
-    const existingContact = await storage.findLeadOrClientByContactIdentifier(contactEmailToSearch, 'email');
+    const existingContact = await storage.findOpportunityOrClientByContactIdentifier(contactEmailToSearch, 'email');
     if (existingContact?.client) {
       clientId = existingContact.client.id;
-    } else if (existingContact?.lead) {
-      leadId = existingContact.lead.id;
+    } else if (existingContact?.opportunity) {
+      opportunityId = existingContact.opportunity.id;
     } else {
       if (direction === 'incoming' && fromEmail) { // Only create for incoming from new contacts
-        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new lead.`);
+        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new opportunity.`);
         try {
-            const newLead = await storage.createLead({
+            const newOpportunity = await storage.createOpportunity({
               firstName: fromHeader?.name || 'New',
-              lastName: 'Lead (from Email)',
+              lastName: 'Opportunity (from Email)',
               email: fromEmail,
               status: 'new', // Or a specific status like 'new_email_inquiry'
-              leadSource: 'gmail_sync',
+              opportunitySource: 'gmail_sync',
               eventType: 'Unknown',
             });
-            leadId = newLead.id;
-            await storage.createContactIdentifier({ leadId, type: 'email', value: fromEmail, isPrimary: true, source: 'gmail_sync' });
-            console.log(`GmailSyncService: Created new lead ID ${leadId} for ${fromEmail}`);
-        } catch (leadCreationError) {
-            console.error("GmailSyncService: Error creating new lead:", leadCreationError);
-            return; // Stop processing this email if lead creation fails
+            opportunityId = newOpportunity.id;
+            await storage.createContactIdentifier({ opportunityId, type: 'email', value: fromEmail, isPrimary: true, source: 'gmail_sync' });
+            console.log(`GmailSyncService: Created new opportunity ID ${opportunityId} for ${fromEmail}`);
+        } catch (opportunityCreationError) {
+            console.error("GmailSyncService: Error creating new opportunity:", opportunityCreationError);
+            return; // Stop processing this email if opportunity creation fails
         }
       } else {
-        console.log(`GmailSyncService: Outgoing email to unknown contact ${contactEmailToSearch} or no 'fromEmail' for incoming. Skipping auto-lead creation.`);
+        console.log(`GmailSyncService: Outgoing email to unknown contact ${contactEmailToSearch} or no 'fromEmail' for incoming. Skipping auto-opportunity creation.`);
       }
     }
 
-    if (!leadId && !clientId) {
-        console.log(`GmailSyncService: Skipping email as no associated lead/client found or created for contact ${contactEmailToSearch}.`);
+    if (!opportunityId && !clientId) {
+        console.log(`GmailSyncService: Skipping email as no associated opportunity/client found or created for contact ${contactEmailToSearch}.`);
         return;
     }
 
     const summary = this.aiSummaryEnabled ? await getAISummary(bodyText) : subject;
 
     const communicationData: InsertCommunication = {
-      leadId: leadId,
+      opportunityId: opportunityId,
       clientId: clientId,
       type: 'email',
       direction: direction,
@@ -343,7 +343,7 @@ export class GmailSyncService {
 
     try {
       await storage.createCommunication(communicationData);
-      console.log(`GmailSyncService: Successfully logged email "${subject}" for leadId: ${leadId}, clientId: ${clientId}`);
+      console.log(`GmailSyncService: Successfully logged email "${subject}" for opportunityId: ${opportunityId}, clientId: ${clientId}`);
     } catch (dbError: any) {
       if (dbError.message && dbError.message.includes('duplicate key value violates unique constraint')) {
         console.warn(`GmailSyncService: Communication with externalId ${messageId} already exists. Skipping.`);

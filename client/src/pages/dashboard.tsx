@@ -11,8 +11,8 @@ import RecentEstimatesTable from "@/components/dashboard/RecentEstimatesTable";
 
 export default function Dashboard() {
   // Fetch data for stats
-  const { data: leads = [] } = useQuery({
-    queryKey: ["/api/leads"],
+  const { data: opportunities = [] } = useQuery({
+    queryKey: ["/api/opportunities"],
   });
   
   const { data: estimates = [] } = useQuery({
@@ -24,8 +24,8 @@ export default function Dashboard() {
   });
   
   // Calculate stats
-  const activeLeads = leads.filter((lead: any) => 
-    lead.status !== "archived" && lead.status !== "booked"
+  const activeOpportunities = opportunities.filter((opportunity: any) => 
+    opportunity.status !== "archived" && opportunity.status !== "booked"
   ).length;
   
   const pendingEstimates = estimates.filter((estimate: any) => 
@@ -60,9 +60,9 @@ export default function Dashboard() {
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
           </div>
-          <Link href="/leads/new">
+          <Link href="/opportunities/new">
             <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
-              <span className="hidden md:inline">New Lead</span>
+              <span className="hidden md:inline">New Opportunity</span>
               <Filter className="md:hidden h-4 w-4" />
             </Button>
           </Link>
@@ -72,8 +72,8 @@ export default function Dashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard 
-          title="Active Leads" 
-          value={activeLeads} 
+          title="Active Opportunities" 
+          value={activeOpportunities} 
           icon={<Filter className="text-primary-purple h-5 w-5" />}
           iconBgColor="bg-primary-purple" 
           changePercent={12}
@@ -112,7 +112,7 @@ export default function Dashboard() {
 
       {/* Recent Activity & Upcoming Events */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <RecentLeadsTable />
+        <RecentOpportunitiesTable />
         <UpcomingEventsList />
       </div>
 

@@ -2,25 +2,25 @@ import { storage } from './server/storage.js';
 
 async function testMethods() {
   try {
-    // First, check if we have a lead to work with
-    const leads = await storage.listLeads();
-    console.log('Available leads:', leads.length > 0 ? 'Found leads' : 'No leads found');
+    // First, check if we have an opportunity to work with
+    const opportunities = await storage.listOpportunities();
+    console.log('Available opportunities:', opportunities.length > 0 ? 'Found opportunities' : 'No opportunities found');
     
-    if (leads.length === 0) {
-      console.log('No leads to test with. Creating a test lead...');
-      const newLead = await storage.createLead({
+    if (opportunities.length === 0) {
+      console.log('No opportunities to test with. Creating a test opportunity...');
+      const newOpportunity = await storage.createOpportunity({
         firstName: "Test",
-        lastName: "Lead",
+        lastName: "Opportunity",
         email: "test@example.com",
         phone: "555-1234",
         eventType: "Test Event",
         status: "new"
       });
-      console.log('Created test lead:', newLead);
+      console.log('Created test opportunity:', newOpportunity);
       
-      // Test 1: Create a contact identifier for the lead
+      // Test 1: Create a contact identifier for the opportunity
       const contactIdentifier = await storage.createContactIdentifier({
-        leadId: newLead.id,
+        opportunityId: newOpportunity.id,
         type: "email",
         value: "secondary@example.com",
         isPrimary: false,
@@ -28,17 +28,17 @@ async function testMethods() {
       });
       console.log('Created contact identifier:', contactIdentifier);
       
-      // Test 2: Find lead by contact identifier
-      const foundEntity = await storage.findLeadOrClientByContactIdentifier("secondary@example.com", "email");
+      // Test 2: Find opportunity by contact identifier
+      const foundEntity = await storage.findOpportunityOrClientByContactIdentifier("secondary@example.com", "email");
       console.log('Found by contact identifier:', foundEntity);
       
-      // Test 3: Get contact identifiers for a lead
-      const identifiers = await storage.getContactIdentifiers({ leadId: newLead.id });
-      console.log('Contact identifiers for lead:', identifiers);
+      // Test 3: Get contact identifiers for an opportunity
+      const identifiers = await storage.getContactIdentifiers({ opportunityId: newOpportunity.id });
+      console.log('Contact identifiers for opportunity:', identifiers);
       
-      // Test 4: Create a communication for the lead
+      // Test 4: Create a communication for the opportunity
       const communication = await storage.createCommunication({
-        leadId: newLead.id,
+        opportunityId: newOpportunity.id,
         type: "email",
         direction: "outgoing",
         subject: "Test communication",
@@ -47,17 +47,17 @@ async function testMethods() {
       });
       console.log('Created communication:', communication);
       
-      // Test 5: Get communications for the lead
-      const communications = await storage.getCommunicationsForLead(newLead.id);
-      console.log('Communications for lead:', communications);
+      // Test 5: Get communications for the opportunity
+      const communications = await storage.getCommunicationsForOpportunity(newOpportunity.id);
+      console.log('Communications for opportunity:', communications);
     } else {
-      // Use the first lead for testing
-      const lead = leads[0];
-      console.log('Using existing lead for tests:', lead.id);
+      // Use the first opportunity for testing
+      const opportunity = opportunities[0];
+      console.log('Using existing opportunity for tests:', opportunity.id);
       
-      // Test 1: Create a contact identifier for the lead
+      // Test 1: Create a contact identifier for the opportunity
       const contactIdentifier = await storage.createContactIdentifier({
-        leadId: lead.id,
+        opportunityId: opportunity.id,
         type: "email",
         value: "secondary-test@example.com",
         isPrimary: false,
@@ -65,17 +65,17 @@ async function testMethods() {
       });
       console.log('Created contact identifier:', contactIdentifier);
       
-      // Test 2: Find lead by contact identifier
-      const foundEntity = await storage.findLeadOrClientByContactIdentifier("secondary-test@example.com", "email");
+      // Test 2: Find opportunity by contact identifier
+      const foundEntity = await storage.findOpportunityOrClientByContactIdentifier("secondary-test@example.com", "email");
       console.log('Found by contact identifier:', foundEntity);
       
-      // Test 3: Get contact identifiers for a lead
-      const identifiers = await storage.getContactIdentifiers({ leadId: lead.id });
-      console.log('Contact identifiers for lead:', identifiers);
+      // Test 3: Get contact identifiers for an opportunity
+      const identifiers = await storage.getContactIdentifiers({ opportunityId: opportunity.id });
+      console.log('Contact identifiers for opportunity:', identifiers);
       
-      // Test 4: Create a communication for the lead
+      // Test 4: Create a communication for the opportunity
       const communication = await storage.createCommunication({
-        leadId: lead.id,
+        opportunityId: opportunity.id,
         type: "email",
         direction: "outgoing",
         subject: "Test communication",
@@ -84,9 +84,9 @@ async function testMethods() {
       });
       console.log('Created communication:', communication);
       
-      // Test 5: Get communications for the lead
-      const communications = await storage.getCommunicationsForLead(lead.id);
-      console.log('Communications for lead:', communications);
+      // Test 5: Get communications for the opportunity
+      const communications = await storage.getCommunicationsForOpportunity(opportunity.id);
+      console.log('Communications for opportunity:', communications);
     }
     
     console.log('All tests completed successfully!');
