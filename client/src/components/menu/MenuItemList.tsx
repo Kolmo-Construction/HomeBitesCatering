@@ -26,6 +26,11 @@ import { Badge } from "@/components/ui/badge";
 export default function MenuItemList() {
   const { data: menuItems = [], isLoading } = useQuery({
     queryKey: ["/api/menu-items"],
+    queryFn: async () => {
+      const res = await fetch('/api/menu-items');
+      if (!res.ok) throw new Error('Failed to fetch menu items');
+      return res.json();
+    }
   });
   
   const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
@@ -116,23 +121,21 @@ export default function MenuItemList() {
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
           <Link href={`/menu-items/${row.original.id}`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
           <Link href={`/menu-items/${row.original.id}/edit`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
-          <AlertDialogTrigger asChild>
-            <button 
-              className="text-red-500 hover:text-red-700 transition"
-              onClick={() => setItemToDelete(row.original)}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
-          </AlertDialogTrigger>
+          <button 
+            className="text-red-500 hover:text-red-700 transition"
+            onClick={() => setItemToDelete(row.original)}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
         </div>
       ),
     },
@@ -158,25 +161,27 @@ export default function MenuItemList() {
         emptyMessage="No menu items found. Create your first menu item to get started."
       />
 
-      <AlertDialog>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the menu item "{itemToDelete?.name}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {itemToDelete && (
+        <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the menu item "{itemToDelete.name}". This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

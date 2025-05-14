@@ -294,6 +294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/menu-items', async (req, res) => {
+    try {
+      const menuItems = await storage.listMenuItems();
+      res.json(menuItems);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   app.post('/api/menu-items', isAuthenticated, async (req, res) => {
     try {
       const menuItemData = insertMenuItemSchema.parse(req.body);
@@ -329,6 +338,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedMenuItem = await storage.updateMenuItem(menuItemId, req.body);
       res.json(updatedMenuItem);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.delete('/api/menu-items/:id', isAuthenticated, async (req, res) => {
+    try {
+      const menuItemId = Number(req.params.id);
+      const menuItem = await storage.getMenuItem(menuItemId);
+      if (!menuItem) {
+        return res.status(404).json({ message: 'Menu item not found' });
+      }
+      
+      await storage.deleteMenuItem(menuItemId);
+      res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
     }
