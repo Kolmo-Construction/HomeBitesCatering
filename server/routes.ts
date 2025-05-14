@@ -922,6 +922,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // --- NEW: Google OAuth Routes for Gmail Sync ---
   app.get('/api/auth/google/initiate', isAuthenticated, isAdmin, (req, res) => { // Protect this
+    // Log the redirect URI being used
+    console.log("Using redirect URI:", process.env.GOOGLE_REDIRECT_URI);
+    
     const authUrl = GmailSyncService.getOAuthClient().generateAuthUrl({
       access_type: 'offline', // Important to get a refresh token
       scope: [
@@ -932,17 +935,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ],
       prompt: 'consent' // Force consent screen to ensure refresh token is granted on first auth
     });
+    
+    console.log("Generated auth URL:", authUrl);
     res.redirect(authUrl);
   });
 
   app.get('/api/auth/google/callback', async (req, res) => { // No isAuthenticated here, Google redirects to it
     const code = req.query.code as string;
+    
+    console.log("Received OAuth callback with code:", code ? "Code received" : "No code");
+    
     if (!code) {
       return res.status(400).send('Authorization code missing.');
     }
+    
     try {
+      console.log("Attempting to exchange code for tokens...");
       const success = await GmailSyncService.setTokensFromCode(code);
+      
       if (success) {
+        console.log("Successfully exchanged auth code for tokens!");
         // Optionally, immediately start the sync service if it wasn't running or re-initialize it
         // This depends on how you manage the service instance.
         // For now, we assume it will pick up the tokens on its next scheduled run or on server restart.
@@ -953,11 +965,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <p>IMPORTANT: If a new Refresh Token was logged in your server console, update your .env/Secrets with it for persistence.</p>
         `);
       } else {
+        console.error("Failed to obtain tokens from Google.");
         res.status(500).send('Failed to obtain tokens from Google.');
       }
     } catch (error) {
       console.error('Error in Google OAuth callback:', error);
-      res.status(500).send('Error during Google authentication callback.');
+      res.status(500).send(`Error during Google authentication callback: ${error.message}`);
     }
   });
 
