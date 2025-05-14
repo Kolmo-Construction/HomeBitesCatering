@@ -145,7 +145,7 @@ export default function MenuItemList() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="font-poppins text-2xl font-bold text-neutral-900">Menu Items</h1>
-        <Link href="/menu-items/new">
+        <Link to="/menu-items/new">
           <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
             <PlusIcon className="mr-1 h-4 w-4" />
             New Menu Item

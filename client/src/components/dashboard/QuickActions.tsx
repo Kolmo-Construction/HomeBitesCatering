@@ -36,11 +36,11 @@ export default function QuickActions() {
         <h2 className="font-poppins text-lg font-semibold text-neutral-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-3">
           {actions.map((action) => (
-            <Link key={action.name} href={action.href}>
-              <a className="flex flex-col items-center justify-center p-3 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition">
+            <Link key={action.name} to={action.href}>
+              <div className="flex flex-col items-center justify-center p-3 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition cursor-pointer">
                 <action.icon className={`${action.color} text-xl mb-2 h-6 w-6`} />
                 <span className="text-sm text-neutral-700 text-center">{action.name}</span>
-              </a>
+              </div>
             </Link>
           ))}
         </div>

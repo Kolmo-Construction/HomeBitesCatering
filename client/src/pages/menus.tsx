@@ -134,15 +134,15 @@ export default function Menus() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
-          <Link href={`/menus/${row.original.id}`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+          <Link to={`/menus/${row.original.id}`}>
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
-          <Link href={`/menus/${row.original.id}/edit`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+          <Link to={`/menus/${row.original.id}/edit`}>
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
           <button 
             className="text-red-500 hover:text-red-700 transition"
@@ -161,7 +161,7 @@ export default function Menus() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="font-poppins text-2xl font-bold text-neutral-900">Menus</h1>
-          <Link href="/menus/new">
+          <Link to="/menus/new">
             <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
               <PlusIcon className="mr-1 h-4 w-4" />
               Create Menu
@@ -254,7 +254,7 @@ export default function Menus() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="font-poppins text-2xl font-bold text-neutral-900">{selectedMenu.name}</h1>
-          <Link href={`/menus/${selectedMenu.id}/edit`}>
+          <Link to={`/menus/${selectedMenu.id}/edit`}>
             <Button variant="outline">
               <PenIcon className="mr-2 h-4 w-4" />
               Edit Menu
