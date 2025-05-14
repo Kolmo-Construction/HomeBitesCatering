@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Filter, Search } from "lucide-react";
 
 import StatCard from "@/components/dashboard/StatCard";
-import RecentLeadsTable from "@/components/dashboard/RecentLeadsTable";
+import RecentOpportunitiesTable from "@/components/dashboard/RecentOpportunitiesTable";
 import UpcomingEventsList from "@/components/dashboard/UpcomingEventsList";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentEstimatesTable from "@/components/dashboard/RecentEstimatesTable";

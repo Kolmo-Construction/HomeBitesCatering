@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
-import Leads from "@/pages/leads";
+import Opportunities from "@/pages/opportunities";
 import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
 import MenuItems from "@/pages/menu-items";
@@ -38,10 +38,10 @@ function AppContent() {
         <Layout>
           <Switch>
             <Route path="/" component={Dashboard} />
-            <Route path="/leads" component={Leads} />
-            <Route path="/leads/new" component={Leads} />
-            <Route path="/leads/:id" component={Leads} />
-            <Route path="/leads/:id/edit" component={Leads} />
+            <Route path="/opportunities" component={Opportunities} />
+            <Route path="/opportunities/new" component={Opportunities} />
+            <Route path="/opportunities/:id" component={Opportunities} />
+            <Route path="/opportunities/:id/edit" component={Opportunities} />
             <Route path="/clients" component={Clients} />
             <Route path="/clients/new" component={Clients} />
             <Route path="/clients/:id" component={Clients} />

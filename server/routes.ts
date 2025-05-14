@@ -872,17 +872,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/leads/:leadId/communications - Get communication timeline for a lead
-  app.get('/api/leads/:leadId/communications', isAuthenticated, async (req: Request, res: Response) => {
+  // GET /api/opportunities/:opportunityId/communications - Get communication timeline for an opportunity
+  app.get('/api/opportunities/:opportunityId/communications', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const leadId = Number(req.params.leadId);
-      if (isNaN(leadId)) {
-        return res.status(400).json({ message: 'Invalid lead ID.' });
+      const opportunityId = Number(req.params.opportunityId);
+      if (isNaN(opportunityId)) {
+        return res.status(400).json({ message: 'Invalid opportunity ID.' });
       }
-      const communications = await storage.getCommunicationsForLead(leadId);
+      const communications = await storage.getCommunicationsForOpportunity(opportunityId);
       res.json(communications);
     } catch (error) {
-      console.error("Error fetching communications for lead:", error);
+      console.error("Error fetching communications for opportunity:", error);
       res.status(500).json({ message: 'Server error fetching communications' });
     }
   });
@@ -902,16 +902,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // --- NEW: Route for finding lead/client by contact info ---
+  // --- NEW: Route for finding opportunity/client by contact info ---
   app.post('/api/contacts/find', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { value, type } = req.body;
       if (!value || (type !== 'email' && type !== 'phone')) {
         return res.status(400).json({ message: 'Invalid value or type for contact lookup.' });
       }
-      const result = await storage.findLeadOrClientByContactIdentifier(value, type);
+      const result = await storage.findOpportunityOrClientByContactIdentifier(value, type);
       if (!result) {
-        return res.status(404).json({ message: 'No matching lead or client found.' });
+        return res.status(404).json({ message: 'No matching opportunity or client found.' });
       }
       res.json(result);
     } catch (error) {
