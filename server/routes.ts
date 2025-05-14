@@ -298,9 +298,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Opportunity not found' });
       }
       
-      const updatedOpportunity = await storage.updateOpportunity(opportunityId, req.body);
+      // Validate priority field if it's included
+      if (req.body.priority && !opportunityPriorityEnum.enumValues.includes(req.body.priority)) {
+        return res.status(400).json({ 
+          message: 'Invalid priority value',
+          validValues: opportunityPriorityEnum.enumValues 
+        });
+      }
+      
+      // Create a partial update schema from the insert schema
+      const updateSchema = z.object({
+        firstName: insertOpportunitySchema.shape.firstName.optional(),
+        lastName: insertOpportunitySchema.shape.lastName.optional(),
+        email: insertOpportunitySchema.shape.email.optional(),
+        phone: insertOpportunitySchema.shape.phone.optional(),
+        eventType: insertOpportunitySchema.shape.eventType.optional(),
+        eventDate: insertOpportunitySchema.shape.eventDate.optional(),
+        guestCount: insertOpportunitySchema.shape.guestCount.optional(),
+        venue: insertOpportunitySchema.shape.venue.optional(),
+        notes: insertOpportunitySchema.shape.notes.optional(),
+        status: insertOpportunitySchema.shape.status.optional(),
+        priority: insertOpportunitySchema.shape.priority.optional(),
+        opportunitySource: insertOpportunitySchema.shape.opportunitySource.optional(),
+        assignedTo: insertOpportunitySchema.shape.assignedTo.optional(),
+        clientId: insertOpportunitySchema.shape.clientId.optional(),
+      });
+      
+      // Validate update data
+      const updateData = updateSchema.parse(req.body);
+      
+      const updatedOpportunity = await storage.updateOpportunity(opportunityId, updateData);
       res.json(updatedOpportunity);
     } catch (error) {
+      console.error("Error updating opportunity:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
       res.status(500).json({ message: 'Server error' });
     }
   });
