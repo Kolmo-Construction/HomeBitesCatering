@@ -80,7 +80,12 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
   const [clientPortalUrl, setClientPortalUrl] = useState<string>("");
   const [showPortalLink, setShowPortalLink] = useState<boolean>(false);
-  const [zipCode, setZipCode] = useState<string>("");
+  
+  // Venue address fields for tax calculation
+  const [venueAddress, setVenueAddress] = useState<string>("");
+  const [venueCity, setVenueCity] = useState<string>("");
+  const [venueZip, setVenueZip] = useState<string>("");
+  const [taxRate, setTaxRate] = useState<number>(0.095); // Default 9.5%
 
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
@@ -496,27 +501,78 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="zipCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Zip Code (for Tax Calculation)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter zip code" 
-                      {...field} 
-                      value={field.value || ""}
-                      onChange={(e) => {
-                        field.onChange(e.target.value);
-                        setZipCode(e.target.value); 
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Address fields for WA Tax calculation */}
+            <div className="space-y-4">
+              <h3 className="text-md font-medium">Venue Address (for Tax Calculation)</h3>
+              
+              <FormField
+                control={form.control}
+                name="venueAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="123 Main St" 
+                        {...field} 
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          setVenueAddress(e.target.value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="venueCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Seattle" 
+                          {...field} 
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            setVenueCity(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="venueZip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ZIP Code</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="98101" 
+                          {...field} 
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            setVenueZip(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             {/* Menu Selection */}
             <div>
