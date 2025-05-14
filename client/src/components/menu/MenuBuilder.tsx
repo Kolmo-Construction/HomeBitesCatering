@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -149,15 +149,43 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     queryKey: ["/api/menu-items"],
   });
   
-  // Set up form
+  // Update selected items with additional data from menu items when available
+  useEffect(() => {
+    if (isEditing && menu && menu.items && menuItems.length > 0) {
+      console.log("Updating selected items with menu item details");
+      const updatedItems = getMenuItems().map((item: MenuItemWithQuantity) => {
+        // Try to find matching menu item to get additional details
+        const menuItem = menuItems.find((mi: any) => mi.id === item.id);
+        if (menuItem) {
+          return {
+            ...item,
+            name: menuItem.name || item.name,
+            price: menuItem.price || item.price,
+            category: menuItem.category || item.category
+          };
+        }
+        return item;
+      });
+      setSelectedItems(updatedItems);
+    }
+  }, [menu, menuItems, isEditing]);
+  
+  // Set up form with appropriate default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: menu || {
-      name: "",
-      description: "",
-      type: "standard",
-      items: [],
-    },
+    defaultValues: menu 
+      ? {
+          name: menu.name || "",
+          description: menu.description || "",
+          type: menu.type || "standard",
+          // items are handled separately in the selectedItems state
+        }
+      : {
+          name: "",
+          description: "",
+          type: "standard",
+          items: [],
+        },
   });
   
   // Mutation for creating/updating menu
@@ -284,7 +312,21 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       return;
     }
     
-    mutation.mutate(values);
+    // Format data for submission
+    const formData = {
+      ...values,
+      // Stringify items array for database storage since the schema uses jsonb
+      items: JSON.stringify(selectedItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price, 
+        quantity: item.quantity,
+        category: item.category
+      })))
+    };
+
+    console.log("Submitting menu data:", formData);
+    mutation.mutate(formData);
   };
   
   // Group menu items by category for selection

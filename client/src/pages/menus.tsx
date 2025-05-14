@@ -238,7 +238,19 @@ export default function Menus() {
     );
   }
   
-  if (mode === "edit" && selectedMenu) {
+  if (mode === "edit") {
+    if (!selectedMenu) {
+      return (
+        <div className="max-w-3xl mx-auto py-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Menu not found</h2>
+          <p className="text-gray-500 mb-6">The menu you are trying to edit could not be found.</p>
+          <Button onClick={() => navigate("/menus")}>Back to Menus</Button>
+        </div>
+      );
+    }
+    
+    console.log("Rendering edit mode with menu data:", selectedMenu);
+    
     return (
       <div>
         <h1 className="font-poppins text-2xl font-bold text-neutral-900 mb-6">Edit Menu</h1>
