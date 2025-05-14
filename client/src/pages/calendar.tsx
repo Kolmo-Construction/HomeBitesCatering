@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Calendar as BigCalendar, Views } from 'react-big-calendar';
-import { format, parseISO, isValid, startOfWeek } from 'date-fns';
-import { dateFnsLocalizer } from 'react-big-calendar/lib/localizers/date-fns';
+import { Calendar as BigCalendar, Views, momentLocalizer } from 'react-big-calendar';
+import { format, parseISO, isValid } from 'date-fns';
+import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 import { Button } from '@/components/ui/button';
@@ -20,22 +20,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-// Date-fns localizer for react-big-calendar
-const localizerFormats = {
-  dateFormat: 'PP',
-  dayFormat: 'dd EEE',
-  monthHeaderFormat: 'MMMM yyyy',
-  timeGutterFormat: 'p',
-  weekdayFormat: 'EEE'
-};
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse: parseISO,
-  startOfWeek: () => startOfWeek(new Date()),
-  getDay: (date: Date) => date.getDay(),
-  locales: { 'en-US': undefined } // No need for locale import in this case
-}, localizerFormats);
+// Setup the moment localizer for react-big-calendar
+const localizer = momentLocalizer(moment);
 
 // Define event source types for color coding
 type EventSourceType = 'lead' | 'confirmedEvent' | 'estimate';
@@ -96,7 +82,7 @@ const eventStyleGetter = (event: CalendarEvent) => {
 };
 
 const Calendar = () => {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [viewMode, setViewMode] = useState<string>('month');
   const [dialogOpen, setDialogOpen] = useState(false);
