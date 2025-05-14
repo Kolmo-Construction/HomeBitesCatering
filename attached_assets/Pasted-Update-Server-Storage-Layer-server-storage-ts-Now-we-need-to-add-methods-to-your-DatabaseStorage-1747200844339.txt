@@ -1,0 +1,158 @@
+Update Server Storage Layer (server/storage.ts)
+
+Now, we need to add methods to your DatabaseStorage class to interact with these new tables. We'll add basic CRUD (Create, Read, Update, Delete) operations for them.
+
+Here are the additions and modifications for your server/storage.ts file:
+
+A. Import New Types and Schemas:
+
+At the top of server/storage.ts, make sure the new schemas and types are imported:
+
+TypeScript
+
+// server/storage.ts
+import {
+  users, leads, menuItems, menus, clients, estimates, events,
+  contactIdentifiers, // <<< NEW
+  communications,    // <<< NEW
+  type User, type InsertUser,
+  type Lead, type InsertLead,
+  type MenuItem, type InsertMenuItem,
+  type Menu as DrizzleMenu, type InsertMenu,
+  type Client, type InsertClient,
+  type Estimate, type InsertEstimate,
+  type Event, type InsertEvent,
+  type ContactIdentifier, type InsertContactIdentifier, // <<< NEW
+  type Communication, type InsertCommunication         // <<< NEW
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, gte, inArray, and, or, desc } from "drizzle-orm"; // <<< Added and, or, desc
+
+// ... (Keep your EnrichedMenu type if you have it from previous steps)
+export type EnrichedMenu = Omit<DrizzleMenu, 'items'> & {
+  items: (MenuItem & { quantity: number })[];
+};
+type MenuItemEntry = { id: number; quantity: number; };
+B. Update IStorage Interface:
+
+Add the new method signatures to your IStorage interface:
+
+TypeScript
+
+// server/storage.ts
+// ...
+export interface IStorage {
+  // ... (existing User, Lead, MenuItem, Menu, Client, Estimate, Event methods)
+
+  // --- NEW: Contact Identifier Methods ---
+  createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier>;
+  getContactIdentifiers(owner: { leadId?: number; clientId?: number }): Promise<ContactIdentifier[]>;
+  updateContactIdentifier(id: number, identifier: Partial<InsertContactIdentifier>): Promise<ContactIdentifier | undefined>;
+  deleteContactIdentifier(id: number): Promise<boolean>;
+  findLeadOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ lead?: Lead, client?: Client } | null>;
+
+  // --- NEW: Communication Methods ---
+  createCommunication(communication: InsertCommunication): Promise<Communication>;
+  getCommunicationsForLead(leadId: number): Promise<Communication[]>;
+  getCommunicationsForClient(clientId: number): Promise<Communication[]>;
+  // Potentially add update/delete for communications if needed, but often they are append-only
+}
+// ...
+C. Implement New Methods in DatabaseStorage Class:
+
+Add the following new methods inside your DatabaseStorage class:
+
+TypeScript
+
+// server/storage.ts
+
+export class DatabaseStorage implements IStorage {
+  // ... (existing User, Lead, MenuItem, Menu, Client, Estimate, Event methods should be here)
+
+  // --- NEW: Contact Identifier Methods Implementation ---
+  async createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier> {
+    const [newIdentifier] = await db
+      .insert(contactIdentifiers)
+      .values(identifier)
+      .returning();
+    return newIdentifier;
+  }
+
+  async getContactIdentifiers(owner: { leadId?: number; clientId?: number }): Promise<ContactIdentifier[]> {
+    if (owner.leadId) {
+      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.leadId, owner.leadId));
+    }
+    if (owner.clientId) {
+      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, owner.clientId));
+    }
+    return []; // Or throw an error if neither is provided
+  }
+
+  async updateContactIdentifier(id: number, identifierData: Partial<InsertContactIdentifier>): Promise<ContactIdentifier | undefined> {
+    const [updatedIdentifier] = await db
+      .update(contactIdentifiers)
+      .set(identifierData)
+      .where(eq(contactIdentifiers.id, id))
+      .returning();
+    return updatedIdentifier;
+  }
+
+  async deleteContactIdentifier(id: number): Promise<boolean> {
+    await db.delete(contactIdentifiers).where(eq(contactIdentifiers.id, id));
+    return true;
+  }
+
+  async findLeadOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ lead?: Lead, client?: Client } | null> {
+    const foundIdentifiers = await db
+      .select()
+      .from(contactIdentifiers)
+      .where(and(eq(contactIdentifiers.value, value), eq(contactIdentifiers.type, type)));
+
+    if (foundIdentifiers.length === 0) {
+      return null;
+    }
+
+    // Prioritize client if both lead and client are linked, or take the first found
+    // This logic might need refinement based on your business rules
+    for (const identifier of foundIdentifiers) {
+      if (identifier.clientId) {
+        const [client] = await db.select().from(clients).where(eq(clients.id, identifier.clientId));
+        if (client) return { client };
+      }
+      if (identifier.leadId) {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, identifier.leadId));
+        if (lead) return { lead }; // Return lead if client not found for this identifier
+      }
+    }
+    return null;
+  }
+
+  // --- NEW: Communication Methods Implementation ---
+  async createCommunication(communication: InsertCommunication): Promise<Communication> {
+    const [newCommunication] = await db
+      .insert(communications)
+      .values(communication)
+      .returning();
+    return newCommunication;
+  }
+
+  async getCommunicationsForLead(leadId: number): Promise<Communication[]> {
+    return db
+      .select()
+      .from(communications)
+      .where(eq(communications.leadId, leadId))
+      .orderBy(desc(communications.timestamp)); // Order by most recent first
+  }
+
+  async getCommunicationsForClient(clientId: number): Promise<Communication[]> {
+    return db
+      .select()
+      .from(communications)
+      .where(eq(communications.clientId, clientId))
+      .orderBy(desc(communications.timestamp)); // Order by most recent first
+  }
+
+  // ... (ensure all your existing methods like listUsers, getMenu, etc., are still here)
+}
+
+// ... (export const storage = new DatabaseStorage(); should be at the end)

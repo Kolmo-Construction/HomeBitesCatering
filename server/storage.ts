@@ -12,7 +12,7 @@ import {
   type Communication, type InsertCommunication
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, gte, inArray, and, isNull, desc } from "drizzle-orm"; // Added new imports
+import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
 
 // Define an enriched Menu type that includes full menu item details
 // This type will be used for the return values of getMenu and listMenus
@@ -91,26 +91,16 @@ export interface IStorage {
   listUpcomingEvents(): Promise<Event[]>;
   
   // Contact Identifiers
-  getContactIdentifier(id: number): Promise<ContactIdentifier | undefined>;
   createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier>;
+  getContactIdentifiers(owner: { leadId?: number; clientId?: number }): Promise<ContactIdentifier[]>;
   updateContactIdentifier(id: number, identifier: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined>;
   deleteContactIdentifier(id: number): Promise<boolean>;
-  listContactIdentifiers(): Promise<ContactIdentifier[]>;
-  listContactIdentifiersByLead(leadId: number): Promise<ContactIdentifier[]>;
-  listContactIdentifiersByClient(clientId: number): Promise<ContactIdentifier[]>;
-  listContactIdentifiersByType(type: string): Promise<ContactIdentifier[]>;
+  findLeadOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ lead?: Lead, client?: Client } | null>;
   
   // Communications
-  getCommunication(id: number): Promise<Communication | undefined>;
   createCommunication(communication: InsertCommunication): Promise<Communication>;
-  updateCommunication(id: number, communication: Partial<Communication>): Promise<Communication | undefined>;
-  deleteCommunication(id: number): Promise<boolean>;
-  listCommunications(): Promise<Communication[]>;
-  listCommunicationsByLead(leadId: number): Promise<Communication[]>;
-  listCommunicationsByClient(clientId: number): Promise<Communication[]>;
-  listCommunicationsByUser(userId: number): Promise<Communication[]>;
-  listCommunicationsByType(type: string): Promise<Communication[]>;
-  listRecentCommunications(limit?: number): Promise<Communication[]>;
+  getCommunicationsForLead(leadId: number): Promise<Communication[]>;
+  getCommunicationsForClient(clientId: number): Promise<Communication[]>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -513,17 +503,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Contact Identifiers
-  async getContactIdentifier(id: number): Promise<ContactIdentifier | undefined> {
-    const [identifier] = await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.id, id));
-    return identifier || undefined;
-  }
-
   async createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier> {
     const [newIdentifier] = await db
       .insert(contactIdentifiers)
       .values(identifier)
       .returning();
     return newIdentifier;
+  }
+
+  async getContactIdentifiers(owner: { leadId?: number; clientId?: number }): Promise<ContactIdentifier[]> {
+    if (owner.leadId) {
+      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.leadId, owner.leadId));
+    }
+    if (owner.clientId) {
+      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, owner.clientId));
+    }
+    return []; // Return empty array if neither leadId nor clientId is provided
   }
 
   async updateContactIdentifier(id: number, identifierData: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined> {
@@ -542,28 +537,31 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async listContactIdentifiers(): Promise<ContactIdentifier[]> {
-    return await db.select().from(contactIdentifiers);
-  }
+  async findLeadOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ lead?: Lead, client?: Client } | null> {
+    const foundIdentifiers = await db
+      .select()
+      .from(contactIdentifiers)
+      .where(and(eq(contactIdentifiers.value, value), eq(contactIdentifiers.type, type)));
 
-  async listContactIdentifiersByLead(leadId: number): Promise<ContactIdentifier[]> {
-    return await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.leadId, leadId));
-  }
+    if (foundIdentifiers.length === 0) {
+      return null;
+    }
 
-  async listContactIdentifiersByClient(clientId: number): Promise<ContactIdentifier[]> {
-    return await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, clientId));
-  }
-
-  async listContactIdentifiersByType(type: string): Promise<ContactIdentifier[]> {
-    return await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.type, type));
+    // Prioritize client if both lead and client are linked, or take the first found
+    for (const identifier of foundIdentifiers) {
+      if (identifier.clientId) {
+        const [client] = await db.select().from(clients).where(eq(clients.id, identifier.clientId));
+        if (client) return { client };
+      }
+      if (identifier.leadId) {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, identifier.leadId));
+        if (lead) return { lead }; // Return lead if client not found for this identifier
+      }
+    }
+    return null;
   }
 
   // Communications
-  async getCommunication(id: number): Promise<Communication | undefined> {
-    const [communication] = await db.select().from(communications).where(eq(communications.id, id));
-    return communication || undefined;
-  }
-
   async createCommunication(communication: InsertCommunication): Promise<Communication> {
     const [newCommunication] = await db
       .insert(communications)
@@ -572,48 +570,20 @@ export class DatabaseStorage implements IStorage {
     return newCommunication;
   }
 
-  async updateCommunication(id: number, communicationData: Partial<Communication>): Promise<Communication | undefined> {
-    const [updatedCommunication] = await db
-      .update(communications)
-      .set(communicationData)
-      .where(eq(communications.id, id))
-      .returning();
-    return updatedCommunication;
-  }
-
-  async deleteCommunication(id: number): Promise<boolean> {
-    await db
-      .delete(communications)
-      .where(eq(communications.id, id));
-    return true;
-  }
-
-  async listCommunications(): Promise<Communication[]> {
-    return await db.select().from(communications);
-  }
-
-  async listCommunicationsByLead(leadId: number): Promise<Communication[]> {
-    return await db.select().from(communications).where(eq(communications.leadId, leadId));
-  }
-
-  async listCommunicationsByClient(clientId: number): Promise<Communication[]> {
-    return await db.select().from(communications).where(eq(communications.clientId, clientId));
-  }
-
-  async listCommunicationsByUser(userId: number): Promise<Communication[]> {
-    return await db.select().from(communications).where(eq(communications.userId, userId));
-  }
-
-  async listCommunicationsByType(type: string): Promise<Communication[]> {
-    return await db.select().from(communications).where(eq(communications.type, type));
-  }
-
-  async listRecentCommunications(limit: number = 10): Promise<Communication[]> {
-    return await db
+  async getCommunicationsForLead(leadId: number): Promise<Communication[]> {
+    return db
       .select()
       .from(communications)
-      .orderBy(desc(communications.timestamp))
-      .limit(limit);
+      .where(eq(communications.leadId, leadId))
+      .orderBy(desc(communications.timestamp)); // Order by most recent first
+  }
+
+  async getCommunicationsForClient(clientId: number): Promise<Communication[]> {
+    return db
+      .select()
+      .from(communications)
+      .where(eq(communications.clientId, clientId))
+      .orderBy(desc(communications.timestamp)); // Order by most recent first
   }
 }
 
