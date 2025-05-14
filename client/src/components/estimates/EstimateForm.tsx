@@ -85,7 +85,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   });
   
   // Get menu details if a menu is selected
-  const { data: selectedMenu, isLoading: isLoadingSelectedMenu } = useQuery({
+  const { data: selectedMenu = { items: [] }, isLoading: isLoadingSelectedMenu } = useQuery({
     queryKey: ["/api/menus", selectedMenuId],
     enabled: !!selectedMenuId,
   });
@@ -247,12 +247,19 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     const estimateTax = tax || 0;
     const estimateTotal = total || 0;
     
-    mutation.mutate({
+    // Prepare values with properly handled date fields
+    const preparedValues = {
       ...values,
+      // Ensure eventDate is a proper Date object or null
+      eventDate: values.eventDate instanceof Date ? values.eventDate : null,
+      // Ensure sentAt is a proper Date object or null
+      sentAt: values.sentAt instanceof Date ? values.sentAt : null,
       subtotal: estimateSubtotal,
       tax: estimateTax,
       total: estimateTotal
-    });
+    };
+    
+    mutation.mutate(preparedValues);
   };
   
   // Handle sending estimate
@@ -263,23 +270,29 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     const estimateSubtotal = subtotal || 0;
     const estimateTax = tax || 0;
     const estimateTotal = total || 0;
+    const currentDate = new Date();
     
     // Update status to 'sent'
     form.setValue("status", "sent");
-    form.setValue("sentAt", new Date());
+    form.setValue("sentAt", currentDate);
     form.setValue("subtotal", estimateSubtotal);
     form.setValue("tax", estimateTax);
     form.setValue("total", estimateTotal);
     
-    // Submit the form with all required fields
-    mutation.mutate({
+    // Prepare date values properly
+    const preparedValues = {
       ...values,
       status: "sent",
-      sentAt: new Date(),
+      sentAt: currentDate,
+      // Make sure eventDate is properly handled as a Date object
+      eventDate: values.eventDate instanceof Date ? values.eventDate : null,
       subtotal: estimateSubtotal,
       tax: estimateTax, 
       total: estimateTotal
-    });
+    };
+    
+    // Submit the form with all required fields and proper Date objects
+    mutation.mutate(preparedValues);
   };
   
   return (
