@@ -294,15 +294,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/menu-items', async (req, res) => {
-    try {
-      const menuItems = await storage.listMenuItems();
-      res.json(menuItems);
-    } catch (error) {
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-
   app.post('/api/menu-items', isAuthenticated, async (req, res) => {
     try {
       const menuItemData = insertMenuItemSchema.parse(req.body);

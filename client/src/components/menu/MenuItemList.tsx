@@ -120,12 +120,12 @@ export default function MenuItemList() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
-          <Link href={`/menu-items/${row.original.id}`}>
+          <Link to={`/menu-items/${row.original.id}`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
             </div>
           </Link>
-          <Link href={`/menu-items/${row.original.id}/edit`}>
+          <Link to={`/menu-items/${row.original.id}/edit`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
             </div>
