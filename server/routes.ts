@@ -567,7 +567,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Estimate not found' });
       }
       
+      // Check if the estimate status is being updated to "sent"
+      const beingSent = req.body.status === 'sent' && estimate.status !== 'sent';
+      
+      // Update the estimate
       const updatedEstimate = await storage.updateEstimate(estimateId, req.body);
+      
+      // If the estimate is being sent, generate a client portal link
+      if (beingSent) {
+        // In a real app, you would use a proper JWT or secure token
+        // For now, we'll just use the estimate ID as the token for simplicity
+        const portalToken = estimateId.toString();
+        
+        // The client portal URL that would be sent to the client
+        const portalUrl = `${req.protocol}://${req.get('host')}/client-portal/${portalToken}`;
+        console.log(`Client portal created: ${portalUrl}`);
+        
+        // Here you would typically send an email to the client with the portal link
+        // For now, we'll just log it and include it in the response
+        
+        return res.json({ 
+          ...updatedEstimate, 
+          clientPortalUrl: portalUrl,
+          message: "Estimate updated and client portal link generated"
+        });
+      }
+      
       res.json(updatedEstimate);
     } catch (error) {
       res.status(500).json({ message: 'Server error' });

@@ -90,6 +90,8 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [subtotal, setSubtotal] = useState(estimate?.subtotal || 0);
   const [tax, setTax] = useState(estimate?.tax || 0);
   const [total, setTotal] = useState(estimate?.total || 0);
+  const [clientPortalUrl, setClientPortalUrl] = useState<string | null>(null);
+  const [showPortalLink, setShowPortalLink] = useState<boolean>(false);
   
   // Set up form
   const form = useForm<FormValues>({
