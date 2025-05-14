@@ -123,6 +123,7 @@ export const estimates = pgTable("estimates", {
   eventType: text("event_type").notNull(),
   guestCount: integer("guest_count"),
   venue: text("venue"),
+  zipCode: text("zip_code"),
   menuId: integer("menu_id").references(() => menus.id),
   items: jsonb("items"), // JSON of custom items if not using a standard menu
   additionalServices: jsonb("additional_services"), // JSON of additional services

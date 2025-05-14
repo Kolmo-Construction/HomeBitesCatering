@@ -425,6 +425,27 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="zipCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Zip Code (for Tax Calculation)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter zip code" 
+                      {...field} 
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        setZipCode(e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <div>
               <FormLabel>Menu Selection</FormLabel>
               <Select 
