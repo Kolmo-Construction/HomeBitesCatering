@@ -60,8 +60,8 @@ export default function Estimates() {
   
   return (
     <div className="text-center py-12">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Estimate Not Found</h2>
-      <p className="text-gray-600">The estimate you're looking for doesn't exist or has been deleted.</p>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Quote Not Found</h2>
+      <p className="text-gray-600">The quote you're looking for doesn't exist or has been deleted.</p>
     </div>
   );
 }

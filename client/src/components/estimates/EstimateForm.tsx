@@ -64,11 +64,13 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State for menu items
+  // State for menu items and client portal URL
   const [selectedMenuId, setSelectedMenuId] = useState<number | null>(estimate?.menuId || null);
   const [customItems, setCustomItems] = useState<CustomItem[]>(
     estimate?.items ? JSON.parse(estimate.items) : []
   );
+  const [clientPortalUrl, setClientPortalUrl] = useState<string>("");
+  const [showPortalLink, setShowPortalLink] = useState<boolean>(false);
   
   // Get clients for dropdown
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
@@ -90,8 +92,6 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [subtotal, setSubtotal] = useState(estimate?.subtotal || 0);
   const [tax, setTax] = useState(estimate?.tax || 0);
   const [total, setTotal] = useState(estimate?.total || 0);
-  const [clientPortalUrl, setClientPortalUrl] = useState<string | null>(null);
-  const [showPortalLink, setShowPortalLink] = useState<boolean>(false);
   
   // Set up form
   const form = useForm<FormValues>({
@@ -252,7 +252,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>{isEditing ? "Edit Estimate" : "Create New Estimate"}</CardTitle>
+        <CardTitle>{isEditing ? "Edit Quote" : "Create New Quote"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -603,14 +603,14 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
             </CardFooter>
           </form>
           
-          {/* Client Portal Link Section - Shown when estimate is sent */}
+          {/* Client Portal Link Section - Shown when quote is sent */}
           {showPortalLink && clientPortalUrl && (
             <div className="mt-8 p-4 border border-green-200 bg-green-50 rounded-md">
               <h3 className="text-lg font-semibold text-green-700 mb-2">
                 Client Portal Created
               </h3>
               <p className="text-sm text-green-600 mb-4">
-                A client portal has been created for this estimate. Share this link with your client:
+                A client portal has been created for this quote. Share this link with your client:
               </p>
               
               <div className="flex items-center space-x-2 mb-4">
@@ -651,7 +651,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                     navigate("/estimates");
                   }}
                 >
-                  Back to Estimates
+                  Back to Quotes
                 </Button>
               </div>
             </div>
