@@ -30,7 +30,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { CalendarIcon, PlusIcon, Trash2Icon, DollarSignIcon } from "lucide-react"; // Added DollarSignIcon
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn, formatDate, formatCurrency, calculateTax, calculateTotal } from "@/lib/utils";
+import { cn, formatDate, formatCurrency, calculateTax, calculateTaxAsync, calculateTotal } from "@/lib/utils";
 
 // Define the structure for custom items managed in the form's state
 interface CustomItem {
@@ -303,7 +303,6 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
         venueCity: values.venueCity || "",
         venueZip: values.venueZip || "",
         items: itemsJson,
-        additionalServices: values.additionalServices ? JSON.stringify(values.additionalServices) : null, // Assuming similar handling
         menuId: selectedMenuId, // Already a number or null
         // Use calculated financials from state for submission
         subtotal: subtotal,
