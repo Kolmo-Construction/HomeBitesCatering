@@ -177,6 +177,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
         notes: rawLeadData.notes || "",
         opportunitySource: rawLeadData.source || "email",
         status: "new",
+        priority: "medium",
         assignToExistingClient: false,
         clientId: "",
       });
@@ -199,6 +200,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
         notes: "",
         opportunitySource: "",
         status: "new",
+        priority: "medium",
         assignToExistingClient: false,
         clientId: "",
       });
@@ -564,6 +566,33 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                         <SelectItem value="negotiation">Negotiation</SelectItem>
                         <SelectItem value="won">Won</SelectItem>
                         <SelectItem value="lost">Lost</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="hot">Hot</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
