@@ -1,16 +1,18 @@
 // server/storage.ts
 import {
-  users, leads, menuItems, menus, clients, estimates, events,
+  users, leads, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   type User, type InsertUser,
   type Lead, type InsertLead,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
   type Menu as DrizzleMenu, type InsertMenu, // Alias original Menu to DrizzleMenu to avoid naming conflict
   type Client, type InsertClient,
   type Estimate, type InsertEstimate,
-  type Event, type InsertEvent
+  type Event, type InsertEvent,
+  type ContactIdentifier, type InsertContactIdentifier,
+  type Communication, type InsertCommunication
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, gte, inArray } from "drizzle-orm"; // Added inArray
+import { eq, gte, inArray, and, isNull, desc } from "drizzle-orm"; // Added new imports
 
 // Define an enriched Menu type that includes full menu item details
 // This type will be used for the return values of getMenu and listMenus
@@ -87,6 +89,28 @@ export interface IStorage {
   deleteEvent(id: number): Promise<boolean>;
   listEvents(): Promise<Event[]>;
   listUpcomingEvents(): Promise<Event[]>;
+  
+  // Contact Identifiers
+  getContactIdentifier(id: number): Promise<ContactIdentifier | undefined>;
+  createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier>;
+  updateContactIdentifier(id: number, identifier: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined>;
+  deleteContactIdentifier(id: number): Promise<boolean>;
+  listContactIdentifiers(): Promise<ContactIdentifier[]>;
+  listContactIdentifiersByLead(leadId: number): Promise<ContactIdentifier[]>;
+  listContactIdentifiersByClient(clientId: number): Promise<ContactIdentifier[]>;
+  listContactIdentifiersByType(type: string): Promise<ContactIdentifier[]>;
+  
+  // Communications
+  getCommunication(id: number): Promise<Communication | undefined>;
+  createCommunication(communication: InsertCommunication): Promise<Communication>;
+  updateCommunication(id: number, communication: Partial<Communication>): Promise<Communication | undefined>;
+  deleteCommunication(id: number): Promise<boolean>;
+  listCommunications(): Promise<Communication[]>;
+  listCommunicationsByLead(leadId: number): Promise<Communication[]>;
+  listCommunicationsByClient(clientId: number): Promise<Communication[]>;
+  listCommunicationsByUser(userId: number): Promise<Communication[]>;
+  listCommunicationsByType(type: string): Promise<Communication[]>;
+  listRecentCommunications(limit?: number): Promise<Communication[]>;
 }
 
 // DatabaseStorage implementation using PostgreSQL

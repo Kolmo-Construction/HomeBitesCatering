@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -20,7 +20,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true
 });
 
-// Leads
+// Leads (forward reference to clients handled later)
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
@@ -35,7 +35,7 @@ export const leads = pgTable("leads", {
   status: text("status").default("new").notNull(), // new, contacted, qualified, proposal, booked, archived
   leadSource: text("lead_source"), // website, referral, google, social, etc.
   assignedTo: integer("assigned_to").references(() => users.id),
-  clientId: integer("client_id").references(() => clients.id),
+  clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -108,6 +108,11 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// The proper way to handle circular references in Drizzle is to declare both tables
+// without circular foreign keys first, then use the relations API instead of trying to
+// add the reference after the fact. We'll keep it simple in this case by just documenting
+// that leads.clientId refers to clients.id.
 
 export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
@@ -187,6 +192,60 @@ export const insertEventSchema = createInsertSchema(events).omit({
   updatedAt: true
 });
 
+// --- NEW: Contact Identifiers Table ---
+export const identifierTypeEnum = pgEnum("identifier_type", ["email", "phone"]);
+
+export const contactIdentifiers = pgTable("contact_identifiers", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id, { onDelete: 'cascade' }), // Link to lead
+  clientId: integer("client_id").references(() => clients.id, { onDelete: 'cascade' }), // Link to client
+  type: identifierTypeEnum("type").notNull(), // 'email' or 'phone'
+  value: text("value").notNull(), // The actual email address or phone number
+  isPrimary: boolean("is_primary").default(false).notNull(),
+  source: text("source"), // How this identifier was added (e.g., 'lead_form', 'email_sync', 'manual_entry')
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertContactIdentifierSchema = createInsertSchema(contactIdentifiers).omit({
+  id: true,
+  createdAt: true,
+});
+
+// --- NEW: Communications/Interactions Table ---
+export const communicationTypeEnum = pgEnum("communication_type", ["email", "call", "sms", "note", "meeting"]);
+export const communicationDirectionEnum = pgEnum("communication_direction", ["incoming", "outgoing", "internal"]);
+
+export const communications = pgTable("communications", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id, { onDelete: 'set null' }), // Link to lead
+  clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }), // Link to client
+  userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }), // User who created/logged this, or involved internal user
+  type: communicationTypeEnum("type").notNull(),
+  direction: communicationDirectionEnum("direction").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(), // When the actual communication happened
+  source: text("source"), // e.g., 'gmail_sync', 'twilio_sync', 'manual_entry', 'system_generated'
+  externalId: text("external_id"), // Unique ID from the external system (e.g., email Message-ID, call SID)
+  subject: text("subject"), // For emails or meeting titles
+  fromAddress: text("from_address"), // For emails
+  toAddress: text("to_address"), // For emails (could be an array, consider how to store if multiple)
+  bodyRaw: text("body_raw"), // Full email body, call transcript, etc.
+  bodySummary: text("body_summary"), // AI-generated summary or user-provided summary
+  durationMinutes: integer("duration_minutes"), // For calls
+  recordingUrl: text("recording_url"), // For call recordings
+  metaData: jsonb("meta_data"), // Any other structured data (e.g., email headers, call tags, AI analysis results)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCommunicationSchema = createInsertSchema(communications, {
+  timestamp: z.coerce.date(), // Ensure timestamp is handled as Date
+  metaData: z.any().optional(), // For JSONB
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -208,3 +267,10 @@ export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+// --- NEW: Types for new tables ---
+export type ContactIdentifier = typeof contactIdentifiers.$inferSelect;
+export type InsertContactIdentifier = z.infer<typeof insertContactIdentifierSchema>;
+
+export type Communication = typeof communications.$inferSelect;
+export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
