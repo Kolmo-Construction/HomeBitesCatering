@@ -1,0 +1,76 @@
+Add Filtering UI for Priority (Conceptual):
+You'll need to manage the filter state (e.g., using useState) and then pass this filter to your useQuery hook that fetches opportunities. The DataTable itself doesn't handle API-side filtering; it filters the data already loaded on the client unless you implement server-side filtering.
+
+TypeScript
+
+// At the top of your OpportunityList component function:
+const [priorityFilter, setPriorityFilter] = useState<string | undefined>(undefined); // 'all' or specific priority
+
+// Update your useQuery hook to include the filter if your API supports it:
+// const { data: opportunities = [], isLoading } = useQuery({
+//   queryKey: ["/api/opportunities", { priority: priorityFilter, status: statusFilter /*, etc. */ }],
+//   queryFn: async ({ queryKey }) => {
+//     const params = queryKey[1] as Record<string, string | undefined>;
+//     const searchParams = new URLSearchParams();
+//     if (params.priority && params.priority !== 'all') searchParams.append('priority', params.priority);
+//     // Add other filters...
+//     const res = await fetch(`/api/opportunities?${searchParams.toString()}`);
+//     if (!res.ok) throw new Error('Failed to fetch opportunities');
+//     return res.json();
+//   },
+//   // ...
+// });
+
+// Add a Select component for filtering in the JSX, typically above the DataTable:
+// <div className="flex items-center py-4 gap-2">
+//   <Input
+//     placeholder="Filter by name..."
+//     value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+//     onChange={(event) =>
+//       table.getColumn("name")?.setFilterValue(event.target.value)
+//     }
+//     className="max-w-sm"
+//   />
+//   <Select value={priorityFilter || 'all'} onValueChange={(value) => setPriorityFilter(value === 'all' ? undefined : value)}>
+//     <SelectTrigger className="w-[180px]">
+//       <SelectValue placeholder="Filter by priority" />
+//     </SelectTrigger>
+//     <SelectContent>
+//       <SelectItem value="all">All Priorities</SelectItem>
+//       <SelectItem value="hot">Hot</SelectItem>
+//       <SelectItem value="high">High</SelectItem>
+//       <SelectItem value="medium">Medium</SelectItem>
+//       <SelectItem value="low">Low</SelectItem>
+//     </SelectContent>
+//   </Select>
+//   {/* Add similar filters for status if needed */}
+// </div>
+Note on Filtering: The example above shows how to set up the UI for filtering. For it to work with the backend:
+Your GET /api/opportunities endpoint in server/routes.ts must be updated to accept and process a priority query parameter (as outlined in the previous "Backend Adjustments for Priority" section).
+The useQuery in OpportunityList.txt needs to be adjusted to pass this priorityFilter state as part of its query key and to the fetch function, so it re-fetches when the filter changes.
+Component: client/src/pages/OpportunityDetailPage.txt (formerly LeadDetailPage.txt)
+
+Display the priority, perhaps using the same Badge logic as in the list.
+
+TypeScript
+
+// Import Badge and cn if not already there
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+// Inside the component, where you display opportunity details:
+// ...
+// <div>
+//   <Label>Priority</Label>
+//   <div className="font-medium">
+//     {opportunity.priority ? (
+//       <Badge className={cn("capitalize px-2.5 py-1 text-xs font-semibold", /* your badgeClass logic here */)}>
+//         {opportunity.priority}
+//       </Badge>
+//     ) : (
+//       "Not set"
+//     )}
+//   </div>
+// </div>
+// ...
+By making these changes, you'll be able to set, view, and filter opportunities by their priority level. The next step would be to implement the calendar conflict checks.

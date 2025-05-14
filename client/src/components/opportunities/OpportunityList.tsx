@@ -4,10 +4,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
-import BadgePriority from "@/components/ui/badge-priority";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Opportunity } from "../../types/opportunity";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { EyeIcon, PenIcon, PlusIcon, FilterIcon } from "lucide-react";
 import { 
   Select, 
@@ -80,7 +80,36 @@ export default function OpportunityList() {
     {
       accessorKey: "priority",
       header: "Priority",
-      cell: ({ row }) => <BadgePriority priority={row.original.priority || "medium"} />,
+      cell: ({ row }) => {
+        const priority = row.original.priority || "medium";
+        let badgeClass = "";
+        let textColor = "text-white"; // Default text color for badges
+
+        switch (priority) {
+          case 'hot':
+            badgeClass = "bg-red-600 hover:bg-red-700"; // More intense red for hot
+            break;
+          case 'high':
+            badgeClass = "bg-orange-500 hover:bg-orange-600";
+            break;
+          case 'medium':
+            badgeClass = "bg-yellow-500 hover:bg-yellow-600";
+            textColor = "text-gray-800"; // Darker text for yellow bg
+            break;
+          case 'low':
+            badgeClass = "bg-blue-500 hover:bg-blue-600";
+            break;
+          default:
+            badgeClass = "bg-gray-400 hover:bg-gray-500";
+        }
+        
+        return (
+          <Badge className={cn("capitalize px-2.5 py-1 text-xs font-semibold", badgeClass, textColor)}>
+            {priority}
+          </Badge>
+        );
+      },
+      enableSorting: true,
     },
     {
       id: "actions",

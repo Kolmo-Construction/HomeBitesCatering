@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import BadgePriority from "@/components/ui/badge-priority";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -290,7 +290,35 @@ export default function OpportunityDetailPage() {
               <div>
                 <Label>Priority</Label>
                 <div>
-                  <BadgePriority priority={opportunity.priority || "medium"} />
+                  {(() => {
+                    const priority = opportunity.priority || "medium";
+                    let badgeClass = "";
+                    let textColor = "text-white"; // Default text color for badges
+
+                    switch (priority) {
+                      case 'hot':
+                        badgeClass = "bg-red-600 hover:bg-red-700"; // More intense red for hot
+                        break;
+                      case 'high':
+                        badgeClass = "bg-orange-500 hover:bg-orange-600";
+                        break;
+                      case 'medium':
+                        badgeClass = "bg-yellow-500 hover:bg-yellow-600";
+                        textColor = "text-gray-800"; // Darker text for yellow bg
+                        break;
+                      case 'low':
+                        badgeClass = "bg-blue-500 hover:bg-blue-600";
+                        break;
+                      default:
+                        badgeClass = "bg-gray-400 hover:bg-gray-500";
+                    }
+                    
+                    return (
+                      <Badge className={cn("capitalize px-2.5 py-1 text-xs font-semibold", badgeClass, textColor)}>
+                        {priority}
+                      </Badge>
+                    );
+                  })()}
                 </div>
               </div>
               
