@@ -24,12 +24,12 @@ const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize and configure email sync service
-  const gmailSyncService = new GmailSyncService(5 * 60 * 1000); // 5-minute interval
-  app.set('gmailSyncService', gmailSyncService);
+  const emailService = new GmailSyncService(5 * 60 * 1000); // 5-minute interval
+  app.set('gmailSyncService', emailService);
   
   // Configure Gmail sync service with the target email from environment
   const targetEmail = process.env.SYNC_TARGET_EMAIL_ADDRESS || 'hello@eathomebites.com';
-  gmailSyncService.targetEmail = targetEmail;
+  emailService.targetEmail = targetEmail;
   
   // Start the Gmail Sync service if we have OAuth credentials
   console.log("Gmail Sync Service configured. It will start polling if authorized.");
