@@ -495,9 +495,10 @@ export class GmailSyncService {
     console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching new emails for ${this.targetEmail}...`);
 
     try {
+      // Only process emails from weddingvendors@zola.com
       const response = await this.gmail.users.messages.list({
         userId: 'me', // 'me' refers to the authenticated user
-        q: 'is:unread label:INBOX', // Example query: unread emails in inbox
+        q: 'is:unread label:INBOX from:weddingvendors@zola.com', // Filter for emails from Zola only
         maxResults: 10, // Process a few at a time
       });
 
