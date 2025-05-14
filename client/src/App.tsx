@@ -8,6 +8,8 @@ import Dashboard from "@/pages/dashboard";
 import Leads from "@/pages/leads";
 import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
+import MenuItems from "@/pages/menu-items";
+import Menus from "@/pages/menus";
 import Layout from "@/components/layout/Layout";
 
 function App() {
@@ -67,6 +69,14 @@ function App() {
               <Route path="/clients/:id" component={Clients} />
               <Route path="/clients/:id/edit" component={Clients} />
               <Route path="/estimates" component={Estimates} />
+              <Route path="/menu-items" component={MenuItems} />
+              <Route path="/menu-items/new" component={MenuItems} />
+              <Route path="/menu-items/:id" component={MenuItems} />
+              <Route path="/menu-items/:id/edit" component={MenuItems} />
+              <Route path="/menus" component={Menus} />
+              <Route path="/menus/new" component={Menus} />
+              <Route path="/menus/:id" component={Menus} />
+              <Route path="/menus/:id/edit" component={Menus} />
               <Route>
                 <Dashboard />
               </Route>

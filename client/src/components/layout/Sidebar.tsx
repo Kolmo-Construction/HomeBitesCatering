@@ -40,7 +40,7 @@ export default function Sidebar() {
               
             return (
               <li key={item.name}>
-                <Link href={item.href}>
+                <Link to={item.href}>
                   <div
                     className={cn(
                       "flex items-center p-2 rounded-lg transition cursor-pointer",
