@@ -1,6 +1,7 @@
 // server/storage.ts
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
+  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -9,7 +10,8 @@ import {
   type Estimate, type InsertEstimate,
   type Event, type InsertEvent,
   type ContactIdentifier, type InsertContactIdentifier,
-  type Communication, type InsertCommunication
+  type Communication, type InsertCommunication,
+  type RawLead, type InsertRawLead
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
@@ -48,6 +50,7 @@ export interface IStorage {
   listOpportunities(): Promise<Opportunity[]>;
   listOpportunitiesByStatus(status: string): Promise<Opportunity[]>;
   listOpportunitiesBySource(source: string): Promise<Opportunity[]>;
+  listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]>;
 
   // Menu Items
   getMenuItem(id: number): Promise<MenuItem | undefined>;
@@ -193,7 +196,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listOpportunitiesBySource(source: string): Promise<Opportunity[]> {
-    return await db.select().from(opportunities).where(eq(opportunities.leadSource, source));
+    return await db.select().from(opportunities).where(eq(opportunities.opportunitySource, source));
+  }
+  
+  async listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]> {
+    return await db.select().from(opportunities).where(eq(opportunities.priority, priority));
   }
 
   // For menu items

@@ -14,7 +14,9 @@ import {
   insertEstimateSchema, 
   insertEventSchema,
   insertContactIdentifierSchema, // New
-  insertCommunicationSchema      // New
+  insertCommunicationSchema,     // New
+  opportunityPriorityEnum,       // For priority filtering
+  insertRawLeadSchema            // For raw leads management
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 
@@ -162,9 +164,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Opportunity routes
   app.get('/api/opportunities', isAuthenticated, async (req, res) => {
     try {
-      const opportunities = await storage.listOpportunities();
+      const { status, source, priority } = req.query;
+      let opportunities;
+
+      if (priority && typeof priority === 'string') {
+        // Validate if priority is a valid enum value
+        if (!opportunityPriorityEnum.enumValues.includes(priority as any)) {
+          return res.status(400).json({ message: 'Invalid priority value' });
+        }
+        opportunities = await storage.listOpportunitiesByPriority(priority as typeof opportunityPriorityEnum.enumValues[number]);
+      } else if (status && typeof status === 'string') {
+        opportunities = await storage.listOpportunitiesByStatus(status);
+      } else if (source && typeof source === 'string') {
+        opportunities = await storage.listOpportunitiesBySource(source);
+      } else {
+        opportunities = await storage.listOpportunities();
+      }
+      
       res.json(opportunities);
     } catch (error) {
+      console.error("Error fetching opportunities:", error);
       res.status(500).json({ message: 'Server error' });
     }
   });

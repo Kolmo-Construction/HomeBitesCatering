@@ -1,0 +1,131 @@
+Backend Adjustments for Priority
+File: server/storage.ts
+
+Ensure createOpportunity and updateOpportunity methods can handle the new priority and opportunitySource fields. Drizzle should handle this automatically if InsertOpportunity and Partial<Opportunity> types are used correctly.
+Add a new method to list opportunities by priority (and potentially other criteria like status).
+<!-- end list -->
+
+TypeScript
+
+// In server/storage.ts
+
+// ... (other imports)
+import { opportunities, type Opportunity, type InsertOpportunity, opportunityPriorityEnum, users } from "@shared/schema"; // ensure opportunityPriorityEnum is imported if used directly
+
+// ...
+
+export interface IStorage {
+  // ... existing Opportunity methods ...
+  getOpportunity(id: number): Promise<Opportunity | undefined>;
+  createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity>;
+  updateOpportunity(id: number, opportunity: Partial<Opportunity>): Promise<Opportunity | undefined>;
+  deleteOpportunity(id: number): Promise<boolean>;
+  listOpportunities(): Promise<Opportunity[]>;
+  listOpportunitiesByStatus(status: string): Promise<Opportunity[]>;
+  listOpportunitiesBySource(source: string): Promise<Opportunity[]>; // This might become listOpportunitiesByOpportunitySource
+  listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]>; // <-- NEW
+  // ... other methods
+}
+
+export class DatabaseStorage implements IStorage {
+  // ... existing implementations ...
+
+  async createOpportunity(opportunityData: InsertOpportunity): Promise<Opportunity> {
+    const [newOpportunity] = await db
+      .insert(opportunities)
+      .values(opportunityData) // priority will be part of opportunityData
+      .returning();
+    return newOpportunity;
+  }
+
+  async updateOpportunity(id: number, opportunityData: Partial<Opportunity>): Promise<Opportunity | undefined> {
+    const [updatedOpportunity] = await db
+      .update(opportunities)
+      .set(opportunityData) // priority can be updated here
+      .where(eq(opportunities.id, id))
+      .returning();
+    return updatedOpportunity;
+  }
+
+  async listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]> {
+    return db.select().from(opportunities).where(eq(opportunities.priority, priority));
+  }
+
+  // ... other implementations ...
+}
+File: server/routes.ts
+
+Update the GET /api/opportunities endpoint to accept a priority query parameter.
+Ensure the POST /api/opportunities and PATCH /api/opportunities/:id endpoints correctly handle the priority and opportunitySource in the request body.
+<!-- end list -->
+
+TypeScript
+
+// In server/routes.ts
+
+// ... (import insertOpportunitySchema)
+
+// GET /api/opportunities
+app.get('/api/opportunities', isAuthenticated, async (req, res) => {
+  try {
+    const { status, source, priority } = req.query; // Add priority
+    let opportunitiesList;
+    if (priority && typeof priority === 'string') {
+      // You might need to validate if 'priority' is a valid enum value
+      opportunitiesList = await storage.listOpportunitiesByPriority(priority as typeof opportunityPriorityEnum.enumValues[number]);
+    } else if (status && typeof status === 'string') {
+      opportunitiesList = await storage.listOpportunitiesByStatus(status);
+    } else if (source && typeof source === 'string') {
+      // This was listLeadsBySource, ensure it's adapted for opportunities.opportunitySource
+      opportunitiesList = await storage.listOpportunitiesBySource(source);
+    } else {
+      opportunitiesList = await storage.listOpportunities();
+    }
+    res.json(opportunitiesList);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/opportunities (ensure insertOpportunitySchema is used and handles priority)
+app.post('/api/opportunities', isAuthenticated, async (req, res) => {
+  try {
+    // ... existing client association logic ...
+    // Make sure opportunityData includes 'priority' and 'opportunitySource' if provided
+    const opportunityData = insertOpportunitySchema.parse({
+        ...req.body, // Contains firstName, lastName, email, opportunitySource, priority, etc.
+        // ensure other default or processed fields are correctly set here
+    });
+    const opportunity = await storage.createOpportunity(opportunityData);
+    // ... rest of the client association logic and response ...
+    res.status(201).json(opportunity); // Or the updatedOpportunity with client info
+  } catch (error) {
+    console.error("Error creating opportunity:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: 'Validation error', errors: error.errors });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// PATCH /api/opportunities/:id (ensure req.body can contain 'priority' for updates)
+app.patch('/api/opportunities/:id', isAuthenticated, async (req, res) => {
+  try {
+    const opportunityId = Number(req.params.id);
+    // const opportunity = await storage.getOpportunity(opportunityId);
+    // if (!opportunity) {
+    //   return res.status(404).json({ message: 'Opportunity not found' });
+    // }
+    // Validate req.body against a partial schema if necessary
+    // For example, create a partial version of insertOpportunitySchema for updates
+    const updatedOpportunity = await storage.updateOpportunity(opportunityId, req.body); // req.body can include { priority: 'hot' }
+    if (!updatedOpportunity) {
+        return res.status(404).json({ message: 'Opportunity not found or update failed' });
+    }
+    res.json(updatedOpportunity);
+  } catch (error) {
+    // ZodError handling if you parse req.body with a schema
+    res.status(500).json({ message: 'Server error' });
+  }
+});
