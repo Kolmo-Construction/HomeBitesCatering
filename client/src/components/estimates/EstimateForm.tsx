@@ -85,7 +85,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [venueAddress, setVenueAddress] = useState<string>("");
   const [venueCity, setVenueCity] = useState<string>("");
   const [venueZip, setVenueZip] = useState<string>("");
-  const [taxRate, setTaxRate] = useState<number>(0.095); // Default 9.5%
+  const [taxRate, setTaxRate] = useState<number>(0.101); // Default 10.1%
 
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
