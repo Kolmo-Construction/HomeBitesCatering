@@ -57,6 +57,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface LeadFormProps {
   lead?: FormValues;
   isEditing?: boolean;
+  leadIdForEdit?: number; // Add this prop for when we want to fetch the lead directly
   onCancel?: () => void;
 }
 
@@ -68,7 +69,7 @@ interface Client {
   company?: string;
 }
 
-export default function LeadForm({ lead, isEditing = false, onCancel }: LeadFormProps) {
+export default function LeadForm({ lead, isEditing = false, leadIdForEdit, onCancel }: LeadFormProps) {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
