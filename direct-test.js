@@ -5,17 +5,17 @@ async function testContactIdentifiers() {
   console.log('\n========== TESTING CONTACT IDENTIFIERS ==========');
 
   try {
-    // Test 1: Create Contact Identifier for Lead
-    console.log('\nTest 1: Create Contact Identifier for Lead');
-    const leadId = 2; // Use an existing lead ID
+    // Test 1: Create Contact Identifier for Opportunity
+    console.log('\nTest 1: Create Contact Identifier for Opportunity');
+    const opportunityId = 2; // Use an existing opportunity ID
     const identifier1 = await storage.createContactIdentifier({
-      leadId,
+      opportunityId,
       type: 'email',
-      value: 'direct-test-lead@example.com',
+      value: 'direct-test-opportunity@example.com',
       isPrimary: true,
       source: 'direct_test'
     });
-    console.log('Created identifier for lead:', identifier1);
+    console.log('Created identifier for opportunity:', identifier1);
 
     // Test 2: Create Contact Identifier for Client
     console.log('\nTest 2: Create Contact Identifier for Client');
@@ -29,20 +29,20 @@ async function testContactIdentifiers() {
     });
     console.log('Created identifier for client:', identifier2);
 
-    // Test 3: Get Identifiers for Lead
-    console.log('\nTest 3: Get Identifiers for Lead');
-    const leadIdentifiers = await storage.getContactIdentifiers({ leadId });
-    console.log(`Found ${leadIdentifiers.length} identifiers for lead:`, leadIdentifiers);
+    // Test 3: Get Identifiers for Opportunity
+    console.log('\nTest 3: Get Identifiers for Opportunity');
+    const opportunityIdentifiers = await storage.getContactIdentifiers({ opportunityId });
+    console.log(`Found ${opportunityIdentifiers.length} identifiers for opportunity:`, opportunityIdentifiers);
 
     // Test 4: Get Identifiers for Client
     console.log('\nTest 4: Get Identifiers for Client');
     const clientIdentifiers = await storage.getContactIdentifiers({ clientId });
     console.log(`Found ${clientIdentifiers.length} identifiers for client:`, clientIdentifiers);
 
-    // Test 5: Find Lead by Contact Identifier
-    console.log('\nTest 5: Find Lead by Contact Identifier');
-    const foundLead = await storage.findLeadOrClientByContactIdentifier('direct-test-lead@example.com', 'email');
-    console.log('Found entity by contact identifier:', foundLead);
+    // Test 5: Find Opportunity by Contact Identifier
+    console.log('\nTest 5: Find Opportunity by Contact Identifier');
+    const foundOpportunity = await storage.findOpportunityOrClientByContactIdentifier('direct-test-opportunity@example.com', 'email');
+    console.log('Found entity by contact identifier:', foundOpportunity);
 
     // Test 6: Update Contact Identifier
     console.log('\nTest 6: Update Contact Identifier');
@@ -58,7 +58,7 @@ async function testContactIdentifiers() {
     console.log('Delete result:', deleteResult);
 
     // Verify deletion
-    const verifyDelete = await storage.getContactIdentifiers({ leadId });
+    const verifyDelete = await storage.getContactIdentifiers({ opportunityId });
     console.log('Identifiers after deletion:', verifyDelete.map(i => ({ id: i.id, value: i.value })));
 
     console.log('\nContact Identifiers Tests: ✅ PASSED');
@@ -72,11 +72,11 @@ async function testCommunications() {
   console.log('\n========== TESTING COMMUNICATIONS ==========');
 
   try {
-    // Test 1: Create Communication for Lead
-    console.log('\nTest 1: Create Communication for Lead');
-    const leadId = 2; // Use an existing lead ID
+    // Test 1: Create Communication for Opportunity
+    console.log('\nTest 1: Create Communication for Opportunity');
+    const opportunityId = 2; // Use an existing opportunity ID
     const comm1 = await storage.createCommunication({
-      leadId,
+      opportunityId,
       type: 'email',
       direction: 'outgoing',
       timestamp: new Date(),
@@ -84,7 +84,7 @@ async function testCommunications() {
       bodyRaw: 'This is a test communication created directly',
       source: 'direct_test'
     });
-    console.log('Created communication for lead:', comm1);
+    console.log('Created communication for opportunity:', comm1);
 
     // Test 2: Create Communication for Client
     console.log('\nTest 2: Create Communication for Client');
@@ -100,12 +100,12 @@ async function testCommunications() {
     });
     console.log('Created communication for client:', comm2);
 
-    // Test 3: Get Communications for Lead
-    console.log('\nTest 3: Get Communications for Lead');
-    const leadComms = await storage.getCommunicationsForLead(leadId);
-    console.log(`Found ${leadComms.length} communications for lead.`);
-    if (leadComms.length > 0) {
-      console.log('Latest lead communication:', leadComms[0]);
+    // Test 3: Get Communications for Opportunity
+    console.log('\nTest 3: Get Communications for Opportunity');
+    const opportunityComms = await storage.getCommunicationsForOpportunity(opportunityId);
+    console.log(`Found ${opportunityComms.length} communications for opportunity.`);
+    if (opportunityComms.length > 0) {
+      console.log('Latest opportunity communication:', opportunityComms[0]);
     }
 
     // Test 4: Get Communications for Client

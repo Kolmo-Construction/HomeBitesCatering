@@ -33,7 +33,7 @@ export const opportunities = pgTable("opportunities", {
   venue: text("venue"),
   notes: text("notes"),
   status: text("status").default("new").notNull(), // new, contacted, qualified, proposal, booked, archived
-  leadSource: text("lead_source"), // website, referral, google, social, etc.
+  opportunitySource: text("opportunity_source"), // website, referral, google, social, etc.
   assignedTo: integer("assigned_to").references(() => users.id),
   clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
   createdAt: timestamp("created_at").defaultNow().notNull(),
