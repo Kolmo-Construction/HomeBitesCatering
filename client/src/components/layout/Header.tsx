@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import EmailSyncToggle from "@/components/emailSync/EmailSyncToggle";
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -48,6 +49,11 @@ export default function Header() {
           <h1 className="font-poppins font-semibold text-lg md:text-xl">Home Bites CMS</h1>
         </div>
         <div className="flex items-center space-x-4">
+          {/* Email Sync Toggle Switch */}
+          <div className="mr-4 text-white">
+            <EmailSyncToggle />
+          </div>
+          
           <button className="text-white hover:text-neutral-200 transition">
             <BellIcon className="h-5 w-5" />
           </button>

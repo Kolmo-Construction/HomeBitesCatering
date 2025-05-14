@@ -457,22 +457,21 @@ export class GmailSyncService {
       console.log('To authorize, visit: /api/auth/google/initiate then follow the redirect.');
       return;
     }
-    if (this.isRunning) {
+    if (this._isRunning) {
       console.log('GmailSyncService is already running.');
       return;
     }
-    this.isRunning = true;
+    this._isRunning = true;
     console.log(`GmailSyncService started. Checking mailbox for "${this.targetEmail}" every ${this.processingInterval / 1000} seconds.`);
     this.scheduleNextFetch();
   }
 
   public stop(): void {
-    // ... (same as IMAP version)
-    if (!this.isRunning) {
+    if (!this._isRunning) {
         console.log('GmailSyncService is not running.');
         return;
       }
-      this.isRunning = false;
+      this._isRunning = false;
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
         this.timeoutId = null;
@@ -481,7 +480,7 @@ export class GmailSyncService {
   }
 
   private scheduleNextFetch(): void {
-    if (!this.isRunning || !this.gmail) return;
+    if (!this._isRunning || !this.gmail) return;
     this.timeoutId = setTimeout(async () => {
       await this.fetchAndProcessEmails();
       this.scheduleNextFetch();
