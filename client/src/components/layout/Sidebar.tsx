@@ -24,7 +24,7 @@ export default function Sidebar() {
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Menu Items", href: "/menu-items", icon: Utensils },
     { name: "Menus", href: "/menus", icon: ClipboardList },
-    { name: "Estimates", href: "/estimates", icon: FileText },
+    { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },

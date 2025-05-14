@@ -69,6 +69,9 @@ function App() {
               <Route path="/clients/:id" component={Clients} />
               <Route path="/clients/:id/edit" component={Clients} />
               <Route path="/estimates" component={Estimates} />
+              <Route path="/estimates/new" component={Estimates} />
+              <Route path="/estimates/:id" component={Estimates} />
+              <Route path="/estimates/:id/edit" component={Estimates} />
               <Route path="/menu-items" component={MenuItems} />
               <Route path="/menu-items/new" component={MenuItems} />
               <Route path="/menu-items/:id" component={MenuItems} />
