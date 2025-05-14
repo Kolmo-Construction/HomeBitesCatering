@@ -523,6 +523,34 @@ export class GmailSyncService {
             if (msg.data.raw) {
                 const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
                 const parsedMail = await simpleParser(rawEmail);
+                
+                // Extract messageId to check for duplicates
+                const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
+                const messageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}`;
+                
+                // Check if we've already processed this email by looking for existing communications
+                try {
+                    // Query to see if this email was already processed
+                    const communications = await storage.getCommunicationsByExternalId(messageId);
+                    if (communications && communications.length > 0) {
+                        console.log(`GmailSyncService: Email with message ID ${messageId} was already processed. Skipping.`);
+                        
+                        // Mark as read anyway to avoid reprocessing
+                        await this.gmail.users.messages.modify({
+                            userId: 'me',
+                            id: messageEntry.id,
+                            requestBody: {
+                                removeLabelIds: ['UNREAD'],
+                            },
+                        });
+                        continue;
+                    }
+                } catch (error) {
+                    // If we can't check for duplicates, proceed with processing
+                    console.warn(`GmailSyncService: Could not check for duplicate processing of message ID ${messageId}:`, error);
+                }
+                
+                // Process the email if it wasn't already processed
                 await this.processParsedEmail(parsedMail);
 
                 // Mark as read (or apply a label)

@@ -1077,8 +1077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const authUrl = GmailSyncService.getOAuthClient().generateAuthUrl({
       access_type: 'offline', // Important to get a refresh token
       scope: [
-        'https://www.googleapis.com/auth/gmail.readonly', // Start with readonly
-        // 'https://www.googleapis.com/auth/gmail.modify', // To mark as read or move
+        'https://www.googleapis.com/auth/gmail.readonly', // For reading emails
+        'https://www.googleapis.com/auth/gmail.modify', // To mark as read or move
         'https://www.googleapis.com/auth/userinfo.email', // To verify the user if needed
         'https://www.googleapis.com/auth/userinfo.profile'
       ],
