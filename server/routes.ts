@@ -1142,6 +1142,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email Sync Service Control Endpoints
+  app.get('/api/email-sync/status', isAuthenticated, isAdmin, (req, res) => {
+    const gmailSyncService = req.app.get('gmailSyncService');
+    if (!gmailSyncService) {
+      return res.status(404).json({ 
+        enabled: false, 
+        configured: false, 
+        message: 'Gmail sync service is not configured' 
+      });
+    }
+    
+    // Get the running status from the service
+    res.json({ 
+      enabled: gmailSyncService.isRunning(), 
+      configured: true,
+      targetEmail: gmailSyncService.getTargetEmail() 
+    });
+  });
+  
+  app.post('/api/email-sync/toggle', isAuthenticated, isAdmin, (req, res) => {
+    const gmailSyncService = req.app.get('gmailSyncService');
+    
+    if (!gmailSyncService) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Gmail sync service is not configured' 
+      });
+    }
+    
+    const { enabled } = req.body;
+    
+    if (enabled === true) {
+      // Start the service
+      gmailSyncService.start();
+      return res.json({ 
+        success: true, 
+        enabled: true, 
+        message: 'Gmail sync service started' 
+      });
+    } else if (enabled === false) {
+      // Stop the service
+      gmailSyncService.stop();
+      return res.json({ 
+        success: true, 
+        enabled: false, 
+        message: 'Gmail sync service stopped' 
+      });
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request. "enabled" parameter must be true or false' 
+      });
+    }
+  });
+
   // Create HTTP server
 
   const httpServer = createServer(app);

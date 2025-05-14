@@ -384,11 +384,20 @@ async function getAISummary(text: string): Promise<string> {
 
 export class GmailSyncService {
   private gmail: gmail_v1.Gmail | null = null;
-  private isRunning: boolean = false;
+  private _isRunning: boolean = false;
   private timeoutId: NodeJS.Timeout | null = null;
   private processingInterval: number;
   private aiSummaryEnabled: boolean;
   private targetEmail: string;
+  
+  // Accessor methods for external status checks
+  public isRunning(): boolean {
+    return this._isRunning;
+  }
+  
+  public getTargetEmail(): string {
+    return this.targetEmail;
+  }
 
   constructor(intervalMs: number = 5 * 60 * 1000, aiEnabled: boolean = true) {
     this.processingInterval = intervalMs;
