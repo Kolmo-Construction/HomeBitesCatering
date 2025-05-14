@@ -80,10 +80,293 @@ oauth2Client.on('tokens', (tokens) => {
 });
 
 
-// Import the AI service
+// Import the AI service and fetch for direct API calls
 import { aiService } from './aiService';
+import fetch from 'node-fetch';
 
-// AI Summarization using DeepSeek V3 via Open Router
+/**
+ * Extracts structured lead data from email content using AI
+ * @param emailContent The body content of the email
+ * @param emailSubject The subject line of the email
+ * @param fromAddress The sender's email address (optional)
+ * @returns A data object aligned with the InsertRawLead schema
+ */
+async function extractLeadDataWithAI(
+  emailContent: string,
+  emailSubject: string,
+  fromAddress?: string
+): Promise<Partial<InsertRawLead> & { success: boolean; error?: string }> {
+  console.log(`Lead Data Extraction: Processing email with subject "${emailSubject}"`);
+  
+  try {
+    // Prepare the full content for analysis
+    const fullContent = `
+Subject: ${emailSubject}
+${fromAddress ? `From: ${fromAddress}` : ''}
+
+${emailContent}
+    `.trim();
+    
+    // Try using our existing aiService first
+    try {
+      const aiResults = await aiService.analyzeLeadMessage(fullContent);
+      console.log("Lead Data Extraction: Successfully processed with AI service");
+      
+      // Helper function to validate score against enum values
+      const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
+        if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
+        return score as typeof leadScoreEnum.enumValues[number];
+      };
+      
+      // Helper function to validate budget indication against enum values
+      const validateBudgetIndication = (indication: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
+        if (!indication || !budgetIndicationEnum.enumValues.includes(indication as any)) return undefined;
+        return indication as typeof budgetIndicationEnum.enumValues[number];
+      };
+      
+      // Helper function to validate lead quality against enum values
+      const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
+        if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
+        return quality as typeof leadQualityCategoryEnum.enumValues[number];
+      };
+      
+      // Helper function to validate sentiment against enum values
+      const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
+        if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
+        return sentiment as typeof sentimentEnum.enumValues[number];
+      };
+      
+      // Form the result object that aligns with InsertRawLead schema
+      return {
+        success: true,
+        source: 'email_ai_extraction',
+        extractedName: aiResults.extractedName || '',
+        extractedEmail: aiResults.extractedEmail || fromAddress || '',
+        extractedPhone: aiResults.extractedPhone || null,
+        eventSummary: emailSubject,
+        status: 'under_review' as const,
+        notes: `Auto-extracted from email with subject: "${emailSubject}"`,
+        
+        // Add AI-extracted fields
+        extractedEventType: aiResults.extractedEventType,
+        extractedEventDate: aiResults.extractedEventDate,
+        extractedEventTime: aiResults.extractedEventTime,
+        extractedGuestCount: aiResults.extractedGuestCount,
+        extractedVenue: aiResults.extractedVenue,
+        extractedMessageSummary: aiResults.extractedMessageSummary,
+        leadSourcePlatform: 'email',
+        
+        // Add AI assessment fields (with type validation)
+        aiUrgencyScore: validateLeadScore(aiResults.aiUrgencyScore),
+        aiBudgetIndication: validateBudgetIndication(aiResults.aiBudgetIndication),
+        aiBudgetValue: aiResults.aiBudgetValue,
+        aiClarityOfRequestScore: validateLeadScore(aiResults.aiClarityOfRequestScore),
+        aiDecisionMakerLikelihood: validateLeadScore(aiResults.aiDecisionMakerLikelihood),
+        aiKeyRequirements: aiResults.aiKeyRequirements || [],
+        aiPotentialRedFlags: aiResults.aiPotentialRedFlags || [],
+        aiOverallLeadQuality: validateLeadQuality(aiResults.aiOverallLeadQuality),
+        aiSuggestedNextStep: aiResults.aiSuggestedNextStep,
+        aiSentiment: validateSentiment(aiResults.aiSentiment),
+        aiConfidenceScore: aiResults.aiConfidenceScore,
+        
+        // Store the raw AI output for debugging
+        rawData: {
+          emailSubject,
+          emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
+          fromAddress,
+          aiProvider: 'OpenRouter-Claude',
+          aiOutput: aiResults,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } 
+    // If our aiService fails, try direct API call as a fallback
+    catch (aiServiceError) {
+      console.error("Lead Data Extraction: AI service error, attempting direct API call:", aiServiceError);
+      
+      // Attempt direct API call to OpenRouter
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        throw new Error("OpenRouter API key not configured");
+      }
+      
+      const prompt = `
+You are a lead analysis assistant for a catering business. 
+Extract all relevant information from this message and analyze its quality as a lead.
+
+Provide your output in the following JSON format ONLY, with empty or null values for fields you can't detect:
+{
+  "extractedName": "Full name of the sender if available",
+  "extractedEmail": "Email address if present",
+  "extractedPhone": "Phone number if present",
+  "extractedEventType": "Type of event mentioned (wedding, corporate, etc.)",
+  "extractedEventDate": "Event date in any format mentioned",
+  "extractedEventTime": "Event time if mentioned",
+  "extractedGuestCount": number of guests if mentioned (return as number, not string),
+  "extractedVenue": "Venue name or location if mentioned",
+  "extractedMessageSummary": "2-3 sentence summary of the message",
+  "aiUrgencyScore": one of "1", "2", "3", "4", "5" (5 being most urgent),
+  "aiBudgetIndication": one of "not_mentioned", "low", "medium", "high", "specific_amount",
+  "aiBudgetValue": exact budget amount if mentioned (in whole dollar amount, numeric only),
+  "aiClarityOfRequestScore": one of "1", "2", "3", "4", "5" (5 being very clear),
+  "aiDecisionMakerLikelihood": one of "1", "2", "3", "4", "5" (5 being definitely a decision maker),
+  "aiKeyRequirements": [array of key requirements mentioned],
+  "aiPotentialRedFlags": [array of potential concerns or red flags],
+  "aiOverallLeadQuality": one of "hot", "warm", "cold", "nurture",
+  "aiSuggestedNextStep": "Your recommendation for how to follow up with this lead",
+  "aiSentiment": one of "positive", "neutral", "negative", "urgent",
+  "aiConfidenceScore": confidence in your analysis from 0.0 to 1.0
+}
+
+Here's the message to analyze:
+${fullContent}`;
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://catering-cms.replit.app',
+          'X-Title': 'Catering CMS'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-haiku',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 1500,
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      const resultText = responseData.choices?.[0]?.message?.content?.trim() || "{}";
+      
+      try {
+        // Parse the JSON response
+        const aiResults = JSON.parse(resultText);
+        console.log("Lead Data Extraction: Successfully processed with direct API call");
+        
+        // Helper functions for validation
+        const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
+          if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
+          return score as typeof leadScoreEnum.enumValues[number];
+        };
+        
+        const validateBudgetIndication = (indication: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
+          if (!indication || !budgetIndicationEnum.enumValues.includes(indication as any)) return undefined;
+          return indication as typeof budgetIndicationEnum.enumValues[number];
+        };
+        
+        const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
+          if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
+          return quality as typeof leadQualityCategoryEnum.enumValues[number];
+        };
+        
+        const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
+          if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
+          return sentiment as typeof sentimentEnum.enumValues[number];
+        };
+        
+        return {
+          success: true,
+          source: 'email_direct_api',
+          extractedName: aiResults.extractedName || '',
+          extractedEmail: aiResults.extractedEmail || fromAddress || '',
+          extractedPhone: aiResults.extractedPhone || null,
+          eventSummary: emailSubject,
+          status: 'under_review' as const,
+          notes: `Auto-extracted from email with subject: "${emailSubject}" (direct API)`,
+          
+          // Add AI-extracted fields
+          extractedEventType: aiResults.extractedEventType,
+          extractedEventDate: aiResults.extractedEventDate,
+          extractedEventTime: aiResults.extractedEventTime,
+          extractedGuestCount: aiResults.extractedGuestCount,
+          extractedVenue: aiResults.extractedVenue,
+          extractedMessageSummary: aiResults.extractedMessageSummary,
+          leadSourcePlatform: 'email',
+          
+          // Add AI assessment fields (with type validation)
+          aiUrgencyScore: validateLeadScore(aiResults.aiUrgencyScore),
+          aiBudgetIndication: validateBudgetIndication(aiResults.aiBudgetIndication),
+          aiBudgetValue: aiResults.aiBudgetValue,
+          aiClarityOfRequestScore: validateLeadScore(aiResults.aiClarityOfRequestScore),
+          aiDecisionMakerLikelihood: validateLeadScore(aiResults.aiDecisionMakerLikelihood),
+          aiKeyRequirements: aiResults.aiKeyRequirements || [],
+          aiPotentialRedFlags: aiResults.aiPotentialRedFlags || [],
+          aiOverallLeadQuality: validateLeadQuality(aiResults.aiOverallLeadQuality),
+          aiSuggestedNextStep: aiResults.aiSuggestedNextStep,
+          aiSentiment: validateSentiment(aiResults.aiSentiment),
+          aiConfidenceScore: aiResults.aiConfidenceScore,
+          
+          // Store the raw AI output for debugging
+          rawData: {
+            emailSubject,
+            emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
+            fromAddress,
+            aiProvider: 'OpenRouter-Direct-API',
+            apiResponse: responseData,
+            aiOutput: aiResults,
+            timestamp: new Date().toISOString()
+          }
+        };
+      } catch (jsonParseError) {
+        console.error("Lead Data Extraction: JSON parsing error:", jsonParseError);
+        console.error("Lead Data Extraction: Raw AI response:", resultText);
+        
+        // Return a partial result that can still be used to create a RawLead
+        return {
+          success: false,
+          error: "JSON parsing error in AI response",
+          source: 'email_ai_failed',
+          extractedEmail: fromAddress || '',
+          eventSummary: emailSubject,
+          status: 'parsing_failed' as const,
+          notes: `AI parsing failed for email with subject: "${emailSubject}". Error: ${jsonParseError.message}`,
+          extractedMessageSummary: "AI failed to parse email content",
+          rawData: {
+            emailSubject,
+            emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
+            fromAddress,
+            aiProvider: 'OpenRouter-Direct-API-Failed',
+            apiResponse: responseData,
+            rawResponse: resultText,
+            error: jsonParseError.message,
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Lead Data Extraction: Critical error:", error);
+    
+    // Return minimal data that can be used to create a RawLead in an error state
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      source: 'email_ai_error',
+      extractedEmail: fromAddress || '',
+      eventSummary: emailSubject,
+      status: 'parsing_failed' as const,
+      notes: `AI extraction error for email with subject: "${emailSubject}". Error: ${error instanceof Error ? error.message : String(error)}`,
+      rawData: {
+        emailSubject,
+        emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
+        fromAddress,
+        aiProvider: 'Failed',
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+}
+
+// AI Summarization using Claude via Open Router
 async function getAISummary(text: string): Promise<string> {
   console.log("AI Summarization (Gmail): Input length -", text.length);
   if (!text) return "No content to summarize.";
@@ -332,74 +615,24 @@ export class GmailSyncService {
       if (direction === 'incoming' && fromEmail) { // Only create for incoming from new contacts
         console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new raw lead.`);
         try {
-            // First, use AI to analyze the email content
-            const aiAnalysisResults = this.aiSummaryEnabled ? 
-              await aiService.analyzeLeadMessage(bodyText) : null;
+            // Use our dedicated extraction function for more robust handling
+            // This includes fallbacks, error handling, and complete data extraction
+            const extractedData = this.aiSummaryEnabled 
+              ? await extractLeadDataWithAI(bodyText, subject, fromEmail)
+              : {
+                  success: true,
+                  source: 'gmail_sync',
+                  extractedName: fromHeader?.name || '',
+                  extractedEmail: fromEmail,
+                  extractedPhone: null,
+                  eventSummary: subject,
+                  status: 'new' as const,
+                  notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
+                  rawData: parsedMail
+                };
             
-            console.log("GmailSyncService: AI Analysis completed for incoming email.");
-            
-            // Helper function to validate score against enum values
-            const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
-              if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
-              return score as typeof leadScoreEnum.enumValues[number];
-            };
-            
-            // Helper function to validate budget indication against enum values
-            const validateBudgetIndication = (indication: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
-              if (!indication || !budgetIndicationEnum.enumValues.includes(indication as any)) return undefined;
-              return indication as typeof budgetIndicationEnum.enumValues[number];
-            };
-            
-            // Helper function to validate lead quality against enum values
-            const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
-              if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
-              return quality as typeof leadQualityCategoryEnum.enumValues[number];
-            };
-            
-            // Helper function to validate sentiment against enum values
-            const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
-              if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
-              return sentiment as typeof sentimentEnum.enumValues[number];
-            };
-            
-            // Create enriched raw lead with AI-extracted data (with type-safe values)
-            const rawLeadData: InsertRawLead = {
-              source: 'gmail_sync',
-              extractedName: fromHeader?.name || aiAnalysisResults?.extractedName || '',
-              extractedEmail: fromEmail,
-              extractedPhone: aiAnalysisResults?.extractedPhone || null,
-              eventSummary: subject,
-              rawData: parsedMail, // Store the full parsed email as raw data
-              // Use the enum values directly for status
-              status: this.aiSummaryEnabled ? 
-                rawLeadStatusEnum.enumValues[1] : // 'under_review'
-                rawLeadStatusEnum.enumValues[0],  // 'new'
-              notes: `Auto-created from incoming email with subject: ${subject}`,
-              
-              // Add AI-extracted fields if available
-              extractedEventType: aiAnalysisResults?.extractedEventType,
-              extractedEventDate: aiAnalysisResults?.extractedEventDate,
-              extractedEventTime: aiAnalysisResults?.extractedEventTime,
-              extractedGuestCount: aiAnalysisResults?.extractedGuestCount,
-              extractedVenue: aiAnalysisResults?.extractedVenue,
-              extractedMessageSummary: aiAnalysisResults?.extractedMessageSummary,
-              leadSourcePlatform: 'email',
-              
-              // Add AI assessment fields (with type validation)
-              aiUrgencyScore: validateLeadScore(aiAnalysisResults?.aiUrgencyScore),
-              aiBudgetIndication: validateBudgetIndication(aiAnalysisResults?.aiBudgetIndication),
-              aiBudgetValue: aiAnalysisResults?.aiBudgetValue,
-              aiClarityOfRequestScore: validateLeadScore(aiAnalysisResults?.aiClarityOfRequestScore),
-              aiDecisionMakerLikelihood: validateLeadScore(aiAnalysisResults?.aiDecisionMakerLikelihood),
-              aiKeyRequirements: aiAnalysisResults?.aiKeyRequirements || [],
-              aiPotentialRedFlags: aiAnalysisResults?.aiPotentialRedFlags || [],
-              aiOverallLeadQuality: validateLeadQuality(aiAnalysisResults?.aiOverallLeadQuality),
-              aiSuggestedNextStep: aiAnalysisResults?.aiSuggestedNextStep,
-              aiSentiment: validateSentiment(aiAnalysisResults?.aiSentiment),
-              aiConfidenceScore: aiAnalysisResults?.aiConfidenceScore
-            };
-            
-            const rawLead = await storage.createRawLead(rawLeadData);
+            // Create the raw lead with extracted data
+            const rawLead = await storage.createRawLead(extractedData);
             
             console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail}`);
             
