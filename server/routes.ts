@@ -508,6 +508,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.session.userId
       });
       const estimate = await storage.createEstimate(estimateData);
+      
+      // If the estimate is being sent right away, generate a client portal link
+      if (estimate.status === 'sent') {
+        // In a real app, you would use a proper JWT or secure token
+        // For now, we'll just use the estimate ID as the token for simplicity
+        const portalToken = estimate.id.toString();
+        
+        // The client portal URL that would be sent to the client
+        const portalUrl = `${req.protocol}://${req.get('host')}/client-portal/${portalToken}`;
+        console.log(`Client portal created: ${portalUrl}`);
+        
+        // Here you would typically send an email to the client with the portal link
+        // For now, we'll just log it and include it in the response
+        
+        return res.status(201).json({ 
+          ...estimate, 
+          clientPortalUrl: portalUrl,
+          message: "Estimate created and client portal link generated"
+        });
+      }
+      
       res.status(201).json(estimate);
     } catch (error) {
       if (error instanceof z.ZodError) {
