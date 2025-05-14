@@ -185,15 +185,15 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
         setShowPortalLink(true);
         
         toast({
-          title: "Estimate sent",
-          description: "The estimate has been sent successfully. A client portal link has been generated."
+          title: "Quote sent",
+          description: "The quote has been sent successfully. A client portal link has been generated."
         });
       } else {
         toast({
-          title: isEditing ? "Estimate updated" : "Estimate created",
+          title: isEditing ? "Quote updated" : "Quote created",
           description: isEditing 
-            ? "The estimate has been updated successfully." 
-            : "The new estimate has been created successfully."
+            ? "The quote has been updated successfully." 
+            : "The new quote has been created successfully."
         });
         navigate("/estimates");
       }
