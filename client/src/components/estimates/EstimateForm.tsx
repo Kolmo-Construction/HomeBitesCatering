@@ -395,14 +395,20 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
             <div>
               <FormLabel>Menu Selection</FormLabel>
               <Select 
-                onValueChange={(value) => setSelectedMenuId(parseInt(value, 10))} 
-                defaultValue={selectedMenuId?.toString() || ""}
+                onValueChange={(value) => {
+                  if (value === "none") {
+                    setSelectedMenuId(null);
+                  } else {
+                    setSelectedMenuId(parseInt(value, 10));
+                  }
+                }} 
+                defaultValue={selectedMenuId?.toString() || "none"}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a menu" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Menu (Custom Items Only)</SelectItem>
+                  <SelectItem value="none">No Menu (Custom Items Only)</SelectItem>
                   {menus.map((menu: any) => (
                     <SelectItem key={menu.id} value={menu.id.toString()}>
                       {menu.name} - {formatCurrency(menu.items.reduce((acc: number, item: any) => acc + item.price, 0) / 100)}
