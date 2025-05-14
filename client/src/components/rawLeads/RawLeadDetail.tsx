@@ -24,6 +24,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { RawLead } from '@/../../shared/schema';
 import { format } from 'date-fns';
+import { Trash2Icon } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RawLeadDetailProps {
   leadId: number;
@@ -35,6 +46,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   const { toast } = useToast();
   const [notes, setNotes] = React.useState<string>('');
   const [status, setStatus] = React.useState<string>('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState<boolean>(false);
 
   const { data: rawLead, isLoading, error } = useQuery<RawLead>({
     queryKey: [`/api/raw-leads/${leadId}`],
@@ -45,11 +57,15 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
       }
       return response.json();
     },
-    onSuccess: (data) => {
-      setNotes(data.notes || '');
-      setStatus(data.status);
-    },
   });
+  
+  // Set initial values when data is loaded
+  React.useEffect(() => {
+    if (rawLead) {
+      setNotes(rawLead.notes || '');
+      setStatus(rawLead.status);
+    }
+  }, [rawLead]);
 
   const updateLeadMutation = useMutation({
     mutationFn: async (data: Partial<RawLead>) => {
@@ -83,6 +99,37 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
       });
     },
   });
+  
+  // Delete lead mutation
+  const deleteLeadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/raw-leads/${leadId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete lead');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Lead deleted",
+        description: "The lead has been successfully deleted.",
+      });
+      // Redirect back to the leads list after deletion
+      navigate('/raw-leads');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete lead. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNotes(e.target.value);
@@ -101,6 +148,15 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
 
   const handleConvertClick = () => {
     navigate(`/opportunities/new?fromRawLeadId=${leadId}`);
+  };
+  
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteConfirm = () => {
+    deleteLeadMutation.mutate();
+    setIsDeleteDialogOpen(false);
   };
 
   if (isLoading) {
@@ -230,24 +286,59 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
         </Tabs>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={() => navigate('/raw-leads')}>
-          Back to List
-        </Button>
-        {!rawLead.createdOpportunityId && status !== 'junk' && (
-          <Button onClick={handleConvertClick}>
-            Convert to Opportunity
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/raw-leads')}>
+            Back to List
           </Button>
-        )}
-        {rawLead.createdOpportunityId && (
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(`/opportunities/${rawLead.createdOpportunityId}`)}
-            className="text-green-600 border-green-600 hover:bg-green-50"
-          >
-            View Linked Opportunity #{rawLead.createdOpportunityId}
-          </Button>
-        )}
+          {!rawLead.createdOpportunityId && (
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteClick}
+              className="flex items-center gap-1"
+            >
+              <Trash2Icon className="h-4 w-4" />
+              Delete Lead
+            </Button>
+          )}
+        </div>
+        <div>
+          {!rawLead.createdOpportunityId && status !== 'junk' && (
+            <Button onClick={handleConvertClick}>
+              Convert to Opportunity
+            </Button>
+          )}
+          {rawLead.createdOpportunityId && (
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/opportunities/${rawLead.createdOpportunityId}`)}
+              className="text-green-600 border-green-600 hover:bg-green-50"
+            >
+              View Linked Opportunity #{rawLead.createdOpportunityId}
+            </Button>
+          )}
+        </div>
       </CardFooter>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the lead and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm} 
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
