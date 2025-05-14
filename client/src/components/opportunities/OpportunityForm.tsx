@@ -1,13 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertOpportunitySchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -20,12 +19,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CalendarIcon, X, UserPlus } from "lucide-react";
@@ -52,13 +51,12 @@ const formSchema = insertOpportunitySchema.extend({
   assignToExistingClient: z.boolean().default(false),
   clientId: z.string().optional(),
 });
-
 type FormValues = z.infer<typeof formSchema>;
 
 interface OpportunityFormProps {
   opportunity?: FormValues;
   isEditing?: boolean;
-  opportunityIdForEdit?: number; // Add this prop for when we want to fetch the opportunity directly
+  opportunityIdForEdit?: number;
   onCancel?: () => void;
 }
 
@@ -71,30 +69,19 @@ interface Client {
 }
 
 export default function OpportunityForm({ opportunity: initialOpportunity, isEditing = false, opportunityIdForEdit, onCancel }: OpportunityFormProps) {
+  // --- HOOKS (Must be called unconditionally at the top level) ---
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [emailCheck, setEmailCheck] = useState<{loading: boolean, client?: Client | null}>({
+  const [emailCheck, setEmailCheck] = useState<{ loading: boolean, client?: Client | null }>({
     loading: false,
     client: null
   });
-  const [phoneCheck, setPhoneCheck] = useState<{loading: boolean, client?: Client | null}>({
+  const [phoneCheck, setPhoneCheck] = useState<{ loading: boolean, client?: Client | null }>({
     loading: false,
     client: null
   });
   const [rawLeadId, setRawLeadId] = useState<number | null>(null);
-
-  // Extract fromRawLeadId from URL query parameters if present
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const fromRawLeadId = searchParams.get('fromRawLeadId');
-    if (fromRawLeadId) {
-      const leadId = parseInt(fromRawLeadId);
-      if (!isNaN(leadId)) {
-        setRawLeadId(leadId);
-      }
-    }
-  }, [location]);
 
   // Fetch raw lead data if fromRawLeadId is provided
   const { data: rawLeadData, isLoading: isLoadingRawLead } = useQuery({
@@ -105,22 +92,20 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
       if (!res.ok) throw new Error('Failed to fetch raw lead');
       return res.json();
     },
-    enabled: !!rawLeadId && !isEditing, // Only fetch if we have a lead ID and not in edit mode
+    enabled: !!rawLeadId && !isEditing,
   });
 
   // Fetch opportunity data if opportunityIdForEdit is provided
   const { data: fetchedOpportunityData, isLoading: isLoadingFetchedOpportunity } = useQuery<FormValues>({
     queryKey: ['/api/opportunities', opportunityIdForEdit],
     queryFn: async () => {
-      if (!opportunityIdForEdit) return undefined; // Should not happen if enabled is true
+      if (!opportunityIdForEdit) return undefined;
       const res = await fetch(`/api/opportunities/${opportunityIdForEdit}`);
       if (!res.ok) throw new Error('Failed to fetch opportunity');
       return res.json();
     },
-    enabled: isEditing && !!opportunityIdForEdit && !initialOpportunity, // Only fetch if editing, ID provided, and no initialOpportunity
+    enabled: isEditing && !!opportunityIdForEdit && !initialOpportunity,
   });
-
-  const opportunityToEdit = initialOpportunity || fetchedOpportunityData;
 
   // Fetch all clients for dropdown
   const { data: clients = [] } = useQuery({
@@ -132,6 +117,8 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
     },
     staleTime: 30000, // 30 seconds
   });
+
+  const opportunityToEdit = initialOpportunity || fetchedOpportunityData;
 
   // Set up the form with default values
   const form = useForm<FormValues>({
@@ -152,11 +139,77 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
       clientId: "",
     },
   });
-  
+
+  // Create or update opportunity mutation
+  const mutation = useMutation({
+    mutationFn: async (values: FormValues) => {
+      const { assignToExistingClient, clientId, ...opportunityValues } = values;
+
+      if (isEditing && opportunityToEdit) {
+        // Update existing opportunity
+        const res = await apiRequest("PATCH", `/api/opportunities/${opportunityToEdit.id}`, opportunityValues);
+        return res.json();
+      } else {
+        // Create new opportunity
+        const payload = {
+          ...opportunityValues,
+          assignToExistingClient: values.assignToExistingClient,
+          clientId: values.assignToExistingClient ? values.clientId : undefined,
+          rawLeadId: rawLeadId
+        };
+
+        const res = await apiRequest("POST", "/api/opportunities", payload);
+        return res.json();
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+
+      toast({
+        title: isEditing ? "Opportunity updated" : "Opportunity created",
+        description: isEditing
+          ? "The opportunity has been updated successfully."
+          : `The new opportunity has been created successfully${data.clientId ? ' and linked to a client' : ''}.`,
+      });
+      navigate("/opportunities");
+    },
+    onError: (error) => {
+      console.error("Error creating opportunity:", error);
+      let readableError = `Failed to ${isEditing ? "update" : "create"} opportunity.`;
+      if (error instanceof Error) {
+        try {
+          const errorDetails = JSON.parse(error.message.substring(error.message.indexOf("{")));
+          if (errorDetails.message) {
+            readableError = errorDetails.message;
+            if (errorDetails.errors) {
+              readableError += ` Details: ${errorDetails.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')}`;
+            }
+          }
+        } catch (e) {
+          readableError = error.message;
+        }
+      }
+      toast({ title: "Error", description: readableError, variant: "destructive" });
+    },
+  });
+
+  // --- EFFECTS ---
+  // Extract fromRawLeadId from URL query parameters if present
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const fromRawLeadId = searchParams.get('fromRawLeadId');
+    if (fromRawLeadId) {
+      const leadId = parseInt(fromRawLeadId);
+      if (!isNaN(leadId)) {
+        setRawLeadId(leadId);
+      }
+    }
+  }, [location]);
+
   // Update form values when opportunityToEdit or rawLeadData changes
   useEffect(() => {
     if (opportunityToEdit) {
-      // If editing existing opportunity
       form.reset({
         ...opportunityToEdit,
         eventDate: opportunityToEdit.eventDate ? new Date(opportunityToEdit.eventDate) : null,
@@ -164,30 +217,27 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
         clientId: opportunityToEdit.clientId ? String(opportunityToEdit.clientId) : "",
       });
     } else if (rawLeadData && !isEditing) {
-      // If creating from raw lead
       form.reset({
         firstName: rawLeadData.extractedName?.split(' ')[0] || "",
         lastName: rawLeadData.extractedName?.split(' ').slice(1).join(' ') || "",
         email: rawLeadData.extractedEmail || "",
         phone: rawLeadData.extractedPhone || "",
-        eventType: "",
-        eventDate: null,
-        guestCount: null,
-        venue: "",
-        notes: rawLeadData.notes || "",
+        eventType: rawLeadData.extractedEventType || "",
+        eventDate: rawLeadData.extractedEventDate ? new Date(rawLeadData.extractedEventDate) : null,
+        guestCount: rawLeadData.extractedGuestCount != null ? rawLeadData.extractedGuestCount : null,
+        venue: rawLeadData.extractedVenue || "",
+        notes: rawLeadData.notes || rawLeadData.extractedMessageSummary || "",
         opportunitySource: rawLeadData.source || "email",
-        status: "new",
-        priority: "medium",
-        assignToExistingClient: false,
+        status: rawLeadData.status === 'qualified' ? 'qualified' : 'new', // Set status based on raw lead status if qualified
+        priority: rawLeadData.aiOverallLeadQuality || "medium", // Use AI quality for priority
+        assignToExistingClient: false, // Default to not assigning to existing client immediately
         clientId: "",
       });
-      // Display toast to notify user
       toast({
         title: "Lead Data Loaded",
         description: "Form has been pre-filled with lead information.",
       });
     } else if (!isEditing) {
-      // Reset for new form (no raw lead data)
       form.reset({
         firstName: "",
         lastName: "",
@@ -207,14 +257,6 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
     }
   }, [opportunityToEdit, rawLeadData, form, isEditing, toast]);
 
-  // Show loading states while fetching data
-  if (isLoadingFetchedOpportunity && isEditing && !!opportunityIdForEdit && !initialOpportunity) {
-    return <div className="text-center p-4">Loading opportunity data for editing...</div>;
-  }
-  
-  if (isLoadingRawLead && !!rawLeadId && !isEditing) {
-    return <div className="text-center p-4">Loading raw lead data...</div>;
-  }
 
   // Handle when email or phone field changes to check for existing clients
   const watchEmail = form.watch("email");
@@ -222,115 +264,86 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
   const watchAssignToExistingClient = form.watch("assignToExistingClient");
 
   // Check for existing client when email changes
-  const checkExistingClientByEmail = async (email: string) => {
+  const checkExistingClientByEmail = useCallback(async (email: string) => {
     if (!email) return;
-    setEmailCheck({loading: true});
+    setEmailCheck({ loading: true });
     try {
       // We're simulating the check by filtering the clients we have
       // In a real app, you might have a dedicated API endpoint for this
-      const existingClient = clients.find((client: Client) => 
+      const existingClient = clients.find((client: Client) =>
         client.email.toLowerCase() === email.toLowerCase()
       );
-      
       setEmailCheck({
         loading: false,
         client: existingClient || null
       });
     } catch (error) {
-      setEmailCheck({loading: false});
+      setEmailCheck({ loading: false });
       console.error("Error checking client by email:", error);
     }
-  };
+  }, [clients]); // Add clients to dependency array
 
   // Check for existing client when phone changes
-  const checkExistingClientByPhone = async (phone: string) => {
+  const checkExistingClientByPhone = useCallback(async (phone: string) => {
     if (!phone) return;
-    setPhoneCheck({loading: true});
+    setPhoneCheck({ loading: true });
     try {
       // We're simulating the check by filtering the clients we have
       // In a real app, you might have a dedicated API endpoint for this
-      const existingClient = clients.find((client: Client) => 
+      const existingClient = clients.find((client: Client) =>
         client.phone === phone
       );
-      
       setPhoneCheck({
         loading: false,
         client: existingClient || null
       });
     } catch (error) {
-      setPhoneCheck({loading: false});
+      setPhoneCheck({ loading: false });
       console.error("Error checking client by phone:", error);
     }
-  };
+  }, [clients]); // Add clients to dependency array
 
   // React hook to watch for changes in the email and phone fields
   useEffect(() => {
     if (watchEmail && !isEditing) {
       checkExistingClientByEmail(watchEmail);
     }
-  }, [watchEmail, isEditing]);
+  }, [watchEmail, isEditing, checkExistingClientByEmail]); // Added checkExistingClientByEmail
 
   useEffect(() => {
     if (watchPhone && !isEditing) {
       checkExistingClientByPhone(watchPhone);
     }
-  }, [watchPhone, isEditing]);
-
-  // Create or update opportunity mutation
-  const mutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      const { assignToExistingClient, clientId, ...opportunityValues } = values;
-      
-      if (isEditing && opportunityToEdit) {
-        // Update existing opportunity
-        const res = await apiRequest("PATCH", `/api/opportunities/${opportunityToEdit.id}`, opportunityValues);
-        return res.json();
-      } else {
-        // Create new opportunity
-        const payload = {
-          ...opportunityValues,
-          assignToExistingClient: values.assignToExistingClient,
-          clientId: values.assignToExistingClient ? values.clientId : undefined,
-          rawLeadId: rawLeadId // Include the raw lead ID if applicable
-        };
-
-        const res = await apiRequest("POST", "/api/opportunities", payload);
-        return res.json();
-      }
-    },
-    onSuccess: (data) => {
-      // Invalidate opportunities and clients queries to refetch data
-      queryClient.invalidateQueries({ queryKey: ["/api/opportunities"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      
-      // Show success message and redirect
-      toast({
-        title: isEditing ? "Opportunity updated" : "Opportunity created",
-        description: isEditing 
-          ? "The opportunity has been updated successfully." 
-          : `The new opportunity has been created successfully${data.clientId ? ' and linked to a client' : ''}.`,
-      });
-      
-      // Navigate back to opportunities list
-      navigate("/opportunities");
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to ${isEditing ? "update" : "create"} opportunity: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
+  }, [watchPhone, isEditing, checkExistingClientByPhone]); // Added checkExistingClientByPhone
 
   // Handle form submission
   const onSubmit = (values: FormValues) => {
     mutation.mutate(values);
   };
-  
+
   // Determine if we have any existing client matches
   const existingClient = emailCheck.client || phoneCheck.client;
   const showExistingClientAlert = !isEditing && existingClient && !watchAssignToExistingClient;
+
+  // --- RENDER ---
+
+  // Show loading states while fetching data
+  if ((isEditing && isLoadingFetchedOpportunity && !!opportunityIdForEdit && !initialOpportunity) ||
+    (isLoadingRawLead && !!rawLeadId && !isEditing)) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle>{isEditing ? "Edit Opportunity" : "New Opportunity"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple"></div>
+            <p className="ml-4 text-gray-600">{isEditing ? "Loading opportunity data for editing..." : "Loading raw lead data..."}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -361,7 +374,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="lastName"
@@ -375,7 +388,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="email"
@@ -389,7 +402,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="phone"
@@ -403,15 +416,16 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
+
               <FormField
                 control={form.control}
                 name="eventType"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Event Type</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -432,7 +446,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="eventDate"
@@ -449,11 +463,12 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            {field.value ? (
-                              formatDate(field.value)
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
+                            {field.value
+                              ? (
+                                formatDate(field.value)
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
@@ -474,7 +489,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="guestCount"
@@ -497,15 +512,15 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="opportunitySource"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Opportunity Source</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -528,7 +543,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="venue"
@@ -542,15 +557,15 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -572,15 +587,15 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -600,7 +615,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                 )}
               />
             </div>
-            
+
             {/* Notes field spanning full width */}
             <FormField
               control={form.control}
@@ -609,24 +624,24 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Additional notes or details" 
-                      className="min-h-[100px]" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Additional notes or details"
+                      className="min-h-[100px]"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             {/* Alert for existing client */}
             {showExistingClientAlert && (
               <Alert variant="default" className="bg-amber-50 border-amber-200">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertTitle className="text-amber-800">Existing Client Found</AlertTitle>
                 <AlertDescription className="text-amber-700">
-                  A client with the same {emailCheck.client ? 'email' : 'phone number'} already exists: 
+                  A client with the same {emailCheck.client ? 'email' : 'phone number'} already exists:
                   <strong> {existingClient.firstName} {existingClient.lastName}</strong>
                   {existingClient.company && ` (${existingClient.company})`}.
                   Do you want to link this opportunity to the existing client?
@@ -662,7 +677,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                 </div>
               </Alert>
             )}
-            
+
             {/* Manual client selection (when no automatic match is found, or in edit mode) */}
             {(isEditing || !showExistingClientAlert) && (
               <FormField
@@ -686,7 +701,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                 )}
               />
             )}
-            
+
             {/* Client selection dropdown, only shown if assignToExistingClient is true */}
             {form.watch("assignToExistingClient") && (
               <FormField
@@ -695,11 +710,11 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Select Client 
+                      Select Client
                       <UserPlus className="h-4 w-4 inline-block ml-2 text-primary" />
                     </FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -720,20 +735,19 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                 )}
               />
             )}
-            
+
             <div className="flex justify-end space-x-2">
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel}>
                   Cancel
                 </Button>
               )}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={mutation.isPending}
                 className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
               >
-                {mutation.isPending ? 
-                  (isEditing ? "Saving..." : "Creating...") : 
+                {mutation.isPending ? (isEditing ? "Saving..." : "Creating...") :
                   (isEditing ? "Save Changes" : "Create Opportunity")}
               </Button>
             </div>

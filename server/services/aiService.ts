@@ -17,7 +17,7 @@ const AI_MODEL_ID = 'anthropic/claude-3-haiku';
 /**
  * AI Service that provides various AI capabilities using Claude via Open Router
  */
-export class AIService {
+export class AIService { // <-- ADDED export keyword here
   /**
    * Generates a summary of a text using Claude
    */
@@ -28,7 +28,7 @@ export class AIService {
       }
 
       console.log(`AI Summarization: Sending text of length ${text.length} to Claude via OpenRouter...`);
-      
+
       const response = await openRouter.chat.completions.create({
         model: AI_MODEL_ID,
         messages: [
@@ -85,9 +85,9 @@ export class AIService {
       }
 
       console.log(`AI Lead Analysis: Sending message of length ${message.length} to Claude via OpenRouter...`);
-      
+
       const prompt = `
-You are a lead analysis assistant for a catering business. 
+You are a lead analysis assistant for a catering business.
 Extract all relevant information from this message and analyze its quality as a lead.
 
 Provide your output in the following JSON format ONLY, with empty or null values for fields you can't detect:
@@ -131,11 +131,11 @@ ${message}`;
       });
 
       const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-      
+
       try {
         // Parse the JSON response
         const result = JSON.parse(resultText);
-        
+
         // Convert guest count to number if present
         if (result.extractedGuestCount && typeof result.extractedGuestCount === 'string') {
           const parsedCount = parseInt(result.extractedGuestCount, 10);
@@ -143,7 +143,7 @@ ${message}`;
             result.extractedGuestCount = parsedCount;
           }
         }
-        
+
         // Convert budget value to number if present
         if (result.aiBudgetValue && typeof result.aiBudgetValue === 'string') {
           const parsedBudget = parseInt(result.aiBudgetValue, 10);
@@ -151,16 +151,16 @@ ${message}`;
             result.aiBudgetValue = parsedBudget;
           }
         }
-        
+
         // Ensure arrays are actually arrays
         if (!Array.isArray(result.aiKeyRequirements)) {
           result.aiKeyRequirements = [];
         }
-        
+
         if (!Array.isArray(result.aiPotentialRedFlags)) {
           result.aiPotentialRedFlags = [];
         }
-        
+
         console.log("AI Lead Analysis: Analysis completed successfully.");
         return result;
       } catch (parseError) {

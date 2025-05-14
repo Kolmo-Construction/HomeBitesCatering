@@ -1,10 +1,10 @@
 // server/services/emailSyncService.ts
 import { google, Auth, gmail_v1 } from 'googleapis';
 import { storage } from '../storage'; // Your existing storage instance
-import { 
-  InsertCommunication, 
-  InsertContactIdentifier, 
-  Communication, 
+import {
+  InsertCommunication,
+  InsertContactIdentifier,
+  Communication,
   InsertRawLead,
   rawLeadStatusEnum,
   leadScoreEnum,
@@ -27,7 +27,7 @@ interface TokenStore {
 // For a production app, consider a secure database table for these.
 let tokenStore: TokenStore = {
     targetEmail: process.env.SYNC_TARGET_EMAIL_ADDRESS
-}; 
+};
 
 // Load tokens from a persistent store if available (e.g., a config file, DB, or env vars)
 // For simplicity, we'll try to load from env vars, but ideally, refresh token is stored securely after first auth.
@@ -97,7 +97,7 @@ async function extractLeadDataWithAI(
   fromAddress?: string
 ): Promise<Partial<InsertRawLead> & { success: boolean; error?: string }> {
   console.log(`Lead Data Extraction: Processing email with subject "${emailSubject}"`);
-  
+
   try {
     // Prepare the full content for analysis
     const fullContent = `
@@ -106,36 +106,36 @@ ${fromAddress ? `From: ${fromAddress}` : ''}
 
 ${emailContent}
     `.trim();
-    
+
     // Try using our existing aiService first
     try {
       const aiResults = await aiService.analyzeLeadMessage(fullContent);
       console.log("Lead Data Extraction: Successfully processed with AI service");
-      
+
       // Helper function to validate score against enum values
       const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
         if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
         return score as typeof leadScoreEnum.enumValues[number];
       };
-      
+
       // Helper function to validate budget indication against enum values
       const validateBudgetIndication = (indication: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
         if (!indication || !budgetIndicationEnum.enumValues.includes(indication as any)) return undefined;
         return indication as typeof budgetIndicationEnum.enumValues[number];
       };
-      
+
       // Helper function to validate lead quality against enum values
       const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
         if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
         return quality as typeof leadQualityCategoryEnum.enumValues[number];
       };
-      
+
       // Helper function to validate sentiment against enum values
       const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
         if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
         return sentiment as typeof sentimentEnum.enumValues[number];
       };
-      
+
       // Form the result object that aligns with InsertRawLead schema
       return {
         success: true,
@@ -146,7 +146,7 @@ ${emailContent}
         eventSummary: emailSubject,
         status: 'under_review' as const,
         notes: `Auto-extracted from email with subject: "${emailSubject}"`,
-        
+
         // Add AI-extracted fields
         extractedEventType: aiResults.extractedEventType,
         extractedEventDate: aiResults.extractedEventDate,
@@ -155,7 +155,7 @@ ${emailContent}
         extractedVenue: aiResults.extractedVenue,
         extractedMessageSummary: aiResults.extractedMessageSummary,
         leadSourcePlatform: 'email',
-        
+
         // Add AI assessment fields (with type validation)
         aiUrgencyScore: validateLeadScore(aiResults.aiUrgencyScore),
         aiBudgetIndication: validateBudgetIndication(aiResults.aiBudgetIndication),
@@ -168,7 +168,7 @@ ${emailContent}
         aiSuggestedNextStep: aiResults.aiSuggestedNextStep,
         aiSentiment: validateSentiment(aiResults.aiSentiment),
         aiConfidenceScore: aiResults.aiConfidenceScore,
-        
+
         // Store the raw AI output for debugging
         rawData: {
           emailSubject,
@@ -179,19 +179,19 @@ ${emailContent}
           timestamp: new Date().toISOString()
         }
       };
-    } 
+    }
     // If our aiService fails, try direct API call as a fallback
     catch (aiServiceError) {
       console.error("Lead Data Extraction: AI service error, attempting direct API call:", aiServiceError);
-      
+
       // Attempt direct API call to OpenRouter
       const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) {
         throw new Error("OpenRouter API key not configured");
       }
-      
+
       const prompt = `
-You are a lead analysis assistant for a catering business. 
+You are a lead analysis assistant for a catering business.
 Extract all relevant information from this message and analyze its quality as a lead.
 
 Provide your output in the following JSON format ONLY, with empty or null values for fields you can't detect:
@@ -237,41 +237,41 @@ ${fullContent}`;
           response_format: { type: "json_object" }
         })
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
-      
+
       const responseData = await response.json();
       const resultText = responseData.choices?.[0]?.message?.content?.trim() || "{}";
-      
+
       try {
         // Parse the JSON response
         const aiResults = JSON.parse(resultText);
         console.log("Lead Data Extraction: Successfully processed with direct API call");
-        
+
         // Helper functions for validation
         const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
           if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
           return score as typeof leadScoreEnum.enumValues[number];
         };
-        
+
         const validateBudgetIndication = (indication: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
           if (!indication || !budgetIndicationEnum.enumValues.includes(indication as any)) return undefined;
           return indication as typeof budgetIndicationEnum.enumValues[number];
         };
-        
+
         const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
           if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
           return quality as typeof leadQualityCategoryEnum.enumValues[number];
         };
-        
+
         const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
           if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
           return sentiment as typeof sentimentEnum.enumValues[number];
         };
-        
+
         return {
           success: true,
           source: 'email_direct_api',
@@ -281,7 +281,7 @@ ${fullContent}`;
           eventSummary: emailSubject,
           status: 'under_review' as const,
           notes: `Auto-extracted from email with subject: "${emailSubject}" (direct API)`,
-          
+
           // Add AI-extracted fields
           extractedEventType: aiResults.extractedEventType,
           extractedEventDate: aiResults.extractedEventDate,
@@ -290,7 +290,7 @@ ${fullContent}`;
           extractedVenue: aiResults.extractedVenue,
           extractedMessageSummary: aiResults.extractedMessageSummary,
           leadSourcePlatform: 'email',
-          
+
           // Add AI assessment fields (with type validation)
           aiUrgencyScore: validateLeadScore(aiResults.aiUrgencyScore),
           aiBudgetIndication: validateBudgetIndication(aiResults.aiBudgetIndication),
@@ -303,7 +303,7 @@ ${fullContent}`;
           aiSuggestedNextStep: aiResults.aiSuggestedNextStep,
           aiSentiment: validateSentiment(aiResults.aiSentiment),
           aiConfidenceScore: aiResults.aiConfidenceScore,
-          
+
           // Store the raw AI output for debugging
           rawData: {
             emailSubject,
@@ -318,7 +318,7 @@ ${fullContent}`;
       } catch (jsonParseError) {
         console.error("Lead Data Extraction: JSON parsing error:", jsonParseError);
         console.error("Lead Data Extraction: Raw AI response:", resultText);
-        
+
         // Return a partial result that can still be used to create a RawLead
         return {
           success: false,
@@ -344,7 +344,7 @@ ${fullContent}`;
     }
   } catch (error) {
     console.error("Lead Data Extraction: Critical error:", error);
-    
+
     // Return minimal data that can be used to create a RawLead in an error state
     return {
       success: false,
@@ -389,12 +389,12 @@ export class GmailSyncService {
   private processingInterval: number;
   private aiSummaryEnabled: boolean;
   public targetEmail: string = "";
-  
+
   // Accessor methods for external status checks
   public isRunning(): boolean {
     return this._isRunning;
   }
-  
+
   public getTargetEmail(): string {
     return this.targetEmail;
   }
@@ -432,7 +432,7 @@ export class GmailSyncService {
       if (tokens.refresh_token) {
         console.log('IMPORTANT: Store this REFRESH TOKEN securely:', tokens.refresh_token);
         // Update environment variables or a secure store
-        process.env.GOOGLE_REFRESH_TOKEN = tokens.refresh_token; 
+        process.env.GOOGLE_REFRESH_TOKEN = tokens.refresh_token;
       }
       if (tokens.access_token) process.env.GOOGLE_ACCESS_TOKEN = tokens.access_token;
       if (tokens.expiry_date) process.env.GOOGLE_TOKEN_EXPIRY_DATE = tokens.expiry_date.toString();
@@ -488,6 +488,13 @@ export class GmailSyncService {
   }
 
   private async fetchAndProcessEmails(): Promise<void> {
+    // --- ADDED CHECK: Return immediately if sync is stopped ---
+    if (!this._isRunning) {
+      console.log("GmailSyncService: Sync is stopped, aborting fetch.");
+      return;
+    }
+    // --- END OF ADDED CHECK ---
+
     if (!this.gmail) {
       console.warn('GmailSyncService: Gmail client not available for fetching.');
       // Attempt to re-initialize if tokens might have become available
@@ -521,6 +528,16 @@ export class GmailSyncService {
       for (const messageEntry of messages) {
         if (!messageEntry.id) continue;
 
+        // --- OPTIONAL ADDED CHECK: Check if sync stopped during processing batch ---
+         if (!this._isRunning) {
+             console.log(`GmailSyncService: Sync stopped during processing, skipping message ${messageEntry.id}.`);
+             // Optionally, mark as read to avoid reprocessing next time, or leave unread.
+             // await this.gmail.users.messages.modify({ userId: 'me', id: messageEntry.id, requestBody: { removeLabelIds: ['UNREAD'] }});
+             continue; // Skip processing this message
+         }
+        // --- END OF OPTIONAL ADDED CHECK ---
+
+
         try {
             const msg = await this.gmail.users.messages.get({
                 userId: 'me',
@@ -531,18 +548,18 @@ export class GmailSyncService {
             if (msg.data.raw) {
                 const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
                 const parsedMail = await simpleParser(rawEmail);
-                
+
                 // Extract messageId to check for duplicates
                 const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
                 const messageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}`;
-                
+
                 // Check if we've already processed this email by looking for existing communications
                 try {
                     // Query to see if this email was already processed
                     const communications = await storage.getCommunicationsByExternalId(messageId);
                     if (communications && communications.length > 0) {
                         console.log(`GmailSyncService: Email with message ID ${messageId} was already processed. Skipping.`);
-                        
+
                         // Mark as read anyway to avoid reprocessing
                         await this.gmail.users.messages.modify({
                             userId: 'me',
@@ -557,7 +574,7 @@ export class GmailSyncService {
                     // If we can't check for duplicates, proceed with processing
                     console.warn(`GmailSyncService: Could not check for duplicate processing of message ID ${messageId}:`, error);
                 }
-                
+
                 // Process the email if it wasn't already processed
                 await this.processParsedEmail(parsedMail);
 
@@ -591,6 +608,13 @@ export class GmailSyncService {
   // processParsedEmail method would be very similar to the one in the IMAP example
   // Key differences: how you determine direction might need to check against this.targetEmail
   private async processParsedEmail(parsedMail: ParsedMail): Promise<void> {
+    // --- OPTIONAL ADDED CHECK: Ensure sync is still running before processing an email ---
+     if (!this._isRunning) {
+        console.log("GmailSyncService: Sync stopped during email processing, aborting.");
+        return; // Do not process this email if sync was stopped
+     }
+    // --- END OF OPTIONAL ADDED CHECK ---
+
     const subject = parsedMail.subject || '(No Subject)';
     // Safe extraction of email address fields with proper type checking
     // Handle both single address object and array of address objects
@@ -654,7 +678,7 @@ export class GmailSyncService {
         try {
             // Use our dedicated extraction function for more robust handling
             // This includes fallbacks, error handling, and complete data extraction
-            const extractedData = this.aiSummaryEnabled 
+            const extractedData = this.aiSummaryEnabled
               ? await extractLeadDataWithAI(bodyText, subject, fromEmail)
               : {
                   success: true,
@@ -667,12 +691,12 @@ export class GmailSyncService {
                   notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
                   rawData: parsedMail
                 };
-            
+
             // Create the raw lead with extracted data
             const rawLead = await storage.createRawLead(extractedData);
-            
+
             console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail}`);
-            
+
             // We'll still create a communication, but it will be linked to existing contact if found
             if (existingContact?.opportunity) {
               opportunityId = existingContact.opportunity.id;
@@ -723,3 +747,6 @@ export class GmailSyncService {
     }
   }
 }
+
+// AI service functionality is integrated directly in the GmailSyncService
+// No need for a separate AIService instance
