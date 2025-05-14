@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function Menus() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mode, setMode] = useState<"list" | "new" | "edit" | "view">("list");
   const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
