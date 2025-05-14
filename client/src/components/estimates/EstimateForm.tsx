@@ -126,10 +126,15 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     
     // Add menu price if selected
     if (selectedMenu) {
-      const menuPrice = selectedMenu.items.reduce((acc: number, item: any) => {
-        const menuItem = item.menuItem || item;
-        return acc + (menuItem.price * (item.quantity || 1));
-      }, 0);
+      const menuPrice = Array.isArray(selectedMenu.items) 
+        ? selectedMenu.items.reduce((acc: number, item: any) => {
+            if (!item) return acc;
+            const menuItem = item.menuItem || item;
+            const price = menuItem?.price || 0;
+            const quantity = item.quantity || 1;
+            return acc + (price * quantity);
+          }, 0)
+        : 0;
       
       const guestCount = form.getValues("guestCount") || 1;
       estimateSubtotal = menuPrice * guestCount;
@@ -411,7 +416,11 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   <SelectItem value="none">No Menu (Custom Items Only)</SelectItem>
                   {menus.map((menu: any) => (
                     <SelectItem key={menu.id} value={menu.id.toString()}>
-                      {menu.name} - {formatCurrency(menu.items.reduce((acc: number, item: any) => acc + item.price, 0) / 100)}
+                      {menu.name} - {formatCurrency(
+                        Array.isArray(menu.items) 
+                          ? menu.items.reduce((acc: number, item: any) => acc + (item?.price || 0), 0) / 100
+                          : 0
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -419,21 +428,25 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
               
               {selectedMenuId && selectedMenu && (
                 <div className="mt-4 border rounded-md p-4">
-                  <h4 className="font-medium">{selectedMenu.name}</h4>
-                  <p className="text-sm text-gray-500">{selectedMenu.description}</p>
+                  <h4 className="font-medium">{selectedMenu.name || 'Selected Menu'}</h4>
+                  <p className="text-sm text-gray-500">{selectedMenu.description || ''}</p>
                   <ul className="mt-2 space-y-1">
-                    {selectedMenu.items.map((item: any, index: number) => (
+                    {Array.isArray(selectedMenu.items) && selectedMenu.items.map((item: any, index: number) => (
                       <li key={index} className="text-sm">
-                        {item.quantity || 1}x {item.name || item.menuItem?.name} - {formatCurrency((item.price || item.menuItem?.price) / 100)}
+                        {item.quantity || 1}x {item.name || item.menuItem?.name || 'Menu Item'} - {formatCurrency(((item.price || item.menuItem?.price) || 0) / 100)}
                       </li>
                     ))}
                   </ul>
                   <div className="mt-2 text-sm font-medium">
-                    Per Person: {formatCurrency(selectedMenu.items.reduce((acc: number, item: any) => {
-                      const price = item.price || item.menuItem?.price || 0;
-                      const quantity = item.quantity || 1;
-                      return acc + (price * quantity);
-                    }, 0) / 100)}
+                    Per Person: {formatCurrency(
+                      Array.isArray(selectedMenu.items) 
+                        ? selectedMenu.items.reduce((acc: number, item: any) => {
+                            const price = item?.price || item?.menuItem?.price || 0;
+                            const quantity = item?.quantity || 1;
+                            return acc + (price * quantity);
+                          }, 0) / 100
+                        : 0
+                    )}
                   </div>
                 </div>
               )}
