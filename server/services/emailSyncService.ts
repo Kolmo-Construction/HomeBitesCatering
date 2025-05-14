@@ -70,13 +70,23 @@ oauth2Client.on('tokens', (tokens) => {
 });
 
 
-// Placeholder for AI Summarization
+// Import the AI service
+import { aiService } from './aiService';
+
+// AI Summarization using DeepSeek V3 via Open Router
 async function getAISummary(text: string): Promise<string> {
   console.log("AI Summarization (Gmail): Input length -", text.length);
   if (!text) return "No content to summarize.";
-  const summary = text.substring(0, Math.min(text.length, 150)).replace(/\s+/g, ' ') + (text.length > 150 ? "..." : "");
-  console.log("AI Summarization (Gmail): Output -", summary);
-  return summary;
+  try {
+    const summary = await aiService.generateSummary(text);
+    console.log("AI Summarization (Gmail): Output -", summary);
+    return summary;
+  } catch (error) {
+    console.error("AI Summarization (Gmail) Error:", error);
+    // Fallback to basic trimming if AI summarization fails
+    const fallbackSummary = text.substring(0, Math.min(text.length, 150)).replace(/\s+/g, ' ') + (text.length > 150 ? "..." : "");
+    return fallbackSummary;
+  }
 }
 
 export class GmailSyncService {
