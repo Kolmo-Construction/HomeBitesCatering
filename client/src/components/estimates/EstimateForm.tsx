@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertEstimateSchema } from "@shared/schema";
+import { insertEstimateSchema, type Estimate as EstimateType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -27,37 +27,47 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CalendarIcon, PlusIcon, Trash2Icon, DollarSignIcon } from "lucide-react"; // Added DollarSignIcon
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, formatDate, formatCurrency, calculateTax, calculateTotal } from "@/lib/utils";
 
-// Extend the estimate schema with validation
+// Define the structure for custom items managed in the form's state
+interface CustomItem {
+  id: string; // Client-side unique ID
+  name: string;
+  quantity: number;
+  price: number; // Stored in cents
+}
+
+// Extend the estimate schema for form validation.
+// Note: 'items' and 'additionalServices' are jsonb in the DB.
+// For this form, 'items' will be managed by the `customItems` state and stringified before API submission.
+// `insertEstimateSchema` already defines fields like `subtotal`, `tax`, `total` as numbers (cents).
 const formSchema = insertEstimateSchema.extend({
-  clientId: z.number().min(1, "Client is required"),
-  eventType: z.string().min(1, "Event type is required"),
+  clientId: z.number({ required_error: "Client is required." }).min(1, "Client is required"),
+  eventType: z.string({ required_error: "Event type is required." }).min(1, "Event type is required"),
   guestCount: z.coerce.number().int().positive("Guest count must be positive").optional().nullable(),
-  venue: z.string().optional(),
+  venue: z.string().optional().nullable(),
   eventDate: z.date().optional().nullable(),
-  subtotal: z.coerce.number().int().min(0, "Subtotal must be positive"),
-  tax: z.coerce.number().int().min(0, "Tax must be positive"),
-  total: z.coerce.number().int().min(0, "Total must be positive"),
-  notes: z.string().optional(),
-  zipCode: z.string().optional(),
+  // subtotal, tax, total are part of insertEstimateSchema, ensure they are numbers (cents)
+  notes: z.string().optional().nullable(),
+  zipCode: z.string().optional().nullable(),
+  // `items` and `additionalServices` from insertEstimateSchema are z.any() or similar for jsonb.
+  // We don't need them directly in the form's Zod schema if managed by separate state.
+  // However, if they are part of the Zod schema for validation (e.g. as z.string() for JSON),
+  // ensure they are handled correctly. For this implementation, we'll omit them from direct
+  // form control via react-hook-form and handle `customItems` separately.
+}).omit({ 
+  items: true, // Omit if managed by customItems state and not directly a form field
+  additionalServices: true // Omit if managed separately or not directly in this form
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface EstimateFormProps {
-  estimate?: any;
+  estimate?: EstimateType; // This is the raw estimate data from the API
   isEditing?: boolean;
-}
-
-interface CustomItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
 }
 
 export default function EstimateForm({ estimate, isEditing = false }: EstimateFormProps) {
@@ -65,206 +75,194 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // State for menu items and client portal URL
-  // When editing, ensure we set the correct menu ID
-  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(() => {
-    if (isEditing && estimate?.menuId) {
-      return Number(estimate.menuId);
-    }
-    return null;
-  });
-  const [customItems, setCustomItems] = useState<CustomItem[]>(
-    estimate?.items ? JSON.parse(estimate.items) : []
-  );
+
+  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
+  const [customItems, setCustomItems] = useState<CustomItem[]>([]);
   const [clientPortalUrl, setClientPortalUrl] = useState<string>("");
   const [showPortalLink, setShowPortalLink] = useState<boolean>(false);
-  const [zipCode, setZipCode] = useState<string>(estimate?.zipCode || "");
-  
-  // Get clients for dropdown
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+  const [zipCode, setZipCode] = useState<string>("");
+
+  const [subtotal, setSubtotal] = useState(0);
+  const [tax, setTax] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  // Fetch clients for dropdown
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
-  
-  // Get menus for dropdown
-  const { data: menus = [], isLoading: isLoadingMenus } = useQuery({
+
+  // Fetch menus for dropdown
+  const { data: menus = [], isLoading: isLoadingMenus } = useQuery<any[]>({
     queryKey: ["/api/menus"],
   });
-  
-  // Get menu details if a menu is selected
-  const { data: selectedMenu = { items: [] }, isLoading: isLoadingSelectedMenu } = useQuery({
+
+  // Fetch details of the selected menu
+  const { data: selectedMenu, isLoading: isLoadingSelectedMenu } = useQuery<any>({
     queryKey: ["/api/menus", selectedMenuId],
     enabled: !!selectedMenuId,
   });
-  
-  // State for price calculations
-  const [subtotal, setSubtotal] = useState(estimate?.subtotal || 0);
-  const [tax, setTax] = useState(estimate?.tax || 0);
-  const [total, setTotal] = useState(estimate?.total || 0);
-  
-  // Prepare default values for the form with proper date conversions
-  const getFormDefaultValues = () => {
-    if (isEditing && estimate) {
-      console.log("Editing estimate with data:", estimate);
-      
+
+  // Function to safely parse items from the estimate prop
+  const parseEstimateItems = useCallback((itemsData: any): CustomItem[] => {
+    if (!itemsData) return [];
+    if (typeof itemsData === 'string') {
       try {
-        // Additional debugging for date conversion
-        if (estimate.eventDate) {
-          console.log("eventDate before conversion:", estimate.eventDate);
-          console.log("eventDate after conversion:", new Date(estimate.eventDate));
-        }
-        
-        return {
-          ...estimate,
-          // Convert date strings to Date objects for form handling
-          eventDate: estimate.eventDate ? new Date(estimate.eventDate) : null,
-          sentAt: estimate.sentAt ? new Date(estimate.sentAt) : null,
-          expiresAt: estimate.expiresAt ? new Date(estimate.expiresAt) : null,
-          viewedAt: estimate.viewedAt ? new Date(estimate.viewedAt) : null,
-          acceptedAt: estimate.acceptedAt ? new Date(estimate.acceptedAt) : null,
-          declinedAt: estimate.declinedAt ? new Date(estimate.declinedAt) : null,
-          // Handle nullable fields
-          menuId: estimate.menuId ? Number(estimate.menuId) : null,
-          guestCount: estimate.guestCount ? Number(estimate.guestCount) : null,
-          additionalServices: estimate.additionalServices || null,
-          // Ensure proper types
-          subtotal: Number(estimate.subtotal) || 0,
-          tax: Number(estimate.tax) || 0,
-          total: Number(estimate.total) || 0,
-          zipCode: estimate.zipCode || "",
-          // Make sure clientId is properly set
-          clientId: estimate.clientId ? Number(estimate.clientId) : undefined,
-        };
-      } catch (error) {
-        console.error("Error converting estimate data:", error);
-        // Return a safe default if there's an error
-        return {
-          clientId: undefined,
-          eventType: estimate.eventType || "",
-          guestCount: null,
-          venue: estimate.venue || "",
-          eventDate: null,
-          menuId: null,
-          items: null,
-          additionalServices: null,
-          subtotal: 0,
-          tax: 0,
-          total: 0,
-          notes: estimate.notes || "",
-          status: estimate.status || "draft",
-          zipCode: estimate.zipCode || "",
-        };
+        if (itemsData.trim() === "") return [];
+        const parsed = JSON.parse(itemsData);
+        return Array.isArray(parsed) ? parsed.map(item => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 })) : [];
+      } catch (e) {
+        console.error("Error parsing estimate.items JSON string:", e, "Value was:", itemsData);
+        return [];
       }
+    } else if (Array.isArray(itemsData)) {
+      return itemsData.map(item => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 }));
     }
-    
-    // Default values for new estimate
-    return {
+    console.warn("estimate.items was neither a string nor an array:", itemsData);
+    return [];
+  }, []);
+
+
+  // Memoized default values function
+  const getFormDefaultValues = useCallback((): FormValues => {
+    if (isEditing && estimate) {
+      console.log("EstimateForm - getFormDefaultValues - Populating for editing:", estimate);
+      return {
+        clientId: Number(estimate.clientId) || undefined,
+        eventType: estimate.eventType || "",
+        guestCount: estimate.guestCount != null ? Number(estimate.guestCount) : null,
+        venue: estimate.venue || "",
+        eventDate: estimate.eventDate ? new Date(estimate.eventDate) : null,
+        menuId: estimate.menuId != null ? Number(estimate.menuId) : null,
+        subtotal: Number(estimate.subtotal) || 0,
+        tax: Number(estimate.tax) || 0,
+        total: Number(estimate.total) || 0,
+        notes: estimate.notes || "",
+        status: estimate.status || "draft",
+        zipCode: estimate.zipCode || "",
+        createdBy: estimate.createdBy != null ? Number(estimate.createdBy) : undefined,
+        // Dates from schema
+        sentAt: estimate.sentAt ? new Date(estimate.sentAt) : null,
+        expiresAt: estimate.expiresAt ? new Date(estimate.expiresAt) : null,
+        viewedAt: estimate.viewedAt ? new Date(estimate.viewedAt) : null,
+        acceptedAt: estimate.acceptedAt ? new Date(estimate.acceptedAt) : null,
+        declinedAt: estimate.declinedAt ? new Date(estimate.declinedAt) : null,
+      };
+    }
+    return { // Defaults for a new form
       clientId: undefined,
       eventType: "",
       guestCount: null,
       venue: "",
       eventDate: null,
       menuId: null,
-      items: null,
-      additionalServices: null,
       subtotal: 0,
       tax: 0,
       total: 0,
       notes: "",
       status: "draft",
       zipCode: "",
+      createdBy: undefined, // This should be set by the backend or auth context
+      sentAt: null,
+      expiresAt: null,
+      viewedAt: null,
+      acceptedAt: null,
+      declinedAt: null,
     };
-  };
-  
-  // Set up form with proper defaults
+  }, [estimate, isEditing]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: getFormDefaultValues(),
-    mode: "onChange", // Validate on change for better user experience
+    mode: "onChange",
   });
-  
-  // Set up field array for custom items
-  const { append, remove } = useFieldArray({
-    control: form.control,
-    name: "items" as never, // TypeScript hack due to complex model
-  });
-  
-  // Handle price calculations
+
+  // Effect to initialize/reset form and local states when in edit mode and estimate data is available
   useEffect(() => {
-    // Calculate subtotal based on menu and custom items
-    let estimateSubtotal = 0;
-    
-    // Add menu price if selected
-    if (selectedMenu) {
-      const menuPrice = Array.isArray(selectedMenu.items) 
-        ? selectedMenu.items.reduce((acc: number, item: any) => {
-            if (!item) return acc;
-            const menuItem = item.menuItem || item;
-            const price = menuItem?.price || 0;
-            const quantity = item.quantity || 1;
-            return acc + (price * quantity);
-          }, 0)
-        : 0;
-      
-      const guestCount = form.getValues("guestCount") || 1;
-      estimateSubtotal = menuPrice * guestCount;
+    if (isEditing && estimate) {
+      console.log("EstimateForm: useEffect resetting form with estimate:", estimate);
+      form.reset(getFormDefaultValues());
+
+      setCustomItems(parseEstimateItems(estimate.items));
+      setSelectedMenuId(estimate.menuId != null ? Number(estimate.menuId) : null);
+      setZipCode(estimate.zipCode || "");
+      // Financials are set by the calculation useEffect
+    } else if (!isEditing) {
+      // Reset for new form if needed (e.g., navigating from edit to new)
+      form.reset(getFormDefaultValues());
+      setCustomItems([]);
+      setSelectedMenuId(null);
+      setZipCode("");
     }
-    
-    // Add custom items
+  }, [estimate, isEditing, form.reset, getFormDefaultValues, parseEstimateItems]);
+
+
+  // Price calculation effect
+  useEffect(() => {
+    let newSubtotal = 0;
+    const guestCountValue = form.getValues("guestCount");
+    const currentGuestCount = guestCountValue != null && guestCountValue > 0 ? guestCountValue : 1;
+
+    if (selectedMenuId && selectedMenu && Array.isArray(selectedMenu.items)) {
+      const menuPricePerGuest = selectedMenu.items.reduce((acc: number, itemDetail: any) => {
+        // Assuming itemDetail could be { menuItem: {...}, quantity: X } or just the item itself
+        const actualItem = itemDetail.menuItem || itemDetail;
+        const price = Number(actualItem?.price) || 0; // Price in cents
+        const quantity = Number(itemDetail.quantity) || 1;
+        return acc + (price * quantity);
+      }, 0);
+      newSubtotal += menuPricePerGuest * currentGuestCount;
+    }
+
     customItems.forEach(item => {
-      estimateSubtotal += item.price * item.quantity;
+      newSubtotal += (Number(item.price) || 0) * (Number(item.quantity) || 0); // item.price is in cents
     });
-    
-    // Get current zipCode value from form
-    const currentZipCode = form.getValues("zipCode");
-    
-    // Calculate tax and total based on zipCode
-    const estimateTax = calculateTax(estimateSubtotal, currentZipCode);
-    const estimateTotal = calculateTotal(estimateSubtotal, estimateTax);
-    
-    setSubtotal(estimateSubtotal);
-    setTax(Math.round(estimateTax));
-    setTotal(Math.round(estimateTotal));
-    
-    // Update form values
-    form.setValue("subtotal", estimateSubtotal);
-    form.setValue("tax", Math.round(estimateTax));
-    form.setValue("total", Math.round(estimateTotal));
-  }, [selectedMenu, customItems, form.watch("guestCount"), form.watch("zipCode")]);
-  
+
+    const currentZipCode = form.getValues("zipCode"); // Get zipCode from form state
+    const newTax = calculateTax(newSubtotal, currentZipCode); // calculateTax expects amount in base units (cents)
+    const newTotal = calculateTotal(newSubtotal, newTax);
+
+    setSubtotal(Math.round(newSubtotal));
+    setTax(Math.round(newTax));
+    setTotal(Math.round(newTotal));
+
+    // Update form values for subtotal, tax, total so they are part of the submission
+    form.setValue("subtotal", Math.round(newSubtotal), { shouldValidate: true });
+    form.setValue("tax", Math.round(newTax), { shouldValidate: true });
+    form.setValue("total", Math.round(newTotal), { shouldValidate: true });
+
+  }, [selectedMenu, customItems, form, selectedMenuId]); // Added form to dependencies for getValues
+
+
   // Mutation for creating/updating estimate
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      // Prepare items JSON
-      const itemsJson = JSON.stringify(customItems);
-      
-      // Parse date strings into proper Date objects or null
-      // This is crucial for Zod validation on the server side
-      const eventDate = values.eventDate ? new Date(values.eventDate) : null;
-      const sentAt = values.sentAt ? new Date(values.sentAt) : null;
-      const expiresAt = values.expiresAt ? new Date(values.expiresAt) : null;
-      const viewedAt = values.viewedAt ? new Date(values.viewedAt) : null;
-      const acceptedAt = values.acceptedAt ? new Date(values.acceptedAt) : null;
-      const declinedAt = values.declinedAt ? new Date(values.declinedAt) : null;
-      
+      const itemsJson = JSON.stringify(customItems.map(item => ({
+        id: item.id, // For custom items, ID might be client-generated or from DB if these were pre-defined custom options
+        name: item.name,
+        quantity: Number(item.quantity),
+        price: Number(item.price), // Ensure price is number (cents)
+      })));
+
       const payload = {
         ...values,
-        // Override with proper date objects
-        eventDate,
-        sentAt,
-        expiresAt,
-        viewedAt,
-        acceptedAt,
-        declinedAt,
+        // Ensure dates are ISO strings or null
+        eventDate: values.eventDate ? values.eventDate.toISOString() : null,
+        sentAt: values.sentAt ? (values.sentAt as Date).toISOString() : null,
+        expiresAt: values.expiresAt ? (values.expiresAt as Date).toISOString() : null,
+        viewedAt: values.viewedAt ? (values.viewedAt as Date).toISOString() : null,
+        acceptedAt: values.acceptedAt ? (values.acceptedAt as Date).toISOString() : null,
+        declinedAt: values.declinedAt ? (values.declinedAt as Date).toISOString() : null,
         items: itemsJson,
-        menuId: selectedMenuId === null ? null : selectedMenuId,
-        createdBy: 1, // In production, this would be the current user ID
-        status: isEditing ? values.status : "draft",
+        additionalServices: values.additionalServices ? JSON.stringify(values.additionalServices) : null, // Assuming similar handling
+        menuId: selectedMenuId, // Already a number or null
+        // Use calculated financials from state for submission
+        subtotal: subtotal,
+        tax: tax,
+        total: total,
+        // createdBy: should be handled by backend or auth context
       };
-      
-      // For debugging - remove in production
-      console.log('Submitting payload:', payload);
-      
+
+      console.log('Submitting payload for estimate:', payload);
       if (isEditing && estimate) {
         const res = await apiRequest("PATCH", `/api/estimates/${estimate.id}`, payload);
         return res.json();
@@ -275,12 +273,9 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
-      
-      // Check if estimate is sent and a client portal URL was generated
       if (data.clientPortalUrl) {
         setClientPortalUrl(data.clientPortalUrl);
         setShowPortalLink(true);
-        
         toast({
           title: "Quote sent",
           description: "The quote has been sent successfully. A client portal link has been generated."
@@ -292,82 +287,69 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
             ? "The quote has been updated successfully." 
             : "The new quote has been created successfully."
         });
-        navigate("/estimates");
+        if (!data.clientPortalUrl) { // Only navigate if not showing portal link
+            navigate("/estimates");
+        }
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Form submission error:", error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isEditing ? "update" : "create"} quote: ${error.message}`,
-        variant: "destructive"
-      });
+      let readableError = `Failed to ${isEditing ? "update" : "create"} quote.`;
+      if (error?.message) {
+          try {
+              // Attempt to parse if error.message contains JSON string from apiRequest's throwIfResNotOk
+              const errorDetails = JSON.parse(error.message.substring(error.message.indexOf("{")));
+              if (errorDetails.message) {
+                  readableError = errorDetails.message;
+                  if (errorDetails.errors) {
+                      readableError += ` Details: ${errorDetails.errors.map((e:any) => `${e.path.join('.')}: ${e.message}`).join(', ')}`;
+                  }
+              }
+          } catch (e) {
+              // If parsing fails, use the original error message string
+              readableError = error.message;
+          }
+      }
+      toast({ title: "Error", description: readableError, variant: "destructive" });
     }
   });
-  
-  // Handle custom item management
+
+  // Handlers for custom items
   const handleAddCustomItem = () => {
-    const newItem: CustomItem = {
-      id: Date.now().toString(),
-      name: "",
-      quantity: 1,
-      price: 0
-    };
-    setCustomItems([...customItems, newItem]);
+    setCustomItems([...customItems, { id: `temp-${Date.now()}`, name: "", quantity: 1, price: 0 }]);
   };
-  
+
   const handleRemoveCustomItem = (id: string) => {
     setCustomItems(customItems.filter(item => item.id !== id));
   };
-  
-  const handleCustomItemChange = (id: string, field: keyof CustomItem, value: any) => {
+
+  const handleCustomItemChange = (id: string, field: keyof CustomItem, value: string | number) => {
     setCustomItems(customItems.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
+      item.id === id 
+        ? { ...item, [field]: field === 'price' ? Math.round(Number(value) * 100) : (field === 'quantity' ? Number(value) : value) } 
+        : item
     ));
   };
-  
-  // Handle form submission
+
+  // Form submission handler
   const onSubmit = (values: FormValues) => {
-    // Make sure financial values are included
-    const estimateSubtotal = subtotal || 0;
-    const estimateTax = tax || 0;
-    const estimateTotal = total || 0;
-    
-    console.log("Form values before submission:", values);
-    
-    // Let the mutation function handle proper date conversion
-    // We just ensure we have all the correct values
-    const updatedValues = {
-      ...values,
-      subtotal: estimateSubtotal,
-      tax: estimateTax,
-      total: estimateTotal
+    console.log("Form values at onSubmit:", values);
+    // The mutation function now handles date stringification and inclusion of calculated financials
+    // Ensure status is correctly passed, especially for new estimates
+    const submissionValues = {
+        ...values,
+        status: form.getValues("status") || "draft" // Ensure status is always set
     };
-    
-    mutation.mutate(updatedValues);
+    mutation.mutate(submissionValues);
   };
-  
-  // Handle sending estimate
+
+  // Handler for "Save & Send"
   const handleSendEstimate = () => {
-    const values = form.getValues();
-    
-    // Make sure we have the required financial values
-    const estimateSubtotal = subtotal || 0;
-    const estimateTax = tax || 0;
-    const estimateTotal = total || 0;
-    const currentDate = new Date();
-    
-    // Update form with current values for submission
     form.setValue("status", "sent");
-    form.setValue("sentAt", currentDate);
-    form.setValue("subtotal", estimateSubtotal);
-    form.setValue("tax", estimateTax);
-    form.setValue("total", estimateTotal);
-    
-    // Simply submit the form - the date conversions are handled in the mutation function
-    onSubmit(form.getValues());
+    form.setValue("sentAt", new Date()); // Set sentAt when sending
+    form.handleSubmit(onSubmit)(); // Trigger the main submit handler
   };
-  
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -376,6 +358,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Client and Event Type Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -385,7 +368,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                     <FormLabel>Client</FormLabel>
                     <Select 
                       onValueChange={(value) => field.onChange(parseInt(value, 10))} 
-                      defaultValue={field.value?.toString()}
+                      value={field.value?.toString()} // Use value for controlled component
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -393,6 +376,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {isLoadingClients && <SelectItem value="loading" disabled>Loading clients...</SelectItem>}
                         {clients.map((client: any) => (
                           <SelectItem key={client.id} value={client.id.toString()}>
                             {client.firstName} {client.lastName}
@@ -404,7 +388,6 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={form.control}
                 name="eventType"
@@ -413,7 +396,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                     <FormLabel>Event Type</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      defaultValue={field.value}
+                      value={field.value} // Use value for controlled component
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -433,7 +416,10 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   </FormItem>
                 )}
               />
-              
+            </div>
+
+            {/* Event Date and Guest Count */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="eventDate"
@@ -472,7 +458,6 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   </FormItem>
                 )}
               />
-              
               <FormField
                 control={form.control}
                 name="guestCount"
@@ -488,7 +473,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                           const value = e.target.value === "" ? null : parseInt(e.target.value, 10);
                           field.onChange(value);
                         }}
-                        value={field.value === null ? "" : field.value}
+                        value={field.value == null ? "" : field.value} // Handle null/undefined for empty display
                       />
                     </FormControl>
                     <FormMessage />
@@ -496,7 +481,8 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 )}
               />
             </div>
-            
+
+            {/* Venue and Zip Code */}
             <FormField
               control={form.control}
               name="venue"
@@ -504,13 +490,12 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 <FormItem>
                   <FormLabel>Location/Venue</FormLabel>
                   <FormControl>
-                    <Input placeholder="Event location or venue" {...field} />
+                    <Input placeholder="Event location or venue" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
             <FormField
               control={form.control}
               name="zipCode"
@@ -521,9 +506,10 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                     <Input 
                       placeholder="Enter zip code" 
                       {...field} 
+                      value={field.value || ""}
                       onChange={(e) => {
                         field.onChange(e.target.value);
-                        setZipCode(e.target.value);
+                        setZipCode(e.target.value); 
                       }}
                     />
                   </FormControl>
@@ -531,117 +517,111 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 </FormItem>
               )}
             />
-            
+
+            {/* Menu Selection */}
             <div>
               <FormLabel>Menu Selection</FormLabel>
               <Select 
                 onValueChange={(value) => {
-                  if (value === "none") {
-                    setSelectedMenuId(null);
-                  } else {
-                    setSelectedMenuId(parseInt(value, 10));
-                  }
+                  const menuIdValue = value === "none" ? null : parseInt(value, 10);
+                  setSelectedMenuId(menuIdValue);
+                  form.setValue("menuId", menuIdValue); // Update form state
                 }} 
-                defaultValue={selectedMenuId?.toString() || "none"}
+                value={selectedMenuId?.toString() || "none"} // Controlled component
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a menu" />
                 </SelectTrigger>
                 <SelectContent>
+                  {isLoadingMenus && <SelectItem value="loading" disabled>Loading menus...</SelectItem>}
                   <SelectItem value="none">No Menu (Custom Items Only)</SelectItem>
                   {menus.map((menu: any) => (
                     <SelectItem key={menu.id} value={menu.id.toString()}>
                       {menu.name} - {formatCurrency(
-                        Array.isArray(menu.items) 
-                          ? menu.items.reduce((acc: number, item: any) => acc + (item?.price || 0), 0) / 100
-                          : 0
+                        (Array.isArray(menu.items) 
+                          ? menu.items.reduce((acc: number, item: any) => {
+                              const menuItem = item.menuItem || item;
+                              return acc + (Number(menuItem?.price) || 0);
+                            }, 0)
+                          : 0) / 100 // Assuming price is in cents
                       )}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
               {selectedMenuId && selectedMenu && (
                 <div className="mt-4 border rounded-md p-4">
                   <h4 className="font-medium">{selectedMenu.name || 'Selected Menu'}</h4>
                   <p className="text-sm text-gray-500">{selectedMenu.description || ''}</p>
                   <ul className="mt-2 space-y-1">
-                    {Array.isArray(selectedMenu.items) && selectedMenu.items.map((item: any, index: number) => (
-                      <li key={index} className="text-sm">
-                        {item.quantity || 1}x {item.name || item.menuItem?.name || 'Menu Item'} - {formatCurrency(((item.price || item.menuItem?.price) || 0) / 100)}
-                      </li>
-                    ))}
+                    {Array.isArray(selectedMenu.items) && selectedMenu.items.map((itemDetail: any, index: number) => {
+                      const actualItem = itemDetail.menuItem || itemDetail;
+                      return (
+                        <li key={index} className="text-sm">
+                          {itemDetail.quantity || 1}x {actualItem.name || 'Menu Item'} - {formatCurrency((Number(actualItem.price) || 0) / 100)}
+                        </li>
+                      );
+                    })}
                   </ul>
-                  <div className="mt-2 text-sm font-medium">
-                    Per Person: {formatCurrency(
-                      Array.isArray(selectedMenu.items) 
-                        ? selectedMenu.items.reduce((acc: number, item: any) => {
-                            const price = item?.price || item?.menuItem?.price || 0;
-                            const quantity = item?.quantity || 1;
+                   <div className="mt-2 text-sm font-medium">
+                      Per Person: {formatCurrency(
+                      (Array.isArray(selectedMenu.items) 
+                        ? selectedMenu.items.reduce((acc: number, itemDetail: any) => {
+                            const actualItem = itemDetail.menuItem || itemDetail;
+                            const price = Number(actualItem?.price) || 0;
+                            const quantity = Number(itemDetail.quantity) || 1;
                             return acc + (price * quantity);
-                          }, 0) / 100
-                        : 0
+                          }, 0)
+                        : 0) / 100
                     )}
                   </div>
                 </div>
               )}
             </div>
-            
+
+            {/* Custom Items */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <FormLabel>Custom Items</FormLabel>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleAddCustomItem}
-                >
-                  <PlusIcon className="h-4 w-4 mr-1" />
-                  Add Item
+                <FormLabel>Custom Items / Additional Services</FormLabel>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddCustomItem}>
+                  <PlusIcon className="h-4 w-4 mr-1" /> Add Item
                 </Button>
               </div>
-              
               {customItems.length === 0 ? (
                 <div className="border border-dashed rounded-md p-4 text-center text-gray-500">
-                  No custom items added yet. Click "Add Item" to add custom items.
+                  No custom items added.
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {customItems.map((item, index) => (
+                  {customItems.map((item) => (
                     <div key={item.id} className="flex items-center gap-2 border rounded-md p-3">
-                      <div className="flex-1">
-                        <Input
-                          placeholder="Item name"
-                          value={item.name}
-                          onChange={(e) => handleCustomItemChange(item.id, "name", e.target.value)}
-                          className="mb-1"
-                        />
-                      </div>
-                      <div className="w-20">
-                        <Input
-                          type="number"
-                          placeholder="Qty"
-                          value={item.quantity}
-                          min={1}
-                          onChange={(e) => handleCustomItemChange(item.id, "quantity", parseInt(e.target.value, 10))}
-                        />
-                      </div>
-                      <div className="w-32">
+                      <Input
+                        placeholder="Item name"
+                        value={item.name}
+                        onChange={(e) => handleCustomItemChange(item.id, "name", e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        min={1}
+                        onChange={(e) => handleCustomItemChange(item.id, "quantity", parseInt(e.target.value, 10) || 1)}
+                        className="w-20"
+                      />
+                      <div className="relative w-32">
+                        <DollarSignIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
                           type="number"
-                          placeholder="Price"
-                          value={item.price / 100}
+                          placeholder="0.00"
+                          value={item.price / 100} // Display in dollars
                           step="0.01"
                           min={0}
-                          onChange={(e) => handleCustomItemChange(item.id, "price", parseFloat(e.target.value) * 100)}
+                          onChange={(e) => handleCustomItemChange(item.id, "price", e.target.value)} // handleCustomItemChange will convert to cents
+                          className="pl-7" // Make space for dollar sign
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveCustomItem(item.id)}
-                      >
+                      <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveCustomItem(item.id)}>
                         <Trash2Icon className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
@@ -649,7 +629,8 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 </div>
               )}
             </div>
-            
+
+            {/* Financial Summary */}
             <div className="bg-gray-50 p-4 rounded-md">
               <div className="flex justify-between mb-2">
                 <span>Subtotal:</span>
@@ -664,7 +645,8 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 <span>{formatCurrency(total / 100)}</span>
               </div>
             </div>
-            
+
+            {/* Notes */}
             <FormField
               control={form.control}
               name="notes"
@@ -673,17 +655,19 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Additional notes for the estimate"
+                      placeholder="Additional notes for the estimate (e.g., dietary restrictions, special requests)"
                       className="resize-none" 
                       rows={3}
                       {...field} 
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
+            {/* Status (only in edit mode) */}
             {isEditing && (
               <FormField
                 control={form.control}
@@ -693,7 +677,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                     <FormLabel>Status</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      defaultValue={field.value}
+                      value={field.value} // Controlled component
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -714,61 +698,37 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
               />
             )}
 
+            {/* Action Buttons */}
             <CardFooter className="px-0 pt-4 flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/estimates")}
-              >
+              <Button type="button" variant="outline" onClick={() => navigate("/estimates")}>
                 Cancel
               </Button>
-              
               <div className="flex space-x-2">
-                <Button 
-                  type="submit" 
-                  variant="outline"
-                  disabled={mutation.isPending}
-                >
+                <Button type="submit" variant="outline" disabled={mutation.isPending || (mutation.isSuccess && showPortalLink)}>
                   {mutation.isPending ? "Saving..." : (isEditing ? "Update Draft" : "Save as Draft")}
                 </Button>
-                
-                {isEditing && form.watch("status") === "draft" && (
+                {(!isEditing || (isEditing && form.getValues("status") === "draft")) && (
                   <Button 
                     type="button" 
                     className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
                     onClick={handleSendEstimate}
-                    disabled={mutation.isPending}
+                    disabled={mutation.isPending || (mutation.isSuccess && showPortalLink)}
                   >
-                    Send to Client
-                  </Button>
-                )}
-                
-                {!isEditing && (
-                  <Button 
-                    type="button" 
-                    className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
-                    onClick={handleSendEstimate}
-                    disabled={mutation.isPending}
-                  >
-                    Save & Send
+                    {mutation.isPending && form.getValues("status") === "sent" ? "Sending..." : (isEditing ? "Update & Send" : "Save & Send")}
                   </Button>
                 )}
               </div>
             </CardFooter>
           </form>
-          
-          {/* Client Portal Link Section - Shown when quote is sent */}
+
           {showPortalLink && clientPortalUrl && (
             <div className="mt-8 p-4 border border-green-200 bg-green-50 rounded-md">
-              <h3 className="text-lg font-semibold text-green-700 mb-2">
-                Client Portal Created
-              </h3>
+              <h3 className="text-lg font-semibold text-green-700 mb-2">Client Portal Created</h3>
               <p className="text-sm text-green-600 mb-4">
                 A client portal has been created for this quote. Share this link with your client:
               </p>
-              
               <div className="flex items-center space-x-2 mb-4">
-                <input 
+                <Input 
                   type="text" 
                   value={clientPortalUrl} 
                   readOnly 
@@ -779,32 +739,17 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   size="sm"
                   onClick={() => {
                     navigator.clipboard.writeText(clientPortalUrl);
-                    toast({
-                      title: "Copied!",
-                      description: "Client portal link copied to clipboard",
-                    });
+                    toast({ title: "Copied!", description: "Client portal link copied to clipboard" });
                   }}
                 >
                   Copy Link
                 </Button>
               </div>
-              
               <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    window.open(clientPortalUrl, '_blank');
-                  }}
-                >
+                <Button variant="outline" size="sm" onClick={() => window.open(clientPortalUrl, '_blank')}>
                   Preview Portal
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    navigate("/estimates");
-                  }}
-                >
+                <Button size="sm" onClick={() => navigate("/estimates")}>
                   Back to Quotes
                 </Button>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -16,7 +16,8 @@ import {
   DownloadIcon, 
   CalendarIcon, 
   MapPinIcon, 
-  UsersIcon
+  UsersIcon,
+  FileTextIcon
 } from "lucide-react";
 import { 
   AlertDialog,
@@ -28,11 +29,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Helmet } from "react-helmet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { type Estimate as EstimateType } from "@shared/schema";
 
 interface EstimateViewerProps {
   id: number;
   isClient?: boolean;
 }
+
+interface CustomItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number; 
+}
+
+// Define a simple client type for clarity, adjust if you have a more specific one
+interface ClientType {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  company?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  // Add other client properties as needed
+}
+
 
 export default function EstimateViewer({ id, isClient = false }: EstimateViewerProps) {
   const { toast } = useToast();
@@ -40,413 +66,315 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false);
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
-  
-  // Get estimate data
-  const { data: estimate, isLoading, isError } = useQuery({
-    queryKey: ["/api/estimates", id],
+
+  const { data: estimate, isLoading, isError, error } = useQuery<EstimateType, Error>({
+    queryKey: ["/api/estimates", id, isClient], // Added isClient to queryKey to differentiate cache if needed
+    queryFn: async ({ queryKey }) => {
+      const currentId = queryKey[1];
+      const clientViewing = queryKey[2];
+      const url = `/api/estimates/${currentId}${clientViewing ? '?client=true' : ''}`;
+      console.log(`EstimateViewer: Fetching estimate from ${url}`);
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: `HTTP error! status: ${res.status}` }));
+        console.error("EstimateViewer: API error response:", errorData);
+        throw new Error(errorData.message || `Failed to fetch estimate ${currentId}`);
+      }
+      const jsonData = await res.json();
+      console.log(`EstimateViewer: Successfully fetched estimate ${currentId}:`, jsonData);
+      return jsonData;
+    },
+    enabled: !!id,
     refetchInterval: false,
     refetchOnMount: true,
     staleTime: 0,
-    onSuccess: (data) => {
-      console.log("EstimateViewer loaded data:", data);
-    },
-    onError: (error) => {
-      console.error("EstimateViewer error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load quote data. Please try again.",
-        variant: "destructive",
-      });
-    }
   });
-  
-  // Get client data
-  const { data: client } = useQuery({
+
+  const { data: client } = useQuery<ClientType>({
     queryKey: ["/api/clients", estimate?.clientId],
+    queryFn: async ({ queryKey }) => {
+        if (!queryKey[1]) return null;
+        const res = await fetch(`/api/clients/${queryKey[1]}`, {credentials: 'include'});
+        if (!res.ok) throw new Error('Failed to fetch client details');
+        return res.json();
+    },
     enabled: !!estimate?.clientId,
   });
-  
-  // Get menu data
-  const { data: menu } = useQuery({
+
+  const { data: menu } = useQuery<any>({ 
     queryKey: ["/api/menus", estimate?.menuId],
+     queryFn: async ({ queryKey }) => {
+        if (!queryKey[1]) return null;
+        const res = await fetch(`/api/menus/${queryKey[1]}`, {credentials: 'include'});
+        if (!res.ok) throw new Error('Failed to fetch menu details');
+        return res.json();
+    },
     enabled: !!estimate?.menuId,
   });
-  
-  // Show loading or error states
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple"></div>
-      </div>
-    );
-  }
-  
-  if (isError || !estimate) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Quote</h2>
-        <p className="text-gray-600 mb-6">There was an error loading the quote data. Please try again.</p>
-        <Link to="/estimates">
-          <Button variant="outline">
-            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-            Back to Quotes
-          </Button>
-        </Link>
-      </div>
-    );
-  }
-  
-  // Accept estimate mutation
+
   const acceptMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", `/api/estimates/${id}/accept`);
-    },
+    mutationFn: async () => apiRequest("POST", `/api/estimates/${id}/accept`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id] });
-      toast({
-        title: "Estimate accepted",
-        description: "The estimate has been accepted successfully."
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
+      toast({ title: "Estimate accepted", description: "The estimate has been accepted successfully." });
       setIsAcceptDialogOpen(false);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to accept estimate: ${error.message}`,
-        variant: "destructive",
-      });
-    },
+    onError: (err: Error) => toast({ title: "Error", description: `Failed to accept estimate: ${err.message}`, variant: "destructive" }),
   });
-  
-  // Decline estimate mutation
+
   const declineMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", `/api/estimates/${id}/decline`);
-    },
+    mutationFn: async () => apiRequest("POST", `/api/estimates/${id}/decline`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id] });
-      toast({
-        title: "Estimate declined",
-        description: "The estimate has been declined."
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
+      toast({ title: "Estimate declined", description: "The estimate has been declined." });
       setIsDeclineDialogOpen(false);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to decline estimate: ${error.message}`,
-        variant: "destructive",
-      });
-    },
+    onError: (err: Error) => toast({ title: "Error", description: `Failed to decline estimate: ${err.message}`, variant: "destructive" }),
   });
-  
-  // Send estimate mutation
+
   const sendMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("PATCH", `/api/estimates/${id}`, {
-        status: "sent",
-        sentAt: new Date()
-      });
-    },
+    mutationFn: async () => apiRequest("PATCH", `/api/estimates/${id}`, { status: "sent", sentAt: new Date().toISOString() }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id] });
-      toast({
-        title: "Estimate sent",
-        description: "The estimate has been sent to the client."
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
+      toast({ title: "Estimate sent", description: "The estimate has been sent to the client." });
       setIsSendDialogOpen(false);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to send estimate: ${error.message}`,
-        variant: "destructive",
-      });
-    },
+    onError: (err: Error) => toast({ title: "Error", description: `Failed to send estimate: ${err.message}`, variant: "destructive" }),
   });
-  
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple mx-auto"></div>
-          <p className="mt-2">Loading estimate...</p>
+          <p className="mt-4 text-gray-600">Loading your estimate...</p>
         </div>
       </div>
     );
   }
-  
-  if (!estimate) {
+
+  if (isError || !estimate) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Estimate Not Found</h2>
-        <p className="text-gray-600 mb-4">The estimate you're looking for doesn't exist or has been deleted.</p>
-        <Link href="/estimates">
-          <Button>
-            <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Back to Estimates
-          </Button>
-        </Link>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+        <Helmet>
+          <title>Error Loading Estimate</title>
+        </Helmet>
+        <div className="text-center max-w-md">
+           <div className="text-red-500 mb-4">
+            <XIcon className="h-16 w-16 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Quote</h2>
+          <p className="text-gray-600 mb-4">
+            {error?.message || "There was an error loading the quote data. Please try again or contact support."}
+          </p>
+          <Link href={isClient ? "/" : "/estimates"}>
+            <Button variant="outline">
+              <ArrowLeftIcon className="w-4 h-4 mr-2" />
+              {isClient ? "Back to Home" : "Back to Quotes"}
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
-  
-  // Parse custom items if any
-  const customItems = estimate.items ? JSON.parse(estimate.items) : [];
-  
-  // Get menu items if available
-  const menuItems = menu?.items || [];
 
-  // Format status for display
-  const getStatusInfo = (status: string) => {
-    const statusInfo = {
-      draft: { label: "Draft", message: "This estimate is in draft mode and has not been sent to the client." },
-      sent: { label: "Sent", message: "This estimate has been sent to the client." },
-      viewed: { label: "Viewed", message: "The client has viewed this estimate." },
-      accepted: { label: "Accepted", message: "The client has accepted this estimate." },
-      declined: { label: "Declined", message: "The client has declined this estimate." }
-    };
-    
-    return statusInfo[status as keyof typeof statusInfo] || { label: status, message: "" };
-  };
-  
-  const statusInfo = getStatusInfo(estimate.status);
-  
-  // Print function
+  let customItems: CustomItem[] = [];
+  if (estimate.items) {
+    if (typeof estimate.items === 'string') {
+      try {
+        if (estimate.items.trim() === "") {
+          customItems = [];
+        } else {
+          const parsed = JSON.parse(estimate.items);
+          customItems = Array.isArray(parsed) ? parsed.map((item: any) => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 })) : [];
+        }
+      } catch (e) {
+        console.error("EstimateViewer: Error parsing estimate.items JSON string:", e, "Value was:", estimate.items);
+        customItems = [];
+      }
+    } else if (Array.isArray(estimate.items)) {
+      console.log("EstimateViewer: estimate.items is already an array:", estimate.items);
+      customItems = estimate.items.map((item: any) => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 }));
+    } else {
+      console.warn("EstimateViewer: estimate.items was neither a string nor an array:", estimate.items);
+    }
+  }
+
+  const menuItemsToDisplay = menu?.items?.map((itemDetail: any) => {
+      const actualItem = itemDetail.menuItem || itemDetail;
+      return {
+          ...actualItem,
+          quantity: itemDetail.quantity || 1,
+          price: Number(actualItem.price) || 0,
+      };
+  }) || [];
+
   const handlePrint = () => {
     window.print();
   };
 
+  // Construct title string safely
+  const pageTitle = `Estimate #${estimate.id} - ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() : "Home Bites Catering"}`;
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6 print:hidden">
-        <Link href="/estimates">
-          <Button variant="outline">
-            <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Back to Estimates
-          </Button>
-        </Link>
-        
-        <div className="flex items-center gap-2">
-          {!isClient && estimate.status === "draft" && (
-            <Button 
-              variant="outline" 
-              className="text-green-600 border-green-600 hover:bg-green-50"
-              onClick={() => setIsSendDialogOpen(true)}
-            >
-              <SendIcon className="mr-2 h-4 w-4" />
-              Send to Client
+    <div className={`max-w-4xl mx-auto ${isClient ? 'py-8' : ''}`}>
+      <Helmet>
+        {/* Corrected: Ensure title content is a single string expression */}
+        <title>{pageTitle}</title>
+        <meta name="description" content={`Details for estimate #${estimate.id}`} />
+      </Helmet>
+
+      {!isClient && (
+        <div className="flex justify-between items-center mb-6 print:hidden">
+          <Link href="/estimates">
+            <Button variant="outline">
+              <ArrowLeftIcon className="mr-2 h-4 w-4" />
+              Back to Quotes
             </Button>
-          )}
-          
-          <Button 
-            variant="outline"
-            onClick={handlePrint}
-          >
-            <PrinterIcon className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-          
-          <Button variant="outline">
-            <DownloadIcon className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            {estimate.status === "draft" && (
+              <Button 
+                variant="outline" 
+                className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
+                onClick={() => setIsSendDialogOpen(true)}
+                disabled={sendMutation.isPending}
+              >
+                <SendIcon className="mr-2 h-4 w-4" />
+                {sendMutation.isPending ? "Sending..." : "Send to Client"}
+              </Button>
+            )}
+            <Button variant="outline" onClick={handlePrint}>
+              <PrinterIcon className="mr-2 h-4 w-4" /> Print
+            </Button>
+            <Button variant="outline">
+              <DownloadIcon className="mr-2 h-4 w-4" /> Download PDF
+            </Button>
+          </div>
         </div>
-      </div>
-      
-      <Card className="mb-6 shadow-lg print:shadow-none">
-        <CardHeader className="pb-4 border-b">
-          <div className="flex justify-between items-start">
-            <div>
+      )}
+
+      <Card className="mb-6 shadow-lg print:shadow-none print:border-none">
+        <CardHeader className="pb-4 border-b print:border-gray-300">
+          <div className="flex flex-col sm:flex-row justify-between items-start">
+            <div className="mb-4 sm:mb-0">
               <div className="mb-2">
                 <img 
                   src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100" 
                   alt="Home Bites Logo" 
-                  className="h-12 rounded-full print:filter print:grayscale"
+                  className="h-12 w-12 rounded-full print:filter print:grayscale"
                 />
               </div>
-              <CardTitle className="text-2xl">Estimate #{estimate.id}</CardTitle>
-            </div>
-            
-            <div className="text-right">
-              <div className="flex items-center justify-end mb-2">
-                <BadgeStatus status={estimate.status} />
-              </div>
-              <p className="text-sm text-gray-500">
+              <CardTitle className="text-2xl print:text-xl">Estimate #{estimate.id}</CardTitle>
+              <p className="text-sm text-gray-500 print:text-xs">
                 Created: {formatDate(new Date(estimate.createdAt))}
               </p>
-              {estimate.sentAt && (
-                <p className="text-sm text-gray-500">
-                  Sent: {formatDate(new Date(estimate.sentAt))}
-                </p>
-              )}
-              {estimate.viewedAt && (
-                <p className="text-sm text-gray-500">
-                  Viewed: {formatDate(new Date(estimate.viewedAt))}
-                </p>
-              )}
-              {estimate.acceptedAt && (
-                <p className="text-sm text-green-600">
-                  Accepted: {formatDate(new Date(estimate.acceptedAt))}
-                </p>
-              )}
-              {estimate.declinedAt && (
-                <p className="text-sm text-red-600">
-                  Declined: {formatDate(new Date(estimate.declinedAt))}
-                </p>
-              )}
+            </div>
+
+            <div className="text-left sm:text-right">
+              <div className="flex items-center justify-start sm:justify-end mb-2">
+                <BadgeStatus status={estimate.status} />
+              </div>
+              {estimate.sentAt && <p className="text-sm text-gray-500 print:text-xs">Sent: {formatDate(new Date(estimate.sentAt))}</p>}
+              {estimate.viewedAt && <p className="text-sm text-gray-500 print:text-xs">Viewed: {formatDate(new Date(estimate.viewedAt))}</p>}
+              {estimate.expiresAt && <p className="text-sm text-gray-500 print:text-xs">Expires: {formatDate(new Date(estimate.expiresAt))}</p>}
+              {estimate.acceptedAt && <p className="text-sm text-green-600 font-medium print:text-xs">Accepted: {formatDate(new Date(estimate.acceptedAt))}</p>}
+              {estimate.declinedAt && <p className="text-sm text-red-600 font-medium print:text-xs">Declined: {formatDate(new Date(estimate.declinedAt))}</p>}
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:grid-cols-2">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">FROM</h3>
-              <p className="font-medium">Home Bites Catering</p>
-              <p>123 Main Street</p>
-              <p>Seattle, WA 98101</p>
-              <p>info@homebites.net</p>
-              <p>(206) 555-1234</p>
+              <h3 className="text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider print:text-xs">From</h3>
+              <p className="font-semibold">Home Bites Catering</p>
+              <p className="text-sm">123 Main Street</p>
+              <p className="text-sm">Seattle, WA 98101</p>
+              <p className="text-sm">info@homebites.net</p>
+              <p className="text-sm">(206) 555-1234</p>
             </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">TO</h3>
+
+            <div className="md:text-right">
+              <h3 className="text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider print:text-xs">To</h3>
               {client ? (
                 <>
-                  <p className="font-medium">{client.firstName} {client.lastName}</p>
-                  <p>{client.email}</p>
-                  <p>{client.phone}</p>
-                  {client.company && <p>{client.company}</p>}
-                  {client.address && (
-                    <p>
-                      {client.address}, {client.city}, {client.state} {client.zip}
+                  <p className="font-semibold">{client.firstName} {client.lastName}</p>
+                  {client.company && <p className="text-sm">{client.company}</p>}
+                  <p className="text-sm">{client.email}</p>
+                  {client.phone && <p className="text-sm">{client.phone}</p>}
+                  {client.address && <p className="text-sm">{client.address}</p>}
+                  {(client.city || client.state || client.zip) && (
+                    <p className="text-sm">
+                      {client.city}{client.city && client.state ? ", " : ""}{client.state} {client.zip}
                     </p>
                   )}
                 </>
               ) : (
-                <p>Client information not available</p>
+                <p className="text-sm text-gray-500">Client information loading or not available.</p>
               )}
             </div>
           </div>
-          
+
           <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-2">Event Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center">
-                <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
+            <h3 className="text-lg font-semibold mb-3 border-b pb-2 print:text-base">Event Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-start">
+                <CalendarIcon className="h-5 w-5 text-gray-400 mr-2 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm text-gray-500">Date</p>
+                  <p className="text-xs text-gray-500">Event Date</p>
                   <p className="font-medium">
-                    {estimate.eventDate 
-                      ? formatDate(new Date(estimate.eventDate)) 
-                      : "To be determined"}
+                    {estimate.eventDate ? formatDate(new Date(estimate.eventDate)) : "To be determined"}
                   </p>
                 </div>
               </div>
-              
-              <div className="flex items-center">
-                <UsersIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <div className="flex items-start">
+                <UsersIcon className="h-5 w-5 text-gray-400 mr-2 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm text-gray-500">Guests</p>
-                  <p className="font-medium">{estimate.guestCount || "—"}</p>
+                  <p className="text-xs text-gray-500">Guest Count</p>
+                  <p className="font-medium">{estimate.guestCount || "N/A"}</p>
                 </div>
               </div>
-              
-              <div className="flex items-center">
-                <MapPinIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <div className="flex items-start">
+                <MapPinIcon className="h-5 w-5 text-gray-400 mr-2 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm text-gray-500">Location</p>
+                  <p className="text-xs text-gray-500">Location / Venue</p>
                   <p className="font-medium">{estimate.venue || "To be determined"}</p>
+                  {estimate.zipCode && <p className="text-xs text-gray-500">Zip: {estimate.zipCode}</p>}
                 </div>
               </div>
             </div>
           </div>
-          
+
           <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-4">Menu & Services</h3>
-            
-            {menu && (
+            <h3 className="text-lg font-semibold mb-3 border-b pb-2 print:text-base">Menu & Services</h3>
+
+            {menu && menuItemsToDisplay.length > 0 && (
               <div className="mb-6">
-                <h4 className="text-md font-medium mb-2">{menu.name} Menu</h4>
-                <p className="text-sm mb-3">{menu.description}</p>
-                
-                <div className="bg-gray-50 rounded-md p-4 mb-4">
-                  <table className="min-w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-2 text-sm font-medium text-gray-500">Item</th>
-                        <th className="text-right py-2 px-2 text-sm font-medium text-gray-500">Qty</th>
-                        <th className="text-right py-2 px-2 text-sm font-medium text-gray-500">Price</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {menuItems.map((item: any, index: number) => {
-                        const menuItem = item.menuItem || item;
-                        const quantity = item.quantity || 1;
-                        const price = menuItem.price || 0;
-                        
-                        return (
-                          <tr key={index} className="border-b border-gray-200">
-                            <td className="py-2 px-2">
-                              <div className="font-medium">{menuItem.name}</div>
-                              {menuItem.description && (
-                                <div className="text-sm text-gray-500">{menuItem.description}</div>
-                              )}
-                            </td>
-                            <td className="py-2 px-2 text-right">{quantity}</td>
-                            <td className="py-2 px-2 text-right">
-                              {formatCurrency(price / 100)}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                <h4 className="text-md font-medium mb-1">{menu.name}</h4>
+                {menu.description && <p className="text-sm text-gray-600 mb-3">{menu.description}</p>}
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 print:bg-gray-100">
                       <tr>
-                        <td colSpan={2} className="py-2 px-2 text-right font-medium">
-                          Menu Total (per person):
-                        </td>
-                        <td className="py-2 px-2 text-right font-medium">
-                          {formatCurrency(
-                            menuItems.reduce((total: number, item: any) => {
-                              const menuItem = item.menuItem || item;
-                              const quantity = item.quantity || 1;
-                              const price = menuItem.price || 0;
-                              return total + (price * quantity);
-                            }, 0) / 100
-                          )}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            
-            {customItems.length > 0 && (
-              <div>
-                <h4 className="text-md font-medium mb-2">Additional Items & Services</h4>
-                
-                <div className="bg-gray-50 rounded-md p-4 mb-4">
-                  <table className="min-w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-2 text-sm font-medium text-gray-500">Item</th>
-                        <th className="text-right py-2 px-2 text-sm font-medium text-gray-500">Qty</th>
-                        <th className="text-right py-2 px-2 text-sm font-medium text-gray-500">Price</th>
-                        <th className="text-right py-2 px-2 text-sm font-medium text-gray-500">Total</th>
+                        <th className="text-left py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                        <th className="text-center py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Qty</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Price/Unit</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Line Total</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {customItems.map((item: any, index: number) => (
-                        <tr key={index} className="border-b border-gray-200">
-                          <td className="py-2 px-2">{item.name}</td>
-                          <td className="py-2 px-2 text-right">{item.quantity}</td>
-                          <td className="py-2 px-2 text-right">
-                            {formatCurrency(item.price / 100)}
+                      {menuItemsToDisplay.map((item: any, index: number) => (
+                        <tr key={`menu-${index}`} className="border-b print:border-gray-300">
+                          <td className="py-2 px-3">
+                            <div className="font-medium">{item.name}</div>
+                            {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
                           </td>
-                          <td className="py-2 px-2 text-right">
-                            {formatCurrency((item.price * item.quantity) / 100)}
-                          </td>
+                          <td className="py-2 px-3 text-center">{item.quantity}</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(item.price / 100)}</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -454,126 +382,181 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                 </div>
               </div>
             )}
-            
-            <div className="border-t border-gray-200 pt-4 mt-6">
-              <div className="flex justify-between mb-2">
-                <span className="font-medium">Subtotal:</span>
-                <span>{formatCurrency(estimate.subtotal / 100)}</span>
+
+            {customItems.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-md font-medium mb-2 mt-4">Additional Items & Services</h4>
+                <div className="overflow-x-auto">
+                   <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 print:bg-gray-100">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                        <th className="text-center py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Qty</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Price/Unit</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customItems.map((item: CustomItem, index: number) => (
+                        <tr key={`custom-${item.id || index}`} className="border-b print:border-gray-300">
+                          <td className="py-2 px-3">{item.name}</td>
+                          <td className="py-2 px-3 text-center">{item.quantity}</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(item.price / 100)}</td>
+                           <td className="py-2 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="flex justify-between mb-2">
-                <span className="font-medium">Tax (9.5%):</span>
-                <span>{formatCurrency(estimate.tax / 100)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total:</span>
-                <span>{formatCurrency(estimate.total / 100)}</span>
+            )}
+
+            {(!menu || menuItemsToDisplay.length === 0) && customItems.length === 0 && (
+                <p className="text-sm text-gray-500">No menu items or custom services listed for this estimate.</p>
+            )}
+
+            <div className="border-t border-gray-200 pt-4 mt-6 print:border-gray-300">
+              <div className="max-w-xs ml-auto text-sm">
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Subtotal:</span>
+                  <span>{formatCurrency(estimate.subtotal / 100)}</span>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Tax:</span>
+                  <span>{formatCurrency(estimate.tax / 100)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
+                  <span>Total:</span>
+                  <span>{formatCurrency(estimate.total / 100)}</span>
+                </div>
               </div>
             </div>
           </div>
-          
+
           {estimate.notes && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">Notes</h3>
-              <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap">
+            <div className="mb-6 px-6 pb-6">
+              <h3 className="text-lg font-semibold mb-2 print:text-base">Notes</h3>
+              <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap text-sm print:bg-white print:border print:border-gray-200">
                 {estimate.notes}
               </div>
             </div>
           )}
-          
-          <div className="border-t border-gray-200 pt-4 text-center text-sm text-gray-500">
-            <p>This estimate is valid for 30 days from the date of creation.</p>
+
+          <div className="border-t border-gray-200 pt-4 px-6 pb-6 text-center text-xs text-gray-500 print:border-gray-300">
+            <p>This estimate is valid for 30 days from the date of creation, unless otherwise stated.</p>
             <p>Questions? Contact us at info@homebites.net or (206) 555-1234</p>
           </div>
         </CardContent>
-        
+
         {isClient && estimate.status === "sent" && (
-          <CardFooter className="border-t">
-            <div className="w-full flex justify-center space-x-4">
-              <Button 
-                variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-50"
-                onClick={() => setIsDeclineDialogOpen(true)}
-              >
-                <XIcon className="mr-2 h-4 w-4" />
-                Decline Estimate
-              </Button>
-              <Button 
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setIsAcceptDialogOpen(true)}
-              >
-                <CheckIcon className="mr-2 h-4 w-4" />
-                Accept Estimate
-              </Button>
+          <CardFooter className="border-t p-6 print:hidden">
+            <div className="w-full flex flex-col sm:flex-row justify-center items-center gap-4">
+               <p className="text-sm text-gray-700 text-center sm:text-left mb-4 sm:mb-0 flex-grow">
+                Please review this estimate. If you have questions or wish to modify, contact us directly.
+              </p>
+              <div className="flex gap-4">
+                <Button 
+                  variant="outline"
+                  className="border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 w-full sm:w-auto"
+                  onClick={() => setIsDeclineDialogOpen(true)}
+                  disabled={declineMutation.isPending || acceptMutation.isPending}
+                >
+                  <XIcon className="mr-2 h-4 w-4" />
+                  Decline Estimate
+                </Button>
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                  onClick={() => setIsAcceptDialogOpen(true)}
+                  disabled={acceptMutation.isPending || declineMutation.isPending}
+                >
+                  <CheckIcon className="mr-2 h-4 w-4" />
+                  Accept Estimate
+                </Button>
+              </div>
+            </div>
+          </CardFooter>
+        )}
+         {isClient && (estimate.status === "accepted" || estimate.status === "declined") && (
+          <CardFooter className="border-t p-6 print:hidden">
+            <div className="w-full text-center">
+              {estimate.status === "accepted" && estimate.acceptedAt && (
+                <p className="text-green-600 font-medium">You accepted this estimate on {formatDate(new Date(estimate.acceptedAt))}. We will be in touch shortly!</p>
+              )}
+              {estimate.status === "declined" && estimate.declinedAt && (
+                <p className="text-red-600 font-medium">You declined this estimate on {formatDate(new Date(estimate.declinedAt))}. Please contact us if you have any questions.</p>
+              )}
             </div>
           </CardFooter>
         )}
       </Card>
-      
-      {/* Accept Dialog */}
+
+      {/* Dialogs */}
       <AlertDialog open={isAcceptDialogOpen} onOpenChange={setIsAcceptDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Accept Estimate</AlertDialogTitle>
+            <AlertDialogTitle>Accept Estimate?</AlertDialogTitle>
             <AlertDialogDescription>
               By accepting this estimate, you agree to the services and prices listed. 
               We'll contact you to finalize the details and schedule your event.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={acceptMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => acceptMutation.mutate()}
               className="bg-green-600 hover:bg-green-700"
+              disabled={acceptMutation.isPending}
             >
-              {acceptMutation.isPending ? "Processing..." : "Accept Estimate"}
+              {acceptMutation.isPending ? "Processing..." : "Yes, Accept Estimate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {/* Decline Dialog */}
+
       <AlertDialog open={isDeclineDialogOpen} onOpenChange={setIsDeclineDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Decline Estimate</AlertDialogTitle>
+            <AlertDialogTitle>Decline Estimate?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to decline this estimate? 
               If you'd like to request changes instead, please contact us directly.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={declineMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => declineMutation.mutate()}
               className="bg-red-500 hover:bg-red-600"
+              disabled={declineMutation.isPending}
             >
-              {declineMutation.isPending ? "Processing..." : "Decline Estimate"}
+              {declineMutation.isPending ? "Processing..." : "Yes, Decline Estimate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {/* Send Dialog */}
-      <AlertDialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Send Estimate to Client</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will send the estimate to the client and mark it as "Sent". 
-              The client will receive an email with a link to view the estimate.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => sendMutation.mutate()}
-              className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1]"
-            >
-              {sendMutation.isPending ? "Sending..." : "Send Estimate"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+      {!isClient && (
+        <AlertDialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Send Estimate to Client?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will mark the estimate as "Sent" and (notionally) email it to the client.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={sendMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => sendMutation.mutate()}
+                className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1]"
+                disabled={sendMutation.isPending}
+              >
+                {sendMutation.isPending ? "Sending..." : "Send Estimate"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

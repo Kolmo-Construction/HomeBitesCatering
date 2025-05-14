@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -123,6 +123,13 @@ export const estimates = pgTable("estimates", {
   eventType: text("event_type").notNull(),
   guestCount: integer("guest_count"),
   venue: text("venue"),
+  // Address fields for Washington Tax Rates API
+  venueAddress: text("venue_address"), // Street address for venue
+  venueCity: text("venue_city"), // City for venue
+  venueState: text("venue_state"), // State for venue (always WA)
+  venueZip: text("venue_zip"), // ZIP code for venue
+  taxRate: doublePrecision("tax_rate"), // Stored tax rate from API
+  // Legacy field - kept for backward compatibility
   zipCode: text("zip_code"),
   menuId: integer("menu_id").references(() => menus.id),
   items: jsonb("items"), // JSON of custom items if not using a standard menu
