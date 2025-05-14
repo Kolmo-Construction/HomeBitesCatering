@@ -358,21 +358,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/menu-items/:id', isAuthenticated, async (req, res) => {
-    try {
-      const menuItemId = Number(req.params.id);
-      const menuItem = await storage.getMenuItem(menuItemId);
-      if (!menuItem) {
-        return res.status(404).json({ message: 'Menu item not found' });
-      }
-      
-      await storage.deleteMenuItem(menuItemId);
-      res.status(204).end();
-    } catch (error) {
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-
   // Menu routes
   app.get('/api/menus', async (req, res) => {
     try {

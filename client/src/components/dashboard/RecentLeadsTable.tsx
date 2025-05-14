@@ -11,6 +11,11 @@ import { Link } from "wouter";
 export default function RecentLeadsTable() {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["/api/leads"],
+    queryFn: async () => {
+      const res = await fetch('/api/leads');
+      if (!res.ok) throw new Error('Failed to fetch leads');
+      return res.json();
+    }
   });
 
   // Get only the most recent 4 leads
@@ -71,9 +76,9 @@ export default function RecentLeadsTable() {
       header: "Action",
       cell: ({ row }) => (
         <Link href={`/leads/${row.original.id}`}>
-          <a className="text-primary-purple hover:text-primary-blue transition">
+          <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
             <PenIcon className="h-4 w-4" />
-          </a>
+          </div>
         </Link>
       ),
     },
@@ -84,7 +89,7 @@ export default function RecentLeadsTable() {
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-poppins text-lg font-semibold text-neutral-900">Recent Leads</h2>
         <Link href="/leads">
-          <a className="text-sm text-primary-purple hover:underline">View All</a>
+          <div className="text-sm text-primary-purple hover:underline cursor-pointer">View All</div>
         </Link>
       </div>
       

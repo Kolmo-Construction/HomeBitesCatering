@@ -10,10 +10,20 @@ import { Link } from "wouter";
 export default function RecentEstimatesTable() {
   const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["/api/estimates"],
+    queryFn: async () => {
+      const res = await fetch('/api/estimates');
+      if (!res.ok) throw new Error('Failed to fetch estimates');
+      return res.json();
+    }
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ["/api/clients"],
+    queryFn: async () => {
+      const res = await fetch('/api/clients');
+      if (!res.ok) throw new Error('Failed to fetch clients');
+      return res.json();
+    }
   });
 
   // Get only the most recent 3 estimates
@@ -66,14 +76,14 @@ export default function RecentEstimatesTable() {
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
           <Link href={`/estimates/${row.original.id}/view`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
           <Link href={`/estimates/${row.original.id}/edit`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
+            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
-            </a>
+            </div>
           </Link>
         </div>
       ),
@@ -85,7 +95,7 @@ export default function RecentEstimatesTable() {
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-poppins text-lg font-semibold text-neutral-900">Recent Estimates</h2>
         <Link href="/estimates">
-          <a className="text-sm text-primary-purple hover:underline">View All</a>
+          <div className="text-sm text-primary-purple hover:underline cursor-pointer">View All</div>
         </Link>
       </div>
       
