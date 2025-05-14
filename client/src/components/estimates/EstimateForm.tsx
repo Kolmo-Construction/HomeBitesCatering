@@ -165,7 +165,9 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       total: 0,
       notes: "",
       status: "draft",
-      zipCode: "",
+      venueAddress: "",
+      venueCity: "",
+      venueZip: "",
       createdBy: undefined, // This should be set by the backend or auth context
       sentAt: null,
       expiresAt: null,
@@ -189,14 +191,20 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
 
       setCustomItems(parseEstimateItems(estimate.items));
       setSelectedMenuId(estimate.menuId != null ? Number(estimate.menuId) : null);
-      setZipCode(estimate.zipCode || "");
+      
+      // Set venue address fields
+      setVenueAddress(estimate.venueAddress || "");
+      setVenueCity(estimate.venueCity || "");
+      setVenueZip(estimate.venueZip || "");
       // Financials are set by the calculation useEffect
     } else if (!isEditing) {
       // Reset for new form if needed (e.g., navigating from edit to new)
       form.reset(getFormDefaultValues());
       setCustomItems([]);
       setSelectedMenuId(null);
-      setZipCode("");
+      setVenueAddress("");
+      setVenueCity("");
+      setVenueZip("");
     }
   }, [estimate, isEditing, form.reset, getFormDefaultValues, parseEstimateItems]);
 
@@ -222,8 +230,41 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       newSubtotal += (Number(item.price) || 0) * (Number(item.quantity) || 0); // item.price is in cents
     });
 
-    const currentZipCode = form.getValues("zipCode"); // Get zipCode from form state
-    const newTax = calculateTax(newSubtotal, currentZipCode); // calculateTax expects amount in base units (cents)
+    // Get address components from form state
+    const address = form.getValues("venueAddress");
+    const city = form.getValues("venueCity");
+    const zip = form.getValues("venueZip");
+    
+    // Use async tax calculation if address components are available
+    if (address && city && zip) {
+      // First set tax using regular calculation to avoid UI flickering
+      const initialTax = calculateTax(newSubtotal, null, address, city);
+      const initialTotal = calculateTotal(newSubtotal, initialTax);
+      
+      setSubtotal(Math.round(newSubtotal));
+      setTax(Math.round(initialTax));
+      setTotal(Math.round(initialTotal));
+      
+      // Then do the async WA Tax API lookup
+      calculateTaxAsync(newSubtotal, address, city, zip).then(asyncTax => {
+        const asyncTotal = calculateTotal(newSubtotal, asyncTax);
+        
+        setTax(Math.round(asyncTax));
+        setTotal(Math.round(asyncTotal));
+        
+        // Update form values
+        form.setValue("tax", Math.round(asyncTax), { shouldValidate: true });
+        form.setValue("total", Math.round(asyncTotal), { shouldValidate: true });
+      }).catch(error => {
+        console.error("Error calculating tax with WA API:", error);
+      });
+      
+      // Early return since we'll update the values in the Promise
+      return;
+    }
+    
+    // Fallback to regular calculation if address is incomplete
+    const newTax = calculateTax(newSubtotal);
     const newTotal = calculateTotal(newSubtotal, newTax);
 
     setSubtotal(Math.round(newSubtotal));
@@ -257,6 +298,10 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
         viewedAt: values.viewedAt ? (values.viewedAt as Date).toISOString() : null,
         acceptedAt: values.acceptedAt ? (values.acceptedAt as Date).toISOString() : null,
         declinedAt: values.declinedAt ? (values.declinedAt as Date).toISOString() : null,
+        // Pass venue address components for tax calculation
+        venueAddress: values.venueAddress || "",
+        venueCity: values.venueCity || "",
+        venueZip: values.venueZip || "",
         items: itemsJson,
         additionalServices: values.additionalServices ? JSON.stringify(values.additionalServices) : null, // Assuming similar handling
         menuId: selectedMenuId, // Already a number or null
