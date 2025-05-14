@@ -31,6 +31,10 @@ export default function Estimates() {
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["/api/estimates", selectedEstimateId],
     enabled: (mode === "edit" || mode === "view") && !!selectedEstimateId,
+    onSuccess: (data) => {
+      // Debug log to see the data structure from the API
+      console.log("Loaded estimate data:", data);
+    }
   });
   
   // Render appropriate component based on mode

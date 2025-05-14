@@ -540,21 +540,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/estimates/:id', async (req, res) => {
     try {
-      const estimate = await storage.getEstimate(Number(req.params.id));
+      const estimateId = Number(req.params.id);
+      console.log(`Fetching estimate with ID: ${estimateId}`);
+      
+      const estimate = await storage.getEstimate(estimateId);
       if (!estimate) {
+        console.log(`Estimate with ID ${estimateId} not found`);
         return res.status(404).json({ message: 'Estimate not found' });
+      }
+      
+      console.log(`Found estimate:`, estimate);
+      
+      // Add client name information for convenience
+      if (estimate.clientId) {
+        const client = await storage.getClient(estimate.clientId);
+        if (client) {
+          estimate.clientName = `${client.firstName} ${client.lastName}`;
+        }
       }
       
       // Update view status if this is a client viewing
       if (req.query.client === 'true' && estimate.status === 'sent' && !estimate.viewedAt) {
+        console.log(`Updating estimate ${estimateId} view status`);
         await storage.updateEstimate(estimate.id, {
           status: 'viewed',
           viewedAt: new Date()
         });
       }
       
+      console.log(`Returning estimate data to client for ID ${estimateId}`);
       res.json(estimate);
     } catch (error) {
+      console.error(`Error fetching estimate ${req.params.id}:`, error);
       res.status(500).json({ message: 'Server error' });
     }
   });

@@ -106,25 +106,54 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     if (isEditing && estimate) {
       console.log("Editing estimate with data:", estimate);
       
-      return {
-        ...estimate,
-        // Convert date strings to Date objects for form handling
-        eventDate: estimate.eventDate ? new Date(estimate.eventDate) : null,
-        sentAt: estimate.sentAt ? new Date(estimate.sentAt) : null,
-        expiresAt: estimate.expiresAt ? new Date(estimate.expiresAt) : null,
-        viewedAt: estimate.viewedAt ? new Date(estimate.viewedAt) : null,
-        acceptedAt: estimate.acceptedAt ? new Date(estimate.acceptedAt) : null,
-        declinedAt: estimate.declinedAt ? new Date(estimate.declinedAt) : null,
-        // Handle nullable fields
-        menuId: estimate.menuId || null,
-        guestCount: estimate.guestCount || null,
-        additionalServices: estimate.additionalServices || null,
-        // Ensure proper types
-        subtotal: Number(estimate.subtotal) || 0,
-        tax: Number(estimate.tax) || 0,
-        total: Number(estimate.total) || 0,
-        zipCode: estimate.zipCode || "",
-      };
+      try {
+        // Additional debugging for date conversion
+        if (estimate.eventDate) {
+          console.log("eventDate before conversion:", estimate.eventDate);
+          console.log("eventDate after conversion:", new Date(estimate.eventDate));
+        }
+        
+        return {
+          ...estimate,
+          // Convert date strings to Date objects for form handling
+          eventDate: estimate.eventDate ? new Date(estimate.eventDate) : null,
+          sentAt: estimate.sentAt ? new Date(estimate.sentAt) : null,
+          expiresAt: estimate.expiresAt ? new Date(estimate.expiresAt) : null,
+          viewedAt: estimate.viewedAt ? new Date(estimate.viewedAt) : null,
+          acceptedAt: estimate.acceptedAt ? new Date(estimate.acceptedAt) : null,
+          declinedAt: estimate.declinedAt ? new Date(estimate.declinedAt) : null,
+          // Handle nullable fields
+          menuId: estimate.menuId ? Number(estimate.menuId) : null,
+          guestCount: estimate.guestCount ? Number(estimate.guestCount) : null,
+          additionalServices: estimate.additionalServices || null,
+          // Ensure proper types
+          subtotal: Number(estimate.subtotal) || 0,
+          tax: Number(estimate.tax) || 0,
+          total: Number(estimate.total) || 0,
+          zipCode: estimate.zipCode || "",
+          // Make sure clientId is properly set
+          clientId: estimate.clientId ? Number(estimate.clientId) : undefined,
+        };
+      } catch (error) {
+        console.error("Error converting estimate data:", error);
+        // Return a safe default if there's an error
+        return {
+          clientId: undefined,
+          eventType: estimate.eventType || "",
+          guestCount: null,
+          venue: estimate.venue || "",
+          eventDate: null,
+          menuId: null,
+          items: null,
+          additionalServices: null,
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+          notes: estimate.notes || "",
+          status: estimate.status || "draft",
+          zipCode: estimate.zipCode || "",
+        };
+      }
     }
     
     // Default values for new estimate
@@ -150,6 +179,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: getFormDefaultValues(),
+    mode: "onChange", // Validate on change for better user experience
   });
   
   // Set up field array for custom items
