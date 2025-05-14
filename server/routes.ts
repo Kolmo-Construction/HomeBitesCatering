@@ -1079,6 +1079,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Server error updating raw lead' });
     }
   });
+  
+  // Delete a single raw lead
+  app.delete('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid ID format' });
+      }
+      
+      // Check if the raw lead exists
+      const existingRawLead = await storage.getRawLeadById(id);
+      if (!existingRawLead) {
+        return res.status(404).json({ message: 'Raw lead not found' });
+      }
+      
+      // Delete the raw lead
+      const success = await storage.deleteRawLead(id);
+      if (success) {
+        res.status(200).json({ message: 'Raw lead deleted successfully' });
+      } else {
+        res.status(500).json({ message: 'Failed to delete raw lead' });
+      }
+    } catch (error) {
+      console.error(`Error deleting raw lead ID ${req.params.id}:`, error);
+      res.status(500).json({ message: 'Server error deleting raw lead' });
+    }
+  });
+  
+  // Delete multiple raw leads
+  app.post('/api/raw-leads/bulk-delete', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Invalid request - must provide an array of IDs' });
+      }
+      
+      // Convert string IDs to numbers if needed
+      const numericIds = ids.map(id => typeof id === 'string' ? parseInt(id) : id);
+      
+      // Check for any invalid IDs
+      if (numericIds.some(id => isNaN(id))) {
+        return res.status(400).json({ message: 'Invalid ID format in array' });
+      }
+      
+      // Delete the raw leads
+      const result = await storage.deleteManyRawLeads(numericIds);
+      
+      res.status(200).json({ 
+        message: `Successfully deleted ${result.deleted} raw leads, ${result.failed} failed`, 
+        ...result 
+      });
+    } catch (error) {
+      console.error(`Error in bulk delete operation:`, error);
+      res.status(500).json({ message: 'Server error during bulk delete operation' });
+    }
+  });
 
   // --- NEW: Google OAuth Routes for Gmail Sync ---
   app.get('/api/auth/google/initiate', isAuthenticated, isAdmin, (req, res) => { // Protect this

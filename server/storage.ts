@@ -111,6 +111,8 @@ export interface IStorage {
   getRawLeadById(id: number): Promise<RawLead | undefined>;
   listRawLeads(filters?: { status?: string; source?: string }): Promise<RawLead[]>;
   updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined>;
+  deleteRawLead(id: number): Promise<boolean>;
+  deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -649,6 +651,41 @@ export class DatabaseStorage implements IStorage {
       .where(eq(rawLeads.id, id))
       .returning();
     return updatedRawLead;
+  }
+  
+  async deleteRawLead(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(rawLeads)
+        .where(eq(rawLeads.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting raw lead:', error);
+      return false;
+    }
+  }
+  
+  async deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }> {
+    const results = { deleted: 0, failed: 0 };
+    
+    if (!ids || ids.length === 0) {
+      return results;
+    }
+    
+    try {
+      // Use in() operator to delete multiple records at once
+      const result = await db
+        .delete(rawLeads)
+        .where(inArray(rawLeads.id, ids));
+        
+      // Since we don't know exactly how many were deleted, we'll assume all were successful
+      results.deleted = ids.length;
+    } catch (error) {
+      console.error('Error deleting multiple raw leads:', error);
+      results.failed = ids.length;
+    }
+    
+    return results;
   }
 }
 
