@@ -101,6 +101,12 @@ export interface IStorage {
   createCommunication(communication: InsertCommunication): Promise<Communication>;
   getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
+  
+  // Raw Leads
+  createRawLead(data: InsertRawLead): Promise<RawLead>;
+  getRawLeadById(id: number): Promise<RawLead | undefined>;
+  listRawLeads(filters?: { status?: string; source?: string }): Promise<RawLead[]>;
+  updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -584,6 +590,50 @@ export class DatabaseStorage implements IStorage {
       .from(communications)
       .where(eq(communications.clientId, clientId))
       .orderBy(desc(communications.timestamp)); // Order by most recent first
+  }
+
+  // Raw Leads
+  async createRawLead(data: InsertRawLead): Promise<RawLead> {
+    const [newRawLead] = await db
+      .insert(rawLeads)
+      .values(data)
+      .returning();
+    return newRawLead;
+  }
+
+  async getRawLeadById(id: number): Promise<RawLead | undefined> {
+    const [rawLead] = await db
+      .select()
+      .from(rawLeads)
+      .where(eq(rawLeads.id, id));
+    return rawLead;
+  }
+
+  async listRawLeads(filters?: { status?: string; source?: string }): Promise<RawLead[]> {
+    let query = db.select().from(rawLeads);
+    
+    if (filters) {
+      if (filters.status) {
+        query = query.where(eq(rawLeads.status, filters.status as any));
+      }
+      if (filters.source) {
+        query = query.where(eq(rawLeads.source, filters.source));
+      }
+    }
+    
+    return query.orderBy(desc(rawLeads.receivedAt)); // Order by most recently received first
+  }
+
+  async updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined> {
+    const [updatedRawLead] = await db
+      .update(rawLeads)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(rawLeads.id, id))
+      .returning();
+    return updatedRawLead;
   }
 }
 

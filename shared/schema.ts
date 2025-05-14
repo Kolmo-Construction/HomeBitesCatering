@@ -274,3 +274,37 @@ export type InsertContactIdentifier = z.infer<typeof insertContactIdentifierSche
 
 export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
+
+// Raw Leads module
+export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'archived', 'junk']);
+
+export const rawLeads = pgTable("raw_leads", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull(), // e.g., 'weddingwire', 'website_form', 'gmail_sync', 'manual_entry'
+  rawData: jsonb("raw_data"), // Store the original request payload/email body etc.
+  extractedName: text("extracted_name"),
+  extractedEmail: text("extracted_email"),
+  extractedPhone: text("extracted_phone"),
+  eventSummary: text("event_summary"), // Brief summary/keywords from raw_data
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  status: rawLeadStatusEnum("status").default('new').notNull(),
+  // This field links a raw lead to the opportunity created from it.
+  createdOpportunityId: integer("created_opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
+  notes: text("internal_notes"), // For internal notes about this raw lead
+  assignedToUserId: integer("assigned_to_user_id").references(() => users.id), // Optional: if raw leads can be assigned for review
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRawLeadSchema = createInsertSchema(rawLeads, {
+  rawData: z.any().optional(),
+  receivedAt: z.coerce.date().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdOpportunityId: true // This is set after opportunity creation
+});
+
+export type RawLead = typeof rawLeads.$inferSelect;
+export type InsertRawLead = z.infer<typeof insertRawLeadSchema>;
