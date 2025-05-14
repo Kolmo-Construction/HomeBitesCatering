@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface LoginProps {
   onLoginSuccess?: (userData: any) => void;
@@ -9,6 +10,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,33 +18,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('Login successful:', userData);
-        
-        // Call the success callback if provided
-        if (onLoginSuccess) {
-          onLoginSuccess(userData);
-        } else {
-          // Fallback to redirect if no callback
-          window.location.href = '/';
-        }
-      } else {
-        const errorData = await response.json();
-        setLoginError(errorData.message || 'Login failed. Please check your credentials.');
+      await login(username, password);
+      
+      // Call the success callback if provided
+      if (onLoginSuccess) {
+        // AuthContext will handle the state update
+        onLoginSuccess(true);
       }
     } catch (error) {
       console.error('Login error:', error);
-      setLoginError('An error occurred during login. Please try again.');
+      setLoginError(error instanceof Error ? error.message : 'An error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }
