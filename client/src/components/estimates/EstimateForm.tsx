@@ -176,15 +176,27 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
         return res.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
-      toast({
-        title: isEditing ? "Estimate updated" : "Estimate created",
-        description: isEditing 
-          ? "The estimate has been updated successfully." 
-          : "The new estimate has been created successfully."
-      });
-      navigate("/estimates");
+      
+      // Check if estimate is sent and a client portal URL was generated
+      if (data.clientPortalUrl) {
+        setClientPortalUrl(data.clientPortalUrl);
+        setShowPortalLink(true);
+        
+        toast({
+          title: "Estimate sent",
+          description: "The estimate has been sent successfully. A client portal link has been generated."
+        });
+      } else {
+        toast({
+          title: isEditing ? "Estimate updated" : "Estimate created",
+          description: isEditing 
+            ? "The estimate has been updated successfully." 
+            : "The new estimate has been created successfully."
+        });
+        navigate("/estimates");
+      }
     },
     onError: (error) => {
       toast({
@@ -590,6 +602,60 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
               </div>
             </CardFooter>
           </form>
+          
+          {/* Client Portal Link Section - Shown when estimate is sent */}
+          {showPortalLink && clientPortalUrl && (
+            <div className="mt-8 p-4 border border-green-200 bg-green-50 rounded-md">
+              <h3 className="text-lg font-semibold text-green-700 mb-2">
+                Client Portal Created
+              </h3>
+              <p className="text-sm text-green-600 mb-4">
+                A client portal has been created for this estimate. Share this link with your client:
+              </p>
+              
+              <div className="flex items-center space-x-2 mb-4">
+                <input 
+                  type="text" 
+                  value={clientPortalUrl} 
+                  readOnly 
+                  className="flex-1 p-2 text-sm border rounded-md bg-white" 
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(clientPortalUrl);
+                    toast({
+                      title: "Copied!",
+                      description: "Client portal link copied to clipboard",
+                    });
+                  }}
+                >
+                  Copy Link
+                </Button>
+              </div>
+              
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.open(clientPortalUrl, '_blank');
+                  }}
+                >
+                  Preview Portal
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    navigate("/estimates");
+                  }}
+                >
+                  Back to Estimates
+                </Button>
+              </div>
+            </div>
+          )}
         </Form>
       </CardContent>
     </Card>
