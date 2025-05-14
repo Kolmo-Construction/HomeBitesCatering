@@ -66,7 +66,13 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const queryClient = useQueryClient();
   
   // State for menu items and client portal URL
-  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(estimate?.menuId || null);
+  // When editing, ensure we set the correct menu ID
+  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(() => {
+    if (isEditing && estimate?.menuId) {
+      return Number(estimate.menuId);
+    }
+    return null;
+  });
   const [customItems, setCustomItems] = useState<CustomItem[]>(
     estimate?.items ? JSON.parse(estimate.items) : []
   );
@@ -95,10 +101,34 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [tax, setTax] = useState(estimate?.tax || 0);
   const [total, setTotal] = useState(estimate?.total || 0);
   
-  // Set up form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: estimate || {
+  // Prepare default values for the form with proper date conversions
+  const getFormDefaultValues = () => {
+    if (isEditing && estimate) {
+      console.log("Editing estimate with data:", estimate);
+      
+      return {
+        ...estimate,
+        // Convert date strings to Date objects for form handling
+        eventDate: estimate.eventDate ? new Date(estimate.eventDate) : null,
+        sentAt: estimate.sentAt ? new Date(estimate.sentAt) : null,
+        expiresAt: estimate.expiresAt ? new Date(estimate.expiresAt) : null,
+        viewedAt: estimate.viewedAt ? new Date(estimate.viewedAt) : null,
+        acceptedAt: estimate.acceptedAt ? new Date(estimate.acceptedAt) : null,
+        declinedAt: estimate.declinedAt ? new Date(estimate.declinedAt) : null,
+        // Handle nullable fields
+        menuId: estimate.menuId || null,
+        guestCount: estimate.guestCount || null,
+        additionalServices: estimate.additionalServices || null,
+        // Ensure proper types
+        subtotal: Number(estimate.subtotal) || 0,
+        tax: Number(estimate.tax) || 0,
+        total: Number(estimate.total) || 0,
+        zipCode: estimate.zipCode || "",
+      };
+    }
+    
+    // Default values for new estimate
+    return {
       clientId: undefined,
       eventType: "",
       guestCount: null,
@@ -113,7 +143,13 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       notes: "",
       status: "draft",
       zipCode: "",
-    },
+    };
+  };
+  
+  // Set up form with proper defaults
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: getFormDefaultValues(),
   });
   
   // Set up field array for custom items
