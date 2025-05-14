@@ -61,6 +61,7 @@ interface CustomItem {
 }
 
 export default function EstimateForm({ estimate, isEditing = false }: EstimateFormProps) {
+  console.log("EstimateForm received props:", { estimate, isEditing });
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();

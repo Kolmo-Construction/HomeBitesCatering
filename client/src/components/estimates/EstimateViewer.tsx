@@ -42,9 +42,22 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   
   // Get estimate data
-  const { data: estimate, isLoading } = useQuery({
+  const { data: estimate, isLoading, isError } = useQuery({
     queryKey: ["/api/estimates", id],
     refetchInterval: false,
+    refetchOnMount: true,
+    staleTime: 0,
+    onSuccess: (data) => {
+      console.log("EstimateViewer loaded data:", data);
+    },
+    onError: (error) => {
+      console.error("EstimateViewer error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load quote data. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
   
   // Get client data
@@ -58,6 +71,30 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
     queryKey: ["/api/menus", estimate?.menuId],
     enabled: !!estimate?.menuId,
   });
+  
+  // Show loading or error states
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple"></div>
+      </div>
+    );
+  }
+  
+  if (isError || !estimate) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Quote</h2>
+        <p className="text-gray-600 mb-6">There was an error loading the quote data. Please try again.</p>
+        <Link to="/estimates">
+          <Button variant="outline">
+            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+            Back to Quotes
+          </Button>
+        </Link>
+      </div>
+    );
+  }
   
   // Accept estimate mutation
   const acceptMutation = useMutation({
