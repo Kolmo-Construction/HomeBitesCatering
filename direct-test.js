@@ -1,5 +1,5 @@
 // Direct Testing Script - This bypasses the API and tests the storage layer directly
-import { storage } from './server/storage.js';
+import { storage } from './server/storage.ts';
 
 async function testContactIdentifiers() {
   console.log('\n========== TESTING CONTACT IDENTIFIERS ==========');

@@ -1,4 +1,4 @@
-import { storage } from './server/storage.js';
+import { storage } from './server/storage.ts';
 
 async function testMethods() {
   try {
