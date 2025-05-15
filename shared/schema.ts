@@ -41,6 +41,9 @@ export const opportunities = pgTable("opportunities", {
   priority: opportunityPriorityEnum("priority").default('medium'), // NEW FIELD for prioritizing opportunities
   assignedTo: integer("assigned_to").references(() => users.id),
   clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
+  // Questionnaire connections
+  questionnaireSubmissionId: integer('questionnaire_submission_id').references(() => questionnaireSubmissions.id, { onDelete: 'set null' }).unique(),
+  questionnaireDefinitionId: integer('questionnaire_definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -49,6 +52,8 @@ export const insertOpportunitySchema = createInsertSchema(opportunities, {
   eventDate: z.string().nullable().transform(date => date ? new Date(date) : null),
   priority: z.enum(opportunityPriorityEnum.enumValues).optional(), // Make it optional on creation, defaults to 'medium'
   opportunitySource: z.string().optional(),
+  questionnaireSubmissionId: z.number().optional(),
+  questionnaireDefinitionId: z.number().optional(),
 }).omit({
   id: true,
   createdAt: true,
@@ -594,6 +599,18 @@ export const questionnaireSubmissionRelations = relations(questionnaireSubmissio
   rawLead: one(rawLeads, {
     fields: [questionnaireSubmissions.rawLeadId],
     references: [rawLeads.id],
+  }),
+}));
+
+// Add relation from opportunities to questionnaire
+export const opportunityQuestionnaireRelations = relations(opportunities, ({ one }) => ({
+  questionnaireSubmission: one(questionnaireSubmissions, {
+    fields: [opportunities.questionnaireSubmissionId],
+    references: [questionnaireSubmissions.id],
+  }),
+  questionnaireDefinition: one(questionnaireDefinitions, {
+    fields: [opportunities.questionnaireDefinitionId],
+    references: [questionnaireDefinitions.id],
   }),
 }));
 
