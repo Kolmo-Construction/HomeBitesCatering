@@ -155,8 +155,17 @@ export class CommunicationSyncService {
         this.customLabelId = createResponse.data.id || null;
         console.log('CommunicationSyncService: Created new custom label:', this.customLabelId);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('CommunicationSyncService: Error ensuring custom label:', error);
+      
+      // Check for specific error types to provide better logging
+      if (error?.message && typeof error.message === 'string' && error.message.includes("Insufficient Permission")) {
+        console.error("CommunicationSyncService: Gmail API permission issue - missing gmail.labels scope. Please re-authorize with the correct permissions at /api/auth/google/initiate");
+      } else if (error?.code === 429) {
+        console.error("CommunicationSyncService: Rate limit exceeded (429). Will retry in the next cycle.");
+      } else if (error?.code === 500) {
+        console.error("CommunicationSyncService: Server error from Gmail API (500). Will retry in the next cycle.");
+      }
     }
   }
 

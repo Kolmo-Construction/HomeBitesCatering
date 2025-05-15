@@ -1258,11 +1258,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   <p>${grantedScopes.split(' ').join('<br>')}</p>
                 </div>
                 
-                ${!hasModifyScope ? `
+                ${!hasModifyScope || !hasLabelsScope ? `
                 <div class="error">
-                  <h3>Warning: Missing Required Permission</h3>
-                  <p>The "gmail.modify" scope is missing. The system will not be able to mark emails as read 
-                  after processing them. This may cause the same emails to be processed multiple times.</p>
+                  <h3>Warning: Missing Required Permissions</h3>
+                  <p>The following permissions are missing:</p>
+                  <ul>
+                    ${!hasModifyScope ? `<li>The "gmail.modify" scope is missing. The system will not be able to mark emails as read after processing them.</li>` : ''}
+                    ${!hasLabelsScope ? `<li>The "gmail.labels" scope is missing. The system will not be able to create or modify labels to track processed emails.</li>` : ''}
+                  </ul>
+                  <p>This may cause duplicate email processing and other functionality issues.</p>
                   <p>Please <a href="/api/auth/google/initiate">re-authorize</a> and make sure to grant all requested permissions.</p>
                 </div>
                 ` : `

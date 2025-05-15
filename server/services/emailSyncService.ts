@@ -250,7 +250,13 @@ ${fullContent}`;
         throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const responseData = await response.json();
+      const responseData = await response.json() as {
+        choices?: Array<{
+          message?: {
+            content?: string;
+          };
+        }>;
+      };
       const resultText = responseData.choices?.[0]?.message?.content?.trim() || "{}";
 
       try {
