@@ -229,6 +229,281 @@ async function runTests() {
       }
     }
     
+    // ===== Question Management Tests =====
+    if (createdPageId) {
+      // Create a new page for testing questions
+      console.log('\n=== Creating a test page for questions ===');
+      const testPageData = {
+        title: 'Question Test Page',
+        order: 1
+      };
+      
+      const testPageResponse = await makeRequest(
+        'POST', 
+        `/api/admin/questionnaires/definitions/${definitionId}/pages`, 
+        testPageData
+      );
+      
+      console.log(`Create Test Page Response (${testPageResponse.statusCode}):`, testPageResponse.data);
+      
+      let testPageId = null;
+      if (testPageResponse.statusCode === 201 && testPageResponse.data && testPageResponse.data.id) {
+        testPageId = testPageResponse.data.id;
+        console.log(`Created test page with ID: ${testPageId}`);
+        
+        // 1. Test creating a question
+        console.log('\n=== Test creating a question ===');
+        const questionData = {
+          questionText: 'What is your name?',
+          questionKey: 'name',
+          questionType: 'text',
+          isRequired: true,
+          order: 0,
+          helpText: 'Please enter your full name'
+        };
+        
+        const createQuestionResponse = await makeRequest(
+          'POST',
+          `/api/admin/questionnaires/pages/${testPageId}/questions`,
+          questionData
+        );
+        
+        console.log(`Create Question Response (${createQuestionResponse.statusCode}):`, createQuestionResponse.data);
+        
+        let questionId = null;
+        if (createQuestionResponse.statusCode === 201 && createQuestionResponse.data && createQuestionResponse.data.id) {
+          questionId = createQuestionResponse.data.id;
+          console.log(`Created question with ID: ${questionId}`);
+          
+          // 2. Test listing questions for a page
+          console.log('\n=== Test listing questions for a page ===');
+          const listQuestionsResponse = await makeRequest(
+            'GET',
+            `/api/admin/questionnaires/pages/${testPageId}/questions`
+          );
+          
+          console.log(`List Questions Response (${listQuestionsResponse.statusCode}):`, listQuestionsResponse.data);
+          
+          // 3. Test getting a specific question
+          console.log('\n=== Test getting a specific question ===');
+          const getQuestionResponse = await makeRequest(
+            'GET',
+            `/api/admin/questionnaires/questions/${questionId}`
+          );
+          
+          console.log(`Get Question Response (${getQuestionResponse.statusCode}):`, getQuestionResponse.data);
+          
+          // 4. Test updating a question
+          console.log('\n=== Test updating a question ===');
+          const updateQuestionData = {
+            questionText: 'What is your full name?',
+            helpText: 'Please enter your first and last name',
+            isRequired: true
+          };
+          
+          const updateQuestionResponse = await makeRequest(
+            'PUT',
+            `/api/admin/questionnaires/questions/${questionId}`,
+            updateQuestionData
+          );
+          
+          console.log(`Update Question Response (${updateQuestionResponse.statusCode}):`, updateQuestionResponse.data);
+          
+          // 5. Test creating a second question for reordering
+          console.log('\n=== Test creating a second question for reordering ===');
+          const question2Data = {
+            questionText: 'What is your email address?',
+            questionKey: 'email',
+            questionType: 'email',
+            isRequired: true,
+            order: 1,
+            helpText: 'Please enter a valid email'
+          };
+          
+          const createQuestion2Response = await makeRequest(
+            'POST',
+            `/api/admin/questionnaires/pages/${testPageId}/questions`,
+            question2Data
+          );
+          
+          console.log(`Create Second Question Response (${createQuestion2Response.statusCode}):`, createQuestion2Response.data);
+          
+          let question2Id = null;
+          if (createQuestion2Response.statusCode === 201 && createQuestion2Response.data && createQuestion2Response.data.id) {
+            question2Id = createQuestion2Response.data.id;
+            console.log(`Created second question with ID: ${question2Id}`);
+            
+            // 6. Test reordering questions
+            console.log('\n=== Test reordering questions ===');
+            const reorderQuestionsData = {
+              questionIds: [question2Id, questionId] // Reverse the order
+            };
+            
+            const reorderQuestionsResponse = await makeRequest(
+              'PATCH',
+              `/api/admin/questionnaires/pages/${testPageId}/questions/reorder`,
+              reorderQuestionsData
+            );
+            
+            console.log(`Reorder Questions Response (${reorderQuestionsResponse.statusCode}):`, reorderQuestionsResponse.data);
+          }
+          
+          // ===== Question Options Tests =====
+          
+          // Create a multiple choice question for testing options
+          console.log('\n=== Test creating a multiple choice question ===');
+          const multiChoiceQuestionData = {
+            questionText: 'What is your preferred contact method?',
+            questionKey: 'contact_preference',
+            questionType: 'select',
+            isRequired: true,
+            order: 2,
+            helpText: 'Please select your preferred contact method'
+          };
+          
+          const createMultiChoiceResponse = await makeRequest(
+            'POST',
+            `/api/admin/questionnaires/pages/${testPageId}/questions`,
+            multiChoiceQuestionData
+          );
+          
+          console.log(`Create Multi-Choice Question Response (${createMultiChoiceResponse.statusCode}):`, createMultiChoiceResponse.data);
+          
+          let multiChoiceQuestionId = null;
+          if (createMultiChoiceResponse.statusCode === 201 && createMultiChoiceResponse.data && createMultiChoiceResponse.data.id) {
+            multiChoiceQuestionId = createMultiChoiceResponse.data.id;
+            console.log(`Created multi-choice question with ID: ${multiChoiceQuestionId}`);
+            
+            // 1. Test creating options for the multi-choice question
+            console.log('\n=== Test creating an option ===');
+            const optionData = {
+              label: 'Email',
+              value: 'email',
+              order: 0
+            };
+            
+            const createOptionResponse = await makeRequest(
+              'POST',
+              `/api/admin/questionnaires/questions/${multiChoiceQuestionId}/options`,
+              optionData
+            );
+            
+            console.log(`Create Option Response (${createOptionResponse.statusCode}):`, createOptionResponse.data);
+            
+            let optionId = null;
+            if (createOptionResponse.statusCode === 201 && createOptionResponse.data && createOptionResponse.data.id) {
+              optionId = createOptionResponse.data.id;
+              console.log(`Created option with ID: ${optionId}`);
+              
+              // Create a second option
+              console.log('\n=== Test creating a second option ===');
+              const option2Data = {
+                label: 'Phone',
+                value: 'phone',
+                order: 1
+              };
+              
+              const createOption2Response = await makeRequest(
+                'POST',
+                `/api/admin/questionnaires/questions/${multiChoiceQuestionId}/options`,
+                option2Data
+              );
+              
+              console.log(`Create Second Option Response (${createOption2Response.statusCode}):`, createOption2Response.data);
+              
+              let option2Id = null;
+              if (createOption2Response.statusCode === 201 && createOption2Response.data && createOption2Response.data.id) {
+                option2Id = createOption2Response.data.id;
+                console.log(`Created second option with ID: ${option2Id}`);
+              }
+              
+              // 2. Test listing options for a question
+              console.log('\n=== Test listing options for a question ===');
+              const listOptionsResponse = await makeRequest(
+                'GET',
+                `/api/admin/questionnaires/questions/${multiChoiceQuestionId}/options`
+              );
+              
+              console.log(`List Options Response (${listOptionsResponse.statusCode}):`, listOptionsResponse.data);
+              
+              // 3. Test updating an option
+              console.log('\n=== Test updating an option ===');
+              const updateOptionData = {
+                label: 'Email Address',
+                value: 'email_address'
+              };
+              
+              const updateOptionResponse = await makeRequest(
+                'PUT',
+                `/api/admin/questionnaires/options/${optionId}`,
+                updateOptionData
+              );
+              
+              console.log(`Update Option Response (${updateOptionResponse.statusCode}):`, updateOptionResponse.data);
+              
+              // 4. Test deleting an option
+              console.log('\n=== Test deleting an option ===');
+              const deleteOptionResponse = await makeRequest(
+                'DELETE',
+                `/api/admin/questionnaires/options/${optionId}`
+              );
+              
+              console.log(`Delete Option Response (${deleteOptionResponse.statusCode}):`, deleteOptionResponse.data);
+              
+              // Delete the second option if it was created
+              if (option2Id) {
+                console.log('\n=== Test deleting the second option ===');
+                const deleteOption2Response = await makeRequest(
+                  'DELETE',
+                  `/api/admin/questionnaires/options/${option2Id}`
+                );
+                
+                console.log(`Delete Second Option Response (${deleteOption2Response.statusCode}):`, deleteOption2Response.data);
+              }
+            }
+          }
+          
+          // Delete questions in reverse order of creation
+          if (multiChoiceQuestionId) {
+            console.log('\n=== Test deleting multi-choice question ===');
+            const deleteMultiChoiceResponse = await makeRequest(
+              'DELETE',
+              `/api/admin/questionnaires/questions/${multiChoiceQuestionId}`
+            );
+            
+            console.log(`Delete Multi-Choice Question Response (${deleteMultiChoiceResponse.statusCode}):`, deleteMultiChoiceResponse.data);
+          }
+          
+          if (question2Id) {
+            console.log('\n=== Test deleting second question ===');
+            const deleteQuestion2Response = await makeRequest(
+              'DELETE',
+              `/api/admin/questionnaires/questions/${question2Id}`
+            );
+            
+            console.log(`Delete Second Question Response (${deleteQuestion2Response.statusCode}):`, deleteQuestion2Response.data);
+          }
+          
+          console.log('\n=== Test deleting first question ===');
+          const deleteQuestionResponse = await makeRequest(
+            'DELETE',
+            `/api/admin/questionnaires/questions/${questionId}`
+          );
+          
+          console.log(`Delete Question Response (${deleteQuestionResponse.statusCode}):`, deleteQuestionResponse.data);
+        }
+        
+        // Clean up test page
+        console.log('\n=== Cleaning up test page ===');
+        const deleteTestPageResponse = await makeRequest(
+          'DELETE',
+          `/api/admin/questionnaires/definitions/${definitionId}/pages/${testPageId}`
+        );
+        
+        console.log(`Delete Test Page Response (${deleteTestPageResponse.statusCode}):`, deleteTestPageResponse.data);
+      }
+    }
+
     console.log('\n=== All tests completed ===');
   } catch (error) {
     console.error('Error during testing:', error);

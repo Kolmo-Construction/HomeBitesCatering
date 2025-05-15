@@ -1846,6 +1846,310 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== Questionnaire Questions API Endpoints =====
+  
+  // 1. Create a New Question for a Page
+  app.post('/api/admin/questionnaires/pages/:pageId/questions', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const pageId = Number(req.params.pageId);
+      if (isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid page ID' });
+      }
+      
+      // Check if the questionnaire page exists
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      // Validate the request body
+      const validatedData = questionnaireQuestionCreateSchema.parse(req.body);
+      
+      // Create the question with the pageId from the URL parameters
+      const newQuestion = await storage.createQuestionnaireQuestion({
+        ...validatedData,
+        pageId
+      });
+      
+      res.status(201).json(newQuestion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating questionnaire question:', error);
+      res.status(500).json({ message: 'Server error creating questionnaire question' });
+    }
+  });
+  
+  // 2. List All Questions for a Page
+  app.get('/api/admin/questionnaires/pages/:pageId/questions', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const pageId = Number(req.params.pageId);
+      if (isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid page ID' });
+      }
+      
+      // Check if the questionnaire page exists
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      const questions = await storage.getQuestionnaireQuestionsByPage(pageId);
+      res.json(questions);
+    } catch (error) {
+      console.error('Error listing questionnaire questions:', error);
+      res.status(500).json({ message: 'Server error listing questionnaire questions' });
+    }
+  });
+  
+  // 3. Get a Specific Question
+  app.get('/api/admin/questionnaires/questions/:questionId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const questionId = Number(req.params.questionId);
+      if (isNaN(questionId) || questionId <= 0) {
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+      
+      const question = await storage.getQuestionnaireQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: 'Questionnaire question not found' });
+      }
+      
+      res.json(question);
+    } catch (error) {
+      console.error('Error fetching questionnaire question:', error);
+      res.status(500).json({ message: 'Server error fetching questionnaire question' });
+    }
+  });
+  
+  // 4. Update a Question
+  app.put('/api/admin/questionnaires/questions/:questionId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const questionId = Number(req.params.questionId);
+      if (isNaN(questionId) || questionId <= 0) {
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+      
+      // Check if the question exists
+      const question = await storage.getQuestionnaireQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: 'Questionnaire question not found' });
+      }
+      
+      // Validate the request body
+      const validatedData = questionnaireQuestionUpdateSchema.parse(req.body);
+      
+      // Update the question
+      const updatedQuestion = await storage.updateQuestionnaireQuestion(questionId, validatedData);
+      res.json(updatedQuestion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error updating questionnaire question:', error);
+      res.status(500).json({ message: 'Server error updating questionnaire question' });
+    }
+  });
+  
+  // 5. Delete a Question
+  app.delete('/api/admin/questionnaires/questions/:questionId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const questionId = Number(req.params.questionId);
+      if (isNaN(questionId) || questionId <= 0) {
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+      
+      // Check if the question exists
+      const question = await storage.getQuestionnaireQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: 'Questionnaire question not found' });
+      }
+      
+      // Delete the question
+      const success = await storage.deleteQuestionnaireQuestion(questionId);
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: 'Failed to delete the question' });
+      }
+    } catch (error) {
+      console.error('Error deleting questionnaire question:', error);
+      res.status(500).json({ message: 'Server error deleting questionnaire question' });
+    }
+  });
+  
+  // 6. Batch Update Question Order for a Page
+  app.patch('/api/admin/questionnaires/pages/:pageId/questions/reorder', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const pageId = Number(req.params.pageId);
+      if (isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid page ID' });
+      }
+      
+      // Validate the request body
+      const { questionIds } = questionnaireQuestionsReorderSchema.parse(req.body);
+      
+      // Check if the page exists
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      // Get all existing questions for the page
+      const existingQuestions = await storage.getQuestionnaireQuestionsByPage(pageId);
+      const existingQuestionIds = existingQuestions.map(question => question.id);
+      
+      // Verify that the provided questionIds match all existing questions
+      const allQuestionsIncluded = questionIds.length === existingQuestionIds.length && 
+        questionIds.every(id => existingQuestionIds.includes(id));
+      
+      if (!allQuestionsIncluded) {
+        return res.status(400).json({ 
+          message: 'The provided question IDs do not match the existing questions for this page' 
+        });
+      }
+      
+      // Reorder the questions
+      const updatedQuestions = await storage.reorderQuestionnaireQuestions(pageId, questionIds);
+      res.json(updatedQuestions);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error reordering questionnaire questions:', error);
+      res.status(500).json({ message: 'Server error reordering questionnaire questions' });
+    }
+  });
+  
+  // ===== Questionnaire Question Options API Endpoints =====
+  
+  // 1. List Options for a Question
+  app.get('/api/admin/questionnaires/questions/:questionId/options', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const questionId = Number(req.params.questionId);
+      if (isNaN(questionId) || questionId <= 0) {
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+      
+      // Check if the question exists
+      const question = await storage.getQuestionnaireQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: 'Questionnaire question not found' });
+      }
+      
+      const options = await storage.getQuestionnaireQuestionOptions(questionId);
+      res.json(options);
+    } catch (error) {
+      console.error('Error listing question options:', error);
+      res.status(500).json({ message: 'Server error listing question options' });
+    }
+  });
+  
+  // 2. Create a New Option for a Question
+  app.post('/api/admin/questionnaires/questions/:questionId/options', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const questionId = Number(req.params.questionId);
+      if (isNaN(questionId) || questionId <= 0) {
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+      
+      // Check if the question exists
+      const question = await storage.getQuestionnaireQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: 'Questionnaire question not found' });
+      }
+      
+      // Make sure the question type supports options
+      if (!['select', 'multi-select', 'radio', 'checkbox'].includes(question.questionType)) {
+        return res.status(400).json({ 
+          message: `Cannot add options to a question of type '${question.questionType}'. Options are only supported for select, multi-select, radio, and checkbox types.` 
+        });
+      }
+      
+      // Create the option validation schema
+      const optionCreateSchema = z.object({
+        label: z.string().min(1, { message: "Option label is required" }),
+        value: z.string().min(1, { message: "Option value is required" }),
+        order: z.number().int().nonnegative().default(0)
+      });
+      
+      // Validate the request body
+      const validatedData = optionCreateSchema.parse(req.body);
+      
+      // Create the option with proper field names mapping
+      const newOption = await storage.createQuestionnaireQuestionOption({
+        questionId,
+        order: validatedData.order,
+        optionText: validatedData.label,
+        optionValue: validatedData.value
+      });
+      
+      res.status(201).json(newOption);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating question option:', error);
+      res.status(500).json({ message: 'Server error creating question option' });
+    }
+  });
+  
+  // 3. Update an Option
+  app.put('/api/admin/questionnaires/options/:optionId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const optionId = Number(req.params.optionId);
+      if (isNaN(optionId) || optionId <= 0) {
+        return res.status(400).json({ message: 'Invalid option ID' });
+      }
+      
+      // Create the option update schema
+      const optionUpdateSchema = z.object({
+        label: z.string().min(1, { message: "Option label is required" }).optional(),
+        value: z.string().min(1, { message: "Option value is required" }).optional(),
+        order: z.number().int().nonnegative().optional()
+      });
+      
+      // Validate the request body
+      const validatedData = optionUpdateSchema.parse(req.body);
+      
+      // Update the option
+      const updatedOption = await storage.updateQuestionnaireQuestionOption(optionId, validatedData);
+      if (!updatedOption) {
+        return res.status(404).json({ message: 'Question option not found' });
+      }
+      
+      res.json(updatedOption);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error updating question option:', error);
+      res.status(500).json({ message: 'Server error updating question option' });
+    }
+  });
+  
+  // 4. Delete an Option
+  app.delete('/api/admin/questionnaires/options/:optionId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const optionId = Number(req.params.optionId);
+      if (isNaN(optionId) || optionId <= 0) {
+        return res.status(400).json({ message: 'Invalid option ID' });
+      }
+      
+      // Delete the option
+      const success = await storage.deleteQuestionnaireQuestionOption(optionId);
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(404).json({ message: 'Question option not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting question option:', error);
+      res.status(500).json({ message: 'Server error deleting question option' });
+    }
+  });
+
   // Create HTTP server
   
   // Email sync service should NOT be started automatically
