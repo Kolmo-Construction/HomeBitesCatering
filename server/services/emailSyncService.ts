@@ -528,8 +528,12 @@ export class GmailSyncService {
     // But leaving credentials in memory allows easier restart without re-authorization
     // oauth2Client.credentials = {};
     
+    // Reset the lastSyncTimestamp when service stops
+    // This ensures when the service starts again, it will fetch all emails since it was last running
+    this.lastSyncTimestamp = null;
+    
     // Additional logging to verify the service is really stopped
-    console.log('GmailSyncService stopped. Running status:', this._isRunning, 'Gmail client cleared.');
+    console.log('GmailSyncService stopped. Running status:', this._isRunning, 'Gmail client cleared. Last sync timestamp reset.');
   }
 
   private scheduleNextFetch(): void {
