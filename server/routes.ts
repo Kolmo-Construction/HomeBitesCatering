@@ -1220,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Successfully exchanged auth code for tokens!");
         
         // Get the granted scopes for display
-        const grantedScopes = oauth2Client.credentials.scope || '';
+        const grantedScopes = GmailSyncService.getOAuthClient().credentials.scope || '';
         const hasModifyScope = grantedScopes.includes('https://www.googleapis.com/auth/gmail.modify');
         
         res.send(`

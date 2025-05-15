@@ -706,7 +706,14 @@ export default function OpportunityDetailPage() {
                             </Badge>
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {format(new Date(comm.date), "PPP p")}
+                            {comm.date ? (() => {
+                              try {
+                                const date = new Date(comm.date);
+                                return isNaN(date.getTime()) ? "Invalid date" : format(date, "PPP p");
+                              } catch (e) {
+                                return "Invalid date format";
+                              }
+                            })() : "Date unavailable"}
                           </span>
                         </div>
                         
