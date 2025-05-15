@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision, pgEnum, numeric } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -291,6 +292,7 @@ export const sentimentEnum = pgEnum("sentiment", ['positive', 'neutral', 'negati
 // Updated status enum to include new statuses
 export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'archived', 'junk', 'parsing_failed', 'needs_manual_review']);
 
+// Forward declare rawLeads for circular references
 export const rawLeads = pgTable("raw_leads", {
   id: serial("id").primaryKey(),
   source: text("source").notNull(), // e.g., 'weddingwire', 'website_form', 'gmail_sync', 'manual_entry'
@@ -385,3 +387,122 @@ export const insertProcessedEmailSchema = createInsertSchema(processedEmails).om
 
 export type ProcessedEmail = typeof processedEmails.$inferSelect;
 export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
+
+// Questionnaire System Schemas
+
+// Enums for questionnaire system
+export const questionTypeEnum = pgEnum('question_type_enum', [
+  'text',
+  'textarea',
+  'select',
+  'radio',
+  'checkbox', // single boolean checkbox
+  'checkbox_group', // multiple choice checkbox
+  'date',
+  'time',
+  'number',
+  'matrix_single', // matrix where each row can have one selection from columns
+  'matrix_multi', // matrix where each row can have multiple selections from columns
+  'info_text', // for displaying read-only information blocks
+  'name', // Compound field for first/last name (could be handled as two 'text' fields too)
+  'address', // Compound field for address (could be multiple 'text' fields)
+  'phone',
+  'email',
+]);
+
+export const conditionTriggerOperatorEnum = pgEnum('condition_trigger_operator_enum', [
+  'equals',
+  'not_equals',
+  'contains', // for text or array-like values
+  'not_contains',
+  'greater_than',
+  'less_than',
+  'is_empty',
+  'is_not_empty',
+  'is_selected', // for checkboxes or radio options
+  'is_not_selected'
+]);
+
+export const conditionActionTypeEnum = pgEnum('condition_action_type_enum', [
+  'show_question',
+  'hide_question',
+  'require_question',
+  'unrequire_question', // new
+  'skip_to_page',
+  'enable_option', // new
+  'disable_option', // new
+]);
+
+export const submissionStatusEnum = pgEnum('submission_status_enum', ['draft', 'submitted', 'archived']);
+
+// Questionnaire tables
+export const questionnaireDefinitions = pgTable('questionnaire_definitions', {
+  id: serial('id').primaryKey(),
+  versionName: text('version_name').notNull(), // e.g., "Customer Intake Form - Q3 2025"
+  description: text('description'),
+  isActive: boolean('is_active').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnairePages = pgTable('questionnaire_pages', {
+  id: serial('id').primaryKey(),
+  definitionId: integer('definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(), // e.g., "Event Details," "Menu Preferences"
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnaireQuestions = pgTable('questionnaire_questions', {
+  id: serial('id').primaryKey(),
+  pageId: integer('page_id').references(() => questionnairePages.id, { onDelete: 'cascade' }).notNull(),
+  questionText: text('question_text').notNull(),
+  questionKey: text('question_key').unique().notNull(), // Unique key for this question, e.g., `event_type`, `guest_count`
+  questionType: questionTypeEnum('question_type').notNull(),
+  order: integer('order').notNull(),
+  isRequired: boolean('is_required').default(false).notNull(),
+  placeholderText: text('placeholder_text'),
+  helpText: text('help_text'), // For tooltips or sub-labels
+  validationRules: jsonb('validation_rules'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnaireQuestionOptions = pgTable('questionnaire_question_options', {
+  id: serial('id').primaryKey(),
+  questionId: integer('question_id').references(() => questionnaireQuestions.id, { onDelete: 'cascade' }).notNull(),
+  optionText: text('option_text').notNull(), // Label for the option
+  optionValue: text('option_value').notNull(), // Value stored when selected
+  order: integer('order').notNull(),
+  defaultSelectionIndicator: text('default_selection_indicator'),
+  relatedMenuItemId: integer('related_menu_item_id').references(() => menuItems.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnaireMatrixColumns = pgTable('questionnaire_matrix_columns', {
+  id: serial('id').primaryKey(),
+  questionId: integer('question_id').references(() => questionnaireQuestions.id, { onDelete: 'cascade' }).notNull(), // The matrix question
+  columnText: text('column_text').notNull(), // Label for the column
+  columnValue: text('column_value').notNull(), // Value for the column
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnaireConditionalLogic = pgTable('questionnaire_conditional_logic', {
+  id: serial('id').primaryKey(),
+  definitionId: integer('definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'cascade' }).notNull(),
+  triggerQuestionKey: text('trigger_question_key').notNull(), // References questionnaireQuestions.questionKey
+  triggerCondition: conditionTriggerOperatorEnum('trigger_condition').notNull(),
+  triggerValue: text('trigger_value'), // Value to compare against. Can be null for 'is_empty'/'is_not_empty'
+  actionType: conditionActionTypeEnum('action_type').notNull(),
+  targetQuestionKey: text('target_question_key'), // References questionnaireQuestions.questionKey (for show/hide/require question)
+  targetPageId: integer('target_page_id').references(() => questionnairePages.id, { onDelete: 'set null' }), // For skip_to_page
+  targetOptionValue: text('target_option_value'), // For enable/disable option, references questionnaireQuestionOptions.optionValue
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// We'll define the relations and exports after completing table definitions
