@@ -57,6 +57,10 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // State for combined name/description format
+  const [useCombinedFormat, setUseCombinedFormat] = useState(false);
+  const [combinedNameDesc, setCombinedNameDesc] = useState("");
+  
   // Set up the form with default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,6 +77,21 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
       isNutFree: false,
     },
   });
+  
+  // Function to process combined format
+  const processCombinedFormat = (value: string) => {
+    setCombinedNameDesc(value);
+    
+    // Split by first colon
+    const colonIndex = value.indexOf(':');
+    if (colonIndex > 0) {
+      const name = value.substring(0, colonIndex).trim();
+      const description = value.substring(colonIndex + 1).trim();
+      
+      form.setValue("name", name);
+      form.setValue("description", description);
+    }
+  };
 
   // Create or update menu item mutation
   const mutation = useMutation({
@@ -142,19 +161,50 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Item Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Menu item name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Checkbox 
+                  id="combined-format"
+                  checked={useCombinedFormat}
+                  onCheckedChange={(checked) => setUseCombinedFormat(checked as boolean)}
+                />
+                <label 
+                  htmlFor="combined-format" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Use combined name and description format (e.g., "Asian Street Fries: Fries topped with sauce")
+                </label>
+              </div>
+              
+              {useCombinedFormat ? (
+                <div className="mb-4">
+                  <Textarea 
+                    placeholder="Enter menu item in format: Name: Description"
+                    value={combinedNameDesc}
+                    onChange={(e) => processCombinedFormat(e.target.value)}
+                    rows={3}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Everything before the colon (:) will be used as the name, and everything after will be the description.
+                  </p>
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Item Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Menu item name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -261,24 +311,26 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Item description"
-                      className="resize-none" 
-                      rows={3}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!useCombinedFormat && (
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Item description"
+                        className="resize-none" 
+                        rows={3}
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <FormField
               control={form.control}
