@@ -64,7 +64,7 @@ export default function EmailSyncToggle() {
       }
     },
     enabled: isAdmin, // Only fetch if user is admin
-    refetchInterval: 3000, // Refresh every 30 seconds
+    refetchInterval: 30000000000000, // Refresh every 30 seconds
   });
 
   // Update local state when API data loads

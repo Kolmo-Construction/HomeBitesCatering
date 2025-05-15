@@ -115,7 +115,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
       if (!res.ok) throw new Error('Failed to fetch clients');
       return res.json();
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000000000, // 30 seconds
   });
 
   const opportunityToEdit = initialOpportunity || fetchedOpportunityData;
