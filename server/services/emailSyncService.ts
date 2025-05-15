@@ -397,6 +397,21 @@ export class GmailSyncService {
   public getTargetEmail(): string {
     return this.targetEmail;
   }
+  
+  public getTimerId(): NodeJS.Timeout | null {
+    return this.timeoutId;
+  }
+  
+  public inspectStatus(): any {
+    return {
+      isRunning: this._isRunning,
+      hasTimeout: this.timeoutId !== null,
+      hasGmailClient: this.gmail !== null,
+      targetEmailConfigured: !!this.targetEmail,
+      processingInterval: this.processingInterval,
+      aiSummaryEnabled: this.aiSummaryEnabled,
+    };
+  }
 
   constructor(intervalMs: number = 5 * 60 * 1000, aiEnabled: boolean = true) {
     this.processingInterval = intervalMs;

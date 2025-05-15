@@ -1305,7 +1305,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ 
       enabled: gmailSyncService.isRunning(), 
       configured: true,
-      targetEmail: gmailSyncService.getTargetEmail() 
+      targetEmail: gmailSyncService.getTargetEmail(),
+      // Add debug info
+      isRunning: gmailSyncService.isRunning(),
+      timerId: gmailSyncService.getTimerId() ? "Timer exists" : "No timer",
+      inspectRunningStatus: JSON.stringify(gmailSyncService.inspectStatus())
     });
   });
   
