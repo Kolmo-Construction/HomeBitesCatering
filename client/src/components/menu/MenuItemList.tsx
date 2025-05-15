@@ -130,7 +130,11 @@ export default function MenuItemList() {
     {
       accessorKey: "price",
       header: "Price",
-      cell: ({ row }) => <span>{row.original.price ? formatCurrency(row.original.price) : 'Not set'}</span>,
+      cell: ({ row }) => {
+        // Handle numeric or null price
+        const price = row.original.price;
+        return <span>{price !== null && price !== undefined ? formatCurrency(Number(price)) : 'Not set'}</span>;
+      },
     },
     {
       accessorKey: "dietary",
