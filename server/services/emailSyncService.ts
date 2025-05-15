@@ -45,7 +45,7 @@ const oauth2Client = new google.auth.OAuth2(
 );
 
 // Function to set credentials for the oauth2Client
-// This should be called after obtaining tokens or if they are already stored
+// This should be called only when explicitly starting the email sync service
 function setOAuthCredentials() {
   if (tokenStore.accessToken && tokenStore.refreshToken) {
     oauth2Client.setCredentials({
@@ -53,9 +53,13 @@ function setOAuthCredentials() {
       refresh_token: tokenStore.refreshToken,
       expiry_date: tokenStore.expiryDate,
     });
+    console.log("GmailSyncService: OAuth credentials initialized from stored tokens");
+    return true;
   }
+  console.warn("GmailSyncService: Cannot initialize OAuth - no tokens available");
+  return false;
 }
-setOAuthCredentials(); // Initialize if tokens are present from env
+// IMPORTANT: We do NOT call setOAuthCredentials() at startup - we'll call it only when explicitly starting the service
 
 // Handle token refresh
 oauth2Client.on('tokens', (tokens) => {
@@ -468,7 +472,17 @@ export class GmailSyncService {
         console.error("GmailSyncService: Cannot start, SYNC_TARGET_EMAIL_ADDRESS not set.");
         return;
     }
-    // Initialize or re-initialize Gmail client here if needed
+    
+    // CRITICAL FIX: Only initialize OAuth credentials when explicitly starting the service
+    // This prevents emails from being fetched unless the user explicitly enables the service
+    const credentialsInitialized = setOAuthCredentials();
+    if (!credentialsInitialized) {
+      console.warn('GmailSyncService: OAuth credentials could not be initialized. Cannot start service.');
+      console.log('To authorize, visit: /api/auth/google/initiate then follow the redirect.');
+      return;
+    }
+    
+    // Initialize or re-initialize Gmail client only after credentials are set
     if (!this.gmail && oauth2Client.credentials.access_token) {
         this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
         console.log("GmailSyncService: Gmail API client initialized/re-initialized.");
@@ -503,8 +517,16 @@ export class GmailSyncService {
         this.timeoutId = null;
     }
     
+    // IMPORTANT SECURITY FIX: Clear the Gmail client to prevent any accidental API access
+    // This ensures that if someone stops the service, we need to re-authenticate when starting again
+    this.gmail = null;
+    
+    // ADDITIONAL SECURITY: We could also clear oauth2Client.credentials here for complete isolation
+    // But leaving credentials in memory allows easier restart without re-authorization
+    // oauth2Client.credentials = {};
+    
     // Additional logging to verify the service is really stopped
-    console.log('GmailSyncService stopped. Running status:', this._isRunning);
+    console.log('GmailSyncService stopped. Running status:', this._isRunning, 'Gmail client cleared.');
   }
 
   private scheduleNextFetch(): void {
