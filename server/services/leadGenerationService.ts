@@ -616,16 +616,17 @@ ${emailContent}
             emailSubject,
             emailPreview: emailContent.substring(0, 500),
             fromAddress,
-            error: aiError.message,
+            error: errorMessage,
             timestamp: new Date().toISOString()
           }
         };
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error("Lead Data Extraction: Critical error:", error);
       return {
         success: false,
-        error: `Lead extraction error: ${error.message || 'Unknown error'}`,
+        error: `Lead extraction error: ${errorMessage}`,
         status: 'needs_manual_review' as const
       };
     }

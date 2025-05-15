@@ -524,8 +524,9 @@ export class CommunicationSyncService {
             sentimentConfidence = sentimentAnalysis.confidence;
             
             console.log(`CommunicationSyncService: AI analysis complete for email ID ${messageId} - Sentiment: ${sentiment}`);
-          } catch (aiError) {
-            console.error(`CommunicationSyncService: AI analysis failed for email ID ${messageId}:`, aiError);
+          } catch (aiError: unknown) {
+            const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
+            console.error(`CommunicationSyncService: AI analysis failed for email ID ${messageId}:`, errorMessage);
             // Continue with basic summary
           }
         }
@@ -562,8 +563,9 @@ export class CommunicationSyncService {
         // Log information to help diagnose why matching failed
         console.log(`CommunicationSyncService: Attempted to match email using address: ${contactEmailToSearch}`);
       }
-    } catch (error) {
-      console.error(`CommunicationSyncService: Error processing email communication (ID: ${messageId}):`, error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`CommunicationSyncService: Error processing email communication (ID: ${messageId}):`, errorMessage);
     }
   }
 
@@ -575,8 +577,9 @@ export class CommunicationSyncService {
     try {
       const summary = await aiService.generateSummary(text);
       return summary;
-    } catch (error) {
-      console.error("AI Summarization Error:", error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("AI Summarization Error:", errorMessage);
       // Fallback to basic trimming
       return text.substring(0, Math.min(text.length, 150)).replace(/\s+/g, ' ') + (text.length > 150 ? "..." : "");
     }
@@ -600,8 +603,9 @@ export class CommunicationSyncService {
         sentiment,
         confidence: result.confidence || 0.5
       };
-    } catch (error) {
-      console.error("AI Sentiment Analysis Error:", error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("AI Sentiment Analysis Error:", errorMessage);
       // Return neutral as fallback
       return {
         sentiment: 'neutral',
