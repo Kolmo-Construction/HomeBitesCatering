@@ -392,6 +392,7 @@ export class GmailSyncService {
   private processingInterval: number;
   private aiSummaryEnabled: boolean;
   public targetEmail: string = "";
+  private lastSyncTimestamp: number | null = null; // Unix timestamp of the last successful email fetch
 
   // Accessor methods for external status checks
   public isRunning(): boolean {
