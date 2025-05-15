@@ -206,6 +206,9 @@ export class CommunicationSyncService {
 
         if (!messageEntry.id) continue;
 
+        // Define messageId in broader scope for access in the finally block
+        let messageId: string = '';
+        
         try {
           const msg = await this.gmail.users.messages.get({
             userId: 'me',
@@ -217,20 +220,79 @@ export class CommunicationSyncService {
             const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
             const parsedMail = await simpleParser(rawEmail);
             
-            // Generate a message ID for tracking
+            // Extract message ID for tracking
             const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
-            const messageId = messageIdHeader || `generated-${Date.now()}-${messageEntry.id}`;
+            messageId = messageIdHeader || `generated-${Date.now()}-${messageEntry.id}`;
             
-            // Check if this email has already been processed
+            // --- Database Duplicate Check ---
+            try {
+              const isProcessed = await storage.isEmailProcessed(messageId, 'comm_sync');
+              if (isProcessed) {
+                console.log(`CommunicationSyncService: Email with message ID ${messageId} (Gmail ID: ${messageEntry.id}) was already processed according to database. Skipping.`);
+                
+                // Always try to mark as read and labeled, even if it's a duplicate
+                // This covers cases where the database recorded it but label application failed
+                try {
+                  await this.markEmailAsProcessed(messageEntry.id);
+                  // Update the record to show label was applied
+                  await storage.updateProcessedEmailLabel(messageId, true);
+                } catch (labelError) {
+                  console.error(`CommunicationSyncService: Error applying label to already processed message ${messageId}:`, labelError);
+                }
+                
+                continue; // Skip to the next message
+              } else {
+                console.log(`CommunicationSyncService: Message ID ${messageId} is not in processed database. Continuing with processing.`);
+              }
+            } catch (dbError) {
+              // If database check fails, log but continue processing
+              // Better to risk duplicate processing than missing emails
+              console.error(`CommunicationSyncService: Database duplicate check failed for message ID ${messageId}:`, dbError);
+            }
+            
+            // Legacy check against communications table (for backward compatibility)
             try {
               const communications = await storage.getCommunicationsByExternalId(messageId);
               if (communications && communications.length > 0) {
-                console.log(`CommunicationSyncService: Email with message ID ${messageId} was already processed. Skipping.`);
+                console.log(`CommunicationSyncService: Email with message ID ${messageId} was already processed in communications table. Recording in tracking DB & skipping.`);
+                
+                // Record in our processed emails table for future reference
+                await storage.recordProcessedEmail({
+                  messageId,
+                  gmailId: messageEntry.id,
+                  service: 'comm_sync',
+                  email: parsedMail.from?.value[0]?.address || 'unknown',
+                  subject: parsedMail.subject || 'No Subject',
+                  labelApplied: false // Will be updated after markEmailAsProcessed
+                });
+                
                 await this.markEmailAsProcessed(messageEntry.id);
+                
+                // Update to show label was applied
+                await storage.updateProcessedEmailLabel(messageId, true);
                 continue;
               }
             } catch (error) {
               console.error(`CommunicationSyncService: Error during duplicate check for message ID ${messageId}. Attempting to process anyway.`, error);
+            }
+            // Record this email in our processed database BEFORE processing
+            // This ensures it's recorded even if processing fails
+            const fromAddress = parsedMail.from?.value[0]?.address || 'unknown';
+            const emailSubject = parsedMail.subject || 'No Subject';
+            
+            try {
+              await storage.recordProcessedEmail({
+                messageId,
+                gmailId: messageEntry.id,
+                service: 'comm_sync',
+                email: fromAddress,
+                subject: emailSubject,
+                labelApplied: false // Will be updated after markEmailAsProcessed is successful
+              });
+              console.log(`CommunicationSyncService: Recorded message ID ${messageId} in processed emails database`);
+            } catch (recordError) {
+              console.error(`CommunicationSyncService: Failed to record in processed emails database:`, recordError);
+              // Continue processing - better to have duplicate processing than missing emails
             }
             
             // Process the email to log communication
@@ -241,6 +303,13 @@ export class CommunicationSyncService {
         } finally {
           try {
             await this.markEmailAsProcessed(messageEntry.id);
+            
+            // Update the processed email record to show label was applied
+            try {
+              await storage.updateProcessedEmailLabel(messageId, true);
+            } catch (updateError) {
+              console.error(`CommunicationSyncService: Failed to update label status in database:`, updateError);
+            }
           } catch (markProcessedErr) {
             console.error(`CommunicationSyncService: Failed to mark message ID ${messageEntry.id} as processed:`, markProcessedErr);
           }

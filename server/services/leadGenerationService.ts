@@ -159,6 +159,9 @@ export class LeadGenerationService {
 
         if (!messageEntry.id) continue;
 
+        // Define messageId in broader scope for access in the finally block
+        let messageId: string = '';
+        
         try {
           const msg = await this.gmail.users.messages.get({
             userId: 'me',
@@ -172,7 +175,7 @@ export class LeadGenerationService {
             
             // Extract message ID for tracking
             const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
-            const messageId = messageIdHeader || `generated-${Date.now()}-${messageEntry.id}`;
+            messageId = messageIdHeader || `generated-${Date.now()}-${messageEntry.id}`;
             
             // --- Database Duplicate Check ---
             try {
@@ -599,11 +602,12 @@ ${emailContent}
             timestamp: new Date().toISOString()
           }
         };
-      } catch (aiError) {
+      } catch (aiError: unknown) {
+        const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
         console.error("Lead Data Extraction: AI service error:", aiError);
         return {
           success: false,
-          error: `AI service error: ${aiError.message || 'Unknown error'}`,
+          error: `AI service error: ${errorMessage}`,
           extractedEmail: fromAddress,
           eventSummary: emailSubject,
           status: 'needs_manual_review' as const,
