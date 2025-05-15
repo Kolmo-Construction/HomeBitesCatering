@@ -9,7 +9,7 @@ const menuData = JSON.parse(fs.readFileSync(path.join(__dirname, 'menu-data.json
 // Login to get a session cookie
 async function login() {
   try {
-    const loginResponse = await axios.post('http://localhost:3000/api/auth/login', {
+    const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
       username: 'admin',
       password: 'password'
     });
@@ -48,7 +48,7 @@ async function importMenuItems() {
         isNutFree: item.dietaryNotes.nutFree
       };
 
-      const response = await axios.post('http://localhost:3000/api/menu-items', menuItemData, {
+      const response = await axios.post('http://localhost:5000/api/menu-items', menuItemData, {
         headers: {
           'Cookie': cookie,
           'Content-Type': 'application/json'
