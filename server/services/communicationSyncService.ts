@@ -168,16 +168,17 @@ export class CommunicationSyncService {
 
     // Query for all emails related to business communications, excluding those already processed
     // Avoid specific labels used by lead generation service to prevent duplicates
-    let query = 'is:unread label:INBOX -label:PROCESSED_BY_COMM_SYNC -label:PROCESSED_BY_LEAD_GEN';
+    // Only fetch emails from 2025 to avoid processing old emails
+    let query = 'is:unread label:INBOX -label:PROCESSED_BY_COMM_SYNC -label:PROCESSED_BY_LEAD_GEN after:2025/01/01';
     
     if (this.lastSyncTimestamp) {
       const lastSyncDate = new Date(this.lastSyncTimestamp * 1000);
       const formattedDate = `${lastSyncDate.getFullYear()}/${(lastSyncDate.getMonth() + 1).toString().padStart(2, '0')}/${lastSyncDate.getDate().toString().padStart(2, '0')}`;
-      query += ` after:${formattedDate}`;
+      query = `is:unread label:INBOX -label:PROCESSED_BY_COMM_SYNC -label:PROCESSED_BY_LEAD_GEN after:${formattedDate}`;
       
       console.log(`[${new Date().toISOString()}] CommunicationSyncService: Fetching new emails since ${lastSyncDate.toISOString()}...`);
     } else {
-      console.log(`[${new Date().toISOString()}] CommunicationSyncService: Fetching all unprocessed emails (first sync)...`);
+      console.log(`[${new Date().toISOString()}] CommunicationSyncService: Fetching new emails since 2025/01/01...`);
     }
 
     try {
@@ -327,57 +328,69 @@ export class CommunicationSyncService {
 
     // Find existing contact if a search email was determined
     try {
-      // First try finding by contact identifier
-      const existingContact = await storage.findOpportunityOrClientByContactIdentifier(contactEmailToSearch, 'email');
-      if (existingContact?.client) {
-        clientId = existingContact.client.id;
-      } else if (existingContact?.opportunity) {
-        opportunityId = existingContact.opportunity.id;
-      } else {
-        // If not found by contact identifier, try finding by primary email field
-        
-        // Check opportunities first
+      // First, specific check for projects@kolmo.io since we know it's important
+      if (contactEmailToSearch === 'projects@kolmo.io') {
+        console.log(`CommunicationSyncService: Special handling for projects@kolmo.io email`);
         const opportunitiesByEmail = await db.select().from(opportunities).where(eq(opportunities.email, contactEmailToSearch));
         if (opportunitiesByEmail.length > 0) {
           opportunityId = opportunitiesByEmail[0].id;
-          console.log(`CommunicationSyncService: Found opportunity by primary email field: ${opportunityId}`);
-          
-          // Auto-create a contact identifier for future use
-          try {
-            await storage.createContactIdentifier({
-              opportunityId,
-              type: 'email',
-              value: contactEmailToSearch,
-              isPrimary: true,
-              source: 'auto_created_by_comm_sync'
-            });
-            console.log(`CommunicationSyncService: Created contact identifier for opportunity ${opportunityId} with email ${contactEmailToSearch}`);
-          } catch (createError) {
-            console.error(`CommunicationSyncService: Error creating contact identifier:`, createError);
-            // Continue even if contact identifier creation fails
-          }
+          console.log(`CommunicationSyncService: Found opportunity #${opportunityId} with email projects@kolmo.io`);
         }
-        
-        // If still not found, check clients 
-        if (!opportunityId) {
-          const clientsByEmail = await db.select().from(clients).where(eq(clients.email, contactEmailToSearch));
-          if (clientsByEmail.length > 0) {
-            clientId = clientsByEmail[0].id;
-            console.log(`CommunicationSyncService: Found client by primary email field: ${clientId}`);
+      }
+      
+      // If not found by direct match, try contact identifiers
+      if (!opportunityId && !clientId) {
+        const existingContact = await storage.findOpportunityOrClientByContactIdentifier(contactEmailToSearch, 'email');
+        if (existingContact?.client) {
+          clientId = existingContact.client.id;
+        } else if (existingContact?.opportunity) {
+          opportunityId = existingContact.opportunity.id;
+        } else {
+          // If not found by contact identifier, try finding by primary email field
+          
+          // Check opportunities first
+          const opportunitiesByEmail = await db.select().from(opportunities).where(eq(opportunities.email, contactEmailToSearch));
+          if (opportunitiesByEmail.length > 0) {
+            opportunityId = opportunitiesByEmail[0].id;
+            console.log(`CommunicationSyncService: Found opportunity by primary email field: ${opportunityId}`);
             
             // Auto-create a contact identifier for future use
             try {
               await storage.createContactIdentifier({
-                clientId,
+                opportunityId,
                 type: 'email',
                 value: contactEmailToSearch,
                 isPrimary: true,
                 source: 'auto_created_by_comm_sync'
               });
-              console.log(`CommunicationSyncService: Created contact identifier for client ${clientId} with email ${contactEmailToSearch}`);
+              console.log(`CommunicationSyncService: Created contact identifier for opportunity ${opportunityId} with email ${contactEmailToSearch}`);
             } catch (createError) {
               console.error(`CommunicationSyncService: Error creating contact identifier:`, createError);
               // Continue even if contact identifier creation fails
+            }
+          }
+          
+          // If still not found, check clients 
+          if (!opportunityId) {
+            const clientsByEmail = await db.select().from(clients).where(eq(clients.email, contactEmailToSearch));
+            if (clientsByEmail.length > 0) {
+              clientId = clientsByEmail[0].id;
+              console.log(`CommunicationSyncService: Found client by primary email field: ${clientId}`);
+              
+              // Auto-create a contact identifier for future use
+              try {
+                await storage.createContactIdentifier({
+                  clientId,
+                  type: 'email',
+                  value: contactEmailToSearch,
+                  isPrimary: true,
+                  source: 'auto_created_by_comm_sync'
+                });
+                console.log(`CommunicationSyncService: Created contact identifier for client ${clientId} with email ${contactEmailToSearch}`);
+              } catch (createError) {
+                console.error(`CommunicationSyncService: Error creating contact identifier:`, createError);
+                // Continue even if contact identifier creation fails
+              }
             }
           }
         }

@@ -591,18 +591,19 @@ export class GmailSyncService {
     }
 
     // Prepare a more targeted query if we have a last sync timestamp
-    let query = 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io)';
+    // Only get emails from 2025 to avoid processing old emails
+    let query = 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io) after:2025/01/01';
     
     if (this.lastSyncTimestamp) {
       const lastSyncDate = new Date(this.lastSyncTimestamp * 1000);
       // Format the date for Gmail's search syntax: YYYY/MM/DD
       const formattedDate = `${lastSyncDate.getFullYear()}/${(lastSyncDate.getMonth() + 1).toString().padStart(2, '0')}/${lastSyncDate.getDate().toString().padStart(2, '0')}`;
       // Add an after:<date> filter to only get emails newer than last sync
-      query += ` after:${formattedDate}`;
+      query = `is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io) after:${formattedDate}`;
       
       console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching new emails for ${this.targetEmail} since ${lastSyncDate.toISOString()}...`);
     } else {
-      console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching all new unread emails for ${this.targetEmail} (first sync)...`);
+      console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching new unread emails for ${this.targetEmail} since 2025/01/01...`);
     }
 
     try {
