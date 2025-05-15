@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "wouter";
@@ -22,6 +22,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import MenuItemFilters, { MenuFilters } from "./MenuItemFilters";
 
 export default function MenuItemList() {
   const { data: menuItems = [], isLoading } = useQuery({
@@ -32,6 +33,45 @@ export default function MenuItemList() {
       return res.json();
     }
   });
+  
+  const [filters, setFilters] = useState<MenuFilters>({
+    search: "",
+    category: "",
+    dietary: {
+      isVegetarian: false,
+      isVegan: false,
+      isGlutenFree: false,
+      isDairyFree: false,
+      isNutFree: false,
+    }
+  });
+  
+  // Filter menu items based on current filters
+  const filteredMenuItems = useMemo(() => {
+    if (!menuItems || menuItems.length === 0) return [];
+    
+    return menuItems.filter((item: MenuItem) => {
+      // Search filter
+      if (filters.search && !item.name.toLowerCase().includes(filters.search.toLowerCase()) && 
+          !(item.description && item.description.toLowerCase().includes(filters.search.toLowerCase()))) {
+        return false;
+      }
+      
+      // Category filter
+      if (filters.category && item.category !== filters.category) {
+        return false;
+      }
+      
+      // Dietary filters
+      if (filters.dietary.isVegetarian && !item.isVegetarian) return false;
+      if (filters.dietary.isVegan && !item.isVegan) return false;
+      if (filters.dietary.isGlutenFree && !item.isGlutenFree) return false;
+      if (filters.dietary.isDairyFree && !item.isDairyFree) return false;
+      if (filters.dietary.isNutFree && !item.isNutFree) return false;
+      
+      return true;
+    });
+  }, [menuItems, filters]);
   
   const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
   const { toast } = useToast();
@@ -153,12 +193,29 @@ export default function MenuItemList() {
         </Link>
       </div>
 
+      {/* Menu Item Filters */}
+      <MenuItemFilters onFilterChange={setFilters} />
+      
+      {/* Results count when filters are active */}
+      {(filters.search || filters.category || Object.values(filters.dietary).some(v => v)) && (
+        <div className="mb-2 text-sm text-gray-500">
+          Found {filteredMenuItems.length} item{filteredMenuItems.length !== 1 ? 's' : ''} 
+          {filters.search ? ` matching "${filters.search}"` : ''}
+          {filters.category ? ` in category "${filters.category}"` : ''}
+          {Object.values(filters.dietary).some(v => v) ? ' with selected dietary restrictions' : ''}
+        </div>
+      )}
+
       <DataTable 
         columns={columns} 
-        data={menuItems} 
-        searchKey="name"
+        data={filteredMenuItems} 
+        // Do not pass searchKey when using our custom search
         loading={isLoading}
-        emptyMessage="No menu items found. Create your first menu item to get started."
+        emptyMessage={
+          Object.values(filters).some(v => !!v) || Object.values(filters.dietary).some(v => v)
+            ? "No menu items found matching your filters. Try adjusting your search criteria."
+            : "No menu items found. Create your first menu item to get started."
+        }
       />
 
       {itemToDelete && (
