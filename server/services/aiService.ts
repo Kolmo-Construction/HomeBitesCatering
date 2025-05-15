@@ -1,6 +1,6 @@
 import { OpenAI } from 'openai';
 
-// Open Router needs an OpenAI-compatible client with a different baseURL
+// Open Router integration with the latest client format
 const openRouter = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY || '',
   baseURL: 'https://openrouter.ai/api/v1',
@@ -17,9 +17,12 @@ const openai = openaiEnabled ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null;
 
-// Model ID for Open Router
-// Initial choice was DeepSeek V3 0324, but switched to Claude Haiku for availability
-const AI_MODEL_ID = 'anthropic/claude-3-haiku';
+// OpenRouter model IDs
+// Using DeepSeek V3 0324 as specified by user
+const OPENROUTER_MODEL_ID = 'deepseek/deepseek-chat-v3-0324:free';
+// Fallback to Claude Haiku if needed
+const CLAUDE_MODEL_ID = 'anthropic/claude-3-haiku';
+// For direct OpenAI calls
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL_ID = 'gpt-4o';
 
@@ -37,10 +40,10 @@ export class AIService { // <-- ADDED export keyword here
         return "No content to summarize.";
       }
 
-      console.log(`AI Summarization: Sending text of length ${text.length} to Claude via OpenRouter...`);
+      console.log(`AI Summarization: Sending text of length ${text.length} to DeepSeek via OpenRouter...`);
 
       const response = await openRouter.chat.completions.create({
-        model: AI_MODEL_ID,
+        model: OPENROUTER_MODEL_ID,
         messages: [
           {
             role: 'system',
@@ -60,7 +63,33 @@ export class AIService { // <-- ADDED export keyword here
       return summary;
     } catch (error) {
       console.error("AI Summarization Error:", error);
-      return "Error generating summary.";
+      
+      // Fallback to Claude if DeepSeek fails
+      try {
+        console.log("AI Summarization: Falling back to Claude...");
+        const response = await openRouter.chat.completions.create({
+          model: CLAUDE_MODEL_ID,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that summarizes texts concisely. Create a brief summary that captures the main points. Be factual and direct.'
+            },
+            {
+              role: 'user',
+              content: `Please summarize the following text in 2-3 sentences:\n\n${text}`
+            }
+          ],
+          max_tokens: 300,
+          temperature: 0.3
+        });
+
+        const summary = response.choices[0]?.message?.content?.trim() || "Unable to generate summary.";
+        console.log("AI Summarization: Summary generated successfully with fallback model.");
+        return summary;
+      } catch (fallbackError) {
+        console.error("AI Summarization Fallback Error:", fallbackError);
+        return "Error generating summary.";
+      }
     }
   }
   
@@ -78,60 +107,106 @@ export class AIService { // <-- ADDED export keyword here
       
       console.log(`AI Sentiment Analysis: Processing text of length ${text.length}`);
       
-      // Prefer using OpenAI if available as it handles sentiment better
-      if (openaiEnabled && openai) {
-        try {
-          console.log("AI Sentiment Analysis: Using OpenAI for sentiment analysis");
-          
-          const response = await openai.chat.completions.create({
-            model: OPENAI_MODEL_ID,
-            messages: [
-              {
-                role: 'system',
-                content: `You are a sentiment analysis expert focusing on business communications. 
-                Analyze the sentiment of emails and messages, categorizing them as one of:
-                - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
-                - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
-                - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
-                - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
-                
-                Your response must be in JSON format with two fields:
-                - sentiment: one of "positive", "neutral", "negative", or "urgent"
-                - confidence: a number from 0 to 1 representing your confidence in the analysis
-                
-                Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.`
-              },
-              {
-                role: 'user',
-                content: text
-              }
-            ],
-            temperature: 0.1,
-            response_format: { type: "json_object" }
-          });
-          
-          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-          const result = JSON.parse(resultText);
-          
-          if (result.sentiment && typeof result.confidence === 'number') {
-            console.log(`AI Sentiment Analysis: OpenAI detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
-            return {
-              sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
-              confidence: result.confidence
-            };
+      // Try DeepSeek model via OpenRouter first
+      try {
+        console.log("AI Sentiment Analysis: Using DeepSeek via OpenRouter for sentiment analysis");
+        
+        const response = await openRouter.chat.completions.create({
+          model: OPENROUTER_MODEL_ID,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a sentiment analysis expert focusing on business communications. 
+              Analyze the sentiment of emails and messages, categorizing them as one of:
+              - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
+              - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
+              - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
+              - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
+              
+              Your response must be in JSON format with two fields:
+              - sentiment: one of "positive", "neutral", "negative", or "urgent"
+              - confidence: a number from 0 to 1 representing your confidence in the analysis
+              
+              Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.`
+            },
+            {
+              role: 'user',
+              content: text
+            }
+          ],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        });
+        
+        const resultText = response.choices[0]?.message?.content?.trim() || "{}";
+        const result = JSON.parse(resultText);
+        
+        if (result.sentiment && typeof result.confidence === 'number') {
+          console.log(`AI Sentiment Analysis: DeepSeek detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
+          return {
+            sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
+            confidence: result.confidence
+          };
+        }
+        throw new Error("Invalid response format from DeepSeek");
+      } catch (deepseekError) {
+        console.error("DeepSeek Sentiment Analysis Error:", deepseekError);
+        
+        // Then try OpenAI if available
+        if (openaiEnabled && openai) {
+          try {
+            console.log("AI Sentiment Analysis: Falling back to OpenAI for sentiment analysis");
+            
+            const response = await openai.chat.completions.create({
+              model: OPENAI_MODEL_ID,
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are a sentiment analysis expert focusing on business communications. 
+                  Analyze the sentiment of emails and messages, categorizing them as one of:
+                  - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
+                  - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
+                  - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
+                  - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
+                  
+                  Your response must be in JSON format with two fields:
+                  - sentiment: one of "positive", "neutral", "negative", or "urgent"
+                  - confidence: a number from 0 to 1 representing your confidence in the analysis
+                  
+                  Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.`
+                },
+                {
+                  role: 'user',
+                  content: text
+                }
+              ],
+              temperature: 0.1,
+              response_format: { type: "json_object" }
+            });
+            
+            const resultText = response.choices[0]?.message?.content?.trim() || "{}";
+            const result = JSON.parse(resultText);
+            
+            if (result.sentiment && typeof result.confidence === 'number') {
+              console.log(`AI Sentiment Analysis: OpenAI detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
+              return {
+                sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
+                confidence: result.confidence
+              };
+            }
+            throw new Error("Invalid response format from OpenAI");
+          } catch (openaiError) {
+            console.error("OpenAI Sentiment Analysis Error:", openaiError);
+            // Fall back to Claude via OpenRouter
           }
-          throw new Error("Invalid response format from OpenAI");
-        } catch (openaiError) {
-          console.error("OpenAI Sentiment Analysis Error:", openaiError);
-          // Fall back to Claude via OpenRouter
         }
       }
       
-      // Fallback to OpenRouter/Claude if OpenAI is unavailable or had an error
-      console.log("AI Sentiment Analysis: Using Claude via OpenRouter for sentiment analysis");
+      // Final fallback to Claude
+      console.log("AI Sentiment Analysis: Falling back to Claude via OpenRouter for sentiment analysis");
       
       const response = await openRouter.chat.completions.create({
-        model: AI_MODEL_ID,
+        model: CLAUDE_MODEL_ID,
         messages: [
           {
             role: 'system',
@@ -159,7 +234,7 @@ export class AIService { // <-- ADDED export keyword here
         const result = JSON.parse(resultText);
         
         if (result.sentiment && typeof result.confidence === 'number') {
-          console.log(`AI Sentiment Analysis: Detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
+          console.log(`AI Sentiment Analysis: Claude detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
           return {
             sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
             confidence: result.confidence
