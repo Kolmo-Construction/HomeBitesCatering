@@ -15,6 +15,7 @@ import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
 import QuestionnaireBuilder from "@/pages/QuestionnaireBuilder";
+import QuestionnaireDocumentation from "@/pages/QuestionnaireDocumentation";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -55,6 +56,7 @@ function AppContent() {
             <Route path="/estimates/:id/view" component={Estimates} />
             <Route path="/estimates/:id/edit" component={Estimates} />
             <Route path="/questionnaire-builder" component={QuestionnaireBuilder} />
+            <Route path="/questionnaire-docs" component={QuestionnaireDocumentation} />
             <Route path="/menu-items" component={MenuItems} />
             <Route path="/menu-items/new" component={MenuItems} />
             <Route path="/menu-items/:id" component={MenuItems} />

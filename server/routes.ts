@@ -1695,10 +1695,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Questionnaire Definitions
   app.post('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
     try {
+      console.log('Creating questionnaire definition with data:', req.body);
       const validatedData = insertQuestionnaireDefinitionSchema.parse(req.body);
+      console.log('Validated data:', validatedData);
       
       // If setting this definition to active, ensure only one definition is active at a time
       if (validatedData.isActive) {
+        console.log('Setting as active definition, deactivating others');
         // Update all other definitions to inactive
         await db
           .update(questionnaireDefinitions)
@@ -1706,11 +1709,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(questionnaireDefinitions.isActive, true));
       }
       
+      console.log('Calling storage.createQuestionnaireDefinition');
       const definition = await storage.createQuestionnaireDefinition(validatedData);
+      console.log('Definition created successfully:', definition);
       
       res.status(201).json(definition);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Validation error:', error.errors);
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
       console.error('Error creating questionnaire definition:', error);
