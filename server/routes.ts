@@ -30,7 +30,9 @@ import {
   questionnaireQuestionOptions, // Table access
   questionnaireMatrixColumns, // Table access
   conditionTriggerOperatorEnum, // For conditional logic trigger operators
-  conditionActionTypeEnum // For conditional logic actions
+  conditionActionTypeEnum, // For conditional logic actions
+  questionnaireDefinitions, // Table access for definitions
+  questionnaireSubmissions // Table access for submissions
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';
