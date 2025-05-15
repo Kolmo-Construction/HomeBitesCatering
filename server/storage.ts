@@ -153,6 +153,14 @@ export interface IStorage {
   createQuestionnaireQuestionOption(option: InsertQuestionnaireQuestionOption): Promise<QuestionnaireQuestionOption>;
   updateQuestionnaireQuestionOption(optionId: number, option: Partial<QuestionnaireQuestionOption>): Promise<QuestionnaireQuestionOption | undefined>;
   deleteQuestionnaireQuestionOption(optionId: number): Promise<boolean>;
+  
+  // Questionnaire Conditional Logic
+  getConditionalLogicRule(ruleId: number): Promise<QuestionnaireConditionalLogic | undefined>;
+  getConditionalLogicRulesByDefinition(definitionId: number): Promise<QuestionnaireConditionalLogic[]>;
+  createConditionalLogicRule(rule: InsertQuestionnaireConditionalLogic): Promise<QuestionnaireConditionalLogic>;
+  updateConditionalLogicRule(ruleId: number, rule: Partial<QuestionnaireConditionalLogic>): Promise<QuestionnaireConditionalLogic | undefined>;
+  deleteConditionalLogicRule(ruleId: number): Promise<boolean>;
+  questionKeyExistsInDefinition(definitionId: number, questionKey: string): Promise<boolean>;
 }
 
 // DatabaseStorage implementation using PostgreSQL

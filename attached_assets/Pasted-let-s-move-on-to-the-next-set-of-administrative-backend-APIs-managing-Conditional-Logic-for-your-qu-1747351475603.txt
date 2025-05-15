@@ -1,0 +1,93 @@
+let's move on to the next set of administrative backend APIs: managing Conditional Logic for your questionnaires.
+
+These rules are what make your forms dynamic and user-friendly from a client's perspective (e.g., "If the user selects 'Yes' for 'Attending Dinner?', then show the 'Dietary Restrictions' question"). For the admin, managing these rules needs to be as intuitive as possible.
+
+The conditional logic rules will be associated with a specific QuestionnaireDefinition, as the questionKeys used in conditions are tied to questions within that definition.
+
+Base Path for Conditional Logic Endpoints:
+
+All routes will be prefixed under a specific questionnaire definition:
+/api/admin/questionnaires/definitions/:definitionId/conditional-logic
+
+1. Create a New Conditional Logic Rule
+
+HTTP Method & Route: POST /api/admin/questionnaires/definitions/:definitionId/conditional-logic
+Handler Name Suggestion: handleCreateConditionalLogicRule(req, res)
+Path Parameters:
+definitionId: (integer) The ID of the QuestionnaireDefinition this rule belongs to.
+Request Body (JSON):
+triggerQuestionKey: (string, required) The questionKey of the question that triggers this condition. Must exist within the specified definitionId.
+triggerCondition: (enum string, required, from conditionTriggerOperatorEnum) The operator to evaluate the trigger question's answer (e.g., 'equals', 'is_selected', 'contains').
+triggerValue: (string, optional, depends on triggerCondition) The value to compare against the trigger question's answer. For 'is_selected'/'is_not_selected' with checkboxes/radio, this would be the optionValue. For 'is_empty'/'is_not_empty', this might be omitted.
+actionType: (enum string, required, from conditionActionTypeEnum) The action to perform if the condition is met (e.g., 'show_question', 'hide_question', 'skip_to_page', 'require_question').
+targetQuestionKey: (string, optional) The questionKey of the question to be affected by the action. Required if actionType targets a question. Must exist within the specified definitionId.
+targetPageId: (integer, optional) The ID of the page to skip to. Required if actionType is 'skip_to_page'. Must exist within the specified definitionId.
+targetOptionValue: (string, optional) The specific option value to target for actions like 'enable_option' or 'disable_option' (if we implement these more granular actions).
+Zod Schema Suggestion: ConditionalLogicRuleCreateSchema. This schema will need to perform several validations:
+Ensure definitionId is valid.
+Verify that triggerQuestionKey refers to an existing question within this definitionId.
+If targetQuestionKey is provided, verify it refers to an existing question within this definitionId.
+If targetPageId is provided, verify it refers to an existing page within this definitionId.
+Ensure logical consistency between actionType and the provided target fields (e.g., actionType: 'show_question' requires targetQuestionKey).
+Response (Success - 201 Created):
+The newly created conditional logic rule object (matching the questionnaireConditionalLogic table structure).
+Key Logic:
+Validate definitionId and ensure the QuestionnaireDefinition exists.
+Perform thorough validation of the request body using the Zod schema, which may involve database lookups to confirm existence of triggerQuestionKey, targetQuestionKey, and targetPageId within the context of the definitionId.
+Insert a new record into the questionnaireConditionalLogic table.
+2. List All Conditional Logic Rules for a Definition
+
+HTTP Method & Route: GET /api/admin/questionnaires/definitions/:definitionId/conditional-logic
+Handler Name Suggestion: handleListConditionalLogicRules(req, res)
+Path Parameters:
+definitionId: (integer) The ID of the QuestionnaireDefinition.
+Response (Success - 200 OK):
+An array of conditional logic rule objects associated with the specified definitionId.
+Key Logic:
+Validate definitionId.
+Query the questionnaireConditionalLogic table, filtering by definitionId.
+3. Get a Single Conditional Logic Rule's Details
+
+HTTP Method & Route: GET /api/admin/questionnaires/conditional-logic/:ruleId
+(Using ruleId as it's the primary key for the questionnaireConditionalLogic table.)
+Handler Name Suggestion: handleGetConditionalLogicRule(req, res)
+Path Parameters:
+ruleId: (integer) The ID of the conditional logic rule.
+Response (Success - 200 OK):
+A single conditional logic rule object.
+Key Logic:
+Validate ruleId.
+Fetch the specific rule from the questionnaireConditionalLogic table.
+4. Update a Conditional Logic Rule
+
+HTTP Method & Route: PUT /api/admin/questionnaires/conditional-logic/:ruleId
+Handler Name Suggestion: handleUpdateConditionalLogicRule(req, res)
+Path Parameters:
+ruleId: (integer) The ID of the rule to update.
+Request Body (JSON):
+Same structure as the creation payload, but all fields are optional. The definitionId associated with the rule cannot be changed (as rules are intrinsically linked to the definition they were created for).
+Zod Schema Suggestion: ConditionalLogicRuleUpdateSchema. Similar complex validation as the create schema for the fields being updated.
+Response (Success - 200 OK):
+The updated conditional logic rule object.
+Key Logic:
+Validate ruleId and ensure the rule exists.
+Fetch the existing rule to confirm its definitionId (as context for validating any new questionKeys or pageIds).
+Perform thorough validation of the provided fields against existing questions/pages within that original definitionId.
+Update the record in the questionnaireConditionalLogic table.
+5. Delete a Conditional Logic Rule
+
+HTTP Method & Route: DELETE /api/admin/questionnaires/conditional-logic/:ruleId
+Handler Name Suggestion: handleDeleteConditionalLogicRule(req, res)
+Path Parameters:
+ruleId: (integer) The ID of the rule to delete.
+Response (Success - 200 OK or 204 No Content):
+A success message.
+Key Logic:
+Validate ruleId.
+Delete the rule from the questionnaireConditionalLogic table.
+User-Friendliness & Implementation Notes:
+
+Data Integrity: The backend validation for the existence and correct association of triggerQuestionKey, targetQuestionKey, and targetPageId within the definition is paramount. Your frontend UI will ideally fetch lists of available question keys and page titles for the current definition to populate dropdowns, minimizing manual input errors by the admin.
+Uniqueness of questionKey: The system relies heavily on questionKey being globally unique (or at least unique within a definition) for these rules to function correctly.
+Complexity: The service layer handling these rules will need to carefully manage lookups and validations to ensure that rules are always consistent with the questionnaire structure.
+With these endpoints for conditional logic, the core administrative backend for defining the questionnaire's structure (definitions, pages, questions, and now logic) will be quite comprehensive.
