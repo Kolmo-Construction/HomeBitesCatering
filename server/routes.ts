@@ -501,9 +501,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client routes
   app.get('/api/clients', isAuthenticated, async (req, res) => {
     try {
+      console.log('Attempting to list all clients');
       const clients = await storage.listClients();
+      console.log(`Successfully retrieved ${clients.length} clients`);
       res.json(clients);
     } catch (error) {
+      console.error('Error getting clients:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
