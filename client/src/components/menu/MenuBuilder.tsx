@@ -54,6 +54,27 @@ interface MenuBuilderProps {
   isEditing?: boolean;
 }
 
+// Format category display name (for custom categories)
+const getCategoryDisplayName = (categoryKey: string): string => {
+  const categoryLabels: Record<string, string> = {
+    appetizer: "Appetizers",
+    entree: "Main Courses",
+    side: "Sides",
+    dessert: "Desserts",
+    beverage: "Beverages"
+  };
+  
+  if (categoryLabels[categoryKey]) {
+    return categoryLabels[categoryKey];
+  }
+  
+  // For custom categories, capitalize first letter of each word
+  return categoryKey
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 // Sortable item component
 function SortableMenuItem({ 
   item, 
@@ -339,27 +360,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     return acc;
   }, {});
   
-  // Category labels - with a helper function to format custom categories
-  const categoryLabels: Record<string, string> = {
-    appetizer: "Appetizers",
-    entree: "Main Courses",
-    side: "Sides",
-    dessert: "Desserts",
-    beverage: "Beverages"
-  };
-  
-  // Format category display name (for custom categories)
-  const getCategoryDisplayName = (categoryKey: string): string => {
-    if (categoryLabels[categoryKey]) {
-      return categoryLabels[categoryKey];
-    }
-    
-    // For custom categories, capitalize first letter of each word
-    return categoryKey
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
+  // Use the getCategoryDisplayName function defined above
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
