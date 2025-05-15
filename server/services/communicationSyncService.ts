@@ -327,6 +327,29 @@ export class CommunicationSyncService {
     // Determine the contact email to search/associate with
     let contactEmailToSearch = direction === 'incoming' ? fromEmail : (toEmails.find(email => email !== this.targetEmail.toLowerCase()) || ccEmails.find(email => email !== this.targetEmail.toLowerCase()));
 
+    // Special case for projects@kolmo.io - we need to be smarter about matching
+    const isKolmoEmail = fromEmail === 'projects@kolmo.io' || toEmails.includes('projects@kolmo.io');
+    if (isKolmoEmail) {
+      console.log(`CommunicationSyncService: Special case - projects@kolmo.io email detected`);
+      
+      // Look for additional clues to match the opportunity/client
+      const subjectLower = subject.toLowerCase();
+      
+      // Extract any potential reference numbers or client names from the subject
+      const refNumberMatch = subjectLower.match(/ref\s*[#:]?\s*(\w+)/i) || 
+                           subjectLower.match(/project\s*[#:]?\s*(\w+)/i) ||
+                           subjectLower.match(/quote\s*[#:]?\s*(\w+)/i);
+      
+      if (refNumberMatch && refNumberMatch[1]) {
+        console.log(`CommunicationSyncService: Detected reference number in subject: ${refNumberMatch[1]}`);
+        // We might use this reference number for better matching in future updates
+      }
+      
+      // When dealing with projects@kolmo.io, always use that as the search email
+      // regardless of direction since it's a shared inbox
+      contactEmailToSearch = 'projects@kolmo.io';
+    }
+
     if (!contactEmailToSearch) {
       console.warn(`CommunicationSyncService: Could not determine a contact email to search for opportunities/clients. Skipping.`);
       return;
@@ -340,10 +363,22 @@ export class CommunicationSyncService {
       // First, specific check for projects@kolmo.io since we know it's important
       if (contactEmailToSearch === 'projects@kolmo.io') {
         console.log(`CommunicationSyncService: Special handling for projects@kolmo.io email`);
+        
+        // For projects@kolmo.io, we need to find ALL opportunities with this email
+        // and potentially create communications for each
         const opportunitiesByEmail = await db.select().from(opportunities).where(eq(opportunities.email, contactEmailToSearch));
+        
         if (opportunitiesByEmail.length > 0) {
+          // Log how many we found for debugging
+          console.log(`CommunicationSyncService: Found ${opportunitiesByEmail.length} opportunities with email projects@kolmo.io`);
+          
+          // Match to first opportunity by default (in case there are multiple)
+          // We'll address multi-opportunity handling in a more comprehensive solution later
           opportunityId = opportunitiesByEmail[0].id;
-          console.log(`CommunicationSyncService: Found opportunity #${opportunityId} with email projects@kolmo.io`);
+          console.log(`CommunicationSyncService: Matched to opportunity #${opportunityId} with email projects@kolmo.io`);
+          
+          // TODO: In a future enhancement, we could create a copy of this communication 
+          // for each opportunity that uses projects@kolmo.io
         }
       }
       
