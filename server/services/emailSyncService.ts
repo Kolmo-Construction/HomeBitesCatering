@@ -415,6 +415,8 @@ export class GmailSyncService {
       targetEmailConfigured: !!this.targetEmail,
       processingInterval: this.processingInterval,
       aiSummaryEnabled: this.aiSummaryEnabled,
+      lastSyncTimestamp: this.lastSyncTimestamp,
+      lastSyncDate: this.lastSyncTimestamp ? new Date(this.lastSyncTimestamp * 1000).toISOString() : null,
     };
   }
 
@@ -581,12 +583,25 @@ export class GmailSyncService {
         return;
     }
 
-    console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching new emails for ${this.targetEmail}...`);
+    // Prepare a more targeted query if we have a last sync timestamp
+    let query = 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io)';
+    
+    if (this.lastSyncTimestamp) {
+      const lastSyncDate = new Date(this.lastSyncTimestamp * 1000);
+      // Format the date for Gmail's search syntax: YYYY/MM/DD
+      const formattedDate = `${lastSyncDate.getFullYear()}/${(lastSyncDate.getMonth() + 1).toString().padStart(2, '0')}/${lastSyncDate.getDate().toString().padStart(2, '0')}`;
+      // Add an after:<date> filter to only get emails newer than last sync
+      query += ` after:${formattedDate}`;
+      
+      console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching new emails for ${this.targetEmail} since ${lastSyncDate.toISOString()}...`);
+    } else {
+      console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching all new unread emails for ${this.targetEmail} (first sync)...`);
+    }
 
     try {
       const response = await this.gmail.users.messages.list({
         userId: 'me', // 'me' refers to the authenticated user
-        q: 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io)', // Filter for emails from specified senders
+        q: query, // Use our constructed query with potential date filter
         maxResults: 10, // Process a few at a time
       });
 
@@ -673,7 +688,9 @@ export class GmailSyncService {
       }
       // Other API errors might warrant alerting but don't necessarily stop the service immediately
     } finally {
-        console.log(`[${new Date().toISOString()}] GmailSyncService: Finished email fetch cycle for ${this.targetEmail}.`);
+        // Update the lastSyncTimestamp to the current time
+        this.lastSyncTimestamp = Math.floor(Date.now() / 1000); // Convert to seconds (Unix timestamp)
+        console.log(`[${new Date().toISOString()}] GmailSyncService: Finished email fetch cycle for ${this.targetEmail}. Next sync will only fetch emails after this time.`);
     }
   }
 
