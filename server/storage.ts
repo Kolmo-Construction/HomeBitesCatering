@@ -618,7 +618,11 @@ export class DatabaseStorage implements IStorage {
       receivedAt: data.receivedAt || new Date()
     };
     
-    console.log(`Storage: Creating raw lead with receivedAt date: ${insertData.receivedAt}`);
+    // Add detailed logging for date tracking
+    console.log(`Storage: Creating raw lead with receivedAt date:`);
+    console.log(`  - Original receivedAt from data: ${data.receivedAt ? data.receivedAt.toISOString() : 'undefined'}`);
+    console.log(`  - Final receivedAt being stored: ${insertData.receivedAt.toISOString()}`);
+    console.log(`  - Current server time: ${new Date().toISOString()}`);
     
     const [newRawLead] = await db
       .insert(rawLeads)

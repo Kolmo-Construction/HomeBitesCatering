@@ -845,7 +845,12 @@ export class GmailSyncService {
 
     // messageId is now passed as an argument
     const emailDate = parsedMail.date || new Date();
-    console.log(`GmailSyncService: Email Date from headers: ${emailDate.toISOString()} (for message ID: ${messageId})`);
+    const headerDate = parsedMail.headers.get('date') as string;
+    
+    console.log(`GmailSyncService: Email Date processing:`);
+    console.log(`  - Original header date string: "${headerDate}"`);
+    console.log(`  - Parsed Date object: ${emailDate.toISOString()}`);
+    console.log(`  - For message ID: ${messageId}`);
 
     let bodyText = parsedMail.text || '';
     if (!bodyText && parsedMail.html) {

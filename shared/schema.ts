@@ -299,7 +299,7 @@ export const rawLeads = pgTable("raw_leads", {
   extractedEmail: text("extracted_email"),
   extractedPhone: text("extracted_phone"),
   eventSummary: text("event_summary"), // Brief summary/keywords from raw_data
-  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  receivedAt: timestamp("received_at").notNull(), // Removed defaultNow() so we can set this to the email's original date
   status: rawLeadStatusEnum("status").default('new').notNull(),
   // This field links a raw lead to the opportunity created from it.
   createdOpportunityId: integer("created_opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
