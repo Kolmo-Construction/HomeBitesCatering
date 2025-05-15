@@ -1,10 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db"; // For direct database access
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import { eq } from "drizzle-orm"; // For equality operations
 import {
   insertUserSchema, 
   insertOpportunitySchema, 
@@ -21,7 +23,11 @@ import {
   insertQuestionnaireDefinitionSchema, // For questionnaire definition management
   insertQuestionnaireQuestionSchema, // For questionnaire question management
   insertQuestionnaireQuestionOptionSchema, // For questionnaire question options
-  questionTypeEnum // For question type validation
+  insertQuestionnaireMatrixColumnSchema, // For matrix columns
+  questionTypeEnum, // For question type validation
+  questionnaireQuestions, // Table access
+  questionnaireQuestionOptions, // Table access
+  questionnaireMatrixColumns // Table access
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';
@@ -2007,8 +2013,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Questionnaire page not found' });
       }
       
-      const questions = await storage.getQuestionnaireQuestionsByPage(pageId);
-      res.json(questions);
+      // Get questions for the page
+      const questions = await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.pageId, pageId))
+        .orderBy(questionnaireQuestions.order);
+      
+      // For each question, get its options and matrix columns
+      const questionsWithRelations = await Promise.all(questions.map(async (question) => {
+        // Get options
+        const options = await db
+          .select()
+          .from(questionnaireQuestionOptions)
+          .where(eq(questionnaireQuestionOptions.questionId, question.id))
+          .orderBy(questionnaireQuestionOptions.order);
+        
+        // Get matrix columns
+        const matrixColumns = await db
+          .select()
+          .from(questionnaireMatrixColumns)
+          .where(eq(questionnaireMatrixColumns.questionId, question.id))
+          .orderBy(questionnaireMatrixColumns.order);
+        
+        return {
+          ...question,
+          options,
+          matrixColumns
+        };
+      }));
+      
+      res.json(questionsWithRelations);
     } catch (error) {
       console.error('Error listing questionnaire questions:', error);
       res.status(500).json({ message: 'Server error listing questionnaire questions' });
@@ -2023,12 +2058,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid question ID' });
       }
       
-      const question = await storage.getQuestionnaireQuestion(questionId);
+      // Fetch the question
+      const [question] = await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.id, questionId));
+      
       if (!question) {
         return res.status(404).json({ message: 'Questionnaire question not found' });
       }
       
-      res.json(question);
+      // Fetch options for this question
+      const options = await db
+        .select()
+        .from(questionnaireQuestionOptions)
+        .where(eq(questionnaireQuestionOptions.questionId, questionId))
+        .orderBy(questionnaireQuestionOptions.order);
+      
+      // Fetch matrix columns for this question
+      const matrixColumns = await db
+        .select()
+        .from(questionnaireMatrixColumns)
+        .where(eq(questionnaireMatrixColumns.questionId, questionId))
+        .orderBy(questionnaireMatrixColumns.order);
+      
+      // Return the question with its relations
+      const questionWithRelations = {
+        ...question,
+        options,
+        matrixColumns
+      };
+      
+      res.json(questionWithRelations);
     } catch (error) {
       console.error('Error fetching questionnaire question:', error);
       res.status(500).json({ message: 'Server error fetching questionnaire question' });
@@ -2044,17 +2105,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if the question exists
-      const question = await storage.getQuestionnaireQuestion(questionId);
-      if (!question) {
+      const [existingQuestion] = await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.id, questionId));
+      
+      if (!existingQuestion) {
         return res.status(404).json({ message: 'Questionnaire question not found' });
       }
       
       // Validate the request body
       const validatedData = questionnaireQuestionUpdateSchema.parse(req.body);
       
-      // Update the question
-      const updatedQuestion = await storage.updateQuestionnaireQuestion(questionId, validatedData);
-      res.json(updatedQuestion);
+      // Check questionKey uniqueness if it's being updated
+      if (validatedData.questionKey && validatedData.questionKey !== existingQuestion.questionKey) {
+        const [existingQuestionWithKey] = await db
+          .select()
+          .from(questionnaireQuestions)
+          .where(eq(questionnaireQuestions.questionKey, validatedData.questionKey));
+        
+        if (existingQuestionWithKey) {
+          return res.status(400).json({ 
+            message: 'Validation error', 
+            errors: [{ 
+              path: ['questionKey'], 
+              message: 'Question key must be globally unique',
+              code: 'custom' 
+            }]
+          });
+        }
+      }
+      
+      // Extract options and matrixColumns from the validated data
+      const { options, matrixColumns, ...questionData } = validatedData;
+      
+      // Update in a transaction to ensure data consistency
+      const questionWithRelations: any = {};
+      
+      await db.transaction(async (tx) => {
+        // 1. Update the base question data
+        const [updatedQuestion] = await tx
+          .update(questionnaireQuestions)
+          .set({ 
+            ...questionData,
+            updatedAt: new Date()
+          })
+          .where(eq(questionnaireQuestions.id, questionId))
+          .returning();
+        
+        questionWithRelations.question = updatedQuestion;
+        
+        // 2. Update options if provided
+        if (options) {
+          // First delete existing options (easier than trying to update)
+          await tx
+            .delete(questionnaireQuestionOptions)
+            .where(eq(questionnaireQuestionOptions.questionId, questionId));
+          
+          if (options.length > 0) {
+            // Then insert the new options
+            const optionsToInsert = options.map(option => ({
+              ...option,
+              questionId
+            }));
+            
+            const createdOptions = await tx
+              .insert(questionnaireQuestionOptions)
+              .values(optionsToInsert)
+              .returning();
+            
+            questionWithRelations.options = createdOptions;
+          } else {
+            questionWithRelations.options = [];
+          }
+        } else {
+          // If options not in request, fetch existing ones
+          const existingOptions = await tx
+            .select()
+            .from(questionnaireQuestionOptions)
+            .where(eq(questionnaireQuestionOptions.questionId, questionId))
+            .orderBy(questionnaireQuestionOptions.order);
+          
+          questionWithRelations.options = existingOptions;
+        }
+        
+        // 3. Update matrix columns if provided
+        if (matrixColumns) {
+          // First delete existing matrix columns
+          await tx
+            .delete(questionnaireMatrixColumns)
+            .where(eq(questionnaireMatrixColumns.questionId, questionId));
+          
+          if (matrixColumns.length > 0) {
+            // Then insert the new matrix columns
+            const columnsToInsert = matrixColumns.map(column => ({
+              ...column,
+              questionId
+            }));
+            
+            const createdColumns = await tx
+              .insert(questionnaireMatrixColumns)
+              .values(columnsToInsert)
+              .returning();
+            
+            questionWithRelations.matrixColumns = createdColumns;
+          } else {
+            questionWithRelations.matrixColumns = [];
+          }
+        } else {
+          // If matrix columns not in request, fetch existing ones
+          const existingColumns = await tx
+            .select()
+            .from(questionnaireMatrixColumns)
+            .where(eq(questionnaireMatrixColumns.questionId, questionId))
+            .orderBy(questionnaireMatrixColumns.order);
+          
+          questionWithRelations.matrixColumns = existingColumns;
+        }
+      });
+      
+      res.json(questionWithRelations);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
