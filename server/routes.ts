@@ -1189,6 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               scope: [
                 'https://www.googleapis.com/auth/gmail.readonly',
                 'https://www.googleapis.com/auth/gmail.modify',
+                'https://www.googleapis.com/auth/gmail.labels',
                 'https://www.googleapis.com/auth/userinfo.email',
                 'https://www.googleapis.com/auth/userinfo.profile'
               ],
@@ -1232,6 +1233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get the granted scopes for display
         const grantedScopes = GmailSyncService.getOAuthClient().credentials.scope || '';
         const hasModifyScope = grantedScopes.includes('https://www.googleapis.com/auth/gmail.modify');
+        const hasLabelsScope = grantedScopes.includes('https://www.googleapis.com/auth/gmail.labels');
         
         res.send(`
           <html>
