@@ -328,7 +328,9 @@ ${fullContent}`;
             timestamp: new Date().toISOString()
           }
         };
-      } catch (jsonParseError) {
+      } catch (error) {
+        // Properly type the error for TypeScript
+        const jsonParseError = error instanceof Error ? error : new Error('Unknown JSON parsing error');
         console.error("Lead Data Extraction: JSON parsing error:", jsonParseError);
         console.error("Lead Data Extraction: Raw AI response:", resultText);
 
