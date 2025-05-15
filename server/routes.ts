@@ -19,6 +19,8 @@ import {
   insertRawLeadSchema            // For raw leads management
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
+import { LeadGenerationService } from './services/leadGenerationService';
+import { CommunicationSyncService } from './services/communicationSyncService';
 
 const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
 

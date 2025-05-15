@@ -298,9 +298,9 @@ export class CommunicationSyncService {
     let bodyText = parsedMail.text || '';
     if (!bodyText && parsedMail.html) {
       bodyText = parsedMail.html
-        .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/g, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/g, '')
         .replace(/<[^>]+>/g, ' ')
-        .replace(/\\s+/g, ' ').trim();
+        .replace(/\s+/g, ' ').trim();
     }
     if (!bodyText) bodyText = '(No Content)';
 
