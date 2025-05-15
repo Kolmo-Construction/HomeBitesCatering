@@ -124,7 +124,8 @@ export interface IStorage {
   getEmailsByService(service: string, limit?: number): Promise<ProcessedEmail[]>;
   
   // Questionnaire management methods
-  // Definition methods would be implemented separately
+  // Questionnaire Definitions
+  getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined>;
   
   // Questionnaire Pages
   getQuestionnairePage(pageId: number): Promise<QuestionnairePage | undefined>;
@@ -845,6 +846,22 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error fetching processed emails for service ${service}:`, error);
       return [];
+    }
+  }
+
+  // Questionnaire Definitions Implementation
+  
+  async getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined> {
+    try {
+      const [definition] = await db
+        .select()
+        .from(questionnaireDefinitions)
+        .where(eq(questionnaireDefinitions.id, definitionId));
+      
+      return definition;
+    } catch (error) {
+      console.error(`Error fetching questionnaire definition ${definitionId}:`, error);
+      return undefined;
     }
   }
 

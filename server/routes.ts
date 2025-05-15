@@ -16,13 +16,30 @@ import {
   insertContactIdentifierSchema, // New
   insertCommunicationSchema,     // New
   opportunityPriorityEnum,       // For priority filtering
-  insertRawLeadSchema            // For raw leads management
+  insertRawLeadSchema,           // For raw leads management
+  insertQuestionnairePageSchema, // For questionnaire page management
+  insertQuestionnaireDefinitionSchema // For questionnaire definition management
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
 
 const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
+
+// Validation schemas for questionnaire page API endpoints
+const questionnairePageCreateSchema = insertQuestionnairePageSchema.extend({
+  title: z.string().min(3, { message: "Title must be at least 3 characters long" }),
+  order: z.number().int().nonnegative({ message: "Order must be a non-negative integer" })
+});
+
+const questionnairePageUpdateSchema = z.object({
+  title: z.string().min(3, { message: "Title must be at least 3 characters long" }).optional(),
+  order: z.number().int().nonnegative({ message: "Order must be a non-negative integer" }).optional()
+});
+
+const questionnairePagesReorderSchema = z.object({
+  pageIds: z.array(z.number().int().positive())
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Email sync service is initialized in server/index.ts
@@ -1576,6 +1593,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       aiEnabled: process.env.OPENAI_API_KEY ? true : false
     });
+  });
+
+  // ===== Questionnaire Management Routes =====
+  
+  // 1. Create a New Page for a Definition
+  app.post('/api/admin/questionnaires/definitions/:definitionId/pages', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID' });
+      }
+      
+      // Check if the questionnaire definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ message: 'Questionnaire definition not found' });
+      }
+
+      // Validate the request body
+      const validatedData = questionnairePageCreateSchema.parse(req.body);
+      
+      // Create the page
+      const newPage = await storage.createQuestionnairePage({
+        ...validatedData,
+        definitionId
+      });
+      
+      res.status(201).json(newPage);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating questionnaire page:', error);
+      res.status(500).json({ message: 'Server error creating questionnaire page' });
+    }
+  });
+
+  // 2. List All Pages for a Definition
+  app.get('/api/admin/questionnaires/definitions/:definitionId/pages', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID' });
+      }
+      
+      // Check if the questionnaire definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ message: 'Questionnaire definition not found' });
+      }
+      
+      const pages = await storage.getQuestionnairePagesByDefinition(definitionId);
+      res.json(pages);
+    } catch (error) {
+      console.error('Error listing questionnaire pages:', error);
+      res.status(500).json({ message: 'Server error listing questionnaire pages' });
+    }
+  });
+
+  // 3. Get a Single Page Details
+  app.get('/api/admin/questionnaires/definitions/:definitionId/pages/:pageId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      const pageId = Number(req.params.pageId);
+      
+      if (isNaN(definitionId) || definitionId <= 0 || isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID or page ID' });
+      }
+      
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      // Verify the page belongs to the specified definition
+      if (page.definitionId !== definitionId) {
+        return res.status(404).json({ 
+          message: 'Questionnaire page not found for the specified definition' 
+        });
+      }
+      
+      res.json(page);
+    } catch (error) {
+      console.error('Error getting questionnaire page:', error);
+      res.status(500).json({ message: 'Server error getting questionnaire page' });
+    }
+  });
+
+  // 4. Update a Page
+  app.put('/api/admin/questionnaires/definitions/:definitionId/pages/:pageId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      const pageId = Number(req.params.pageId);
+      
+      if (isNaN(definitionId) || definitionId <= 0 || isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID or page ID' });
+      }
+      
+      // Validate the request body
+      const validatedData = questionnairePageUpdateSchema.parse(req.body);
+      
+      // Check if the page exists and belongs to the definition
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      if (page.definitionId !== definitionId) {
+        return res.status(404).json({ 
+          message: 'Questionnaire page not found for the specified definition' 
+        });
+      }
+      
+      // Update the page
+      const updatedPage = await storage.updateQuestionnairePage(pageId, validatedData);
+      res.json(updatedPage);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error updating questionnaire page:', error);
+      res.status(500).json({ message: 'Server error updating questionnaire page' });
+    }
+  });
+
+  // 5. Delete a Page
+  app.delete('/api/admin/questionnaires/definitions/:definitionId/pages/:pageId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      const pageId = Number(req.params.pageId);
+      
+      if (isNaN(definitionId) || definitionId <= 0 || isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID or page ID' });
+      }
+      
+      // Check if the page exists and belongs to the definition
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      if (page.definitionId !== definitionId) {
+        return res.status(404).json({ 
+          message: 'Questionnaire page not found for the specified definition' 
+        });
+      }
+      
+      // Delete the page (and its associated questions, options, etc. via cascade delete)
+      const deleted = await storage.deleteQuestionnairePage(pageId);
+      if (deleted) {
+        res.json({ message: 'Page deleted successfully' });
+      } else {
+        res.status(500).json({ message: 'Failed to delete page' });
+      }
+    } catch (error) {
+      console.error('Error deleting questionnaire page:', error);
+      res.status(500).json({ message: 'Server error deleting questionnaire page' });
+    }
+  });
+
+  // 6. Batch Update Page Order for a Definition
+  app.patch('/api/admin/questionnaires/definitions/:definitionId/pages/reorder', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID' });
+      }
+      
+      // Validate the request body
+      const { pageIds } = questionnairePagesReorderSchema.parse(req.body);
+      
+      // Check if the definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ message: 'Questionnaire definition not found' });
+      }
+      
+      // Get all existing pages for the definition
+      const existingPages = await storage.getQuestionnairePagesByDefinition(definitionId);
+      const existingPageIds = existingPages.map(page => page.id);
+      
+      // Verify that the provided pageIds match all existing pages
+      const allPagesIncluded = pageIds.length === existingPageIds.length && 
+        pageIds.every(id => existingPageIds.includes(id));
+      
+      if (!allPagesIncluded) {
+        return res.status(400).json({ 
+          message: 'The provided page IDs do not match the existing pages for this definition' 
+        });
+      }
+      
+      // Reorder the pages
+      const updatedPages = await storage.reorderQuestionnairePages(definitionId, pageIds);
+      res.json(updatedPages);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error reordering questionnaire pages:', error);
+      res.status(500).json({ message: 'Server error reordering questionnaire pages' });
+    }
   });
 
   // Create HTTP server
