@@ -12,7 +12,8 @@ import {
   BarChart2,
   Settings,
   ExternalLink,
-  Inbox
+  Inbox,
+  FileQuestion
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -28,6 +29,7 @@ export default function Sidebar() {
     { name: "Menus", href: "/menus", icon: ClipboardList },
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },
+    { name: "Questionnaires", href: "/questionnaire-builder", icon: FileQuestion },
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
