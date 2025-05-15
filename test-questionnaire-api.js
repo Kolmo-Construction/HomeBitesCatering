@@ -251,8 +251,8 @@ async function runTests() {
         testPageId = testPageResponse.data.id;
         console.log(`Created test page with ID: ${testPageId}`);
         
-        // 1. Test creating a question
-        console.log('\n=== Test creating a question ===');
+        // 1. Test creating a simple question
+        console.log('\n=== Test creating a simple question ===');
         const questionData = {
           questionText: 'What is your name?',
           questionKey: 'name',
@@ -262,6 +262,95 @@ async function runTests() {
           helpText: 'Please enter your full name'
         };
         
+        // 1.1 Test creating a complex question with options
+        console.log('\n=== Test creating a complex question with options ===');
+        const complexQuestionData = {
+          questionText: 'What is your preferred meal type?',
+          questionKey: 'meal_preference',
+          questionType: 'radio',
+          isRequired: true,
+          order: 1,
+          helpText: 'Please select your preferred meal type',
+          options: [
+            {
+              optionText: 'Vegetarian',
+              optionValue: 'vegetarian',
+              order: 0
+            },
+            {
+              optionText: 'Vegan',
+              optionValue: 'vegan',
+              order: 1
+            },
+            {
+              optionText: 'Meat',
+              optionValue: 'meat',
+              order: 2
+            },
+            {
+              optionText: 'No Preference',
+              optionValue: 'none',
+              order: 3
+            }
+          ]
+        };
+        
+        // 1.2 Test creating a matrix question
+        console.log('\n=== Test creating a matrix question ===');
+        const matrixQuestionData = {
+          questionText: 'Rate the following aspects of our service:',
+          questionKey: 'service_rating',
+          questionType: 'matrix_single',
+          isRequired: true,
+          order: 2,
+          helpText: 'Please rate each aspect from 1 to 5',
+          options: [
+            {
+              optionText: 'Food Quality',
+              optionValue: 'food_quality',
+              order: 0
+            },
+            {
+              optionText: 'Service Speed',
+              optionValue: 'service_speed',
+              order: 1
+            },
+            {
+              optionText: 'Staff Friendliness',
+              optionValue: 'staff_friendliness',
+              order: 2
+            }
+          ],
+          matrixColumns: [
+            {
+              columnText: '1 - Poor',
+              columnValue: '1',
+              order: 0
+            },
+            {
+              columnText: '2 - Fair',
+              columnValue: '2',
+              order: 1
+            },
+            {
+              columnText: '3 - Good',
+              columnValue: '3',
+              order: 2
+            },
+            {
+              columnText: '4 - Very Good',
+              columnValue: '4',
+              order: 3
+            },
+            {
+              columnText: '5 - Excellent',
+              columnValue: '5',
+              order: 4
+            }
+          ]
+        };
+        
+        // Create simple question
         const createQuestionResponse = await makeRequest(
           'POST',
           `/api/admin/questionnaires/pages/${testPageId}/questions`,
@@ -271,9 +360,29 @@ async function runTests() {
         console.log(`Create Question Response (${createQuestionResponse.statusCode}):`, createQuestionResponse.data);
         
         let questionId = null;
-        if (createQuestionResponse.statusCode === 201 && createQuestionResponse.data && createQuestionResponse.data.id) {
-          questionId = createQuestionResponse.data.id;
+        if (createQuestionResponse.statusCode === 201 && createQuestionResponse.data && createQuestionResponse.data.question && createQuestionResponse.data.question.id) {
+          questionId = createQuestionResponse.data.question.id;
           console.log(`Created question with ID: ${questionId}`);
+          
+          // Now create complex question with options
+          console.log('\n=== Creating a complex question with options ===');
+          const createComplexQuestionResponse = await makeRequest(
+            'POST',
+            `/api/admin/questionnaires/pages/${testPageId}/questions`,
+            complexQuestionData
+          );
+          
+          console.log(`Create Complex Question Response (${createComplexQuestionResponse.statusCode}):`, createComplexQuestionResponse.data);
+          
+          // Now create matrix question
+          console.log('\n=== Creating a matrix question ===');
+          const createMatrixQuestionResponse = await makeRequest(
+            'POST',
+            `/api/admin/questionnaires/pages/${testPageId}/questions`,
+            matrixQuestionData
+          );
+          
+          console.log(`Create Matrix Question Response (${createMatrixQuestionResponse.statusCode}):`, createMatrixQuestionResponse.data);
           
           // 2. Test listing questions for a page
           console.log('\n=== Test listing questions for a page ===');
