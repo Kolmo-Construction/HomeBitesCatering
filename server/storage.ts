@@ -690,18 +690,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listRawLeads(filters?: { status?: string; source?: string }): Promise<RawLead[]> {
-    let query = db.select().from(rawLeads);
+    // We'll compile conditions first, then apply them
+    const conditions = [];
     
-    if (filters) {
-      if (filters.status) {
-        query = query.where(eq(rawLeads.status, filters.status as any));
-      }
-      if (filters.source) {
-        query = query.where(eq(rawLeads.source, filters.source));
-      }
+    // Add conditions based on filters
+    if (filters?.status) {
+      conditions.push(eq(rawLeads.status, filters.status as any));
     }
     
-    return query.orderBy(desc(rawLeads.receivedAt)); // Order by most recently received first
+    if (filters?.source) {
+      conditions.push(eq(rawLeads.source, filters.source));
+    }
+    
+    // Execute query with appropriate conditions
+    if (conditions.length === 0) {
+      // No filters
+      return await db.select().from(rawLeads).orderBy(desc(rawLeads.receivedAt));
+    } else {
+      // With filters - apply AND logic
+      return await db.select()
+        .from(rawLeads)
+        .where(and(...conditions))
+        .orderBy(desc(rawLeads.receivedAt));
+    }
   }
 
   async updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined> {

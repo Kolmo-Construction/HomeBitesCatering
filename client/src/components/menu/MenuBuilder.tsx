@@ -83,7 +83,7 @@ function SortableMenuItem({
       <div className="flex-1">
         <div className="font-medium">{item.name}</div>
         <div className="text-sm text-gray-500">
-          {formatCurrency(item.price / 100)} • {item.category}
+          {formatCurrency(item.price / 100)} • {getCategoryDisplayName(item.category)}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -339,13 +339,26 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     return acc;
   }, {});
   
-  // Category labels
+  // Category labels - with a helper function to format custom categories
   const categoryLabels: Record<string, string> = {
     appetizer: "Appetizers",
     entree: "Main Courses",
     side: "Sides",
     dessert: "Desserts",
     beverage: "Beverages"
+  };
+  
+  // Format category display name (for custom categories)
+  const getCategoryDisplayName = (categoryKey: string): string => {
+    if (categoryLabels[categoryKey]) {
+      return categoryLabels[categoryKey];
+    }
+    
+    // For custom categories, capitalize first letter of each word
+    return categoryKey
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
   
   return (
@@ -490,7 +503,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
               <div className="space-y-6">
                 {Object.entries(groupedMenuItems).map(([category, items]: [string, any]) => (
                   <div key={category}>
-                    <h3 className="font-medium mb-2">{categoryLabels[category] || category}</h3>
+                    <h3 className="font-medium mb-2">{getCategoryDisplayName(category)}</h3>
                     <div className="space-y-2">
                       {items.map((item: any) => {
                         const isSelected = selectedItems.some(selectedItem => selectedItem.id === item.id);

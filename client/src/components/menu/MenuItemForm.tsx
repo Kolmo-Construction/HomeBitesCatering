@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -159,29 +160,78 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
               <FormField
                 control={form.control}
                 name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="appetizer">Appetizers</SelectItem>
-                        <SelectItem value="entree">Main Courses</SelectItem>
-                        <SelectItem value="side">Sides</SelectItem>
-                        <SelectItem value="dessert">Desserts</SelectItem>
-                        <SelectItem value="beverage">Beverages</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const [isCustomCategory, setIsCustomCategory] = useState(false);
+                  const [customCategory, setCustomCategory] = useState("");
+                  
+                  // Set custom category mode if the value doesn't match predefined ones
+                  useEffect(() => {
+                    if (field.value && !["appetizer", "entree", "side", "dessert", "beverage"].includes(field.value)) {
+                      setIsCustomCategory(true);
+                      setCustomCategory(field.value);
+                    }
+                  }, [field.value]);
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      {!isCustomCategory ? (
+                        <>
+                          <Select 
+                            onValueChange={(value) => {
+                              if (value === "custom") {
+                                setIsCustomCategory(true);
+                                setCustomCategory("");
+                              } else {
+                                field.onChange(value);
+                              }
+                            }} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="appetizer">Appetizers</SelectItem>
+                              <SelectItem value="entree">Main Courses</SelectItem>
+                              <SelectItem value="side">Sides</SelectItem>
+                              <SelectItem value="dessert">Desserts</SelectItem>
+                              <SelectItem value="beverage">Beverages</SelectItem>
+                              <SelectItem value="custom">Add New Category...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </>
+                      ) : (
+                        <div className="space-y-2">
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter custom category" 
+                              value={customCategory}
+                              onChange={(e) => {
+                                setCustomCategory(e.target.value);
+                                field.onChange(e.target.value);
+                              }}
+                            />
+                          </FormControl>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setIsCustomCategory(false);
+                              field.onChange("");
+                            }}
+                          >
+                            Back to Preset Categories
+                          </Button>
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               
               <FormField
