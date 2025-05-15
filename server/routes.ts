@@ -1372,11 +1372,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create HTTP server
   
-  // Start the email sync service if oauth credentials are present
+  // Email sync service should NOT be started automatically
+  // It must be manually toggled ON by the user through the /api/email-sync/toggle endpoint
+  // Otherwise, emails will be processed even when the user has turned sync OFF
   const syncService = app.get('gmailSyncService');
   if (syncService) {
-    // Attempt to start the service (it will only start if properly configured)
-    syncService.start();
+    console.log("Email sync service available but NOT automatically started - must be enabled via toggle");
   }
 
   const httpServer = createServer(app);
