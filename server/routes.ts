@@ -1142,19 +1142,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Log the redirect URI being used
     console.log("Using redirect URI:", process.env.GOOGLE_REDIRECT_URI);
     
-    const authUrl = GmailSyncService.getOAuthClient().generateAuthUrl({
-      access_type: 'offline', // Important to get a refresh token
-      scope: [
-        'https://www.googleapis.com/auth/gmail.readonly', // For reading emails
-        'https://www.googleapis.com/auth/gmail.modify', // To mark as read or move
-        'https://www.googleapis.com/auth/userinfo.email', // To verify the user if needed
-        'https://www.googleapis.com/auth/userinfo.profile'
-      ],
-      prompt: 'consent' // Force consent screen to ensure refresh token is granted on first auth
-    });
-    
-    console.log("Generated auth URL:", authUrl);
-    res.redirect(authUrl);
+    // Display a pre-authorization page with important information for the user
+    res.send(`
+      <html>
+        <head>
+          <title>Google Authentication for Email Sync</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            .container { border: 1px solid #ccc; padding: 20px; border-radius: 5px; }
+            .important { color: #d32f2f; font-weight: bold; }
+            .scope-list { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+            button { padding: 10px 15px; background: #4285f4; color: white; border: none; cursor: pointer; border-radius: 4px; }
+            button:hover { background: #3367d6; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Google Authentication for Email Sync</h1>
+            
+            <p>You are about to authorize the application to access your Gmail account to automatically process incoming leads.</p>
+            
+            <p class="important">IMPORTANT: Make sure to grant ALL requested permissions, especially "Modify your Gmail messages" which is needed to mark processed emails as read.</p>
+            
+            <h3>Required Permissions:</h3>
+            <ul class="scope-list">
+              <li>Read emails from your Gmail account</li>
+              <li>Modify your Gmail messages (to mark as read)</li>
+              <li>See your email address</li>
+              <li>See your basic profile info</li>
+            </ul>
+            
+            <p>After authorization, the system will begin syncing emails from: ${process.env.SYNC_TARGET_EMAIL_ADDRESS || 'hello@eathomebites.com'}</p>
+            
+            <p><button onclick="window.location.href='${GmailSyncService.getOAuthClient().generateAuthUrl({
+              access_type: 'offline',
+              scope: [
+                'https://www.googleapis.com/auth/gmail.readonly',
+                'https://www.googleapis.com/auth/gmail.modify',
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile'
+              ],
+              prompt: 'consent'
+            })}'">Proceed to Google Authentication</button></p>
+          </div>
+        </body>
+      </html>
+    `);
   });
 
   app.get('/api/auth/google/callback', async (req, res) => { // No isAuthenticated here, Google redirects to it
@@ -1185,18 +1218,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (success) {
         console.log("Successfully exchanged auth code for tokens!");
-        // Optionally, immediately start the sync service if it wasn't running or re-initialize it
-        // This depends on how you manage the service instance.
-        // For now, we assume it will pick up the tokens on its next scheduled run or on server restart.
+        
+        // Get the granted scopes for display
+        const grantedScopes = oauth2Client.credentials.scope || '';
+        const hasModifyScope = grantedScopes.includes('https://www.googleapis.com/auth/gmail.modify');
+        
         res.send(`
-          <h1>Google Authentication Successful!</h1>
-          <p>Tokens obtained. The email sync service will now use these credentials.</p>
-          <p>You can close this window.</p>
-          <p>IMPORTANT: If a new Refresh Token was logged in your server console, update your .env/Secrets with it for persistence.</p>
+          <html>
+            <head>
+              <title>Google Authentication Successful</title>
+              <style>
+                body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                .container { border: 1px solid #ccc; padding: 20px; border-radius: 5px; }
+                .success { color: #4caf50; }
+                .warning { color: #ff9800; font-weight: bold; }
+                .error { color: #f44336; font-weight: bold; }
+                .scope-list { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h1 class="success">Google Authentication Successful!</h1>
+                <p>Tokens obtained. The email sync service will now use these credentials.</p>
+                
+                <h3>Granted Permissions:</h3>
+                <div class="scope-list">
+                  <p>${grantedScopes.split(' ').join('<br>')}</p>
+                </div>
+                
+                ${!hasModifyScope ? `
+                <div class="error">
+                  <h3>Warning: Missing Required Permission</h3>
+                  <p>The "gmail.modify" scope is missing. The system will not be able to mark emails as read 
+                  after processing them. This may cause the same emails to be processed multiple times.</p>
+                  <p>Please <a href="/api/auth/google/initiate">re-authorize</a> and make sure to grant all requested permissions.</p>
+                </div>
+                ` : `
+                <p class="success">✓ All required permissions have been granted.</p>
+                `}
+                
+                <p>You can close this window and return to the application.</p>
+                
+                <p><small>Note: If a new Refresh Token was logged in your server console, update your .env/Secrets with it for persistence.</small></p>
+              </div>
+            </body>
+          </html>
         `);
       } else {
         console.error("Failed to obtain tokens from Google.");
-        res.status(500).send('Failed to obtain tokens from Google.');
+        res.status(500).send(`
+          <html>
+            <head>
+              <title>Authentication Failed</title>
+              <style>
+                body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                .container { border: 1px solid #ccc; padding: 20px; border-radius: 5px; }
+                .error { color: #f44336; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h1 class="error">Authentication Failed</h1>
+                <p>Failed to obtain tokens from Google.</p>
+                <p><a href="/api/auth/google/initiate">Try again</a></p>
+              </div>
+            </body>
+          </html>
+        `);
       }
     } catch (error) {
       console.error('Error in Google OAuth callback:', error);

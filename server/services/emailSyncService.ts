@@ -649,6 +649,15 @@ export class GmailSyncService {
           return;
       }
       try {
+          // First check if we're in read-only mode (no modify permissions)
+          const scopes = oauth2Client.credentials.scope;
+          const hasModifyScope = scopes && scopes.includes('https://www.googleapis.com/auth/gmail.modify');
+          
+          if (!hasModifyScope) {
+              console.log(`GmailSyncService: Skipping marking message ${messageGmailId} as read - no modify permission. Email will remain unread.`);
+              return;
+          }
+          
           await this.gmail.users.messages.modify({
               userId: 'me',
               id: messageGmailId,
@@ -659,9 +668,15 @@ export class GmailSyncService {
               },
           });
           console.log(`GmailSyncService: Successfully marked message ${messageGmailId} as read.`);
-      } catch (markReadError) {
-          console.error(`GmailSyncService: Failed to mark message ${messageGmailId} as read:`, markReadError);
-          // Consider alerting or logging this failure to investigate why emails aren't being marked.
+      } catch (markReadError: any) {
+          // Check if this is a permission error
+          if (markReadError?.code === 403 || 
+              (markReadError?.errors && 
+               markReadError.errors.some((e: any) => e.reason === 'insufficientPermissions'))) {
+              console.log(`GmailSyncService: Cannot mark message ${messageGmailId} as read due to insufficient permissions. The gmail.modify scope is required.`);
+          } else {
+              console.error(`GmailSyncService: Failed to mark message ${messageGmailId} as read:`, markReadError);
+          }
       }
   }
 
