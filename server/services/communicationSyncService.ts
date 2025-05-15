@@ -12,6 +12,7 @@ import {
   opportunities,
   clients,
   InsertContactIdentifier,
+  InsertProcessedEmail
 } from '@shared/schema';
 
 // Use the same token store as emailSyncService
@@ -177,18 +178,10 @@ export class CommunicationSyncService {
 
     // Query for all emails related to business communications, excluding those already processed
     // Avoid specific labels used by lead generation service to prevent duplicates
-    // Only fetch emails from 2025 to avoid processing old emails
-    let query = 'is:unread label:INBOX -label:PROCESSED_BY_COMM_SYNC -label:PROCESSED_BY_LEAD_GEN after:2025/01/01';
+    // No date filtering needed - we use database tracking and Gmail labels for deduplication
+    const query = 'is:unread label:INBOX -label:PROCESSED_BY_COMM_SYNC -label:PROCESSED_BY_LEAD_GEN';
     
-    if (this.lastSyncTimestamp) {
-      const lastSyncDate = new Date(this.lastSyncTimestamp * 1000);
-      const formattedDate = `${lastSyncDate.getFullYear()}/${(lastSyncDate.getMonth() + 1).toString().padStart(2, '0')}/${lastSyncDate.getDate().toString().padStart(2, '0')}`;
-      query = `is:unread label:INBOX -label:PROCESSED_BY_COMM_SYNC -label:PROCESSED_BY_LEAD_GEN after:${formattedDate}`;
-      
-      console.log(`[${new Date().toISOString()}] CommunicationSyncService: Fetching new emails since ${lastSyncDate.toISOString()}...`);
-    } else {
-      console.log(`[${new Date().toISOString()}] CommunicationSyncService: Fetching new emails since 2025/01/01...`);
-    }
+    console.log(`[${new Date().toISOString()}] CommunicationSyncService: Fetching unprocessed emails...`);
 
     try {
       const response = await this.gmail.users.messages.list({

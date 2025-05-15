@@ -131,17 +131,10 @@ export class LeadGenerationService {
     }
 
     // Lead-specific query to target potential lead sources
-    let query = 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io)';
+    // No date filtering necessary - we use database tracking and Gmail labels for deduplication
+    const query = 'is:unread label:INBOX -label:PROCESSED_BY_LEAD_GEN (from:weddingvendors@zola.com OR from:projects@kolmo.io)';
     
-    if (this.lastSyncTimestamp) {
-      const lastSyncDate = new Date(this.lastSyncTimestamp * 1000);
-      const formattedDate = `${lastSyncDate.getFullYear()}/${(lastSyncDate.getMonth() + 1).toString().padStart(2, '0')}/${lastSyncDate.getDate().toString().padStart(2, '0')}`;
-      query += ` after:${formattedDate}`;
-      
-      console.log(`[${new Date().toISOString()}] LeadGenerationService: Fetching new lead emails since ${lastSyncDate.toISOString()}...`);
-    } else {
-      console.log(`[${new Date().toISOString()}] LeadGenerationService: Fetching all potential lead emails (first sync)...`);
-    }
+    console.log(`[${new Date().toISOString()}] LeadGenerationService: Fetching unprocessed lead emails from specific sources...`);
 
     try {
       const response = await this.gmail.users.messages.list({
@@ -233,6 +226,26 @@ export class LeadGenerationService {
               console.error(`LeadGenerationService: Error during duplicate check for message ID ${messageId}. Attempting to process anyway.`, error);
             }
             
+            // Record this email in our processed database BEFORE processing
+            // This ensures it's recorded even if processing fails
+            const fromAddress = parsedMail.from?.value[0]?.address || 'unknown';
+            const emailSubject = parsedMail.subject || 'No Subject';
+            
+            try {
+              await storage.recordProcessedEmail({
+                messageId,
+                gmailId: messageEntry.id,
+                service: 'lead_generation',
+                email: fromAddress,
+                subject: emailSubject,
+                labelApplied: false // Will be updated after markEmailAsRead is successful
+              });
+              console.log(`LeadGenerationService: Recorded message ID ${messageId} in processed emails database`);
+            } catch (recordError) {
+              console.error(`LeadGenerationService: Failed to record in processed emails database:`, recordError);
+              // Continue processing - better to have duplicate processing than missing emails
+            }
+            
             // Process the email to generate a lead
             await this.processLeadEmail(parsedMail, messageId);
           }
@@ -241,6 +254,13 @@ export class LeadGenerationService {
         } finally {
           try {
             await this.markEmailAsRead(messageEntry.id);
+            
+            // Update the processed email record to show label was applied
+            try {
+              await storage.updateProcessedEmailLabel(messageId, true);
+            } catch (updateError) {
+              console.error(`LeadGenerationService: Failed to update label status in database:`, updateError);
+            }
           } catch (markReadErr) {
             console.error(`LeadGenerationService: Failed to mark message ID ${messageEntry.id} as read:`, markReadErr);
           }
