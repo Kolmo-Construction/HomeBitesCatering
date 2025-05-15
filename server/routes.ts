@@ -1694,6 +1694,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
     try {
       const validatedData = insertQuestionnaireDefinitionSchema.parse(req.body);
+      
+      // If setting this definition to active, ensure only one definition is active at a time
+      if (validatedData.isActive) {
+        // Update all other definitions to inactive
+        await db
+          .update(questionnaireDefinitions)
+          .set({ isActive: false })
+          .where(eq(questionnaireDefinitions.isActive, true));
+      }
+      
       const definition = await storage.createQuestionnaireDefinition(validatedData);
       
       res.status(201).json(definition);
@@ -2716,6 +2726,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting conditional logic rule:', error);
       res.status(500).json({ message: 'Server error deleting conditional logic rule' });
+    }
+  });
+
+  // ===== Public Questionnaire API Endpoints =====
+  
+  // Create a schema for validating questionnaire submission data
+  const questionnaireSubmitSchema = z.object({
+    definitionId: z.number().int().positive(),
+    submittedData: z.record(z.any()).or(z.any()).optional(), // Flexible schema for various question types
+    clientIdentifier: z.string().optional(),
+    userId: z.number().int().positive().optional(),
+    rawLeadId: z.number().int().positive().optional(),
+    status: z.enum(['draft', 'submitted', 'archived']).default('submitted')
+  });
+  
+  // 1. Get Active Questionnaire 
+  app.get('/api/questionnaires/active', async (req: Request, res: Response) => {
+    try {
+      // Get active questionnaire definition
+      const activeDefinition = await storage.getActiveQuestionnaireDefinition();
+      
+      if (!activeDefinition) {
+        return res.status(404).json({ 
+          message: 'No active questionnaire found',
+          success: false
+        });
+      }
+      
+      // Get the complete structure for this active questionnaire
+      const questionnaireStructure = await storage.getPublicQuestionnaireStructure(activeDefinition.id);
+      
+      if (!questionnaireStructure) {
+        return res.status(500).json({ 
+          message: 'Failed to retrieve active questionnaire structure',
+          success: false
+        });
+      }
+      
+      res.json({
+        success: true,
+        questionnaire: questionnaireStructure
+      });
+    } catch (error) {
+      console.error('Error retrieving active questionnaire:', error);
+      res.status(500).json({ 
+        message: 'Server error retrieving active questionnaire',
+        success: false
+      });
+    }
+  });
+  
+  // 2. Get Specific Questionnaire by ID
+  app.get('/api/questionnaires/:definitionId', async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ 
+          message: 'Invalid questionnaire ID',
+          success: false
+        });
+      }
+      
+      // Get the questionnaire structure
+      const questionnaireStructure = await storage.getPublicQuestionnaireStructure(definitionId);
+      
+      if (!questionnaireStructure) {
+        return res.status(404).json({ 
+          message: 'Questionnaire not found',
+          success: false
+        });
+      }
+      
+      res.json({
+        success: true,
+        questionnaire: questionnaireStructure
+      });
+    } catch (error) {
+      console.error('Error retrieving questionnaire:', error);
+      res.status(500).json({ 
+        message: 'Server error retrieving questionnaire',
+        success: false
+      });
+    }
+  });
+  
+  // 3. Submit Questionnaire Response
+  app.post('/api/questionnaires/submit', async (req: Request, res: Response) => {
+    try {
+      // Validate request body
+      const validatedData = questionnaireSubmitSchema.parse(req.body);
+      
+      // Verify that the questionnaire definition exists
+      const definition = await storage.getQuestionnaireDefinition(validatedData.definitionId);
+      if (!definition) {
+        return res.status(404).json({ 
+          message: 'Questionnaire definition not found',
+          success: false 
+        });
+      }
+      
+      // If user is authenticated, associate their ID
+      if (req.session.userId && !validatedData.userId) {
+        validatedData.userId = req.session.userId;
+      }
+      
+      // Submit the questionnaire response
+      const submission = await storage.submitQuestionnaireResponse(validatedData);
+      
+      // Process the submission - this might include:
+      // 1. Creating a RawLead from the data
+      // 2. Updating the RawLead with the submissionId 
+      // 3. Converting directly to an Opportunity if enough data is provided
+      
+      let rawLeadId: number | null = null;
+      
+      // Check if this is linked to a raw lead already
+      if (!validatedData.rawLeadId && validatedData.status === 'submitted') {
+        try {
+          // Extract lead data from submission
+          const submittedData = submission.submittedData as Record<string, any>;
+          
+          // Attempt to extract name, email, phone from submitted data (common fields)
+          const leadData: Partial<InsertRawLead> = {
+            status: 'new',
+            source: 'questionnaire',
+            questionnaireSubmissionId: submission.id,
+            questionnaireDefinitionId: submission.definitionId
+          };
+          
+          // Map common fields if present in the submission
+          if (submittedData.email) leadData.email = String(submittedData.email);
+          if (submittedData.phone) leadData.phone = String(submittedData.phone);
+          if (submittedData.firstName) leadData.firstName = String(submittedData.firstName);
+          if (submittedData.lastName) leadData.lastName = String(submittedData.lastName);
+          if (submittedData.message) leadData.initialInquiry = String(submittedData.message);
+          
+          // Only create a raw lead if we have at least an email or phone
+          if (leadData.email || leadData.phone) {
+            // Create raw lead
+            const rawLead = await storage.createRawLead(leadData as InsertRawLead);
+            rawLeadId = rawLead.id;
+            
+            // Update submission with the raw lead ID
+            if (rawLead.id) {
+              await db
+                .update(questionnaireSubmissions)
+                .set({ rawLeadId: rawLead.id })
+                .where(eq(questionnaireSubmissions.id, submission.id));
+            }
+          }
+        } catch (leadError) {
+          console.error('Error creating raw lead from questionnaire submission:', leadError);
+          // We don't fail the overall request if lead creation fails
+        }
+      }
+      
+      res.status(201).json({
+        success: true,
+        message: 'Questionnaire submitted successfully',
+        submission: {
+          id: submission.id,
+          definitionId: submission.definitionId,
+          status: submission.status,
+          submittedAt: submission.submittedAt,
+          rawLeadId: rawLeadId || submission.rawLeadId
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          errors: error.errors,
+          success: false
+        });
+      }
+      console.error('Error submitting questionnaire:', error);
+      res.status(500).json({ 
+        message: 'Server error submitting questionnaire',
+        success: false
+      });
     }
   });
 

@@ -163,6 +163,22 @@ export interface IStorage {
   updateConditionalLogicRule(ruleId: number, rule: Partial<QuestionnaireConditionalLogic>): Promise<QuestionnaireConditionalLogic | undefined>;
   deleteConditionalLogicRule(ruleId: number): Promise<boolean>;
   questionKeyExistsInDefinition(definitionId: number, questionKey: string): Promise<boolean>;
+  
+  // Public-facing questionnaire methods
+  getActiveQuestionnaireDefinition(): Promise<QuestionnaireDefinition | undefined>;
+  getPublicQuestionnaireStructure(definitionId: number): Promise<{
+    definition: QuestionnaireDefinition;
+    pages: {
+      page: QuestionnairePage;
+      questions: {
+        question: QuestionnaireQuestion;
+        options: QuestionnaireQuestionOption[];
+        matrixColumns: QuestionnaireMatrixColumn[];
+      }[];
+    }[];
+    conditionalLogic: QuestionnaireConditionalLogic[];
+  } | undefined>;
+  submitQuestionnaireResponse(submission: InsertQuestionnaireSubmission): Promise<QuestionnaireSubmission>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -1277,6 +1293,136 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error checking if question key "${questionKey}" exists in definition ${definitionId}:`, error);
       return false;
+    }
+  }
+  
+  // Public-facing questionnaire methods implementation
+  async getActiveQuestionnaireDefinition(): Promise<QuestionnaireDefinition | undefined> {
+    try {
+      const [definition] = await db
+        .select()
+        .from(questionnaireDefinitions)
+        .where(eq(questionnaireDefinitions.isActive, true))
+        .limit(1);
+      
+      return definition;
+    } catch (error) {
+      console.error('Error fetching active questionnaire definition:', error);
+      return undefined;
+    }
+  }
+  
+  async getPublicQuestionnaireStructure(definitionId: number): Promise<{
+    definition: QuestionnaireDefinition;
+    pages: {
+      page: QuestionnairePage;
+      questions: {
+        question: QuestionnaireQuestion;
+        options: QuestionnaireQuestionOption[];
+        matrixColumns: QuestionnaireMatrixColumn[];
+      }[];
+    }[];
+    conditionalLogic: QuestionnaireConditionalLogic[];
+  } | undefined> {
+    try {
+      // Get the definition
+      const definition = await this.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return undefined;
+      }
+      
+      // Get all pages for this definition
+      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
+      if (pages.length === 0) {
+        // Return early with empty pages if none found
+        return {
+          definition,
+          pages: [],
+          conditionalLogic: []
+        };
+      }
+      
+      // Get conditional logic for this definition
+      const conditionalLogic = await this.getConditionalLogicRulesByDefinition(definitionId);
+      
+      // Build a complete structure with pages and their questions
+      const pagesWithQuestions = await Promise.all(pages.map(async (page) => {
+        // Get questions for this page
+        const questionsRaw = await db
+          .select()
+          .from(questionnaireQuestions)
+          .where(eq(questionnaireQuestions.pageId, page.id))
+          .orderBy(questionnaireQuestions.order);
+        
+        // For each question, get its options and matrix columns
+        const questions = await Promise.all(questionsRaw.map(async (question) => {
+          const options = await db
+            .select()
+            .from(questionnaireQuestionOptions)
+            .where(eq(questionnaireQuestionOptions.questionId, question.id))
+            .orderBy(questionnaireQuestionOptions.order);
+          
+          const matrixColumns = await db
+            .select()
+            .from(questionnaireMatrixColumns)
+            .where(eq(questionnaireMatrixColumns.questionId, question.id))
+            .orderBy(questionnaireMatrixColumns.order);
+          
+          return {
+            question,
+            options,
+            matrixColumns
+          };
+        }));
+        
+        return {
+          page,
+          questions
+        };
+      }));
+      
+      // Return the complete structure
+      return {
+        definition,
+        pages: pagesWithQuestions,
+        conditionalLogic
+      };
+    } catch (error) {
+      console.error(`Error fetching public questionnaire structure for definition ${definitionId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async submitQuestionnaireResponse(submission: InsertQuestionnaireSubmission): Promise<QuestionnaireSubmission> {
+    try {
+      // Current timestamp for submission
+      const now = new Date();
+      
+      // Add submitted timestamp if the status is 'submitted'
+      if (submission.status === 'submitted') {
+        submission.submittedAt = now;
+      }
+      
+      // If submittedData is not provided, initialize as empty object
+      if (!submission.submittedData) {
+        submission.submittedData = {};
+      }
+      
+      // Insert the submission
+      const [newSubmission] = await db
+        .insert(questionnaireSubmissions)
+        .values({
+          ...submission,
+          // Override any provided timestamps to ensure they're set server-side
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+      
+      return newSubmission;
+    } catch (error) {
+      console.error('Error submitting questionnaire response:', error);
+      throw error;
     }
   }
 }

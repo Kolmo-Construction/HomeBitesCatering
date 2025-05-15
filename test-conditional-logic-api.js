@@ -89,7 +89,8 @@ async function runTests() {
     const definitionData = {
       title: 'Test Questionnaire',
       description: 'A test questionnaire for conditional logic',
-      version: '1.0'
+      versionName: '1.0',
+      status: 'draft'
     };
     
     const createDefinitionRes = await makeRequest('POST', '/api/admin/questionnaires/definitions', definitionData);
