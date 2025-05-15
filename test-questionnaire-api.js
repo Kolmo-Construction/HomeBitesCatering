@@ -91,10 +91,9 @@ async function runTests() {
     // 1. Create a test questionnaire definition first (we need a definition to add pages to)
     console.log('\n=== Creating a test questionnaire definition ===');
     const definitionData = {
-      title: 'Test Questionnaire',
+      versionName: 'Test Questionnaire v1.0',
       description: 'A test questionnaire for API validation',
-      status: 'draft',
-      version: '1.0'
+      isActive: true
     };
 
     const definitionResponse = await makeRequest(
@@ -120,7 +119,8 @@ async function runTests() {
     console.log('\n=== Test creating a page ===');
     const pageData = {
       title: 'Test Page 1',
-      order: 0
+      order: 0,
+      definitionId: definitionId
     };
     
     const createResponse = await makeRequest(

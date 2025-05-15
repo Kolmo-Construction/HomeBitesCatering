@@ -14,10 +14,12 @@ import {
   type Communication, type InsertCommunication,
   type RawLead, type InsertRawLead,
   type ProcessedEmail, type InsertProcessedEmail,
-  type QuestionnairePage, type InsertQuestionnairePage, type QuestionnaireDefinition
+  type QuestionnairePage, type InsertQuestionnairePage, type QuestionnaireDefinition,
+  insertQuestionnaireDefinitionSchema
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
+import { z } from "zod";
 
 // Define an enriched Menu type that includes full menu item details
 // This type will be used for the return values of getMenu and listMenus
