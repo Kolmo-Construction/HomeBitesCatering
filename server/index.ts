@@ -66,10 +66,9 @@ app.use((req, res, next) => {
 
     if (process.env.GOOGLE_CLIENT_ID && process.env.SYNC_TARGET_EMAIL_ADDRESS) {
       gmailSyncService = new GmailSyncService(SYNC_INTERVAL_MS, AI_SUMMARY_ENABLED);
-      // The service will try to use stored tokens. If none, it won't start polling effectively.
+      // The service will NOT start automatically - must be started manually via toggle
       // Admin needs to visit /api/auth/google/initiate once to authorize.
-      gmailSyncService.start();
-      console.log("Gmail Sync Service configured. It will start polling if authorized.");
+      console.log("Gmail Sync Service configured but NOT started. Email sync is OFF by default.");
       
       // Make the service instance accessible to routes
       app.set('gmailSyncService', gmailSyncService);
