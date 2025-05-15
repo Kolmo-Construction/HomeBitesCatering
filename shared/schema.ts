@@ -61,7 +61,7 @@ export const menuItems = pgTable("menu_items", {
   name: text("name").notNull(),
   description: text("description"),
   category: text("category").notNull(), // appetizer, entree, side, dessert, beverage
-  price: integer("price").notNull(), // stored in cents
+  price: integer("price"), // stored in cents, nullable for items without price
   ingredients: text("ingredients"),
   isVegetarian: boolean("is_vegetarian").default(false),
   isVegan: boolean("is_vegan").default(false),
