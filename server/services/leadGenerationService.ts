@@ -9,13 +9,16 @@ import {
   leadScoreEnum,
   leadQualityCategoryEnum,
   budgetIndicationEnum,
-  sentimentEnum
+  sentimentEnum,
+  InsertProcessedEmail
 } from '@shared/schema';
 
 // Use the same token store as emailSyncService
 import { tokenStore, oauth2Client, setOAuthCredentials } from './emailSyncService';
 
 export class LeadGenerationService {
+  private static readonly CUSTOM_LABEL_NAME = 'PROCESSED_BY_LEAD_GEN';
+  
   private gmail: gmail_v1.Gmail | null = null;
   private _isRunning: boolean = false;
   private timeoutId: NodeJS.Timeout | null = null;
@@ -23,6 +26,7 @@ export class LeadGenerationService {
   private aiEnabled: boolean;
   private targetEmail: string = "";
   private lastSyncTimestamp: number | null = null;
+  private customLabelId: string | null = null;
 
   constructor(intervalMs: number = 15 * 60 * 1000, aiEnabled: boolean = true) {
     this.processingInterval = intervalMs;
@@ -173,16 +177,56 @@ export class LeadGenerationService {
             const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
             const parsedMail = await simpleParser(rawEmail);
             
-            // Generate a message ID for tracking
+            // Extract message ID for tracking
             const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
             const messageId = messageIdHeader || `generated-${Date.now()}-${messageEntry.id}`;
             
-            // Check if this email has already been processed
+            // --- Database Duplicate Check ---
+            try {
+              const isProcessed = await storage.isEmailProcessed(messageId, 'lead_generation');
+              if (isProcessed) {
+                console.log(`LeadGenerationService: Email with message ID ${messageId} (Gmail ID: ${messageEntry.id}) was already processed according to database. Skipping.`);
+                
+                // Always try to mark as read and labeled, even if it's a duplicate
+                // This covers cases where the database recorded it but label application failed
+                try {
+                  await this.markEmailAsRead(messageEntry.id);
+                  // Update the record to show label was applied
+                  await storage.updateProcessedEmailLabel(messageId, true);
+                } catch (labelError) {
+                  console.error(`LeadGenerationService: Error applying label to already processed message ${messageId}:`, labelError);
+                }
+                
+                continue; // Skip to the next message
+              } else {
+                console.log(`LeadGenerationService: Message ID ${messageId} is not in processed database. Continuing with processing.`);
+              }
+            } catch (dbError) {
+              // If database check fails, log but continue processing
+              // Better to risk duplicate processing than missing emails
+              console.error(`LeadGenerationService: Database duplicate check failed for message ID ${messageId}:`, dbError);
+            }
+            
+            // Legacy check against communications table (for backward compatibility)
             try {
               const communications = await storage.getCommunicationsByExternalId(messageId);
               if (communications && communications.length > 0) {
-                console.log(`LeadGenerationService: Email with message ID ${messageId} was already processed. Skipping.`);
+                console.log(`LeadGenerationService: Email with message ID ${messageId} was already processed in communications. Recording in tracking DB & skipping.`);
+                
+                // Record in our processed emails table for future reference
+                await storage.recordProcessedEmail({
+                  messageId,
+                  gmailId: messageEntry.id,
+                  service: 'lead_generation',
+                  email: parsedMail.from?.value[0]?.address || 'unknown',
+                  subject: parsedMail.subject || 'No Subject',
+                  labelApplied: false // Will be updated after markEmailAsRead
+                });
+                
                 await this.markEmailAsRead(messageEntry.id);
+                
+                // Update to show label was applied
+                await storage.updateProcessedEmailLabel(messageId, true);
                 continue;
               }
             } catch (error) {
@@ -214,16 +258,96 @@ export class LeadGenerationService {
     }
   }
 
-  private async markEmailAsRead(messageId: string): Promise<void> {
+  /**
+   * Ensures our custom label exists in Gmail
+   * Will create the label if it doesn't exist
+   */
+  private async ensureCustomLabelExists(): Promise<string | null> {
+    if (!this.gmail) {
+      console.warn('LeadGenerationService: Cannot check/create label, Gmail client not available.');
+      return null;
+    }
+    
+    if (this.customLabelId) {
+      return this.customLabelId; // Use cached label ID if we've already found it
+    }
+    
     try {
-      await this.gmail?.users.messages.modify({
+      // First check if our label already exists
+      const labelsResponse = await this.gmail.users.labels.list({
+        userId: 'me'
+      });
+      
+      const existingLabel = labelsResponse.data.labels?.find(
+        label => label.name === LeadGenerationService.CUSTOM_LABEL_NAME
+      );
+      
+      if (existingLabel && existingLabel.id) {
+        console.log(`LeadGenerationService: Found existing label '${LeadGenerationService.CUSTOM_LABEL_NAME}' with ID ${existingLabel.id}`);
+        this.customLabelId = existingLabel.id;
+        return existingLabel.id;
+      }
+      
+      // If not found, create the label
+      console.log(`LeadGenerationService: Label '${LeadGenerationService.CUSTOM_LABEL_NAME}' not found, creating it now...`);
+      const createResponse = await this.gmail.users.labels.create({
+        userId: 'me',
+        requestBody: {
+          name: LeadGenerationService.CUSTOM_LABEL_NAME,
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show'
+        }
+      });
+      
+      if (createResponse.data.id) {
+        console.log(`LeadGenerationService: Successfully created label '${LeadGenerationService.CUSTOM_LABEL_NAME}' with ID ${createResponse.data.id}`);
+        this.customLabelId = createResponse.data.id;
+        return createResponse.data.id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`LeadGenerationService: Error ensuring custom label exists:`, error);
+      return null;
+    }
+  }
+  
+  private async markEmailAsRead(messageId: string): Promise<void> {
+    if (!this.gmail) {
+      console.warn(`LeadGenerationService: Cannot mark message ${messageId} as read, Gmail client not available.`);
+      return;
+    }
+    
+    try {
+      // First check if we're in read-only mode (no modify permissions)
+      const scopes = oauth2Client.credentials.scope;
+      const hasModifyScope = scopes && typeof scopes === 'string' && scopes.includes('https://www.googleapis.com/auth/gmail.modify');
+      
+      if (!hasModifyScope) {
+        console.log(`LeadGenerationService: Skipping marking message ${messageId} as read - no modify permission.`);
+        return;
+      }
+      
+      // Ensure our custom label exists and get its ID
+      await this.ensureCustomLabelExists();
+      
+      // Build the modification request
+      const requestBody: any = {
+        removeLabelIds: ['UNREAD']
+      };
+      
+      // Only add the custom label if we successfully got its ID
+      if (this.customLabelId) {
+        requestBody.addLabelIds = [this.customLabelId];
+      }
+      
+      await this.gmail.users.messages.modify({
         userId: 'me',
         id: messageId,
-        requestBody: {
-          removeLabelIds: ['UNREAD'],
-          addLabelIds: ['PROCESSED_BY_LEAD_GEN'],
-        },
+        requestBody
       });
+      
+      console.log(`LeadGenerationService: Successfully marked message ${messageId} as read and applied custom label.`);
     } catch (error) {
       console.error(`LeadGenerationService: Error marking email ${messageId} as read:`, error);
       throw error;
