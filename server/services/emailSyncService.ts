@@ -25,7 +25,7 @@ interface TokenStore {
 
 // For a server-side app syncing one mailbox, tokens can be stored more simply.
 // For a production app, consider a secure database table for these.
-let tokenStore: TokenStore = {
+export let tokenStore: TokenStore = {
     targetEmail: process.env.SYNC_TARGET_EMAIL_ADDRESS
 };
 
@@ -38,7 +38,7 @@ if (process.env.GOOGLE_ACCESS_TOKEN && process.env.GOOGLE_REFRESH_TOKEN) {
 }
 
 
-const oauth2Client = new google.auth.OAuth2(
+export const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
   process.env.GOOGLE_REDIRECT_URI
@@ -46,7 +46,7 @@ const oauth2Client = new google.auth.OAuth2(
 
 // Function to set credentials for the oauth2Client
 // This should be called only when explicitly starting the email sync service
-function setOAuthCredentials() {
+export function setOAuthCredentials() {
   if (tokenStore.accessToken && tokenStore.refreshToken) {
     oauth2Client.setCredentials({
       access_token: tokenStore.accessToken,

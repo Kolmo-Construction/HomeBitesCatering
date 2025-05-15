@@ -1,0 +1,485 @@
+// server/services/leadGenerationService.ts
+import { google, Auth, gmail_v1 } from 'googleapis';
+import { simpleParser, ParsedMail } from 'mailparser';
+import { storage } from '../storage';
+import { aiService } from './aiService';
+import {
+  InsertRawLead,
+  rawLeadStatusEnum,
+  leadScoreEnum,
+  leadQualityCategoryEnum,
+  budgetIndicationEnum,
+  sentimentEnum
+} from '@shared/schema';
+
+// Use the same token store as emailSyncService
+import { tokenStore, oauth2Client, setOAuthCredentials } from './emailSyncService';
+
+export class LeadGenerationService {
+  private gmail: gmail_v1.Gmail | null = null;
+  private _isRunning: boolean = false;
+  private timeoutId: NodeJS.Timeout | null = null;
+  private processingInterval: number;
+  private aiEnabled: boolean;
+  private targetEmail: string = "";
+  private lastSyncTimestamp: number | null = null;
+
+  constructor(intervalMs: number = 15 * 60 * 1000, aiEnabled: boolean = true) {
+    this.processingInterval = intervalMs;
+    this.aiEnabled = aiEnabled;
+    this.targetEmail = tokenStore.targetEmail || process.env.SYNC_TARGET_EMAIL_ADDRESS || '';
+
+    if (!this.targetEmail) {
+      console.error("LeadGenerationService: SYNC_TARGET_EMAIL_ADDRESS is not configured. Service cannot start.");
+    }
+  }
+
+  public isRunning(): boolean {
+    return this._isRunning;
+  }
+
+  public getTargetEmail(): string {
+    return this.targetEmail;
+  }
+
+  public getTimerId(): NodeJS.Timeout | null {
+    return this.timeoutId;
+  }
+
+  public inspectStatus(): any {
+    return {
+      isRunning: this._isRunning,
+      hasTimeout: this.timeoutId !== null,
+      hasGmailClient: this.gmail !== null,
+      targetEmailConfigured: !!this.targetEmail,
+      processingInterval: this.processingInterval,
+      aiEnabled: this.aiEnabled,
+      lastSyncTimestamp: this.lastSyncTimestamp,
+      lastSyncDate: this.lastSyncTimestamp ? new Date(this.lastSyncTimestamp * 1000).toISOString() : null,
+    };
+  }
+
+  public start(): void {
+    if (!this.targetEmail) {
+      console.error("LeadGenerationService: Cannot start, SYNC_TARGET_EMAIL_ADDRESS not set.");
+      return;
+    }
+    
+    // Initialize OAuth credentials when starting the service
+    const credentialsInitialized = setOAuthCredentials();
+    if (!credentialsInitialized) {
+      console.warn('LeadGenerationService: OAuth credentials could not be initialized. Cannot start service.');
+      console.log('To authorize, visit: /api/auth/google/initiate then follow the redirect.');
+      return;
+    }
+    
+    // Initialize Gmail client only after credentials are set
+    if (!this.gmail && oauth2Client.credentials.access_token) {
+      this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      console.log("LeadGenerationService: Gmail API client initialized.");
+    }
+
+    if (!this.gmail) {
+      console.warn('LeadGenerationService: Gmail API client not initialized (missing auth). Cannot start.');
+      return;
+    }
+
+    if (this._isRunning) {
+      console.log('LeadGenerationService is already running.');
+      return;
+    }
+
+    this._isRunning = true;
+    console.log(`LeadGenerationService started. Checking for lead emails for "${this.targetEmail}" every ${this.processingInterval / 1000} seconds.`);
+    this.scheduleNextFetch();
+  }
+
+  public stop(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this._isRunning = false;
+    console.log('LeadGenerationService stopped.');
+  }
+
+  private scheduleNextFetch(): void {
+    if (!this._isRunning) return;
+    
+    this.timeoutId = setTimeout(async () => {
+      try {
+        await this.fetchAndProcessLeadEmails();
+      } catch (error) {
+        console.error('LeadGenerationService error during fetch cycle:', error);
+      } finally {
+        // Schedule next run only if service is still running
+        if (this._isRunning) {
+          this.scheduleNextFetch();
+        }
+      }
+    }, this.processingInterval);
+  }
+
+  private async fetchAndProcessLeadEmails(): Promise<void> {
+    if (!this._isRunning || !this.gmail) {
+      console.warn('LeadGenerationService: Cannot fetch emails, service stopped or client unavailable.');
+      return;
+    }
+
+    // Lead-specific query to target potential lead sources
+    let query = 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io)';
+    
+    if (this.lastSyncTimestamp) {
+      const lastSyncDate = new Date(this.lastSyncTimestamp * 1000);
+      const formattedDate = `${lastSyncDate.getFullYear()}/${(lastSyncDate.getMonth() + 1).toString().padStart(2, '0')}/${lastSyncDate.getDate().toString().padStart(2, '0')}`;
+      query += ` after:${formattedDate}`;
+      
+      console.log(`[${new Date().toISOString()}] LeadGenerationService: Fetching new lead emails since ${lastSyncDate.toISOString()}...`);
+    } else {
+      console.log(`[${new Date().toISOString()}] LeadGenerationService: Fetching all potential lead emails (first sync)...`);
+    }
+
+    try {
+      const response = await this.gmail.users.messages.list({
+        userId: 'me',
+        q: query,
+        maxResults: 10,
+      });
+
+      const messages = response.data.messages;
+      if (!messages || messages.length === 0) {
+        console.log('LeadGenerationService: No new potential lead emails found.');
+        return;
+      }
+
+      console.log(`LeadGenerationService: Found ${messages.length} potential lead emails.`);
+
+      for (const messageEntry of messages) {
+        if (!this._isRunning) {
+          console.log(`LeadGenerationService: Stopping processing early due to service stop.`);
+          break;
+        }
+
+        if (!messageEntry.id) continue;
+
+        try {
+          const msg = await this.gmail.users.messages.get({
+            userId: 'me',
+            id: messageEntry.id,
+            format: 'raw',
+          });
+
+          if (msg.data.raw) {
+            const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
+            const parsedMail = await simpleParser(rawEmail);
+            
+            // Generate a message ID for tracking
+            const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
+            const messageId = messageIdHeader || `generated-${Date.now()}-${messageEntry.id}`;
+            
+            // Check if this email has already been processed
+            try {
+              const communications = await storage.getCommunicationsByExternalId(messageId);
+              if (communications && communications.length > 0) {
+                console.log(`LeadGenerationService: Email with message ID ${messageId} was already processed. Skipping.`);
+                await this.markEmailAsRead(messageEntry.id);
+                continue;
+              }
+            } catch (error) {
+              console.error(`LeadGenerationService: Error during duplicate check for message ID ${messageId}. Attempting to process anyway.`, error);
+            }
+            
+            // Process the email to generate a lead
+            await this.processLeadEmail(parsedMail, messageId);
+          }
+        } catch (err) {
+          console.error(`LeadGenerationService: Error processing message ID ${messageEntry.id}:`, err);
+        } finally {
+          try {
+            await this.markEmailAsRead(messageEntry.id);
+          } catch (markReadErr) {
+            console.error(`LeadGenerationService: Failed to mark message ID ${messageEntry.id} as read:`, markReadErr);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('LeadGenerationService: API Error during fetch cycle:', err.message || err);
+      if (err.code === 401 || (err.response && err.response.status === 401)) {
+        console.error("LeadGenerationService: Authentication error (401). Please re-authorize.");
+        this.stop();
+      }
+    } finally {
+      this.lastSyncTimestamp = Math.floor(Date.now() / 1000);
+      console.log(`[${new Date().toISOString()}] LeadGenerationService: Finished lead email fetch cycle.`);
+    }
+  }
+
+  private async markEmailAsRead(messageId: string): Promise<void> {
+    try {
+      await this.gmail?.users.messages.modify({
+        userId: 'me',
+        id: messageId,
+        requestBody: {
+          removeLabelIds: ['UNREAD'],
+          addLabelIds: ['PROCESSED_BY_LEAD_GEN'],
+        },
+      });
+    } catch (error) {
+      console.error(`LeadGenerationService: Error marking email ${messageId} as read:`, error);
+      throw error;
+    }
+  }
+
+  private async processLeadEmail(parsedMail: ParsedMail, messageId: string): Promise<void> {
+    const subject = parsedMail.subject || '(No Subject)';
+    
+    // Extract email addresses
+    const getAddressesFrom = (addressField: any): { address?: string; name?: string }[] => {
+      if (!addressField) return [];
+      if (Array.isArray(addressField)) return addressField;
+      if (addressField.value && Array.isArray(addressField.value)) return addressField.value;
+      return [addressField];
+    };
+
+    const fromAddresses = getAddressesFrom(parsedMail.from);
+    const fromHeader = fromAddresses[0];
+    const fromEmail = fromHeader?.address?.toLowerCase();
+    
+    if (!fromEmail) {
+      console.warn(`LeadGenerationService: Cannot process email ID ${messageId}, no sender email found.`);
+      return;
+    }
+
+    // Skip emails from our own address
+    if (fromEmail === this.targetEmail.toLowerCase()) {
+      console.log(`LeadGenerationService: Skipping email from our own address: ${fromEmail}`);
+      return;
+    }
+
+    const emailDate = parsedMail.date || new Date();
+    
+    let bodyText = parsedMail.text || '';
+    if (!bodyText && parsedMail.html) {
+      bodyText = parsedMail.html
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/g, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ').trim();
+    }
+    if (!bodyText) bodyText = '(No Content)';
+
+    console.log(`LeadGenerationService: Processing lead email - Subject: "${subject}", From: ${fromEmail}`);
+
+    try {
+      // Check if this sender already exists in our system
+      const existingContact = await storage.findOpportunityOrClientByContactIdentifier(fromEmail, 'email');
+      
+      // Only create a lead if the email doesn't match an existing opportunity or client
+      if (!existingContact) {
+        console.log(`LeadGenerationService: Creating new lead from email from ${fromEmail}`);
+        
+        // Extract lead data using AI
+        const extractedData = this.aiEnabled
+          ? await this.extractLeadDataWithAI(bodyText, subject, fromEmail, emailDate)
+          : {
+              success: true,
+              source: 'gmail_lead_gen',
+              extractedName: fromHeader?.name || '',
+              extractedEmail: fromEmail,
+              extractedPhone: null,
+              eventSummary: subject,
+              status: 'new' as const,
+              notes: `Auto-created from lead email with subject: ${subject} (AI disabled)`,
+              receivedAt: emailDate,
+              rawData: {
+                subject,
+                from: fromEmail,
+                date: emailDate,
+                bodyPreview: bodyText.substring(0, 500) + (bodyText.length > 500 ? '...' : ''),
+              }
+            };
+
+        if (!extractedData.success && fromEmail) {
+          // Create a fallback lead with basic info if AI extraction failed
+          const fallbackLeadData: InsertRawLead = {
+            source: 'gmail_lead_gen_fallback',
+            extractedName: fromHeader?.name || '',
+            extractedEmail: fromEmail,
+            extractedPhone: null,
+            eventSummary: subject,
+            status: 'needs_manual_review' as const,
+            notes: `Lead creation with AI failed for email with subject: "${subject}"`,
+            receivedAt: emailDate,
+            rawData: { 
+              error: extractedData.error, 
+              emailSubject: subject, 
+              fromAddress: fromEmail, 
+              bodyPreview: bodyText.substring(0, 500) 
+            },
+            leadSourcePlatform: 'email',
+          };
+          
+          const rawLead = await storage.createRawLead(fallbackLeadData);
+          console.log(`LeadGenerationService: Created minimal lead ID ${rawLead.id} due to AI failure.`);
+        } 
+        else if (extractedData.success) {
+          // Create the lead with successfully extracted data
+          const leadData: InsertRawLead = {
+            source: extractedData.source || 'gmail_lead_gen',
+            extractedName: extractedData.extractedName,
+            extractedEmail: extractedData.extractedEmail,
+            extractedPhone: extractedData.extractedPhone,
+            eventSummary: extractedData.eventSummary,
+            status: extractedData.status || 'under_review',
+            notes: extractedData.notes,
+            receivedAt: emailDate,
+            rawData: extractedData.rawData,
+            // Include the AI-extracted fields
+            extractedEventType: extractedData.extractedEventType,
+            extractedEventDate: extractedData.extractedEventDate,
+            extractedEventTime: extractedData.extractedEventTime,
+            extractedGuestCount: extractedData.extractedGuestCount,
+            extractedVenue: extractedData.extractedVenue,
+            extractedMessageSummary: extractedData.extractedMessageSummary,
+            leadSourcePlatform: 'email',
+            // Include AI assessment fields
+            aiUrgencyScore: extractedData.aiUrgencyScore,
+            aiBudgetIndication: extractedData.aiBudgetIndication,
+            aiBudgetValue: extractedData.aiBudgetValue,
+            aiClarityOfRequestScore: extractedData.aiClarityOfRequestScore,
+            aiDecisionMakerLikelihood: extractedData.aiDecisionMakerLikelihood,
+            aiKeyRequirements: extractedData.aiKeyRequirements,
+            aiPotentialRedFlags: extractedData.aiPotentialRedFlags,
+            aiOverallLeadQuality: extractedData.aiOverallLeadQuality,
+            aiSuggestedNextStep: extractedData.aiSuggestedNextStep,
+            aiSentiment: extractedData.aiSentiment,
+            aiConfidenceScore: extractedData.aiConfidenceScore
+          };
+          
+          const rawLead = await storage.createRawLead(leadData);
+          console.log(`LeadGenerationService: Created new lead ID ${rawLead.id} from ${fromEmail}`);
+        } 
+        else {
+          console.error(`LeadGenerationService: Failed to create lead for message ID ${messageId}. Extraction unsuccessful.`);
+        }
+      } else {
+        console.log(`LeadGenerationService: Email from ${fromEmail} matches existing ${existingContact.opportunity ? 'opportunity' : 'client'}. Not creating lead.`);
+      }
+    } catch (error) {
+      console.error(`LeadGenerationService: Error processing lead email (ID: ${messageId}):`, error);
+    }
+  }
+
+  // Helper method to extract lead data with AI
+  private async extractLeadDataWithAI(
+    emailContent: string,
+    emailSubject: string,
+    fromAddress?: string,
+    emailDate?: Date
+  ): Promise<Partial<InsertRawLead> & { success: boolean; error?: string }> {
+    console.log(`Lead Data Extraction: Processing email with subject "${emailSubject}"`);
+
+    try {
+      const fullContent = `
+Subject: ${emailSubject}
+${fromAddress ? `From: ${fromAddress}` : ''}
+
+${emailContent}
+      `.trim();
+
+      try {
+        const aiResults = await aiService.analyzeLeadMessage(fullContent);
+        console.log("Lead Data Extraction: Successfully processed with AI service");
+
+        // Helper function to validate score against enum values
+        const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
+          if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
+          return score as typeof leadScoreEnum.enumValues[number];
+        };
+
+        const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
+          if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
+          return quality as typeof leadQualityCategoryEnum.enumValues[number];
+        };
+
+        const validateBudgetIndication = (budget: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
+          if (!budget || !budgetIndicationEnum.enumValues.includes(budget as any)) return undefined;
+          return budget as typeof budgetIndicationEnum.enumValues[number];
+        };
+
+        const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
+          if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
+          return sentiment as typeof sentimentEnum.enumValues[number];
+        };
+
+        // Form the result object that aligns with InsertRawLead schema
+        return {
+          success: true,
+          source: 'email_ai_extraction',
+          extractedName: aiResults.extractedName || '',
+          extractedEmail: aiResults.extractedEmail || fromAddress || '',
+          extractedPhone: aiResults.extractedPhone || null,
+          eventSummary: emailSubject,
+          status: 'under_review' as const,
+          notes: `Auto-extracted from email with subject: "${emailSubject}"`,
+          receivedAt: emailDate,
+
+          // Add AI-extracted fields
+          extractedEventType: aiResults.extractedEventType,
+          extractedEventDate: aiResults.extractedEventDate,
+          extractedEventTime: aiResults.extractedEventTime,
+          extractedGuestCount: aiResults.extractedGuestCount,
+          extractedVenue: aiResults.extractedVenue,
+          extractedMessageSummary: aiResults.extractedMessageSummary,
+          leadSourcePlatform: 'email',
+
+          // Add AI assessment fields (with type validation)
+          aiUrgencyScore: validateLeadScore(aiResults.aiUrgencyScore),
+          aiBudgetIndication: validateBudgetIndication(aiResults.aiBudgetIndication),
+          aiBudgetValue: aiResults.aiBudgetValue,
+          aiClarityOfRequestScore: validateLeadScore(aiResults.aiClarityOfRequestScore),
+          aiDecisionMakerLikelihood: validateLeadScore(aiResults.aiDecisionMakerLikelihood),
+          aiKeyRequirements: aiResults.aiKeyRequirements || [],
+          aiPotentialRedFlags: aiResults.aiPotentialRedFlags || [],
+          aiOverallLeadQuality: validateLeadQuality(aiResults.aiOverallLeadQuality),
+          aiSuggestedNextStep: aiResults.aiSuggestedNextStep,
+          aiSentiment: validateSentiment(aiResults.aiSentiment),
+          aiConfidenceScore: aiResults.aiConfidenceScore,
+
+          // Store the raw AI output for debugging
+          rawData: {
+            emailSubject,
+            emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
+            fromAddress,
+            aiProvider: 'AI Service',
+            aiOutput: aiResults,
+            timestamp: new Date().toISOString()
+          }
+        };
+      } catch (aiError) {
+        console.error("Lead Data Extraction: AI service error:", aiError);
+        return {
+          success: false,
+          error: `AI service error: ${aiError.message || 'Unknown error'}`,
+          extractedEmail: fromAddress,
+          eventSummary: emailSubject,
+          status: 'needs_manual_review' as const,
+          notes: `AI extraction failed for email with subject: "${emailSubject}"`,
+          rawData: {
+            emailSubject,
+            emailPreview: emailContent.substring(0, 500),
+            fromAddress,
+            error: aiError.message,
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+    } catch (error) {
+      console.error("Lead Data Extraction: Critical error:", error);
+      return {
+        success: false,
+        error: `Lead extraction error: ${error.message || 'Unknown error'}`,
+        status: 'needs_manual_review' as const
+      };
+    }
+  }
+}
