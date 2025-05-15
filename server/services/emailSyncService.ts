@@ -250,8 +250,8 @@ ${fullContent}`;
         throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const responseData = await response.json();
-      const resultText = responseData.choices?.[0]?.message?.content?.trim() || "{}";
+      const responseData = await response.json() as any;
+      const resultText = responseData?.choices?.[0]?.message?.content?.trim() || "{}";
 
       try {
         // Parse the JSON response
@@ -322,9 +322,12 @@ ${fullContent}`;
             timestamp: new Date().toISOString()
           }
         };
-      } catch (jsonParseError) {
-        console.error("Lead Data Extraction: JSON parsing error:", jsonParseError);
+      } catch (error) {
+        console.error("Lead Data Extraction: JSON parsing error:", error);
         console.error("Lead Data Extraction: Raw AI response:", resultText);
+
+        // Get error message safely
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
         // Return a partial result that can still be used to create a RawLead
         return {
@@ -334,7 +337,7 @@ ${fullContent}`;
           extractedEmail: fromAddress || '',
           eventSummary: emailSubject,
           status: 'parsing_failed' as const,
-          notes: `AI parsing failed for email with subject: "${emailSubject}". Error: ${jsonParseError.message}`,
+          notes: `AI parsing failed for email with subject: "${emailSubject}". Error: ${errorMessage}`,
           rawData: {
             emailSubject,
             emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
@@ -342,7 +345,7 @@ ${fullContent}`;
             aiProvider: 'OpenRouter-Direct-API-Failed',
             apiResponse: responseData,
             rawResponse: resultText,
-            error: jsonParseError.message,
+            error: errorMessage,
             timestamp: new Date().toISOString()
           }
         };
@@ -816,7 +819,11 @@ export class GmailSyncService {
 
 
   /**
-   * Processes a single parsed email, extracts data, and creates records in the database.
+   * Processes a single parsed email and creates a communication record in the timeline.
+   * This method only creates communication records and does not automatically create leads.
+   * Its purpose is to build a comprehensive communication timeline that shows all interactions
+   * with contacts, whether they're associated with opportunities/clients or not.
+   * 
    * @param parsedMail The parsed email object from mailparser.
    * @param messageId The determined Message-ID or generated ID for duplicate checking.
    */
