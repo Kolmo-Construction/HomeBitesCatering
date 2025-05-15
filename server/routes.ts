@@ -18,7 +18,10 @@ import {
   opportunityPriorityEnum,       // For priority filtering
   insertRawLeadSchema,           // For raw leads management
   insertQuestionnairePageSchema, // For questionnaire page management
-  insertQuestionnaireDefinitionSchema // For questionnaire definition management
+  insertQuestionnaireDefinitionSchema, // For questionnaire definition management
+  insertQuestionnaireQuestionSchema, // For questionnaire question management
+  insertQuestionnaireQuestionOptionSchema, // For questionnaire question options
+  questionTypeEnum // For question type validation
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';
@@ -41,6 +44,35 @@ const questionnairePageUpdateSchema = z.object({
 
 const questionnairePagesReorderSchema = z.object({
   pageIds: z.array(z.number().int().positive())
+});
+
+// Validation schemas for questionnaire questions API endpoints
+const questionnaireQuestionCreateSchema = insertQuestionnaireQuestionSchema.extend({
+  questionText: z.string().min(3, { message: "Question text must be at least 3 characters long" }),
+  questionKey: z.string().min(2, { message: "Question key must be at least 2 characters long" }),
+  questionType: z.enum(questionTypeEnum.enumValues),
+  order: z.number().int().nonnegative(),
+  isRequired: z.boolean().default(false),
+  placeholderText: z.string().optional(),
+  helpText: z.string().optional(),
+  validationRules: z.any().optional()
+}).omit({
+  pageId: true // We'll get this from the URL params
+});
+
+const questionnaireQuestionUpdateSchema = z.object({
+  questionText: z.string().min(3, { message: "Question text must be at least 3 characters long" }).optional(),
+  questionKey: z.string().min(2, { message: "Question key must be at least 2 characters long" }).optional(),
+  questionType: z.enum(questionTypeEnum.enumValues).optional(),
+  order: z.number().int().nonnegative().optional(),
+  isRequired: z.boolean().optional(),
+  placeholderText: z.string().optional(),
+  helpText: z.string().optional(),
+  validationRules: z.any().optional()
+});
+
+const questionnaireQuestionsReorderSchema = z.object({
+  questionIds: z.array(z.number().int().positive())
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {

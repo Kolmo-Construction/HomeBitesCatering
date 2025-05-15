@@ -137,6 +137,20 @@ export interface IStorage {
   updateQuestionnairePage(pageId: number, page: Partial<QuestionnairePage>): Promise<QuestionnairePage | undefined>;
   deleteQuestionnairePage(pageId: number): Promise<boolean>;
   reorderQuestionnairePages(definitionId: number, pageIds: number[]): Promise<QuestionnairePage[]>;
+  
+  // Questionnaire Questions
+  getQuestionnaireQuestion(questionId: number): Promise<QuestionnaireQuestion | undefined>;
+  getQuestionnaireQuestionsByPage(pageId: number): Promise<QuestionnaireQuestion[]>;
+  createQuestionnaireQuestion(question: InsertQuestionnaireQuestion): Promise<QuestionnaireQuestion>;
+  updateQuestionnaireQuestion(questionId: number, question: Partial<QuestionnaireQuestion>): Promise<QuestionnaireQuestion | undefined>;
+  deleteQuestionnaireQuestion(questionId: number): Promise<boolean>;
+  reorderQuestionnaireQuestions(pageId: number, questionIds: number[]): Promise<QuestionnaireQuestion[]>;
+  
+  // Questionnaire Options (for choice questions)
+  getQuestionnaireQuestionOptions(questionId: number): Promise<QuestionnaireQuestionOption[]>;
+  createQuestionnaireQuestionOption(option: InsertQuestionnaireQuestionOption): Promise<QuestionnaireQuestionOption>;
+  updateQuestionnaireQuestionOption(optionId: number, option: Partial<QuestionnaireQuestionOption>): Promise<QuestionnaireQuestionOption | undefined>;
+  deleteQuestionnaireQuestionOption(optionId: number): Promise<boolean>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -988,6 +1002,170 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error reordering questionnaire pages for definition ${definitionId}:`, error);
       throw error;
+    }
+  }
+  
+  // Questionnaire Questions Implementation
+  
+  async getQuestionnaireQuestion(questionId: number): Promise<QuestionnaireQuestion | undefined> {
+    try {
+      const [question] = await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.id, questionId));
+      
+      return question;
+    } catch (error) {
+      console.error(`Error fetching questionnaire question ${questionId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async getQuestionnaireQuestionsByPage(pageId: number): Promise<QuestionnaireQuestion[]> {
+    try {
+      return await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.pageId, pageId))
+        .orderBy(questionnaireQuestions.order);
+    } catch (error) {
+      console.error(`Error fetching questionnaire questions for page ${pageId}:`, error);
+      return [];
+    }
+  }
+  
+  async createQuestionnaireQuestion(question: InsertQuestionnaireQuestion): Promise<QuestionnaireQuestion> {
+    try {
+      const [newQuestion] = await db
+        .insert(questionnaireQuestions)
+        .values(question)
+        .returning();
+      
+      return newQuestion;
+    } catch (error) {
+      console.error('Error creating questionnaire question:', error);
+      throw error;
+    }
+  }
+  
+  async updateQuestionnaireQuestion(questionId: number, questionData: Partial<QuestionnaireQuestion>): Promise<QuestionnaireQuestion | undefined> {
+    try {
+      const [updatedQuestion] = await db
+        .update(questionnaireQuestions)
+        .set({ ...questionData, updatedAt: new Date() })
+        .where(eq(questionnaireQuestions.id, questionId))
+        .returning();
+      
+      return updatedQuestion;
+    } catch (error) {
+      console.error(`Error updating questionnaire question ${questionId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteQuestionnaireQuestion(questionId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.id, questionId));
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error deleting questionnaire question ${questionId}:`, error);
+      return false;
+    }
+  }
+  
+  async reorderQuestionnaireQuestions(pageId: number, questionIds: number[]): Promise<QuestionnaireQuestion[]> {
+    try {
+      // Using a transaction to ensure all updates are atomic
+      const updatedQuestions: QuestionnaireQuestion[] = [];
+      
+      await db.transaction(async (tx) => {
+        // For each questionId in the array, update its order based on its position in the array
+        for (let i = 0; i < questionIds.length; i++) {
+          const questionId = questionIds[i];
+          
+          const [updatedQuestion] = await tx
+            .update(questionnaireQuestions)
+            .set({ 
+              order: i,
+              updatedAt: new Date()
+            })
+            .where(and(
+              eq(questionnaireQuestions.id, questionId),
+              eq(questionnaireQuestions.pageId, pageId)
+            ))
+            .returning();
+          
+          if (updatedQuestion) {
+            updatedQuestions.push(updatedQuestion);
+          }
+        }
+      });
+      
+      // Return the updated questions in their new order
+      return updatedQuestions.sort((a, b) => a.order - b.order);
+    } catch (error) {
+      console.error(`Error reordering questionnaire questions for page ${pageId}:`, error);
+      throw error;
+    }
+  }
+  
+  // Questionnaire Options Implementation
+  
+  async getQuestionnaireQuestionOptions(questionId: number): Promise<QuestionnaireQuestionOption[]> {
+    try {
+      return await db
+        .select()
+        .from(questionnaireQuestionOptions)
+        .where(eq(questionnaireQuestionOptions.questionId, questionId))
+        .orderBy(questionnaireQuestionOptions.order);
+    } catch (error) {
+      console.error(`Error fetching options for question ${questionId}:`, error);
+      return [];
+    }
+  }
+  
+  async createQuestionnaireQuestionOption(option: InsertQuestionnaireQuestionOption): Promise<QuestionnaireQuestionOption> {
+    try {
+      const [newOption] = await db
+        .insert(questionnaireQuestionOptions)
+        .values(option)
+        .returning();
+      
+      return newOption;
+    } catch (error) {
+      console.error('Error creating questionnaire question option:', error);
+      throw error;
+    }
+  }
+  
+  async updateQuestionnaireQuestionOption(optionId: number, optionData: Partial<QuestionnaireQuestionOption>): Promise<QuestionnaireQuestionOption | undefined> {
+    try {
+      const [updatedOption] = await db
+        .update(questionnaireQuestionOptions)
+        .set({ ...optionData, updatedAt: new Date() })
+        .where(eq(questionnaireQuestionOptions.id, optionId))
+        .returning();
+      
+      return updatedOption;
+    } catch (error) {
+      console.error(`Error updating questionnaire question option ${optionId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteQuestionnaireQuestionOption(optionId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(questionnaireQuestionOptions)
+        .where(eq(questionnaireQuestionOptions.id, optionId));
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error deleting questionnaire question option ${optionId}:`, error);
+      return false;
     }
   }
 }
