@@ -2,7 +2,7 @@
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, processedEmails,
-  questionnairePages, questionnaireDefinitions,
+  questionnairePages, questionnaireDefinitions, questionnaireQuestions, questionnaireQuestionOptions, questionTypeEnum,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -14,8 +14,10 @@ import {
   type Communication, type InsertCommunication,
   type RawLead, type InsertRawLead,
   type ProcessedEmail, type InsertProcessedEmail,
-  type QuestionnairePage, type InsertQuestionnairePage, type QuestionnaireDefinition,
-  insertQuestionnaireDefinitionSchema
+  type QuestionnairePage, type InsertQuestionnairePage, 
+  type QuestionnaireDefinition, insertQuestionnaireDefinitionSchema,
+  type QuestionnaireQuestion, type InsertQuestionnaireQuestion,
+  type QuestionnaireQuestionOption, type InsertQuestionnaireQuestionOption
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
