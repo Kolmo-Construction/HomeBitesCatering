@@ -147,7 +147,14 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
 
       if (isEditing && opportunityToEdit) {
         // Update existing opportunity
-        const res = await apiRequest("PATCH", `/api/opportunities/${opportunityToEdit.id}`, opportunityValues);
+        const updatePayload = {
+          ...opportunityValues,
+          // Include clientId in the update when assignToExistingClient is true
+          ...(assignToExistingClient && clientId ? { clientId: Number(clientId) } : { clientId: null })
+        };
+        
+        console.log("Updating opportunity with:", JSON.stringify(updatePayload));
+        const res = await apiRequest("PATCH", `/api/opportunities/${opportunityToEdit.id}`, updatePayload);
         return res.json();
       } else {
         // Create new opportunity

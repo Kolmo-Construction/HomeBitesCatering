@@ -175,26 +175,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOpportunity(id: number, opportunityData: Partial<Opportunity>): Promise<Opportunity | undefined> {
+    console.log(`Updating opportunity ${id} with data:`, JSON.stringify(opportunityData));
+    
     // If clientId is being set, get the client info to update firstName and lastName
     if (opportunityData.clientId) {
+      console.log(`Client ID detected: ${opportunityData.clientId}`);
       try {
         const client = await this.getClient(opportunityData.clientId);
+        console.log(`Retrieved client:`, JSON.stringify(client));
+        
         if (client) {
           // Update the opportunityData with the client's name
           opportunityData.firstName = client.firstName;
           opportunityData.lastName = client.lastName;
-          console.log(`Updating opportunity ${id} with client ${client.id} data: ${client.firstName} ${client.lastName}`);
+          console.log(`Updated opportunity data to use client name: ${client.firstName} ${client.lastName}`);
+        } else {
+          console.log(`No client found with ID ${opportunityData.clientId}`);
         }
       } catch (error) {
         console.error("Error getting client data for opportunity update:", error);
       }
+    } else {
+      console.log('No clientId in update data');
     }
+    
+    console.log(`Final opportunity update data:`, JSON.stringify(opportunityData));
     
     const [updatedOpportunity] = await db
       .update(opportunities)
       .set(opportunityData)
       .where(eq(opportunities.id, id))
       .returning();
+      
+    console.log(`Updated opportunity result:`, JSON.stringify(updatedOpportunity));
     return updatedOpportunity;
   }
 
