@@ -47,6 +47,23 @@ const questionnairePagesReorderSchema = z.object({
 });
 
 // Validation schemas for questionnaire questions API endpoints
+// Define schema for options in question creation
+const questionOptionCreateSchema = z.object({
+  optionText: z.string().min(1, { message: "Option text is required" }),
+  optionValue: z.string().min(1, { message: "Option value is required" }),
+  order: z.number().int().nonnegative(),
+  defaultSelectionIndicator: z.string().optional(),
+  relatedMenuItemId: z.number().int().positive().optional()
+});
+
+// Define schema for matrix columns in question creation
+const matrixColumnCreateSchema = z.object({
+  columnText: z.string().min(1, { message: "Column text is required" }),
+  columnValue: z.string().min(1, { message: "Column value is required" }),
+  order: z.number().int().nonnegative()
+});
+
+// Main question creation schema
 const questionnaireQuestionCreateSchema = insertQuestionnaireQuestionSchema.extend({
   questionText: z.string().min(3, { message: "Question text must be at least 3 characters long" }),
   questionKey: z.string().min(2, { message: "Question key must be at least 2 characters long" }),
@@ -55,7 +72,9 @@ const questionnaireQuestionCreateSchema = insertQuestionnaireQuestionSchema.exte
   isRequired: z.boolean().default(false),
   placeholderText: z.string().optional(),
   helpText: z.string().optional(),
-  validationRules: z.any().optional()
+  validationRules: z.any().optional(),
+  options: z.array(questionOptionCreateSchema).optional(),
+  matrixColumns: z.array(matrixColumnCreateSchema).optional()
 }).omit({
   pageId: true // We'll get this from the URL params
 });
@@ -68,7 +87,9 @@ const questionnaireQuestionUpdateSchema = z.object({
   isRequired: z.boolean().optional(),
   placeholderText: z.string().optional(),
   helpText: z.string().optional(),
-  validationRules: z.any().optional()
+  validationRules: z.any().optional(),
+  options: z.array(questionOptionCreateSchema).optional(),
+  matrixColumns: z.array(matrixColumnCreateSchema).optional()
 });
 
 const questionnaireQuestionsReorderSchema = z.object({
@@ -1865,13 +1886,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the request body
       const validatedData = questionnaireQuestionCreateSchema.parse(req.body);
       
-      // Create the question with the pageId from the URL parameters
-      const newQuestion = await storage.createQuestionnaireQuestion({
-        ...validatedData,
-        pageId
+      // Check for questionKey uniqueness (globally)
+      const existingQuestion = await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(eq(questionnaireQuestions.questionKey, validatedData.questionKey))
+        .limit(1);
+      
+      if (existingQuestion.length > 0) {
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          errors: [{ 
+            path: ['questionKey'], 
+            message: 'Question key must be globally unique',
+            code: 'custom' 
+          }]
+        });
+      }
+      
+      // Extract any options and matrixColumns from the validated data
+      const { options, matrixColumns, ...questionData } = validatedData;
+      
+      // Validate questionType against provided options/matrixColumns
+      const requiresOptions = ['select', 'radio', 'checkbox_group'].includes(questionData.questionType);
+      const requiresMatrixColumns = ['matrix_single', 'matrix_multi'].includes(questionData.questionType);
+      
+      if (requiresOptions && (!options || options.length === 0)) {
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          errors: [{ 
+            path: ['options'], 
+            message: `Question type '${questionData.questionType}' requires at least one option`,
+            code: 'custom' 
+          }]
+        });
+      }
+      
+      if (requiresMatrixColumns && (!matrixColumns || matrixColumns.length === 0)) {
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          errors: [{ 
+            path: ['matrixColumns'], 
+            message: `Question type '${questionData.questionType}' requires at least one matrix column`,
+            code: 'custom' 
+          }]
+        });
+      }
+      
+      // Create everything in a transaction
+      let newQuestion;
+      const questionWithRelations: any = {};
+      
+      await db.transaction(async (tx) => {
+        // 1. Create the question
+        const [createdQuestion] = await tx
+          .insert(questionnaireQuestions)
+          .values({
+            ...questionData,
+            pageId
+          })
+          .returning();
+        
+        newQuestion = createdQuestion;
+        questionWithRelations.question = createdQuestion;
+        questionWithRelations.options = [];
+        questionWithRelations.matrixColumns = [];
+        
+        // 2. Create options if provided
+        if (options && options.length > 0) {
+          const optionsToInsert = options.map(option => ({
+            ...option,
+            questionId: createdQuestion.id
+          }));
+          
+          const createdOptions = await tx
+            .insert(questionnaireQuestionOptions)
+            .values(optionsToInsert)
+            .returning();
+          
+          questionWithRelations.options = createdOptions;
+        }
+        
+        // 3. Create matrix columns if provided
+        if (matrixColumns && matrixColumns.length > 0) {
+          const columnsToInsert = matrixColumns.map(column => ({
+            ...column,
+            questionId: createdQuestion.id
+          }));
+          
+          const createdColumns = await tx
+            .insert(questionnaireMatrixColumns)
+            .values(columnsToInsert)
+            .returning();
+          
+          questionWithRelations.matrixColumns = createdColumns;
+        }
       });
       
-      res.status(201).json(newQuestion);
+      res.status(201).json(questionWithRelations);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
