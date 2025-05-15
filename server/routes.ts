@@ -2113,8 +2113,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the request body
       const validatedData = optionUpdateSchema.parse(req.body);
       
+      // Map to the correct field names for updating
+      const updateData: Partial<QuestionnaireQuestionOption> = {};
+      if (validatedData.order !== undefined) updateData.order = validatedData.order;
+      if (validatedData.label !== undefined) updateData.optionText = validatedData.label;
+      if (validatedData.value !== undefined) updateData.optionValue = validatedData.value;
+      
       // Update the option
-      const updatedOption = await storage.updateQuestionnaireQuestionOption(optionId, validatedData);
+      const updatedOption = await storage.updateQuestionnaireQuestionOption(optionId, updateData);
       if (!updatedOption) {
         return res.status(404).json({ message: 'Question option not found' });
       }
