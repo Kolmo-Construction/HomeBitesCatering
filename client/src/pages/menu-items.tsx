@@ -78,8 +78,8 @@ export default function MenuItems() {
     // Format price from cents to dollars before passing to form
     const formattedMenuItem = {
       ...menuItem,
-      // Make sure price is correctly formatted if it's stored in cents
-      price: typeof menuItem.price === 'number' ? menuItem.price : 0
+      // If price is null, keep it as null to allow editing optional prices
+      price: menuItem.price === null ? null : (typeof menuItem.price === 'number' ? menuItem.price : 0)
     };
     
     return <MenuItemForm menuItem={formattedMenuItem} isEditing={true} />;
