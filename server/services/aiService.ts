@@ -19,12 +19,12 @@ const GEMINI_MODEL_ID = 'google/gemini-2.0-flash-exp:free';
 const CLAUDE_MODEL_ID = 'anthropic/claude-3-haiku';
 
 /**
- * AI Service that provides various AI capabilities using Claude via Open Router
- * and OpenAI for specialized tasks
+ * AI Service that provides various AI capabilities using 
+ * DeepSeek as primary model, with Gemini and Claude as fallbacks
  */
-export class AIService { // <-- ADDED export keyword here
+export class AIService {
   /**
-   * Generates a summary of a text using Claude
+   * Generates a summary of a text using the AI model cascade
    */
   async generateSummary(text: string): Promise<string> {
     try {
@@ -243,6 +243,51 @@ export class AIService { // <-- ADDED export keyword here
   }
 
   /**
+   * Helper method to process lead analysis response from any model
+   */
+  private processLeadAnalysisResponse(resultText: string) {
+    try {
+      // Parse the JSON response
+      const result = JSON.parse(resultText);
+
+      // Convert guest count to number if present
+      if (result.extractedGuestCount && typeof result.extractedGuestCount === 'string') {
+        const parsedCount = parseInt(result.extractedGuestCount, 10);
+        if (!isNaN(parsedCount)) {
+          result.extractedGuestCount = parsedCount;
+        }
+      }
+
+      // Convert budget value to number if present
+      if (result.aiBudgetValue && typeof result.aiBudgetValue === 'string') {
+        const parsedBudget = parseInt(result.aiBudgetValue, 10);
+        if (!isNaN(parsedBudget)) {
+          result.aiBudgetValue = parsedBudget;
+        }
+      }
+
+      // Ensure arrays are actually arrays
+      if (!Array.isArray(result.aiKeyRequirements)) {
+        result.aiKeyRequirements = [];
+      }
+
+      if (!Array.isArray(result.aiPotentialRedFlags)) {
+        result.aiPotentialRedFlags = [];
+      }
+
+      console.log("AI Lead Analysis: Analysis completed successfully.");
+      return result;
+    } catch (parseError) {
+      console.error("AI Lead Analysis JSON Parsing Error:", parseError);
+      return {
+        extractedMessageSummary: "Error parsing AI response.",
+        aiOverallLeadQuality: "cold",
+        aiConfidenceScore: 0
+      };
+    }
+  }
+
+  /**
    * Analyzes an email or message to extract structured information and insights
    */
   async analyzeLeadMessage(message: string): Promise<{
@@ -305,59 +350,62 @@ Provide your output in the following JSON format ONLY, with empty or null values
 Here's the message to analyze:
 ${message}`;
 
-      const response = await openRouter.chat.completions.create({
-        model: CLAUDE_MODEL_ID,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 1500,
-        temperature: 0.2,
-        response_format: { type: "json_object" }
-      });
-
-      const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-
+      // Try DeepSeek first (primary model)
       try {
-        // Parse the JSON response
-        const result = JSON.parse(resultText);
-
-        // Convert guest count to number if present
-        if (result.extractedGuestCount && typeof result.extractedGuestCount === 'string') {
-          const parsedCount = parseInt(result.extractedGuestCount, 10);
-          if (!isNaN(parsedCount)) {
-            result.extractedGuestCount = parsedCount;
-          }
+        const response = await openRouter.chat.completions.create({
+          model: OPENROUTER_MODEL_ID,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 1500,
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        });
+        
+        return this.processLeadAnalysisResponse(response.choices[0]?.message?.content?.trim() || "{}");
+      } catch (deepseekError) {
+        console.error("AI Lead Analysis DeepSeek Error:", deepseekError);
+        console.log("AI Lead Analysis: Falling back to Gemini...");
+        
+        // Try Gemini as first fallback
+        try {
+          const response = await openRouter.chat.completions.create({
+            model: GEMINI_MODEL_ID,
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 1500,
+            temperature: 0.2,
+            response_format: { type: "json_object" }
+          });
+          
+          return this.processLeadAnalysisResponse(response.choices[0]?.message?.content?.trim() || "{}");
+        } catch (geminiError) {
+          console.error("AI Lead Analysis Gemini Error:", geminiError);
+          console.log("AI Lead Analysis: Falling back to Claude...");
+          
+          // Finally try Claude
+          const response = await openRouter.chat.completions.create({
+            model: CLAUDE_MODEL_ID,
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 1500,
+            temperature: 0.2,
+            response_format: { type: "json_object" }
+          });
+          
+          return this.processLeadAnalysisResponse(response.choices[0]?.message?.content?.trim() || "{}");
         }
-
-        // Convert budget value to number if present
-        if (result.aiBudgetValue && typeof result.aiBudgetValue === 'string') {
-          const parsedBudget = parseInt(result.aiBudgetValue, 10);
-          if (!isNaN(parsedBudget)) {
-            result.aiBudgetValue = parsedBudget;
-          }
-        }
-
-        // Ensure arrays are actually arrays
-        if (!Array.isArray(result.aiKeyRequirements)) {
-          result.aiKeyRequirements = [];
-        }
-
-        if (!Array.isArray(result.aiPotentialRedFlags)) {
-          result.aiPotentialRedFlags = [];
-        }
-
-        console.log("AI Lead Analysis: Analysis completed successfully.");
-        return result;
-      } catch (parseError) {
-        console.error("AI Lead Analysis JSON Parsing Error:", parseError);
-        return {
-          extractedMessageSummary: "Error parsing AI response.",
-          aiOverallLeadQuality: "cold",
-          aiConfidenceScore: 0
-        };
       }
     } catch (error) {
       console.error("AI Lead Analysis Error:", error);
