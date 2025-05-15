@@ -2,6 +2,7 @@
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, processedEmails,
+  questionnairePages, questionnaireDefinitions,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -12,7 +13,8 @@ import {
   type ContactIdentifier, type InsertContactIdentifier,
   type Communication, type InsertCommunication,
   type RawLead, type InsertRawLead,
-  type ProcessedEmail, type InsertProcessedEmail
+  type ProcessedEmail, type InsertProcessedEmail,
+  type QuestionnairePage, type InsertQuestionnairePage, type QuestionnaireDefinition
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
@@ -120,6 +122,17 @@ export interface IStorage {
   recordProcessedEmail(emailData: InsertProcessedEmail): Promise<ProcessedEmail>;
   updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<ProcessedEmail | undefined>;
   getEmailsByService(service: string, limit?: number): Promise<ProcessedEmail[]>;
+  
+  // Questionnaire management methods
+  // Definition methods would be implemented separately
+  
+  // Questionnaire Pages
+  getQuestionnairePage(pageId: number): Promise<QuestionnairePage | undefined>;
+  getQuestionnairePagesByDefinition(definitionId: number): Promise<QuestionnairePage[]>;
+  createQuestionnairePage(page: InsertQuestionnairePage): Promise<QuestionnairePage>;
+  updateQuestionnairePage(pageId: number, page: Partial<QuestionnairePage>): Promise<QuestionnairePage | undefined>;
+  deleteQuestionnairePage(pageId: number): Promise<boolean>;
+  reorderQuestionnairePages(definitionId: number, pageIds: number[]): Promise<QuestionnairePage[]>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -832,6 +845,115 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error fetching processed emails for service ${service}:`, error);
       return [];
+    }
+  }
+
+  // Questionnaire Pages Implementation
+
+  async getQuestionnairePage(pageId: number): Promise<QuestionnairePage | undefined> {
+    try {
+      const [page] = await db
+        .select()
+        .from(questionnairePages)
+        .where(eq(questionnairePages.id, pageId));
+      
+      return page;
+    } catch (error) {
+      console.error(`Error fetching questionnaire page ${pageId}:`, error);
+      return undefined;
+    }
+  }
+
+  async getQuestionnairePagesByDefinition(definitionId: number): Promise<QuestionnairePage[]> {
+    try {
+      return await db
+        .select()
+        .from(questionnairePages)
+        .where(eq(questionnairePages.definitionId, definitionId))
+        .orderBy(questionnairePages.order);
+    } catch (error) {
+      console.error(`Error fetching questionnaire pages for definition ${definitionId}:`, error);
+      return [];
+    }
+  }
+
+  async createQuestionnairePage(page: InsertQuestionnairePage): Promise<QuestionnairePage> {
+    try {
+      const [newPage] = await db
+        .insert(questionnairePages)
+        .values(page)
+        .returning();
+      
+      return newPage;
+    } catch (error) {
+      console.error('Error creating questionnaire page:', error);
+      throw error;
+    }
+  }
+
+  async updateQuestionnairePage(pageId: number, pageData: Partial<QuestionnairePage>): Promise<QuestionnairePage | undefined> {
+    try {
+      const [updatedPage] = await db
+        .update(questionnairePages)
+        .set({ ...pageData, updatedAt: new Date() })
+        .where(eq(questionnairePages.id, pageId))
+        .returning();
+      
+      return updatedPage;
+    } catch (error) {
+      console.error(`Error updating questionnaire page ${pageId}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteQuestionnairePage(pageId: number): Promise<boolean> {
+    try {
+      // Due to cascade delete, this will also remove associated questions, options, and matrix columns
+      const result = await db
+        .delete(questionnairePages)
+        .where(eq(questionnairePages.id, pageId));
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting questionnaire page ${pageId}:`, error);
+      return false;
+    }
+  }
+
+  async reorderQuestionnairePages(definitionId: number, pageIds: number[]): Promise<QuestionnairePage[]> {
+    // Using a transaction to ensure all updates are atomic
+    try {
+      // Start transaction
+      const updatedPages: QuestionnairePage[] = [];
+      
+      await db.transaction(async (tx) => {
+        // For each pageId in the array, update its order based on its position in the array
+        for (let i = 0; i < pageIds.length; i++) {
+          const pageId = pageIds[i];
+          
+          const [updatedPage] = await tx
+            .update(questionnairePages)
+            .set({ 
+              order: i,
+              updatedAt: new Date()
+            })
+            .where(and(
+              eq(questionnairePages.id, pageId),
+              eq(questionnairePages.definitionId, definitionId)
+            ))
+            .returning();
+          
+          if (updatedPage) {
+            updatedPages.push(updatedPage);
+          }
+        }
+      });
+      
+      // Return the updated pages in their new order
+      return updatedPages.sort((a, b) => a.order - b.order);
+    } catch (error) {
+      console.error(`Error reordering questionnaire pages for definition ${definitionId}:`, error);
+      throw error;
     }
   }
 }
