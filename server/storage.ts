@@ -1,7 +1,7 @@
 // server/storage.ts
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
-  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads,
+  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, processedEmails,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -11,7 +11,8 @@ import {
   type Event, type InsertEvent,
   type ContactIdentifier, type InsertContactIdentifier,
   type Communication, type InsertCommunication,
-  type RawLead, type InsertRawLead
+  type RawLead, type InsertRawLead,
+  type ProcessedEmail, type InsertProcessedEmail
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
@@ -748,6 +749,79 @@ export class DatabaseStorage implements IStorage {
     }
     
     return results;
+  }
+
+  // Email duplicate prevention methods implementation
+  async isEmailProcessed(messageId: string, service: string): Promise<boolean> {
+    try {
+      const existingEmail = await db
+        .select()
+        .from(processedEmails)
+        .where(eq(processedEmails.messageId, messageId))
+        .limit(1);
+      
+      return existingEmail.length > 0;
+    } catch (error) {
+      console.error(`Error checking if email ${messageId} is processed:`, error);
+      // If we can't check, assume it's not processed for safety
+      return false;
+    }
+  }
+
+  async recordProcessedEmail(emailData: InsertProcessedEmail): Promise<ProcessedEmail> {
+    try {
+      // Check if this message ID is already recorded
+      const existing = await db
+        .select()
+        .from(processedEmails)
+        .where(eq(processedEmails.messageId, emailData.messageId))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        console.log(`Email with message ID ${emailData.messageId} already recorded, returning existing record`);
+        return existing[0];
+      }
+      
+      // Record new processed email
+      const [result] = await db
+        .insert(processedEmails)
+        .values(emailData)
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error(`Error recording processed email ${emailData.messageId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<ProcessedEmail | undefined> {
+    try {
+      const [updated] = await db
+        .update(processedEmails)
+        .set({ labelApplied })
+        .where(eq(processedEmails.messageId, messageId))
+        .returning();
+      
+      return updated;
+    } catch (error) {
+      console.error(`Error updating label status for email ${messageId}:`, error);
+      return undefined;
+    }
+  }
+
+  async getEmailsByService(service: string, limit: number = 100): Promise<ProcessedEmail[]> {
+    try {
+      return await db
+        .select()
+        .from(processedEmails)
+        .where(eq(processedEmails.service, service))
+        .orderBy(desc(processedEmails.processedAt))
+        .limit(limit);
+    } catch (error) {
+      console.error(`Error fetching processed emails for service ${service}:`, error);
+      return [];
+    }
   }
 }
 
