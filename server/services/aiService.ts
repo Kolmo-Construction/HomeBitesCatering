@@ -283,7 +283,7 @@ export class AIService { // <-- ADDED export keyword here
         return {};
       }
 
-      console.log(`AI Lead Analysis: Sending message of length ${message.length} to Claude via OpenRouter...`);
+      console.log(`AI Lead Analysis: Sending message of length ${message.length} to DeepSeek via OpenRouter...`);
 
       const prompt = `
 You are a lead analysis assistant for a catering business.
@@ -317,7 +317,7 @@ Here's the message to analyze:
 ${message}`;
 
       const response = await openRouter.chat.completions.create({
-        model: AI_MODEL_ID,
+        model: CLAUDE_MODEL_ID,
         messages: [
           {
             role: 'user',
