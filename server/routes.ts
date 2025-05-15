@@ -1308,7 +1308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email Sync Service Control Endpoints - FOR DEBUGGING, isAuthenticated and isAdmin are temporarily removed
+  // Email Services Control Endpoints - FOR DEBUGGING, isAuthenticated and isAdmin are temporarily removed
+  
+  // Legacy Gmail Sync (general purpose) - will eventually be retired
   app.get('/api/email-sync/status', (req, res) => {
     const gmailSyncService = req.app.get('gmailSyncService');
     if (!gmailSyncService) {
@@ -1386,6 +1388,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Invalid request. "enabled" parameter must be true or false' 
       });
     }
+  });
+  
+  // Lead Generation Service Control
+  app.get('/api/lead-generation/status', (req, res) => {
+    const leadGenService = req.app.get('leadGenService');
+    if (!leadGenService) {
+      return res.status(404).json({ 
+        enabled: false, 
+        configured: false, 
+        message: 'Lead generation service is not configured' 
+      });
+    }
+    
+    res.json({ 
+      enabled: leadGenService.isRunning(), 
+      configured: true,
+      targetEmail: leadGenService.getTargetEmail(),
+      // Add debug info
+      isRunning: leadGenService.isRunning(),
+      timerId: leadGenService.getTimerId() ? "Timer exists" : "No timer",
+      inspectRunningStatus: JSON.stringify(leadGenService.inspectStatus()),
+      serviceType: 'lead_generation'
+    });
+  });
+  
+  app.post('/api/lead-generation/toggle', (req, res) => {
+    const leadGenService = req.app.get('leadGenService');
+    
+    if (!leadGenService) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Lead generation service is not configured' 
+      });
+    }
+    
+    const { enabled } = req.body;
+    console.log("Lead generation toggle request received: ", enabled);
+    
+    if (enabled === true) {
+      try {
+        leadGenService.start();
+        console.log("Lead generation service started successfully");
+        return res.json({ 
+          success: true, 
+          enabled: true, 
+          message: 'Lead generation service started' 
+        });
+      } catch (error) {
+        console.error("Error starting lead generation service:", error);
+        return res.status(500).json({
+          success: false,
+          enabled: leadGenService.isRunning(),
+          message: `Error starting service: ${error.message || 'Unknown error'}`
+        });
+      }
+    } else if (enabled === false) {
+      try {
+        leadGenService.stop();
+        console.log("Lead generation service stopped successfully");
+        return res.json({ 
+          success: true, 
+          enabled: false, 
+          message: 'Lead generation service stopped' 
+        });
+      } catch (error) {
+        console.error("Error stopping lead generation service:", error);
+        return res.status(500).json({
+          success: false,
+          enabled: leadGenService.isRunning(),
+          message: `Error stopping service: ${error.message || 'Unknown error'}`
+        });
+      }
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request, expected { enabled: true|false }' 
+      });
+    }
+  });
+  
+  // Communication Sync Service Control
+  app.get('/api/communication-sync/status', (req, res) => {
+    const commSyncService = req.app.get('commSyncService');
+    if (!commSyncService) {
+      return res.status(404).json({ 
+        enabled: false, 
+        configured: false, 
+        message: 'Communication sync service is not configured' 
+      });
+    }
+    
+    res.json({ 
+      enabled: commSyncService.isRunning(), 
+      configured: true,
+      targetEmail: commSyncService.getTargetEmail(),
+      // Add debug info
+      isRunning: commSyncService.isRunning(),
+      timerId: commSyncService.getTimerId() ? "Timer exists" : "No timer",
+      inspectRunningStatus: JSON.stringify(commSyncService.inspectStatus()),
+      serviceType: 'communication_sync'
+    });
+  });
+  
+  app.post('/api/communication-sync/toggle', (req, res) => {
+    const commSyncService = req.app.get('commSyncService');
+    
+    if (!commSyncService) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Communication sync service is not configured' 
+      });
+    }
+    
+    const { enabled } = req.body;
+    console.log("Communication sync toggle request received: ", enabled);
+    
+    if (enabled === true) {
+      try {
+        commSyncService.start();
+        console.log("Communication sync service started successfully");
+        return res.json({ 
+          success: true, 
+          enabled: true, 
+          message: 'Communication sync service started' 
+        });
+      } catch (error) {
+        console.error("Error starting communication sync service:", error);
+        return res.status(500).json({
+          success: false,
+          enabled: commSyncService.isRunning(),
+          message: `Error starting service: ${error.message || 'Unknown error'}`
+        });
+      }
+    } else if (enabled === false) {
+      try {
+        commSyncService.stop();
+        console.log("Communication sync service stopped successfully");
+        return res.json({ 
+          success: true, 
+          enabled: false, 
+          message: 'Communication sync service stopped' 
+        });
+      } catch (error) {
+        console.error("Error stopping communication sync service:", error);
+        return res.status(500).json({
+          success: false,
+          enabled: commSyncService.isRunning(),
+          message: `Error stopping service: ${error.message || 'Unknown error'}`
+        });
+      }
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request, expected { enabled: true|false }' 
+      });
+    }
+  });
+  
+  // Email Services Status Summary Endpoint
+  app.get('/api/email-services/status', (req, res) => {
+    const gmailSyncService = req.app.get('gmailSyncService');
+    const leadGenService = req.app.get('leadGenService');
+    const commSyncService = req.app.get('commSyncService');
+    
+    res.json({
+      legacy: {
+        configured: !!gmailSyncService,
+        enabled: gmailSyncService ? gmailSyncService.isRunning() : false,
+        targetEmail: gmailSyncService ? gmailSyncService.getTargetEmail() : null
+      },
+      leadGeneration: {
+        configured: !!leadGenService,
+        enabled: leadGenService ? leadGenService.isRunning() : false,
+        targetEmail: leadGenService ? leadGenService.getTargetEmail() : null
+      },
+      communicationSync: {
+        configured: !!commSyncService,
+        enabled: commSyncService ? commSyncService.isRunning() : false,
+        targetEmail: commSyncService ? commSyncService.getTargetEmail() : null
+      },
+      aiEnabled: process.env.OPENAI_API_KEY ? true : false
+    });
   });
 
   // Create HTTP server
