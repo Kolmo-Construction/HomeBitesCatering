@@ -505,4 +505,160 @@ export const questionnaireConditionalLogic = pgTable('questionnaire_conditional_
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// We'll define the relations and exports after completing table definitions
+// Define the questionnaire submissions table
+export const questionnaireSubmissions = pgTable('questionnaire_submissions', {
+  id: serial('id').primaryKey(),
+  definitionId: integer('definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'cascade' }).notNull(),
+  // This will store the answers from the questionnaire, typically as a JSON object:
+  // { "question_key_1": "answer_1", "question_key_2": ["option_a", "option_c"], ... }
+  submittedData: jsonb('submitted_data').notNull(),
+  status: submissionStatusEnum('status').default('draft').notNull(),
+  clientIdentifier: text('client_identifier'), // e.g., session ID for anonymous, user ID for logged-in
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }), // If submitted by a logged-in user
+  rawLeadId: integer('raw_lead_id').references(() => rawLeads.id, { onDelete: 'set null' }).unique(), // Link to the created rawLead
+  submittedAt: timestamp('submitted_at'), // Only set when status becomes 'submitted'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Now add the questionnaire fields to raw_leads
+export const rawLeadsUpdate = pgTable('raw_leads', {
+  questionnaireSubmissionId: integer('questionnaire_submission_id').references(() => questionnaireSubmissions.id, { onDelete: 'set null' }).unique(),
+  questionnaireDefinitionId: integer('questionnaire_definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'set null' }),
+});
+
+// Define the relationships between tables
+export const questionnaireDefinitionRelations = relations(questionnaireDefinitions, ({ many }) => ({
+  pages: many(questionnairePages),
+  conditionalLogic: many(questionnaireConditionalLogic),
+  submissions: many(questionnaireSubmissions),
+}));
+
+export const questionnairePageRelations = relations(questionnairePages, ({ one, many }) => ({
+  definition: one(questionnaireDefinitions, {
+    fields: [questionnairePages.definitionId],
+    references: [questionnaireDefinitions.id],
+  }),
+  questions: many(questionnaireQuestions),
+  conditionalLogicTargets: many(questionnaireConditionalLogic, { relationName: 'targetPageConditionalLogic' }),
+}));
+
+export const questionnaireQuestionRelations = relations(questionnaireQuestions, ({ one, many }) => ({
+  page: one(questionnairePages, {
+    fields: [questionnaireQuestions.pageId],
+    references: [questionnairePages.id],
+  }),
+  options: many(questionnaireQuestionOptions),
+  matrixColumns: many(questionnaireMatrixColumns),
+}));
+
+export const questionnaireQuestionOptionRelations = relations(questionnaireQuestionOptions, ({ one }) => ({
+  question: one(questionnaireQuestions, {
+    fields: [questionnaireQuestionOptions.questionId],
+    references: [questionnaireQuestions.id],
+  }),
+  relatedMenuItem: one(menuItems, {
+    fields: [questionnaireQuestionOptions.relatedMenuItemId],
+    references: [menuItems.id],
+  }),
+}));
+
+export const questionnaireMatrixColumnRelations = relations(questionnaireMatrixColumns, ({ one }) => ({
+  question: one(questionnaireQuestions, {
+    fields: [questionnaireMatrixColumns.questionId],
+    references: [questionnaireQuestions.id],
+  }),
+}));
+
+export const questionnaireConditionalLogicRelations = relations(questionnaireConditionalLogic, ({ one }) => ({
+  definition: one(questionnaireDefinitions, {
+    fields: [questionnaireConditionalLogic.definitionId],
+    references: [questionnaireDefinitions.id],
+  }),
+  targetPage: one(questionnairePages, {
+    fields: [questionnaireConditionalLogic.targetPageId],
+    references: [questionnairePages.id],
+    relationName: 'targetPageConditionalLogic',
+  }),
+}));
+
+export const questionnaireSubmissionRelations = relations(questionnaireSubmissions, ({ one }) => ({
+  definition: one(questionnaireDefinitions, {
+    fields: [questionnaireSubmissions.definitionId],
+    references: [questionnaireDefinitions.id],
+  }),
+  user: one(users, {
+    fields: [questionnaireSubmissions.userId],
+    references: [users.id],
+  }),
+  rawLead: one(rawLeads, {
+    fields: [questionnaireSubmissions.rawLeadId],
+    references: [rawLeads.id],
+  }),
+}));
+
+// Expose types for the questionnaire tables
+export type QuestionnaireDefinition = typeof questionnaireDefinitions.$inferSelect;
+export type QuestionnairePage = typeof questionnairePages.$inferSelect;
+export type QuestionnaireQuestion = typeof questionnaireQuestions.$inferSelect;
+export type QuestionnaireQuestionOption = typeof questionnaireQuestionOptions.$inferSelect;
+export type QuestionnaireMatrixColumn = typeof questionnaireMatrixColumns.$inferSelect;
+export type QuestionnaireConditionalLogic = typeof questionnaireConditionalLogic.$inferSelect;
+export type QuestionnaireSubmission = typeof questionnaireSubmissions.$inferSelect;
+
+// Create insert schemas for the questionnaire tables
+export const insertQuestionnaireDefinitionSchema = createInsertSchema(questionnaireDefinitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertQuestionnairePageSchema = createInsertSchema(questionnairePages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertQuestionnaireQuestionSchema = createInsertSchema(questionnaireQuestions, {
+  validationRules: z.any().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertQuestionnaireQuestionOptionSchema = createInsertSchema(questionnaireQuestionOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertQuestionnaireMatrixColumnSchema = createInsertSchema(questionnaireMatrixColumns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertQuestionnaireConditionalLogicSchema = createInsertSchema(questionnaireConditionalLogic).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertQuestionnaireSubmissionSchema = createInsertSchema(questionnaireSubmissions, {
+  submittedData: z.any().optional(),
+  submittedAt: z.coerce.date().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// Insert type exports
+export type InsertQuestionnaireDefinition = z.infer<typeof insertQuestionnaireDefinitionSchema>;
+export type InsertQuestionnairePage = z.infer<typeof insertQuestionnairePageSchema>;
+export type InsertQuestionnaireQuestion = z.infer<typeof insertQuestionnaireQuestionSchema>;
+export type InsertQuestionnaireQuestionOption = z.infer<typeof insertQuestionnaireQuestionOptionSchema>;
+export type InsertQuestionnaireMatrixColumn = z.infer<typeof insertQuestionnaireMatrixColumnSchema>;
+export type InsertQuestionnaireConditionalLogic = z.infer<typeof insertQuestionnaireConditionalLogicSchema>;
+export type InsertQuestionnaireSubmission = z.infer<typeof insertQuestionnaireSubmissionSchema>;
