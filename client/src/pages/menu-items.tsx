@@ -102,7 +102,7 @@ export default function MenuItems() {
                 
                 <div className="mb-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Price Per Person</h3>
-                  <p className="text-xl font-semibold">{formatCurrency(menuItem.price / 100)}</p>
+                  <p className="text-xl font-semibold">{menuItem.price ? formatCurrency(menuItem.price) : 'Price not set'}</p>
                 </div>
                 
                 {menuItem.description && (

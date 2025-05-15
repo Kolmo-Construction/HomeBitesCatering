@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision, pgEnum, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -61,7 +61,7 @@ export const menuItems = pgTable("menu_items", {
   name: text("name").notNull(),
   description: text("description"),
   category: text("category").notNull(), // appetizer, entree, side, dessert, beverage
-  price: integer("price"), // stored in cents, nullable for items without price
+  price: numeric("price", { precision: 10, scale: 2 }), // stored as decimal, nullable for items without price
   ingredients: text("ingredients"),
   isVegetarian: boolean("is_vegetarian").default(false),
   isVegan: boolean("is_vegan").default(false),

@@ -90,7 +90,7 @@ export default function MenuItemList() {
     {
       accessorKey: "price",
       header: "Price",
-      cell: ({ row }) => <span>{formatCurrency(row.original.price / 100)}</span>,
+      cell: ({ row }) => <span>{row.original.price ? formatCurrency(row.original.price) : 'Not set'}</span>,
     },
     {
       accessorKey: "dietary",

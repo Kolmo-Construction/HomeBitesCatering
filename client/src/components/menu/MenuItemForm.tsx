@@ -35,7 +35,7 @@ const formSchema = insertMenuItemSchema.extend({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
-  price: z.coerce.number().int().nonnegative("Price must be a non-negative number").optional(),
+  price: z.coerce.number().nonnegative("Price must be a non-negative number").optional(),
   ingredients: z.string().optional(),
   isVegetarian: z.boolean().optional(),
   isVegan: z.boolean().optional(),
@@ -96,11 +96,12 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // Create or update menu item mutation
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      // Convert price to cents for storage (if price is provided)
+      // No need to convert price anymore as it's stored as decimal in the database
       const formattedValues = {
         ...values,
+        // Keep null values as null, don't default to 0 for optional price
         price: values.price !== undefined && values.price !== null ? 
-          Math.round(values.price * 100) : 0 // Default to 0 if price is not specified
+          values.price : null
       };
       
       if (isEditing && menuItem) {
@@ -143,8 +144,9 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   };
 
   // Helper to convert price from cents to dollars for editing
-  const formatPriceForEditing = (priceInCents: number) => {
-    return priceInCents / 100;
+  // No need to format price anymore as it's now stored as a decimal in the database
+  const formatPriceForEditing = (price: number | null) => {
+    return price;
   };
 
   return (
