@@ -680,31 +680,103 @@ export class GmailSyncService {
    * Marks a Gmail message as read by removing the 'UNREAD' label.
    * @param messageGmailId The Gmail ID of the message.
    */
-  private async markEmailAsRead(messageGmailId: string): Promise<void> {
-      if (!this.gmail) {
-          console.warn(`GmailSyncService: Cannot mark message ${messageGmailId} as read, Gmail client not available.`);
-          return;
+  // Custom label we'll use to track processed messages
+  private static readonly CUSTOM_LABEL_NAME = 'PROCESSED_BY_HOMEBITES_Digital_services';
+  private customLabelId: string | null = null;
+
+  /**
+   * Ensures our custom label exists in Gmail
+   * Will create the label if it doesn't exist
+   */
+  private async ensureCustomLabelExists(): Promise<string | null> {
+    if (!this.gmail) {
+      console.warn('GmailSyncService: Cannot check/create label, Gmail client not available.');
+      return null;
+    }
+    
+    if (this.customLabelId) {
+      return this.customLabelId; // Use cached label ID if we've already found it
+    }
+    
+    try {
+      // First check if our label already exists
+      const labelsResponse = await this.gmail.users.labels.list({
+        userId: 'me'
+      });
+      
+      const existingLabel = labelsResponse.data.labels?.find(
+        label => label.name === GmailSyncService.CUSTOM_LABEL_NAME
+      );
+      
+      if (existingLabel && existingLabel.id) {
+        console.log(`GmailSyncService: Found existing label '${GmailSyncService.CUSTOM_LABEL_NAME}' with ID ${existingLabel.id}`);
+        this.customLabelId = existingLabel.id;
+        return existingLabel.id;
       }
-      try {
-          // First check if we're in read-only mode (no modify permissions)
-          const scopes = oauth2Client.credentials.scope;
-          const hasModifyScope = scopes && scopes.includes('https://www.googleapis.com/auth/gmail.modify');
-          
-          if (!hasModifyScope) {
-              console.log(`GmailSyncService: Skipping marking message ${messageGmailId} as read - no modify permission. Email will remain unread.`);
-              return;
-          }
-          
-          await this.gmail.users.messages.modify({
-              userId: 'me',
-              id: messageGmailId,
-              requestBody: {
-                  removeLabelIds: ['UNREAD'],
-                  // Optional: add a label like 'PROCESSED_BY_CRM' for tracking
-                  // addLabelIds: ['PROCESSED_BY_CRM']
-              },
-          });
-          console.log(`GmailSyncService: Successfully marked message ${messageGmailId} as read.`);
+      
+      // If not found, create the label
+      console.log(`GmailSyncService: Label '${GmailSyncService.CUSTOM_LABEL_NAME}' not found, creating it now...`);
+      const createResponse = await this.gmail.users.labels.create({
+        userId: 'me',
+        requestBody: {
+          name: GmailSyncService.CUSTOM_LABEL_NAME,
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show'
+        }
+      });
+      
+      if (createResponse.data.id) {
+        console.log(`GmailSyncService: Successfully created label '${GmailSyncService.CUSTOM_LABEL_NAME}' with ID ${createResponse.data.id}`);
+        this.customLabelId = createResponse.data.id;
+        return createResponse.data.id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`GmailSyncService: Error ensuring custom label exists:`, error);
+      return null;
+    }
+  }
+  
+  private async markEmailAsRead(messageGmailId: string): Promise<void> {
+    if (!this.gmail) {
+        console.warn(`GmailSyncService: Cannot mark message ${messageGmailId} as read, Gmail client not available.`);
+        return;
+    }
+    try {
+        // First check if we're in read-only mode (no modify permissions)
+        const scopes = oauth2Client.credentials.scope;
+        const hasModifyScope = scopes && scopes.includes('https://www.googleapis.com/auth/gmail.modify');
+        
+        if (!hasModifyScope) {
+            console.log(`GmailSyncService: Skipping marking message ${messageGmailId} as read - no modify permission. Email will remain unread.`);
+            return;
+        }
+        
+        // Ensure our custom label exists and get its ID
+        await this.ensureCustomLabelExists();
+        
+        // Build the modification request
+        const requestBody: any = {
+            removeLabelIds: ['UNREAD']
+        };
+        
+        // Only add the custom label if we successfully got its ID
+        if (this.customLabelId) {
+            requestBody.addLabelIds = [this.customLabelId];
+        }
+        
+        await this.gmail.users.messages.modify({
+            userId: 'me',
+            id: messageGmailId,
+            requestBody: requestBody
+        });
+        
+        const successMsg = this.customLabelId 
+            ? `Successfully marked message ${messageGmailId} as read and added '${GmailSyncService.CUSTOM_LABEL_NAME}' label.`
+            : `Successfully marked message ${messageGmailId} as read (custom label could not be applied).`;
+        
+        console.log(`GmailSyncService: ${successMsg}`);
       } catch (markReadError: any) {
           // Check if this is a permission error
           if (markReadError?.code === 403 || 
