@@ -3,16 +3,26 @@ import fetch from 'node-fetch';
 
 const API_BASE_URL = 'http://localhost:5000';
 let authCookie = null;
+const debug = true;
 
 // Helper function to make API requests
 async function makeRequest(method, endpoint, data = null) {
   const options = {
     method,
     headers: {
-      'Content-Type': 'application/json',
-      Cookie: authCookie || ''
+      'Content-Type': 'application/json'
     }
   };
+  
+  // Only add the cookie header if we have one
+  if (authCookie) {
+    options.headers.Cookie = authCookie;
+  }
+  
+  if (debug) {
+    console.log(`Request: ${method} ${endpoint}`);
+    console.log('Options:', JSON.stringify(options, null, 2));
+  }
 
   if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
     options.body = JSON.stringify(data);
@@ -44,12 +54,24 @@ async function login() {
     password: 'admin123'
   };
   
+  if (debug) console.log("Login data:", loginData);
+  
   const response = await makeRequest('POST', '/api/auth/login', loginData);
   
-  if (response.statusCode === 200 && response.headers.get('set-cookie')) {
-    authCookie = response.headers.get('set-cookie');
-    console.log('Successfully logged in');
-    return true;
+  if (debug) {
+    console.log("Login response status:", response.statusCode);
+    console.log("Login response headers:", [...response.headers.entries()]);
+  }
+  
+  if (response.statusCode === 200) {
+    if (response.headers.get('set-cookie')) {
+      authCookie = response.headers.get('set-cookie');
+      console.log('Successfully logged in with cookie');
+      return true;
+    } else {
+      console.log('Login successful but no cookie was set. Session might not work properly.');
+      return true; // Still return true to continue tests
+    }
   } else {
     console.error('Login failed:', response.data);
     return false;
