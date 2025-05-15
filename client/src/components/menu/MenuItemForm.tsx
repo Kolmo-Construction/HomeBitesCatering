@@ -35,7 +35,7 @@ const formSchema = insertMenuItemSchema.extend({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
-  price: z.coerce.number().int().positive("Price must be a positive number"),
+  price: z.coerce.number().int().nonnegative("Price must be a non-negative number").optional(),
   ingredients: z.string().optional(),
   isVegetarian: z.boolean().optional(),
   isVegan: z.boolean().optional(),
@@ -96,10 +96,11 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // Create or update menu item mutation
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      // Convert price to cents for storage
+      // Convert price to cents for storage (if price is provided)
       const formattedValues = {
         ...values,
-        price: Math.round(values.price * 100)
+        price: values.price !== undefined && values.price !== null ? 
+          Math.round(values.price * 100) : 0 // Default to 0 if price is not specified
       };
       
       if (isEditing && menuItem) {
@@ -289,7 +290,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price Per Person</FormLabel>
+                    <FormLabel>Price Per Person <span className="text-sm text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
                       <div className="relative">
                         <DollarSignIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
@@ -306,6 +307,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                       </div>
                     </FormControl>
                     <FormMessage />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty if price is not applicable or to be determined later.</p>
                   </FormItem>
                 )}
               />
