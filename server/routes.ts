@@ -324,7 +324,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: insertOpportunitySchema.shape.priority.optional(),
         opportunitySource: insertOpportunitySchema.shape.opportunitySource.optional(),
         assignedTo: insertOpportunitySchema.shape.assignedTo.optional(),
-        clientId: insertOpportunitySchema.shape.clientId.optional(),
+        // clientId is omitted in insertOpportunitySchema, add it directly
+        clientId: z.number().nullable().optional(),
       });
       
       // Validate update data
