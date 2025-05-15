@@ -119,8 +119,7 @@ async function runTests() {
     console.log('\n=== Test creating a page ===');
     const pageData = {
       title: 'Test Page 1',
-      order: 0,
-      definitionId: definitionId
+      order: 0
     };
     
     const createResponse = await makeRequest(

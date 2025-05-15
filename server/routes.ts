@@ -30,6 +30,8 @@ const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000;
 const questionnairePageCreateSchema = insertQuestionnairePageSchema.extend({
   title: z.string().min(3, { message: "Title must be at least 3 characters long" }),
   order: z.number().int().nonnegative({ message: "Order must be a non-negative integer" })
+}).omit({
+  definitionId: true // We'll get this from the URL params
 });
 
 const questionnairePageUpdateSchema = z.object({
