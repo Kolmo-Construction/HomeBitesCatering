@@ -10,21 +10,13 @@ const openRouter = new OpenAI({
   }
 });
 
-// Check for OpenAI API key
-const openaiEnabled = !!process.env.OPENAI_API_KEY;
-// OpenAI client for direct API calls
-const openai = openaiEnabled ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null;
-
 // OpenRouter model IDs
-// Using DeepSeek V3 0324 as specified by user
+// Primary model: DeepSeek V3 0324 as specified by user
 const OPENROUTER_MODEL_ID = 'deepseek/deepseek-chat-v3-0324:free';
-// Fallback to Claude Haiku if needed
+// First fallback: Gemini 2.0 Flash via OpenRouter
+const GEMINI_MODEL_ID = 'google/gemini-2.0-flash-exp:free';
+// Final fallback: Claude Haiku via OpenRouter
 const CLAUDE_MODEL_ID = 'anthropic/claude-3-haiku';
-// For direct OpenAI calls
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const OPENAI_MODEL_ID = 'gpt-4o';
 
 /**
  * AI Service that provides various AI capabilities using Claude via Open Router
@@ -152,53 +144,50 @@ export class AIService { // <-- ADDED export keyword here
       } catch (deepseekError) {
         console.error("DeepSeek Sentiment Analysis Error:", deepseekError);
         
-        // Then try OpenAI if available
-        if (openaiEnabled && openai) {
-          try {
-            console.log("AI Sentiment Analysis: Falling back to OpenAI for sentiment analysis");
-            
-            const response = await openai.chat.completions.create({
-              model: OPENAI_MODEL_ID,
-              messages: [
-                {
-                  role: 'system',
-                  content: `You are a sentiment analysis expert focusing on business communications. 
-                  Analyze the sentiment of emails and messages, categorizing them as one of:
-                  - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
-                  - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
-                  - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
-                  - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
-                  
-                  Your response must be in JSON format with two fields:
-                  - sentiment: one of "positive", "neutral", "negative", or "urgent"
-                  - confidence: a number from 0 to 1 representing your confidence in the analysis
-                  
-                  Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.`
-                },
-                {
-                  role: 'user',
-                  content: text
-                }
-              ],
-              temperature: 0.1,
-              response_format: { type: "json_object" }
-            });
-            
-            const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-            const result = JSON.parse(resultText);
-            
-            if (result.sentiment && typeof result.confidence === 'number') {
-              console.log(`AI Sentiment Analysis: OpenAI detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
-              return {
-                sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
-                confidence: result.confidence
-              };
-            }
-            throw new Error("Invalid response format from OpenAI");
-          } catch (openaiError) {
-            console.error("OpenAI Sentiment Analysis Error:", openaiError);
-            // Fall back to Claude via OpenRouter
+        // Try Gemini via OpenRouter as first fallback
+        try {
+          console.log("AI Sentiment Analysis: Falling back to Gemini via OpenRouter for sentiment analysis");
+          
+          const response = await openRouter.chat.completions.create({
+            model: GEMINI_MODEL_ID,
+            messages: [
+              {
+                role: 'user',
+                content: `You are a sentiment analysis expert focusing on business communications. 
+                Analyze the sentiment of emails and messages, categorizing them as one of:
+                - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
+                - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
+                - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
+                - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
+                
+                Your response must be in JSON format with two fields:
+                - sentiment: one of "positive", "neutral", "negative", or "urgent"
+                - confidence: a number from 0 to 1 representing your confidence in the analysis
+                
+                Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.
+                
+                Here's the text to analyze:
+                ${text}`
+              }
+            ],
+            temperature: 0.1,
+            response_format: { type: "json_object" }
+          });
+          
+          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
+          const result = JSON.parse(resultText);
+          
+          if (result.sentiment && typeof result.confidence === 'number') {
+            console.log(`AI Sentiment Analysis: Gemini detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
+            return {
+              sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
+              confidence: result.confidence
+            };
           }
+          throw new Error("Invalid response format from Gemini");
+        } catch (geminiError) {
+          console.error("Gemini Sentiment Analysis Error:", geminiError);
+          // Fall back to Claude via OpenRouter
         }
       }
       
