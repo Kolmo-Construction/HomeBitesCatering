@@ -104,7 +104,7 @@ export default function LeadForm({ lead: initialLead, isEditing = false, leadIdF
       if (!res.ok) throw new Error('Failed to fetch clients');
       return res.json();
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 3000000, // 30 seconds
   });
 
   // Set up the form with default values
