@@ -402,11 +402,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createClient(client: InsertClient): Promise<Client> {
-    const [newClient] = await db
-      .insert(clients)
-      .values(client)
-      .returning();
-    return newClient;
+    try {
+      console.log('Attempting to insert client into database:', JSON.stringify(client));
+      const [newClient] = await db
+        .insert(clients)
+        .values(client)
+        .returning();
+      console.log('Client successfully created with ID:', newClient.id);
+      return newClient;
+    } catch (error) {
+      console.error('Database error in createClient:', error);
+      throw error; // Re-throw to be handled by the route handler
+    }
   }
 
   async updateClient(id: number, clientData: Partial<Client>): Promise<Client | undefined> {
@@ -426,7 +433,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listClients(): Promise<Client[]> {
-    return await db.select().from(clients);
+    try {
+      console.log('Executing listClients database query');
+      const clientList = await db.select().from(clients);
+      console.log(`Retrieved ${clientList.length} clients from database`);
+      return clientList;
+    } catch (error) {
+      console.error('Database error in listClients:', error);
+      throw error; // Re-throw to be handled by the route handler
+    }
   }
 
   // For estimates

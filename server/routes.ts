@@ -513,14 +513,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/clients', isAuthenticated, async (req, res) => {
     try {
+      console.log('Client creation request received:', JSON.stringify(req.body));
+      
+      // First try to validate the data
+      console.log('Validating client data against schema...');
       const clientData = insertClientSchema.parse(req.body);
+      console.log('Client data validation passed:', JSON.stringify(clientData));
+      
+      // Then try to create it in the database
+      console.log('Attempting to create client in database...');
       const client = await storage.createClient(clientData);
+      console.log('Client created successfully with ID:', client.id);
+      
       res.status(201).json(client);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Client validation error:', JSON.stringify(error.errors));
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
-      res.status(500).json({ message: 'Server error' });
+      console.error('Error creating client:', error);
+      res.status(500).json({ message: 'Server error', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
