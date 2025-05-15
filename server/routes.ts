@@ -105,6 +105,35 @@ const questionnaireQuestionsReorderSchema = z.object({
   questionIds: z.array(z.number().int().positive())
 });
 
+// Validation schemas for questionnaire conditional logic API endpoints
+const conditionalLogicRuleCreateSchema = z.object({
+  triggerQuestionKey: z.string().min(1, { message: "Trigger question key is required" }),
+  triggerCondition: z.enum(conditionTriggerOperatorEnum.enumValues, {
+    errorMap: () => ({ message: `Trigger condition must be one of: ${conditionTriggerOperatorEnum.enumValues.join(', ')}` })
+  }),
+  triggerValue: z.string().optional(),
+  actionType: z.enum(conditionActionTypeEnum.enumValues, {
+    errorMap: () => ({ message: `Action type must be one of: ${conditionActionTypeEnum.enumValues.join(', ')}` })
+  }),
+  targetQuestionKey: z.string().optional(),
+  targetPageId: z.number().int().positive().optional(),
+  targetOptionValue: z.string().optional()
+});
+
+const conditionalLogicRuleUpdateSchema = z.object({
+  triggerQuestionKey: z.string().min(1).optional(),
+  triggerCondition: z.enum(conditionTriggerOperatorEnum.enumValues, {
+    errorMap: () => ({ message: `Trigger condition must be one of: ${conditionTriggerOperatorEnum.enumValues.join(', ')}` })
+  }).optional(),
+  triggerValue: z.string().optional(),
+  actionType: z.enum(conditionActionTypeEnum.enumValues, {
+    errorMap: () => ({ message: `Action type must be one of: ${conditionActionTypeEnum.enumValues.join(', ')}` })
+  }).optional(),
+  targetQuestionKey: z.string().optional(),
+  targetPageId: z.number().int().positive().optional(),
+  targetOptionValue: z.string().optional()
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Email sync service is initialized in server/index.ts
   // It's set to OFF by default and must be enabled explicitly by the user
@@ -2438,6 +2467,255 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting question option:', error);
       res.status(500).json({ message: 'Server error deleting question option' });
+    }
+  });
+  
+  // ===== Questionnaire Conditional Logic API Endpoints =====
+  
+  // 1. Create a New Conditional Logic Rule
+  app.post('/api/admin/questionnaires/definitions/:definitionId/conditional-logic', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID' });
+      }
+      
+      // Check if the questionnaire definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ message: 'Questionnaire definition not found' });
+      }
+      
+      // Validate the request body
+      const validatedData = conditionalLogicRuleCreateSchema.parse(req.body);
+      
+      // Verify that triggerQuestionKey exists within this definition
+      const triggerKeyExists = await storage.questionKeyExistsInDefinition(definitionId, validatedData.triggerQuestionKey);
+      if (!triggerKeyExists) {
+        return res.status(400).json({ 
+          message: `Trigger question key "${validatedData.triggerQuestionKey}" does not exist in this questionnaire definition` 
+        });
+      }
+      
+      // If targetQuestionKey is provided, verify it exists
+      if (validatedData.targetQuestionKey) {
+        const targetKeyExists = await storage.questionKeyExistsInDefinition(definitionId, validatedData.targetQuestionKey);
+        if (!targetKeyExists) {
+          return res.status(400).json({ 
+            message: `Target question key "${validatedData.targetQuestionKey}" does not exist in this questionnaire definition` 
+          });
+        }
+      }
+      
+      // Verify that the action type and target fields are consistent
+      // For example, if actionType is 'show_question', targetQuestionKey should be provided
+      if (
+        ['show_question', 'hide_question', 'require_question', 'unrequire_question'].includes(validatedData.actionType) && 
+        !validatedData.targetQuestionKey
+      ) {
+        return res.status(400).json({ 
+          message: `Action type "${validatedData.actionType}" requires a targetQuestionKey` 
+        });
+      }
+      
+      // If actionType is 'skip_to_page', targetPageId should be provided
+      if (validatedData.actionType === 'skip_to_page' && !validatedData.targetPageId) {
+        return res.status(400).json({ 
+          message: 'Action type "skip_to_page" requires a targetPageId' 
+        });
+      }
+      
+      // If targetPageId is provided, verify it belongs to this definition
+      if (validatedData.targetPageId) {
+        const page = await storage.getQuestionnairePage(validatedData.targetPageId);
+        if (!page || page.definitionId !== definitionId) {
+          return res.status(400).json({ 
+            message: `Target page ID ${validatedData.targetPageId} does not exist in this questionnaire definition` 
+          });
+        }
+      }
+      
+      // If actionType is 'enable_option' or 'disable_option', targetQuestionKey and targetOptionValue should be provided
+      if (
+        ['enable_option', 'disable_option'].includes(validatedData.actionType) && 
+        (!validatedData.targetQuestionKey || !validatedData.targetOptionValue)
+      ) {
+        return res.status(400).json({ 
+          message: `Action type "${validatedData.actionType}" requires both targetQuestionKey and targetOptionValue` 
+        });
+      }
+      
+      // Create the conditional logic rule
+      const rule = await storage.createConditionalLogicRule({
+        ...validatedData,
+        definitionId
+      });
+      
+      res.status(201).json(rule);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating conditional logic rule:', error);
+      res.status(500).json({ message: 'Server error creating conditional logic rule' });
+    }
+  });
+  
+  // 2. List All Conditional Logic Rules for a Definition
+  app.get('/api/admin/questionnaires/definitions/:definitionId/conditional-logic', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID' });
+      }
+      
+      // Check if the questionnaire definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ message: 'Questionnaire definition not found' });
+      }
+      
+      const rules = await storage.getConditionalLogicRulesByDefinition(definitionId);
+      res.json(rules);
+    } catch (error) {
+      console.error('Error listing conditional logic rules:', error);
+      res.status(500).json({ message: 'Server error listing conditional logic rules' });
+    }
+  });
+  
+  // 3. Get a Single Conditional Logic Rule's Details
+  app.get('/api/admin/questionnaires/conditional-logic/:ruleId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const ruleId = Number(req.params.ruleId);
+      if (isNaN(ruleId) || ruleId <= 0) {
+        return res.status(400).json({ message: 'Invalid rule ID' });
+      }
+      
+      const rule = await storage.getConditionalLogicRule(ruleId);
+      if (!rule) {
+        return res.status(404).json({ message: 'Conditional logic rule not found' });
+      }
+      
+      res.json(rule);
+    } catch (error) {
+      console.error('Error fetching conditional logic rule:', error);
+      res.status(500).json({ message: 'Server error fetching conditional logic rule' });
+    }
+  });
+  
+  // 4. Update a Conditional Logic Rule
+  app.put('/api/admin/questionnaires/conditional-logic/:ruleId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const ruleId = Number(req.params.ruleId);
+      if (isNaN(ruleId) || ruleId <= 0) {
+        return res.status(400).json({ message: 'Invalid rule ID' });
+      }
+      
+      // Fetch the existing rule to get its definitionId
+      const existingRule = await storage.getConditionalLogicRule(ruleId);
+      if (!existingRule) {
+        return res.status(404).json({ message: 'Conditional logic rule not found' });
+      }
+      
+      const definitionId = existingRule.definitionId;
+      
+      // Validate the request body
+      const validatedData = conditionalLogicRuleUpdateSchema.parse(req.body);
+      
+      // Verify that triggerQuestionKey exists within this definition
+      if (validatedData.triggerQuestionKey) {
+        const triggerKeyExists = await storage.questionKeyExistsInDefinition(definitionId, validatedData.triggerQuestionKey);
+        if (!triggerKeyExists) {
+          return res.status(400).json({ 
+            message: `Trigger question key "${validatedData.triggerQuestionKey}" does not exist in this questionnaire definition` 
+          });
+        }
+      }
+      
+      // If targetQuestionKey is provided, verify it exists
+      if (validatedData.targetQuestionKey) {
+        const targetKeyExists = await storage.questionKeyExistsInDefinition(definitionId, validatedData.targetQuestionKey);
+        if (!targetKeyExists) {
+          return res.status(400).json({ 
+            message: `Target question key "${validatedData.targetQuestionKey}" does not exist in this questionnaire definition` 
+          });
+        }
+      }
+      
+      // Check for consistency between action type and target fields
+      const actionType = validatedData.actionType || existingRule.actionType;
+      const targetQuestionKey = validatedData.targetQuestionKey !== undefined ? validatedData.targetQuestionKey : existingRule.targetQuestionKey;
+      const targetPageId = validatedData.targetPageId !== undefined ? validatedData.targetPageId : existingRule.targetPageId;
+      const targetOptionValue = validatedData.targetOptionValue !== undefined ? validatedData.targetOptionValue : existingRule.targetOptionValue;
+      
+      // Check if the update would result in an invalid configuration
+      if (
+        ['show_question', 'hide_question', 'require_question', 'unrequire_question'].includes(actionType) && 
+        !targetQuestionKey
+      ) {
+        return res.status(400).json({ 
+          message: `Action type "${actionType}" requires a targetQuestionKey` 
+        });
+      }
+      
+      if (actionType === 'skip_to_page' && !targetPageId) {
+        return res.status(400).json({ 
+          message: 'Action type "skip_to_page" requires a targetPageId' 
+        });
+      }
+      
+      if (
+        ['enable_option', 'disable_option'].includes(actionType) && 
+        (!targetQuestionKey || !targetOptionValue)
+      ) {
+        return res.status(400).json({ 
+          message: `Action type "${actionType}" requires both targetQuestionKey and targetOptionValue` 
+        });
+      }
+      
+      // If targetPageId is provided, verify it belongs to this definition
+      if (validatedData.targetPageId) {
+        const page = await storage.getQuestionnairePage(validatedData.targetPageId);
+        if (!page || page.definitionId !== definitionId) {
+          return res.status(400).json({ 
+            message: `Target page ID ${validatedData.targetPageId} does not exist in this questionnaire definition` 
+          });
+        }
+      }
+      
+      // Update the rule
+      const updatedRule = await storage.updateConditionalLogicRule(ruleId, validatedData);
+      if (!updatedRule) {
+        return res.status(500).json({ message: 'Failed to update conditional logic rule' });
+      }
+      
+      res.json(updatedRule);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error updating conditional logic rule:', error);
+      res.status(500).json({ message: 'Server error updating conditional logic rule' });
+    }
+  });
+  
+  // 5. Delete a Conditional Logic Rule
+  app.delete('/api/admin/questionnaires/conditional-logic/:ruleId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const ruleId = Number(req.params.ruleId);
+      if (isNaN(ruleId) || ruleId <= 0) {
+        return res.status(400).json({ message: 'Invalid rule ID' });
+      }
+      
+      const success = await storage.deleteConditionalLogicRule(ruleId);
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(404).json({ message: 'Conditional logic rule not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting conditional logic rule:', error);
+      res.status(500).json({ message: 'Server error deleting conditional logic rule' });
     }
   });
 
