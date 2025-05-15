@@ -98,7 +98,8 @@ import fetch from 'node-fetch';
 async function extractLeadDataWithAI(
   emailContent: string,
   emailSubject: string,
-  fromAddress?: string
+  fromAddress?: string,
+  emailDate?: Date
 ): Promise<Partial<InsertRawLead> & { success: boolean; error?: string }> {
   console.log(`Lead Data Extraction: Processing email with subject "${emailSubject}"`);
 
@@ -150,6 +151,7 @@ ${emailContent}
         eventSummary: emailSubject,
         status: 'under_review' as const,
         notes: `Auto-extracted from email with subject: "${emailSubject}"`,
+        receivedAt: emailDate,
 
         // Add AI-extracted fields
         extractedEventType: aiResults.extractedEventType,
@@ -889,7 +891,7 @@ export class GmailSyncService {
             // Use our dedicated extraction function for more robust handling
             // This includes fallbacks, error handling, and complete data extraction
             const extractedData = this.aiSummaryEnabled
-              ? await extractLeadDataWithAI(bodyText, subject, fromEmail)
+              ? await extractLeadDataWithAI(bodyText, subject, fromEmail, emailDate)
               : {
                   success: true, // Even without AI, consider it successful extraction of basic info
                   source: 'gmail_sync',
@@ -899,6 +901,7 @@ export class GmailSyncService {
                   eventSummary: subject,
                   status: 'new' as const,
                   notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
+                  receivedAt: emailDate,
                   rawData: {
                       subject,
                       from: fromEmail,
@@ -922,6 +925,7 @@ export class GmailSyncService {
                       eventSummary: extractedData.eventSummary || subject,
                       status: 'needs_manual_review' as const, // Mark for review if AI failed
                       notes: extractedData.notes || `Raw lead creation failed (AI error) for email with subject: "${subject}"`,
+                      receivedAt: emailDate, // Use the original email date instead of the current time
                       rawData: extractedData.rawData || { error: extractedData.error, emailSubject: subject, fromAddress: fromEmail, bodyPreview: bodyText.substring(0, 500) },
                       // Set AI fields to null/undefined on failure
                        aiUrgencyScore: undefined,
@@ -948,6 +952,10 @@ export class GmailSyncService {
 
              } else if (extractedData.success) {
                  // Create the raw lead with successfully extracted data
+                 // Ensure source is set
+                 if (!extractedData.source) {
+                     extractedData.source = 'gmail_sync';
+                 }
                  const rawLead = await storage.createRawLead(extractedData);
                  console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail} (message ID: ${messageId})`);
 
