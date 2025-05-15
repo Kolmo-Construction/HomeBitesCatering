@@ -1,0 +1,269 @@
+et's start by defining the database schemas for the dynamic questionnaire system. We'll add these to your existing shared/schema.ts file.
+
+This first step focuses on setting up the tables that will store the structure and content of your questionnaires.
+
+Here's the code to add. I recommend placing this towards the end of your shared/schema.ts file, but before any relations blocks if you group them.
+
+TypeScript
+
+// In shared/schema.ts
+
+// ... (your existing imports and schema definitions like users, clients, rawLeads, menuItems, etc.)
+// import { pgTable, serial, text, integer, boolean, timestamp, jsonb, varchar, numeric, pgEnum } from 'drizzle-orm/pg-core';
+// import { relations } from 'drizzle-orm';
+// (ensure all necessary imports from drizzle-orm/pg-core and drizzle-orm are present)
+
+
+// Questionnaire System Schemas
+
+export const questionnaireDefinitions = pgTable('questionnaire_definitions', {
+  id: serial('id').primaryKey(),
+  versionName: text('version_name').notNull(), // e.g., "Customer Intake Form - Q3 2025"
+  description: text('description'),
+  isActive: boolean('is_active').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnairePages = pgTable('questionnaire_pages', {
+  id: serial('id').primaryKey(),
+  definitionId: integer('definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(), // e.g., "Event Details," "Menu Preferences"
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionTypeEnum = pgEnum('question_type_enum', [
+  'text',
+  'textarea',
+  'select',
+  'radio',
+  'checkbox', // single boolean checkbox
+  'checkbox_group', // multiple choice checkbox
+  'date',
+  'time',
+  'number',
+  'matrix_single', // matrix where each row can have one selection from columns
+  'matrix_multi', // matrix where each row can have multiple selections from columns
+  'info_text', // for displaying read-only information blocks
+  'name', // Compound field for first/last name (could be handled as two 'text' fields too)
+  'address', // Compound field for address (could be multiple 'text' fields)
+  'phone',
+  'email',
+]);
+
+export const questionnaireQuestions = pgTable('questionnaire_questions', {
+  id: serial('id').primaryKey(),
+  pageId: integer('page_id').references(() => questionnairePages.id, { onDelete: 'cascade' }).notNull(),
+  questionText: text('question_text').notNull(),
+  questionKey: text('question_key').unique().notNull(), // Unique key for this question, e.g., `event_type`, `guest_count`
+  questionType: questionTypeEnum('question_type').notNull(),
+  order: integer('order').notNull(),
+  isRequired: boolean('is_required').default(false).notNull(),
+  placeholderText: text('placeholder_text'),
+  helpText: text('help_text'), // For tooltips or sub-labels
+  // Example: { "minLength": 5, "pattern": "^\\d+$", "min": 0, "max": 100 }
+  // For 'matrix_single' or 'matrix_multi', this could define row-specific validations if needed
+  // For 'checkbox_group', this could specify { "minSelections": 1, "maxSelections": 3 }
+  validationRules: jsonb('validation_rules'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnaireQuestionOptions = pgTable('questionnaire_question_options', {
+  id: serial('id').primaryKey(),
+  questionId: integer('question_id').references(() => questionnaireQuestions.id, { onDelete: 'cascade' }).notNull(),
+  optionText: text('option_text').notNull(), // Label for the option
+  optionValue: text('option_value').notNull(), // Value stored when selected
+  order: integer('order').notNull(),
+  // For matrix questions, this field can indicate if this option is a row label by default
+  // e.g., for matrix row 'Appetizer A', defaultSelectionIndicator could be 'row_label'
+  // For regular select/radio/checkbox, it might be used to mark a default selected option.
+  defaultSelectionIndicator: text('default_selection_indicator'),
+  // Optional: if an option directly corresponds to a menu item, e.g., for preference selection
+  relatedMenuItemId: integer('related_menu_item_id').references(() => menuItems.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const questionnaireMatrixColumns = pgTable('questionnaire_matrix_columns', {
+  id: serial('id').primaryKey(),
+  questionId: integer('question_id').references(() => questionnaireQuestions.id, { onDelete: 'cascade' }).notNull(), // The matrix question
+  columnText: text('column_text').notNull(), // Label for the column
+  columnValue: text('column_value').notNull(), // Value for the column
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const conditionTriggerOperatorEnum = pgEnum('condition_trigger_operator_enum', [
+  'equals',
+  'not_equals',
+  'contains', // for text or array-like values
+  'not_contains',
+  'greater_than',
+  'less_than',
+  'is_empty',
+  'is_not_empty',
+  'is_selected', // for checkboxes or radio options
+  'is_not_selected'
+]);
+
+export const conditionActionTypeEnum = pgEnum('condition_action_type_enum', [
+  'show_question',
+  'hide_question',
+  'require_question',
+  'unrequire_question', // new
+  'skip_to_page',
+  'enable_option', // new
+  'disable_option', // new
+]);
+
+export const questionnaireConditionalLogic = pgTable('questionnaire_conditional_logic', {
+  id: serial('id').primaryKey(),
+  definitionId: integer('definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'cascade' }).notNull(),
+  triggerQuestionKey: text('trigger_question_key').notNull(), // References questionnaireQuestions.questionKey
+  triggerCondition: conditionTriggerOperatorEnum('trigger_condition').notNull(),
+  triggerValue: text('trigger_value'), // Value to compare against. Can be null for 'is_empty'/'is_not_empty'
+  actionType: conditionActionTypeEnum('action_type').notNull(),
+  targetQuestionKey: text('target_question_key'), // References questionnaireQuestions.questionKey (for show/hide/require question)
+  targetPageId: integer('target_page_id').references(() => questionnairePages.id, { onDelete: 'set null' }), // For skip_to_page
+  targetOptionValue: text('target_option_value'), // For enable/disable option, references questionnaireQuestionOptions.optionValue
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const submissionStatusEnum = pgEnum('submission_status_enum', ['draft', 'submitted', 'archived']);
+
+export const questionnaireSubmissions = pgTable('questionnaire_submissions', {
+  id: serial('id').primaryKey(),
+  definitionId: integer('definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'cascade' }).notNull(),
+  // This will store the answers from the questionnaire, typically as a JSON object:
+  // { "question_key_1": "answer_1", "question_key_2": ["option_a", "option_c"], ... }
+  submittedData: jsonb('submitted_data').notNull(),
+  status: submissionStatusEnum('status').default('draft').notNull(),
+  clientIdentifier: text('client_identifier'), // e.g., session ID for anonymous, user ID for logged-in
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }), // If submitted by a logged-in user
+  rawLeadId: integer('raw_lead_id').references(() => rawLeads.id, { onDelete: 'set null' }).unique(), // Link to the created rawLead
+  submittedAt: timestamp('submitted_at'), // Only set when status becomes 'submitted'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+
+// --- Add to your existing rawLeads table definition ---
+// export const rawLeads = pgTable('raw_leads', {
+//   // ... your existing fields ...
+//   id: serial('id').primaryKey(),
+//   // ...
+//   questionnaireSubmissionId: integer('questionnaire_submission_id').references(() => questionnaireSubmissions.id, { onDelete: 'set null' }).unique(),
+//   questionnaireDefinitionId: integer('questionnaire_definition_id').references(() => questionnaireDefinitions.id, { onDelete: 'set null' }),
+//   // ...
+// });
+// --- End of modification for rawLeads ---
+
+
+// Define Relations for the new Questionnaire Schemas
+
+export const questionnaireDefinitionRelations = relations(questionnaireDefinitions, ({ many, one }) => ({
+  pages: many(questionnairePages),
+  conditionalLogic: many(questionnaireConditionalLogic),
+  submissions: many(questionnaireSubmissions),
+  rawLeads: many(rawLeads), // if you add questionnaireDefinitionId to rawLeads
+}));
+
+export const questionnairePageRelations = relations(questionnairePages, ({ one, many }) => ({
+  definition: one(questionnaireDefinitions, {
+    fields: [questionnairePages.definitionId],
+    references: [questionnaireDefinitions.id],
+  }),
+  questions: many(questionnaireQuestions),
+  conditionalLogicTarget: many(questionnaireConditionalLogic, { relationName: 'targetPageConditionalLogic' }) // if needed for reverse lookup
+}));
+
+export const questionnaireQuestionRelations = relations(questionnaireQuestions, ({ one, many }) => ({
+  page: one(questionnairePages, {
+    fields: [questionnaireQuestions.pageId],
+    references: [questionnairePages.id],
+  }),
+  options: many(questionnaireQuestionOptions),
+  matrixColumns: many(questionnaireMatrixColumns),
+  // For reverse lookup from triggerQuestionKey in conditionalLogic, you might need a custom resolver or to query by key
+}));
+
+export const questionnaireQuestionOptionRelations = relations(questionnaireQuestionOptions, ({ one }) => ({
+  question: one(questionnaireQuestions, {
+    fields: [questionnaireQuestionOptions.questionId],
+    references: [questionnaireQuestions.id],
+  }),
+  relatedMenuItem: one(menuItems, { // Assuming menuItems table exists
+    fields: [questionnaireQuestionOptions.relatedMenuItemId],
+    references: [menuItems.id],
+  }),
+}));
+
+export const questionnaireMatrixColumnRelations = relations(questionnaireMatrixColumns, ({ one }) => ({
+  question: one(questionnaireQuestions, {
+    fields: [questionnaireMatrixColumns.questionId],
+    references: [questionnaireQuestions.id],
+  }),
+}));
+
+export const questionnaireConditionalLogicRelations = relations(questionnaireConditionalLogic, ({ one }) => ({
+  definition: one(questionnaireDefinitions, {
+    fields: [questionnaireConditionalLogic.definitionId],
+    references: [questionnaireDefinitions.id],
+  }),
+  targetPage: one(questionnairePages, { // if target_page_id is used
+    fields: [questionnaireConditionalLogic.targetPageId],
+    references: [questionnairePages.id],
+    relationName: 'targetPageConditionalLogic',
+  }),
+  // For triggerQuestionKey and targetQuestionKey, relations are harder as they are text keys, not direct IDs.
+  // You'd typically fetch these by querying questionnaireQuestions where questionKey matches.
+}));
+
+export const questionnaireSubmissionRelations = relations(questionnaireSubmissions, ({ one }) => ({
+  definition: one(questionnaireDefinitions, {
+    fields: [questionnaireSubmissions.definitionId],
+    references: [questionnaireDefinitions.id],
+  }),
+  user: one(users, { // Assuming users table exists
+    fields: [questionnaireSubmissions.userId],
+    references: [users.id],
+  }),
+  rawLead: one(rawLeads, {
+    fields: [questionnaireSubmissions.rawLeadId],
+    references: [rawLeads.id],
+  })
+}));
+
+// --- Add to your existing rawLeadsRelations ---
+// export const rawLeadsRelations = relations(rawLeads, ({ one, many }) => ({
+//   // ... your existing relations ...
+//   questionnaireSubmission: one(questionnaireSubmissions, {
+//     fields: [rawLeads.questionnaireSubmissionId],
+//     references: [questionnaireSubmissions.id],
+//   }),
+//   questionnaireDefinition: one(questionnaireDefinitions, {
+//      fields: [rawLeads.questionnaireDefinitionId],
+//      references: [questionnaireDefinitions.id],
+//   }),
+// }));
+// --- End of modification for rawLeadsRelations ---
+
+// ... (rest of your schema.ts, if any)
+Explanation and Next Steps:
+
+Copy and Paste: Integrate the code above into your shared/schema.ts file.
+
+Make sure all imports from drizzle-orm/pg-core (like pgTable, serial, text, integer, boolean, timestamp, jsonb, pgEnum) are at the top of the file.
+Add the questionnaireSubmissionId and questionnaireDefinitionId fields to your existing rawLeads table schema as shown in the commented section.
+Add the relations for rawLeads to include questionnaireSubmission and questionnaireDefinition as shown in the commented section for rawLeadsRelations. Ensure your existing relations are preserved.
+You'll also need to ensure users and menuItems tables are defined in your schema if you want the foreign key references to work directly, or you can comment out those specific references() for now if those tables don't exist/aren't relevant yet.
+Review Enums: I've added questionTypeEnum, conditionTriggerOperatorEnum, conditionActionTypeEnum, and submissionStatusEnum. Review these to ensure they cover your needs. You can add or modify values as necessary.
+
+Database Migration:
+
+After saving the changes to shared/schema.ts, you'll need to generate the SQL migration files. Run:
