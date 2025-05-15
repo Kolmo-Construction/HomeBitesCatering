@@ -24,10 +24,13 @@ import {
   insertQuestionnaireQuestionSchema, // For questionnaire question management
   insertQuestionnaireQuestionOptionSchema, // For questionnaire question options
   insertQuestionnaireMatrixColumnSchema, // For matrix columns
+  insertQuestionnaireConditionalLogicSchema, // For conditional logic rules
   questionTypeEnum, // For question type validation
   questionnaireQuestions, // Table access
   questionnaireQuestionOptions, // Table access
-  questionnaireMatrixColumns // Table access
+  questionnaireMatrixColumns, // Table access
+  conditionTriggerOperatorEnum, // For conditional logic trigger operators
+  conditionActionTypeEnum // For conditional logic actions
 } from "@shared/schema";
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';

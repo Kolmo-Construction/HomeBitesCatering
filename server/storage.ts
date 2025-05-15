@@ -3,6 +3,7 @@ import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, processedEmails,
   questionnairePages, questionnaireDefinitions, questionnaireQuestions, questionnaireQuestionOptions, questionTypeEnum,
+  questionnaireConditionalLogic,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -17,7 +18,8 @@ import {
   type QuestionnairePage, type InsertQuestionnairePage, 
   type QuestionnaireDefinition, insertQuestionnaireDefinitionSchema,
   type QuestionnaireQuestion, type InsertQuestionnaireQuestion,
-  type QuestionnaireQuestionOption, type InsertQuestionnaireQuestionOption
+  type QuestionnaireQuestionOption, type InsertQuestionnaireQuestionOption,
+  type QuestionnaireConditionalLogic, type InsertQuestionnaireConditionalLogic
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
@@ -1175,6 +1177,105 @@ export class DatabaseStorage implements IStorage {
       return result.rowCount > 0;
     } catch (error) {
       console.error(`Error deleting questionnaire question option ${optionId}:`, error);
+      return false;
+    }
+  }
+  
+  // Methods for Questionnaire Conditional Logic
+  async getConditionalLogicRule(ruleId: number): Promise<QuestionnaireConditionalLogic | undefined> {
+    try {
+      const [rule] = await db
+        .select()
+        .from(questionnaireConditionalLogic)
+        .where(eq(questionnaireConditionalLogic.id, ruleId));
+      
+      return rule;
+    } catch (error) {
+      console.error(`Error fetching conditional logic rule ${ruleId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async getConditionalLogicRulesByDefinition(definitionId: number): Promise<QuestionnaireConditionalLogic[]> {
+    try {
+      return await db
+        .select()
+        .from(questionnaireConditionalLogic)
+        .where(eq(questionnaireConditionalLogic.definitionId, definitionId));
+    } catch (error) {
+      console.error(`Error fetching conditional logic rules for definition ${definitionId}:`, error);
+      return [];
+    }
+  }
+  
+  async createConditionalLogicRule(rule: InsertQuestionnaireConditionalLogic): Promise<QuestionnaireConditionalLogic> {
+    try {
+      const [newRule] = await db
+        .insert(questionnaireConditionalLogic)
+        .values(rule)
+        .returning();
+      
+      return newRule;
+    } catch (error) {
+      console.error('Error creating conditional logic rule:', error);
+      throw error;
+    }
+  }
+  
+  async updateConditionalLogicRule(ruleId: number, rule: Partial<QuestionnaireConditionalLogic>): Promise<QuestionnaireConditionalLogic | undefined> {
+    try {
+      const [updatedRule] = await db
+        .update(questionnaireConditionalLogic)
+        .set({ ...rule, updatedAt: new Date() })
+        .where(eq(questionnaireConditionalLogic.id, ruleId))
+        .returning();
+      
+      return updatedRule;
+    } catch (error) {
+      console.error(`Error updating conditional logic rule ${ruleId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async deleteConditionalLogicRule(ruleId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(questionnaireConditionalLogic)
+        .where(eq(questionnaireConditionalLogic.id, ruleId));
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error deleting conditional logic rule ${ruleId}:`, error);
+      return false;
+    }
+  }
+  
+  async questionKeyExistsInDefinition(definitionId: number, questionKey: string): Promise<boolean> {
+    try {
+      // Get all pages that belong to this definition
+      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
+      
+      if (pages.length === 0) {
+        return false;
+      }
+      
+      const pageIds = pages.map(page => page.id);
+      
+      // Find questions with this key in any of these pages
+      const [question] = await db
+        .select()
+        .from(questionnaireQuestions)
+        .where(
+          and(
+            inArray(questionnaireQuestions.pageId, pageIds),
+            eq(questionnaireQuestions.questionKey, questionKey)
+          )
+        )
+        .limit(1);
+      
+      return !!question;
+    } catch (error) {
+      console.error(`Error checking if question key "${questionKey}" exists in definition ${definitionId}:`, error);
       return false;
     }
   }
