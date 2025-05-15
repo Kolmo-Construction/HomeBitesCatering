@@ -175,6 +175,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOpportunity(id: number, opportunityData: Partial<Opportunity>): Promise<Opportunity | undefined> {
+    // If clientId is being set, get the client info to update firstName and lastName
+    if (opportunityData.clientId) {
+      try {
+        const client = await this.getClient(opportunityData.clientId);
+        if (client) {
+          // Update the opportunityData with the client's name
+          opportunityData.firstName = client.firstName;
+          opportunityData.lastName = client.lastName;
+          console.log(`Updating opportunity ${id} with client ${client.id} data: ${client.firstName} ${client.lastName}`);
+        }
+      } catch (error) {
+        console.error("Error getting client data for opportunity update:", error);
+      }
+    }
+    
     const [updatedOpportunity] = await db
       .update(opportunities)
       .set(opportunityData)
