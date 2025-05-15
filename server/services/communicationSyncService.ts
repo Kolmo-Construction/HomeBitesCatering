@@ -408,6 +408,8 @@ export class CommunicationSyncService {
       // Only proceed if we found a matching opportunity or client
       if (opportunityId || clientId) {
         console.log(`CommunicationSyncService: Email matched to ${opportunityId ? 'opportunity ID ' + opportunityId : 'client ID ' + clientId}`);
+        console.log(`CommunicationSyncService: Match details - From: ${fromEmail}, Subject: "${parsedMail.subject}", To: ${toEmails.join(', ')}, Email date: ${emailDate.toISOString()}`);
+        console.log(`CommunicationSyncService: Match search email: ${contactEmailToSearch}`);
         
         // Generate a summary and sentiment analysis if AI is enabled
         let summary = subject;
@@ -459,6 +461,9 @@ export class CommunicationSyncService {
         console.log(`CommunicationSyncService: Successfully logged communication for ${opportunityId ? 'opportunity' : 'client'}`);
       } else {
         console.log(`CommunicationSyncService: No matching opportunity/client found for ${contactEmailToSearch}. Skipping.`);
+        console.log(`CommunicationSyncService: Unmatched email details - From: ${fromEmail}, Subject: "${parsedMail.subject}", To: ${toEmails.join(', ')}, Date: ${emailDate.toISOString()}`);
+        // Log information to help diagnose why matching failed
+        console.log(`CommunicationSyncService: Attempted to match email using address: ${contactEmailToSearch}`);
       }
     } catch (error) {
       console.error(`CommunicationSyncService: Error processing email communication (ID: ${messageId}):`, error);
