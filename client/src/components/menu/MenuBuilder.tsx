@@ -26,6 +26,7 @@ import { GripVertical, X, Plus, Save, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { insertMenuSchema } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
+import MenuItemSelector from "./MenuItemSelector";
 
 // Define the menu item with quantity
 interface MenuItemWithQuantity {
@@ -168,7 +169,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   // Get all menu items
   const { data: menuItems = [], isLoading: isLoadingMenuItems } = useQuery({
     queryKey: ["/api/menu-items"],
-  });
+  }) as { data: any[], isLoading: boolean };
   
   // Update selected items with additional data from menu items when available
   useEffect(() => {
@@ -211,23 +212,17 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   
   // Mutation for creating/updating menu
   const mutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      // Format items for API
-      const formattedItems = selectedItems.map(item => ({
-        id: item.id,
-        quantity: item.quantity
-      }));
-      
-      const payload = {
-        ...values,
-        items: formattedItems
-      };
-      
+    mutationFn: async (values: {
+      name: string;
+      type: string;
+      description?: string;
+      items: { id: number; quantity: number }[];
+    }) => {
       if (isEditing && menu) {
-        const res = await apiRequest("PATCH", `/api/menus/${menu.id}`, payload);
+        const res = await apiRequest("PATCH", `/api/menus/${menu.id}`, values);
         return res.json();
       } else {
-        const res = await apiRequest("POST", "/api/menus", payload);
+        const res = await apiRequest("POST", "/api/menus", values);
         return res.json();
       }
     },
@@ -333,24 +328,23 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       return;
     }
     
-    // Format data for submission
+    // Format data for submission with proper types for Drizzle
     const formData = {
       ...values,
-      // Stringify items array for database storage since the schema uses jsonb
-      items: JSON.stringify(selectedItems.map(item => ({
+      // Map to the required format for the API
+      items: selectedItems.map(item => ({
         id: item.id,
-        name: item.name,
-        price: item.price, 
-        quantity: item.quantity,
-        category: item.category
-      })))
+        quantity: item.quantity
+      }))
     };
 
     console.log("Submitting menu data:", formData);
     mutation.mutate(formData);
   };
   
-  // Group menu items by category for selection
+  // We no longer need this - MenuItemSelector handles grouping internally
+  // Kept for reference
+  /*
   const groupedMenuItems = menuItems.reduce((acc: any, item: any) => {
     const category = item.category;
     if (!acc[category]) {
@@ -359,6 +353,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     acc[category].push(item);
     return acc;
   }, {});
+  */
   
   // Use the getCategoryDisplayName function defined above
   
@@ -553,47 +548,29 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
             {isLoadingMenuItems ? (
               <div className="text-center py-4">Loading items...</div>
             ) : (
-              <div className="space-y-6">
-                {Object.entries(groupedMenuItems).map(([category, items]: [string, any]) => (
-                  <div key={category}>
-                    <h3 className="font-medium mb-2">{getCategoryDisplayName(category)}</h3>
-                    <div className="space-y-2">
-                      {items.map((item: any) => {
-                        const isSelected = selectedItems.some(selectedItem => selectedItem.id === item.id);
-                        
-                        return (
-                          <div 
-                            key={item.id} 
-                            className={`p-3 border rounded-md flex justify-between items-center
-                              ${isSelected ? 'bg-gray-100 border-gray-300' : 'bg-white hover:bg-gray-50'}`}
-                          >
-                            <div>
-                              <div className="font-medium">{item.name}</div>
-                              <div className="text-sm text-gray-500">{formatCurrency(item.price / 100)}</div>
-                              <div className="flex mt-1 gap-1">
-                                {item.isVegetarian && <Badge variant="outline" className="text-xs">Veg</Badge>}
-                                {item.isVegan && <Badge variant="outline" className="text-xs">Vegan</Badge>}
-                                {item.isGlutenFree && <Badge variant="outline" className="text-xs">GF</Badge>}
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleAddItem(item.id.toString())}
-                              disabled={isSelected}
-                            >
-                              {isSelected ? (
-                                <span className="text-sm text-gray-500">Added</span>
-                              ) : (
-                                <Plus className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              <div className="max-h-[700px] overflow-y-auto pr-2">
+                {/* Use the new MenuItemSelector component with search and filtering */}
+                <MenuItemSelector 
+                  menuItems={menuItems.map(item => ({
+                    ...item,
+                    isVegetarian: item.isVegetarian || false,
+                    isVegan: item.isVegan || false,
+                    isGlutenFree: item.isGlutenFree || false,
+                    isDairyFree: item.isDairyFree || false,
+                    isNutFree: item.isNutFree || false,
+                    description: item.description || '',
+                  }))}
+                  selectedItems={selectedItems.map(item => ({
+                    ...item,
+                    description: '',
+                    isVegetarian: false,
+                    isVegan: false, 
+                    isGlutenFree: false,
+                    isDairyFree: false,
+                    isNutFree: false
+                  }))}
+                  onAddItem={handleAddItem}
+                />
               </div>
             )}
           </CardContent>
