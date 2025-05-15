@@ -903,6 +903,7 @@ export class GmailSyncService {
                   eventSummary: subject,
                   status: 'new' as const,
                   notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
+                  // Make absolutely sure we use the email date for receivedAt
                   receivedAt: emailDate,
                   rawData: {
                       subject,
@@ -927,7 +928,8 @@ export class GmailSyncService {
                       eventSummary: extractedData.eventSummary || subject,
                       status: 'needs_manual_review' as const, // Mark for review if AI failed
                       notes: extractedData.notes || `Raw lead creation failed (AI error) for email with subject: "${subject}"`,
-                      receivedAt: emailDate, // Use the original email date instead of the current time
+                      // Use the original email date instead of the current time - CRITICAL for accurate received date tracking
+                      receivedAt: emailDate,
                       rawData: extractedData.rawData || { error: extractedData.error, emailSubject: subject, fromAddress: fromEmail, bodyPreview: bodyText.substring(0, 500) },
                       // Set AI fields to null/undefined on failure
                        aiUrgencyScore: undefined,

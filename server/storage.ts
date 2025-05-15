@@ -611,9 +611,18 @@ export class DatabaseStorage implements IStorage {
 
   // Raw Leads
   async createRawLead(data: InsertRawLead): Promise<RawLead> {
+    // Ensure receivedAt is provided, otherwise defaultNow() in schema will override it
+    const insertData = {
+      ...data,
+      // Make sure receivedAt is set explicitly to prevent defaultNow() from being used
+      receivedAt: data.receivedAt || new Date()
+    };
+    
+    console.log(`Storage: Creating raw lead with receivedAt date: ${insertData.receivedAt}`);
+    
     const [newRawLead] = await db
       .insert(rawLeads)
-      .values(data)
+      .values(insertData)
       .returning();
     return newRawLead;
   }
