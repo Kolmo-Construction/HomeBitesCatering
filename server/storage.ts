@@ -113,6 +113,12 @@ export interface IStorage {
   updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined>;
   deleteRawLead(id: number): Promise<boolean>;
   deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }>;
+
+  // Email duplicate prevention methods
+  isEmailProcessed(messageId: string, service: string): Promise<boolean>;
+  recordProcessedEmail(emailData: InsertProcessedEmail): Promise<ProcessedEmail>;
+  updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<ProcessedEmail | undefined>;
+  getEmailsByService(service: string, limit?: number): Promise<ProcessedEmail[]>;
 }
 
 // DatabaseStorage implementation using PostgreSQL

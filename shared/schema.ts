@@ -365,3 +365,23 @@ export const insertRawLeadSchema = createInsertSchema(rawLeads, {
 
 export type RawLead = typeof rawLeads.$inferSelect;
 export type InsertRawLead = z.infer<typeof insertRawLeadSchema>;
+
+// Table to track processed emails to avoid duplicates
+export const processedEmails = pgTable("processed_emails", {
+  id: serial("id").primaryKey(),
+  messageId: text("message_id").notNull().unique(), // Gmail/Email message ID
+  gmailId: text("gmail_id").notNull(), // Gmail's internal message ID
+  service: text("service").notNull(), // Which service processed this (lead_generation, comm_sync)
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+  email: text("email").notNull(), // The email address that was matched
+  subject: text("subject"), // Subject line for debugging
+  labelApplied: boolean("label_applied").default(false), // Whether we successfully applied a label
+});
+
+export const insertProcessedEmailSchema = createInsertSchema(processedEmails).omit({
+  id: true,
+  processedAt: true
+});
+
+export type ProcessedEmail = typeof processedEmails.$inferSelect;
+export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
