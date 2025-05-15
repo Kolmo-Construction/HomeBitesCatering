@@ -93,6 +93,7 @@ import fetch from 'node-fetch';
  * @param emailContent The body content of the email
  * @param emailSubject The subject line of the email
  * @param fromAddress The sender's email address (optional)
+ * @param emailDate The original date when the email was received (optional)
  * @returns A data object aligned with the InsertRawLead schema
  */
 async function extractLeadDataWithAI(
@@ -844,6 +845,7 @@ export class GmailSyncService {
 
     // messageId is now passed as an argument
     const emailDate = parsedMail.date || new Date();
+    console.log(`GmailSyncService: Email Date from headers: ${emailDate.toISOString()} (for message ID: ${messageId})`);
 
     let bodyText = parsedMail.text || '';
     if (!bodyText && parsedMail.html) {
@@ -952,11 +954,39 @@ export class GmailSyncService {
 
              } else if (extractedData.success) {
                  // Create the raw lead with successfully extracted data
-                 // Ensure source is set
-                 if (!extractedData.source) {
-                     extractedData.source = 'gmail_sync';
-                 }
-                 const rawLead = await storage.createRawLead(extractedData);
+                 // Ensure required fields are set and properly typed
+                 const leadData: InsertRawLead = {
+                     source: extractedData.source || 'gmail_sync',
+                     extractedName: extractedData.extractedName,
+                     extractedEmail: extractedData.extractedEmail,
+                     extractedPhone: extractedData.extractedPhone,
+                     eventSummary: extractedData.eventSummary,
+                     status: extractedData.status || 'under_review',
+                     notes: extractedData.notes,
+                     receivedAt: extractedData.receivedAt || emailDate,
+                     rawData: extractedData.rawData,
+                     // Include other AI-extracted fields
+                     extractedEventType: extractedData.extractedEventType,
+                     extractedEventDate: extractedData.extractedEventDate,
+                     extractedEventTime: extractedData.extractedEventTime,
+                     extractedGuestCount: extractedData.extractedGuestCount,
+                     extractedVenue: extractedData.extractedVenue,
+                     extractedMessageSummary: extractedData.extractedMessageSummary,
+                     leadSourcePlatform: extractedData.leadSourcePlatform,
+                     // AI assessment fields
+                     aiUrgencyScore: extractedData.aiUrgencyScore,
+                     aiBudgetIndication: extractedData.aiBudgetIndication,
+                     aiBudgetValue: extractedData.aiBudgetValue,
+                     aiClarityOfRequestScore: extractedData.aiClarityOfRequestScore,
+                     aiDecisionMakerLikelihood: extractedData.aiDecisionMakerLikelihood,
+                     aiKeyRequirements: extractedData.aiKeyRequirements,
+                     aiPotentialRedFlags: extractedData.aiPotentialRedFlags,
+                     aiOverallLeadQuality: extractedData.aiOverallLeadQuality,
+                     aiSuggestedNextStep: extractedData.aiSuggestedNextStep,
+                     aiSentiment: extractedData.aiSentiment,
+                     aiConfidenceScore: extractedData.aiConfidenceScore
+                 };
+                 const rawLead = await storage.createRawLead(leadData);
                  console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail} (message ID: ${messageId})`);
 
                  // Optionally, if you want to link the communication to the newly created raw lead
