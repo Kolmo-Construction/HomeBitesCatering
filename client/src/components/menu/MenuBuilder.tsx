@@ -389,24 +389,76 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                   <FormField
                     control={form.control}
                     name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Menu Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select menu type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="custom">Custom</SelectItem>
-                            <SelectItem value="seasonal">Seasonal</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const [isCustomMenuType, setIsCustomMenuType] = useState(false);
+                      const [customMenuType, setCustomMenuType] = useState("");
+                      
+                      // Set custom menu type mode if the value doesn't match predefined ones
+                      useEffect(() => {
+                        if (field.value && !["standard", "custom", "seasonal"].includes(field.value)) {
+                          setIsCustomMenuType(true);
+                          setCustomMenuType(field.value);
+                        }
+                      }, [field.value]);
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Menu Type</FormLabel>
+                          {!isCustomMenuType ? (
+                            <>
+                              <Select 
+                                onValueChange={(value) => {
+                                  if (value === "add_custom") {
+                                    setIsCustomMenuType(true);
+                                    setCustomMenuType("");
+                                  } else {
+                                    field.onChange(value);
+                                  }
+                                }} 
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select menu type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="standard">Standard</SelectItem>
+                                  <SelectItem value="custom">Custom</SelectItem>
+                                  <SelectItem value="seasonal">Seasonal</SelectItem>
+                                  <SelectItem value="add_custom">Add New Menu Type...</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </>
+                          ) : (
+                            <div className="space-y-2">
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter custom menu type" 
+                                  value={customMenuType}
+                                  onChange={(e) => {
+                                    setCustomMenuType(e.target.value);
+                                    field.onChange(e.target.value);
+                                  }}
+                                />
+                              </FormControl>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setIsCustomMenuType(false);
+                                  field.onChange("");
+                                }}
+                              >
+                                Back to Preset Menu Types
+                              </Button>
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
                 
