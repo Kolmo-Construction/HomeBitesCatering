@@ -890,131 +890,22 @@ export class GmailSyncService {
     }
 
 
-    // Create Raw Lead only for incoming emails from new contacts (where no opportunityId or clientId was found)
-    // and if a contact email was successfully determined.
+    // NOTE: Automatic lead creation from emails has been disabled.
+    // New leads will only be created manually by users through the UI.
     if (direction === 'incoming' && fromEmail && !opportunityId && !clientId) {
-        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new raw lead for message ID:`, messageId);
-        try {
-            // Use our dedicated extraction function for more robust handling
-            // This includes fallbacks, error handling, and complete data extraction
-            const extractedData = this.aiSummaryEnabled
-              ? await extractLeadDataWithAI(bodyText, subject, fromEmail, emailDate)
-              : {
-                  success: true, // Even without AI, consider it successful extraction of basic info
-                  source: 'gmail_sync',
-                  extractedName: fromHeader?.name || '',
-                  extractedEmail: fromEmail,
-                  extractedPhone: null, // Basic extraction doesn't get phone
-                  eventSummary: subject,
-                  status: 'new' as const,
-                  notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
-                  // Make absolutely sure we use the email date for receivedAt
-                  receivedAt: emailDate,
-                  rawData: {
-                      subject,
-                      from: fromEmail,
-                      to: toEmails.join(', '),
-                      cc: ccEmails.join(', '),
-                      date: emailDate,
-                      bodyPreview: bodyText.substring(0, 500) + (bodyText.length > 500 ? '...' : ''),
-                      // Consider adding more raw data fields as needed
-                  }
-                };
-
-            // If AI extraction failed but basic info was extracted, we can still create a raw lead
-             if (!extractedData.success && fromEmail) {
-                  console.warn(`GmailSyncService: AI extraction failed for message ID ${messageId}, creating minimal raw lead.`);
-                  // Create a fallback raw lead with basic info if AI extraction failed
-                  const fallbackRawLeadData: InsertRawLead = {
-                      source: extractedData.source || 'gmail_sync_failed',
-                      extractedName: extractedData.extractedName || fromHeader?.name || '',
-                      extractedEmail: extractedData.extractedEmail || fromEmail,
-                      extractedPhone: extractedData.extractedPhone || null,
-                      eventSummary: extractedData.eventSummary || subject,
-                      status: 'needs_manual_review' as const, // Mark for review if AI failed
-                      notes: extractedData.notes || `Raw lead creation failed (AI error) for email with subject: "${subject}"`,
-                      // Use the original email date instead of the current time - CRITICAL for accurate received date tracking
-                      receivedAt: emailDate,
-                      rawData: extractedData.rawData || { error: extractedData.error, emailSubject: subject, fromAddress: fromEmail, bodyPreview: bodyText.substring(0, 500) },
-                      // Set AI fields to null/undefined on failure
-                       aiUrgencyScore: undefined,
-                       aiBudgetIndication: undefined,
-                       aiBudgetValue: undefined,
-                       aiClarityOfRequestScore: undefined,
-                       aiDecisionMakerLikelihood: undefined,
-                       aiKeyRequirements: undefined,
-                       aiPotentialRedFlags: undefined,
-                       aiOverallLeadQuality: undefined,
-                       aiSuggestedNextStep: undefined,
-                       aiSentiment: undefined,
-                       aiConfidenceScore: undefined,
-                       extractedEventType: undefined,
-                       extractedEventDate: undefined,
-                       extractedEventTime: undefined,
-                       extractedGuestCount: undefined,
-                       extractedVenue: undefined,
-                       extractedMessageSummary: undefined,
-                       leadSourcePlatform: 'email',
-                  };
-                 const rawLead = await storage.createRawLead(fallbackRawLeadData);
-                 console.log(`GmailSyncService: Created minimal raw lead ID ${rawLead.id} for ${fromEmail} (message ID: ${messageId}) due to AI failure.`);
-
-             } else if (extractedData.success) {
-                 // Create the raw lead with successfully extracted data
-                 // Ensure required fields are set and properly typed
-                 const leadData: InsertRawLead = {
-                     source: extractedData.source || 'gmail_sync',
-                     extractedName: extractedData.extractedName,
-                     extractedEmail: extractedData.extractedEmail,
-                     extractedPhone: extractedData.extractedPhone,
-                     eventSummary: extractedData.eventSummary,
-                     status: extractedData.status || 'under_review',
-                     notes: extractedData.notes,
-                     receivedAt: extractedData.receivedAt || emailDate,
-                     rawData: extractedData.rawData,
-                     // Include other AI-extracted fields
-                     extractedEventType: extractedData.extractedEventType,
-                     extractedEventDate: extractedData.extractedEventDate,
-                     extractedEventTime: extractedData.extractedEventTime,
-                     extractedGuestCount: extractedData.extractedGuestCount,
-                     extractedVenue: extractedData.extractedVenue,
-                     extractedMessageSummary: extractedData.extractedMessageSummary,
-                     leadSourcePlatform: extractedData.leadSourcePlatform,
-                     // AI assessment fields
-                     aiUrgencyScore: extractedData.aiUrgencyScore,
-                     aiBudgetIndication: extractedData.aiBudgetIndication,
-                     aiBudgetValue: extractedData.aiBudgetValue,
-                     aiClarityOfRequestScore: extractedData.aiClarityOfRequestScore,
-                     aiDecisionMakerLikelihood: extractedData.aiDecisionMakerLikelihood,
-                     aiKeyRequirements: extractedData.aiKeyRequirements,
-                     aiPotentialRedFlags: extractedData.aiPotentialRedFlags,
-                     aiOverallLeadQuality: extractedData.aiOverallLeadQuality,
-                     aiSuggestedNextStep: extractedData.aiSuggestedNextStep,
-                     aiSentiment: extractedData.aiSentiment,
-                     aiConfidenceScore: extractedData.aiConfidenceScore
-                 };
-                 const rawLead = await storage.createRawLead(leadData);
-                 console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail} (message ID: ${messageId})`);
-
-                 // Optionally, if you want to link the communication to the newly created raw lead
-                 // you would need to add a rawLeadId field to the communications table.
-                 // For now, the communication is linked to opportunity/client, and raw lead is separate
-                 // until it's qualified.
-             } else {
-                  // If extraction failed and couldn't even create a minimal lead (e.g., no from email)
-                  console.error(`GmailSyncService: Failed to create raw lead for message ID ${messageId}. Extraction unsuccessful and no fallback possible.`);
-             }
-
-        } catch (rawLeadCreationError) {
-            console.error(`GmailSyncService: Error creating new raw lead for message ID ${messageId}:`, rawLeadCreationError);
-            // Do not return here, continue to log the communication if possible
+        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Communication will be stored without creating a lead.`);
+        // We still generate a summary from the email content if AI is enabled
+        if (this.aiSummaryEnabled && bodyText !== '(No Content)') {
+            // This is just to ensure we have a good summary for the communication record
+            await getAISummary(bodyText);
         }
     }
 
 
-    // Log the communication regardless if a raw lead was created or an existing contact was found
-    // We log it even if no opportunity/client is associated initially,
-    // as it's still a touchpoint that might become relevant later.
+    // MAIN PURPOSE: Store all email communications in a centralized timeline
+    // This is the primary function of the email sync service - to create a communication record
+    // for every email, whether it's associated with an opportunity/client or not.
+    // This creates a comprehensive communication timeline in the system.
     const summary = this.aiSummaryEnabled && bodyText !== '(No Content)' ? await getAISummary(bodyText) : subject;
 
     const communicationData: InsertCommunication = {
