@@ -226,11 +226,11 @@ ${fullContent}`;
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://catering-cms.replit.app',
-          'X-Title': 'Catering CMS'
+          'HTTP-Referer': 'https://catering-cms.replit.app', // Replace with your app's URL
+          'X-Title': 'Catering CMS' // Replace with your app's title
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3-haiku',
+          model: 'anthropic/claude-3-haiku', // You can experiment with other models
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 1500,
           temperature: 0.2,
@@ -328,7 +328,6 @@ ${fullContent}`;
           eventSummary: emailSubject,
           status: 'parsing_failed' as const,
           notes: `AI parsing failed for email with subject: "${emailSubject}". Error: ${jsonParseError.message}`,
-          extractedMessageSummary: "AI failed to parse email content",
           rawData: {
             emailSubject,
             emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
@@ -352,7 +351,7 @@ ${fullContent}`;
       source: 'email_ai_error',
       extractedEmail: fromAddress || '',
       eventSummary: emailSubject,
-      status: 'parsing_failed' as const,
+      status: 'parsing_failed' as const, // Set status to parsing_failed on critical errors too
       notes: `AI extraction error for email with subject: "${emailSubject}". Error: ${error instanceof Error ? error.message : String(error)}`,
       rawData: {
         emailSubject,
@@ -405,13 +404,14 @@ export class GmailSyncService {
     this.targetEmail = tokenStore.targetEmail || process.env.SYNC_TARGET_EMAIL_ADDRESS || '';
 
     if (!this.targetEmail) {
-        console.error("GmailSyncService: SYNC_TARGET_EMAIL_ADDRESS is not configured.");
+        console.error("GmailSyncService: SYNC_TARGET_EMAIL_ADDRESS is not configured. Sync cannot start.");
     }
-    if (oauth2Client.credentials.access_token) {
-        this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-    } else {
-        console.warn("GmailSyncService: No access token available. Authorization needed.");
-    }
+    // Defer Gmail client initialization until start() is called and tokens are confirmed
+    // if (oauth2Client.credentials.access_token) {
+    //     this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    // } else {
+    //     console.warn("GmailSyncService: No access token available. Authorization needed.");
+    // }
   }
 
   public static getOAuthClient(): Auth.OAuth2Client {
@@ -437,6 +437,10 @@ export class GmailSyncService {
       if (tokens.access_token) process.env.GOOGLE_ACCESS_TOKEN = tokens.access_token;
       if (tokens.expiry_date) process.env.GOOGLE_TOKEN_EXPIRY_DATE = tokens.expiry_date.toString();
 
+      // Note: The running service instance needs to pick up these new credentials.
+      // A simple way in this single-instance setup is to re-initialize the gmail client
+      // in the start method or before a fetch if it's null.
+
       return true;
     } catch (error) {
       console.error('GmailSyncService: Error fetching OAuth tokens:', error);
@@ -449,11 +453,14 @@ export class GmailSyncService {
         console.error("GmailSyncService: Cannot start, SYNC_TARGET_EMAIL_ADDRESS not set.");
         return;
     }
+    // Initialize or re-initialize Gmail client here if needed
     if (!this.gmail && oauth2Client.credentials.access_token) {
         this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+        console.log("GmailSyncService: Gmail API client initialized/re-initialized.");
     }
+
     if (!this.gmail) {
-      console.warn('GmailSyncService: Gmail API client not initialized (likely missing auth). Cannot start.');
+      console.warn('GmailSyncService: Gmail API client not initialized (missing auth). Cannot start.');
       console.log('To authorize, visit: /api/auth/google/initiate then follow the redirect.');
       return;
     }
@@ -470,47 +477,75 @@ export class GmailSyncService {
     if (!this._isRunning) {
         console.log('GmailSyncService is not running.');
         return;
-      }
-      this._isRunning = false;
-      if (this.timeoutId) {
+    }
+    console.log('GmailSyncService stopping...');
+    // First set the running flag to false to prevent new fetch cycles
+    this._isRunning = false;
+    
+    // Clear any scheduled timeouts
+    if (this.timeoutId) {
         clearTimeout(this.timeoutId);
         this.timeoutId = null;
-      }
-      console.log('GmailSyncService stopped.');
+    }
+    
+    // Additional logging to verify the service is really stopped
+    console.log('GmailSyncService stopped. Running status:', this._isRunning);
   }
 
   private scheduleNextFetch(): void {
-    if (!this._isRunning || !this.gmail) return;
+    // Ensure we only schedule if the service is still running
+    if (!this._isRunning || !this.gmail) {
+      console.log("GmailSyncService: Not scheduling next fetch as service is stopped or not initialized.");
+      return;
+    }
+    
     this.timeoutId = setTimeout(async () => {
-      await this.fetchAndProcessEmails();
-      this.scheduleNextFetch();
+      // Double-check _isRunning before executing the fetch cycle
+      if (this._isRunning) {
+         await this.fetchAndProcessEmails();
+         
+         // Only schedule the next fetch if the service is still running after the current cycle
+         if (this._isRunning) {
+           this.scheduleNextFetch();
+         } else {
+           console.log("GmailSyncService: Not scheduling next fetch as service was stopped during processing.");
+         }
+      } else {
+         console.log("GmailSyncService: Fetch cycle skipped as service was stopped during timeout.");
+      }
     }, this.processingInterval);
   }
 
   private async fetchAndProcessEmails(): Promise<void> {
-    // --- ADDED CHECK: Return immediately if sync is stopped ---
+    // Double-check running status at the beginning of the fetch cycle
     if (!this._isRunning) {
-      console.log("GmailSyncService: Sync is stopped, aborting fetch.");
+      console.log("GmailSyncService: fetchAndProcessEmails called but service is no longer running. Aborting fetch cycle.");
       return;
     }
-    // --- END OF ADDED CHECK ---
-
+    
     if (!this.gmail) {
       console.warn('GmailSyncService: Gmail client not available for fetching.');
       // Attempt to re-initialize if tokens might have become available
       if (oauth2Client.credentials.access_token) {
           this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
           console.log("GmailSyncService: Re-initialized Gmail client.");
+          // If successfully re-initialized, continue the fetch cycle
       } else {
           console.error('GmailSyncService: Still no access token. Please authorize.');
           this.stop(); // Stop polling if auth is missing
           return;
       }
     }
+
+    // Add check here: if service was stopped while waiting for re-initialization
+    if (!this._isRunning) {
+        console.log("GmailSyncService: Stopping fetch cycle early as service is stopped.");
+        return;
+    }
+
     console.log(`[${new Date().toISOString()}] GmailSyncService: Fetching new emails for ${this.targetEmail}...`);
 
     try {
-      // Process emails from weddingvendors@zola.com and projects@kolmo.io
       const response = await this.gmail.users.messages.list({
         userId: 'me', // 'me' refers to the authenticated user
         q: 'is:unread label:INBOX (from:weddingvendors@zola.com OR from:projects@kolmo.io)', // Filter for emails from specified senders
@@ -526,17 +561,17 @@ export class GmailSyncService {
       console.log(`GmailSyncService: Found ${messages.length} new unread emails.`);
 
       for (const messageEntry of messages) {
+        // Add a check before processing each message in the batch
+        if (!this._isRunning) {
+          console.log(`GmailSyncService: Stopping message processing loop early due to service stop request.`);
+          // Optionally, add logic here to handle messages that were fetched
+          // but not processed, maybe add a label like 'UNPROCESSED_BY_CRM'
+          break; // Exit the loop
+        }
+
         if (!messageEntry.id) continue;
 
-        // --- OPTIONAL ADDED CHECK: Check if sync stopped during processing batch ---
-         if (!this._isRunning) {
-             console.log(`GmailSyncService: Sync stopped during processing, skipping message ${messageEntry.id}.`);
-             // Optionally, mark as read to avoid reprocessing next time, or leave unread.
-             // await this.gmail.users.messages.modify({ userId: 'me', id: messageEntry.id, requestBody: { removeLabelIds: ['UNREAD'] }});
-             continue; // Skip processing this message
-         }
-        // --- END OF OPTIONAL ADDED CHECK ---
-
+        let messageId: string | undefined; // Define messageId outside the try block to be available for markAsRead
 
         try {
             const msg = await this.gmail.users.messages.get({
@@ -549,72 +584,94 @@ export class GmailSyncService {
                 const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
                 const parsedMail = await simpleParser(rawEmail);
 
-                // Extract messageId to check for duplicates
+                // Extract messageId early
                 const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
-                const messageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}`;
+                // Generate a more robust fallback ID including the Gmail message ID
+                messageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}-${messageEntry.id}`;
 
-                // Check if we've already processed this email by looking for existing communications
+                console.log(`GmailSyncService: Processing message (Gmail ID: ${messageEntry.id}, Message-ID: ${messageId})`);
+
+                // --- Duplicate Check ---
                 try {
-                    // Query to see if this email was already processed
                     const communications = await storage.getCommunicationsByExternalId(messageId);
                     if (communications && communications.length > 0) {
-                        console.log(`GmailSyncService: Email with message ID ${messageId} was already processed. Skipping.`);
-
-                        // Mark as read anyway to avoid reprocessing
-                        await this.gmail.users.messages.modify({
-                            userId: 'me',
-                            id: messageEntry.id,
-                            requestBody: {
-                                removeLabelIds: ['UNREAD'],
-                            },
-                        });
-                        continue;
+                        console.log(`GmailSyncService: Email with message ID ${messageId} (Gmail ID: ${messageEntry.id}) was already processed. Skipping.`);
+                        // IMPORTANT: Mark as read *even if* it was already processed
+                        await this.markEmailAsRead(messageEntry.id);
+                        continue; // Skip to the next message in the loop
                     }
                 } catch (error) {
-                    // If we can't check for duplicates, proceed with processing
-                    console.warn(`GmailSyncService: Could not check for duplicate processing of message ID ${messageId}:`, error);
+                    // Log the error but *do not skip* processing if the duplicate check fails.
+                    // It's safer to potentially process a duplicate than to get stuck
+                    // or miss a new email if the DB is temporarily unreachable.
+                    console.error(`GmailSyncService: Error during duplicate check for message ID ${messageId} (Gmail ID: ${messageEntry.id}). Attempting to process anyway.`, error);
                 }
 
-                // Process the email if it wasn't already processed
-                await this.processParsedEmail(parsedMail);
+                // --- Process the email if not identified as a duplicate or if check failed ---
+                await this.processParsedEmail(parsedMail, messageId);
 
-                // Mark as read (or apply a label)
-                await this.gmail.users.messages.modify({
-                    userId: 'me',
-                    id: messageEntry.id,
-                    requestBody: {
-                        removeLabelIds: ['UNREAD'],
-                        // addLabelIds: ['PROCESSED_BY_CRM'] // Optional: add a label
-                    },
-                });
+            } else {
+                console.warn(`GmailSyncService: No raw data found for message ID ${messageEntry.id}. Skipping processing.`);
             }
-        } catch(err) {
-            console.error(`GmailSyncService: Error processing message ID ${messageEntry.id}:`, err);
+        } catch(err: any) {
+            console.error(`GmailSyncService: Unhandled error during processing of message ID ${messageEntry.id}:`, err);
+            // Continue to the finally block to attempt marking as read
+        } finally {
+             // --- Mark as Read After Attempting Processing ---
+             // Mark as read regardless of processParsedEmail success or failure (within this message's try/catch/finally)
+             try {
+                 await this.markEmailAsRead(messageEntry.id);
+             } catch (markReadErr) {
+                 console.error(`GmailSyncService: Failed to mark message ID ${messageEntry.id} as read in finally block:`, markReadErr);
+             }
         }
-      }
+      } // End of for loop over messages
+
     } catch (err: any) {
-      console.error('GmailSyncService: API Error:', err.message || err);
+      console.error('GmailSyncService: API Error during fetch cycle:', err.message || err);
       if (err.code === 401 || (err.response && err.response.status === 401)) {
           console.error("GmailSyncService: Authentication error (401). Refresh token might be invalid or expired. Please re-authorize.");
-          // Potentially try to refresh token here if oauth2Client is set up for it,
-          // or stop the service and require manual re-auth.
-          this.stop();
+          this.stop(); // Stop polling on auth errors to avoid hammering API
       }
+      // Other API errors might warrant alerting but don't necessarily stop the service immediately
     } finally {
         console.log(`[${new Date().toISOString()}] GmailSyncService: Finished email fetch cycle for ${this.targetEmail}.`);
     }
   }
 
-  // processParsedEmail method would be very similar to the one in the IMAP example
-  // Key differences: how you determine direction might need to check against this.targetEmail
-  private async processParsedEmail(parsedMail: ParsedMail): Promise<void> {
-    // --- OPTIONAL ADDED CHECK: Ensure sync is still running before processing an email ---
-     if (!this._isRunning) {
-        console.log("GmailSyncService: Sync stopped during email processing, aborting.");
-        return; // Do not process this email if sync was stopped
-     }
-    // --- END OF OPTIONAL ADDED CHECK ---
+  /**
+   * Marks a Gmail message as read by removing the 'UNREAD' label.
+   * @param messageGmailId The Gmail ID of the message.
+   */
+  private async markEmailAsRead(messageGmailId: string): Promise<void> {
+      if (!this.gmail) {
+          console.warn(`GmailSyncService: Cannot mark message ${messageGmailId} as read, Gmail client not available.`);
+          return;
+      }
+      try {
+          await this.gmail.users.messages.modify({
+              userId: 'me',
+              id: messageGmailId,
+              requestBody: {
+                  removeLabelIds: ['UNREAD'],
+                  // Optional: add a label like 'PROCESSED_BY_CRM' for tracking
+                  // addLabelIds: ['PROCESSED_BY_CRM']
+              },
+          });
+          console.log(`GmailSyncService: Successfully marked message ${messageGmailId} as read.`);
+      } catch (markReadError) {
+          console.error(`GmailSyncService: Failed to mark message ${messageGmailId} as read:`, markReadError);
+          // Consider alerting or logging this failure to investigate why emails aren't being marked.
+      }
+  }
 
+
+  /**
+   * Processes a single parsed email, extracts data, and creates records in the database.
+   * @param parsedMail The parsed email object from mailparser.
+   * @param messageId The determined Message-ID or generated ID for duplicate checking.
+   */
+  private async processParsedEmail(parsedMail: ParsedMail, messageId: string): Promise<void> {
     const subject = parsedMail.subject || '(No Subject)';
     // Safe extraction of email address fields with proper type checking
     // Handle both single address object and array of address objects
@@ -637,8 +694,7 @@ export class GmailSyncService {
     const toEmails = toAddresses.map(addr => addr?.address?.toLowerCase()).filter(Boolean) as string[];
     const ccEmails = ccAddresses.map(addr => addr?.address?.toLowerCase()).filter(Boolean) as string[];
 
-    const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
-    const messageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}`;
+    // messageId is now passed as an argument
     const emailDate = parsedMail.date || new Date();
 
     let bodyText = parsedMail.text || '';
@@ -652,101 +708,159 @@ export class GmailSyncService {
     if (!bodyText) bodyText = '(No Content)';
 
 
-    console.log(`GmailSyncService: Processing email - Subject: "${subject}", From: ${fromEmail}`);
+    console.log(`GmailSyncService: Processing email - Subject: "${subject}", From: ${fromEmail}, Message-ID: ${messageId}`);
 
     const isOutgoing = fromEmail === this.targetEmail.toLowerCase();
     const direction: Communication['direction'] = isOutgoing ? 'outgoing' : 'incoming';
 
+    // Determine the contact email to search/associate with
     let contactEmailToSearch = direction === 'incoming' ? fromEmail : (toEmails.find(email => email !== this.targetEmail.toLowerCase()) || ccEmails.find(email => email !== this.targetEmail.toLowerCase()));
 
     if (!contactEmailToSearch) {
-        console.warn("GmailSyncService: Could not determine a contact email (from/to) to search for opportunity/client.", {fromEmail, toEmails, target: this.targetEmail});
-        return;
+        console.warn("GmailSyncService: Could not determine a contact email (from/to) to search for opportunity/client for message ID:", messageId, {fromEmail, toEmails, target: this.targetEmail});
+        // We will still log the communication below if possible, but no raw lead/contact will be created.
     }
 
     let opportunityId: number | undefined = undefined;
     let clientId: number | undefined = undefined;
 
-    const existingContact = await storage.findOpportunityOrClientByContactIdentifier(contactEmailToSearch, 'email');
-    if (existingContact?.client) {
-      clientId = existingContact.client.id;
-    } else if (existingContact?.opportunity) {
-      opportunityId = existingContact.opportunity.id;
-    } else {
-      if (direction === 'incoming' && fromEmail) { // Only create for incoming from new contacts
-        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new raw lead.`);
+    // Find existing contact if a search email was determined
+    if (contactEmailToSearch) {
+        const existingContact = await storage.findOpportunityOrClientByContactIdentifier(contactEmailToSearch, 'email');
+        if (existingContact?.client) {
+            clientId = existingContact.client.id;
+        } else if (existingContact?.opportunity) {
+            opportunityId = existingContact.opportunity.id;
+        }
+    }
+
+
+    // Create Raw Lead only for incoming emails from new contacts (where no opportunityId or clientId was found)
+    // and if a contact email was successfully determined.
+    if (direction === 'incoming' && fromEmail && !opportunityId && !clientId) {
+        console.log(`GmailSyncService: No existing contact found for ${fromEmail}. Creating new raw lead for message ID:`, messageId);
         try {
             // Use our dedicated extraction function for more robust handling
             // This includes fallbacks, error handling, and complete data extraction
             const extractedData = this.aiSummaryEnabled
               ? await extractLeadDataWithAI(bodyText, subject, fromEmail)
               : {
-                  success: true,
+                  success: true, // Even without AI, consider it successful extraction of basic info
                   source: 'gmail_sync',
                   extractedName: fromHeader?.name || '',
                   extractedEmail: fromEmail,
-                  extractedPhone: null,
+                  extractedPhone: null, // Basic extraction doesn't get phone
                   eventSummary: subject,
                   status: 'new' as const,
                   notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
-                  rawData: parsedMail
+                  rawData: {
+                      subject,
+                      from: fromEmail,
+                      to: toEmails.join(', '),
+                      cc: ccEmails.join(', '),
+                      date: emailDate,
+                      bodyPreview: bodyText.substring(0, 500) + (bodyText.length > 500 ? '...' : ''),
+                      // Consider adding more raw data fields as needed
+                  }
                 };
 
-            // Create the raw lead with extracted data
-            const rawLead = await storage.createRawLead(extractedData);
+            // If AI extraction failed but basic info was extracted, we can still create a raw lead
+             if (!extractedData.success && fromEmail) {
+                  console.warn(`GmailSyncService: AI extraction failed for message ID ${messageId}, creating minimal raw lead.`);
+                  // Create a fallback raw lead with basic info if AI extraction failed
+                  const fallbackRawLeadData: InsertRawLead = {
+                      source: extractedData.source || 'gmail_sync_failed',
+                      extractedName: extractedData.extractedName || fromHeader?.name || '',
+                      extractedEmail: extractedData.extractedEmail || fromEmail,
+                      extractedPhone: extractedData.extractedPhone || null,
+                      eventSummary: extractedData.eventSummary || subject,
+                      status: 'needs_manual_review' as const, // Mark for review if AI failed
+                      notes: extractedData.notes || `Raw lead creation failed (AI error) for email with subject: "${subject}"`,
+                      rawData: extractedData.rawData || { error: extractedData.error, emailSubject: subject, fromAddress: fromEmail, bodyPreview: bodyText.substring(0, 500) },
+                      // Set AI fields to null/undefined on failure
+                       aiUrgencyScore: undefined,
+                       aiBudgetIndication: undefined,
+                       aiBudgetValue: undefined,
+                       aiClarityOfRequestScore: undefined,
+                       aiDecisionMakerLikelihood: undefined,
+                       aiKeyRequirements: undefined,
+                       aiPotentialRedFlags: undefined,
+                       aiOverallLeadQuality: undefined,
+                       aiSuggestedNextStep: undefined,
+                       aiSentiment: undefined,
+                       aiConfidenceScore: undefined,
+                       extractedEventType: undefined,
+                       extractedEventDate: undefined,
+                       extractedEventTime: undefined,
+                       extractedGuestCount: undefined,
+                       extractedVenue: undefined,
+                       extractedMessageSummary: undefined,
+                       leadSourcePlatform: 'email',
+                  };
+                 const rawLead = await storage.createRawLead(fallbackRawLeadData);
+                 console.log(`GmailSyncService: Created minimal raw lead ID ${rawLead.id} for ${fromEmail} (message ID: ${messageId}) due to AI failure.`);
 
-            console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail}`);
+             } else if (extractedData.success) {
+                 // Create the raw lead with successfully extracted data
+                 const rawLead = await storage.createRawLead(extractedData);
+                 console.log(`GmailSyncService: Created new raw lead ID ${rawLead.id} for ${fromEmail} (message ID: ${messageId})`);
 
-            // We'll still create a communication, but it will be linked to existing contact if found
-            if (existingContact?.opportunity) {
-              opportunityId = existingContact.opportunity.id;
-            } else if (existingContact?.client) {
-              clientId = existingContact.client.id;
-            }
+                 // Optionally, if you want to link the communication to the newly created raw lead
+                 // you would need to add a rawLeadId field to the communications table.
+                 // For now, the communication is linked to opportunity/client, and raw lead is separate
+                 // until it's qualified.
+             } else {
+                  // If extraction failed and couldn't even create a minimal lead (e.g., no from email)
+                  console.error(`GmailSyncService: Failed to create raw lead for message ID ${messageId}. Extraction unsuccessful and no fallback possible.`);
+             }
+
         } catch (rawLeadCreationError) {
-            console.error("GmailSyncService: Error creating new raw lead:", rawLeadCreationError);
-            return; // Stop processing this email if raw lead creation fails
+            console.error(`GmailSyncService: Error creating new raw lead for message ID ${messageId}:`, rawLeadCreationError);
+            // Do not return here, continue to log the communication if possible
         }
-      } else {
-        console.log(`GmailSyncService: Outgoing email to unknown contact ${contactEmailToSearch} or no 'fromEmail' for incoming. Skipping auto-raw lead creation.`);
-      }
     }
 
-    if (!opportunityId && !clientId) {
-        console.log(`GmailSyncService: Skipping email as no associated opportunity/client found or created for contact ${contactEmailToSearch}.`);
-        return;
-    }
 
-    const summary = this.aiSummaryEnabled ? await getAISummary(bodyText) : subject;
+    // Log the communication regardless if a raw lead was created or an existing contact was found
+    // We log it even if no opportunity/client is associated initially,
+    // as it's still a touchpoint that might become relevant later.
+    const summary = this.aiSummaryEnabled && bodyText !== '(No Content)' ? await getAISummary(bodyText) : subject;
 
     const communicationData: InsertCommunication = {
-      opportunityId: opportunityId,
-      clientId: clientId,
+      opportunityId: opportunityId, // Will be undefined if no existing opportunity found
+      clientId: clientId,         // Will be undefined if no existing client found
       type: 'email',
       direction: direction,
       timestamp: emailDate,
       source: 'gmail_sync',
-      externalId: messageId,
+      externalId: messageId, // Use the validated/generated messageId
       subject: subject,
       fromAddress: fromEmail,
-      toAddress: toEmails.join(', '),
-      bodyRaw: bodyText.substring(0, 10000), // Truncate if necessary
-      bodySummary: summary,
-      metaData: { cc: ccEmails, originalHeaders: parsedMail.headers }, // Storing all headers might be verbose
+      toAddress: toEmails.join(', '), // Store as comma-separated string
+      // bodyRaw: bodyText.substring(0, 10000), // Truncate if necessary (10000 chars) - Check your DB schema limit
+      bodyRaw: bodyText.length > 50000 ? bodyText.substring(0, 50000) + '...' : bodyText, // Truncate raw body for DB, check column limit (e.g., 50k chars)
+      bodySummary: summary.length > 1000 ? summary.substring(0, 1000) + '...' : summary, // Truncate summary for DB, check column limit (e.g., 1k chars)
+      metaData: {
+          cc: ccEmails,
+          // Consider limiting the size/detail of originalHeaders if storing them,
+          // as they can be very large. Maybe just store key headers or a subset.
+          // originalHeaders: parsedMail.headers // Potentially very large
+          processedAt: new Date().toISOString(),
+          aiProcessing: this.aiSummaryEnabled ? 'attempted' : 'disabled',
+          // Store AI extraction outcome in metadata if needed, although it's on rawLead
+      },
     };
 
     try {
       await storage.createCommunication(communicationData);
-      console.log(`GmailSyncService: Successfully logged email "${subject}" for opportunityId: ${opportunityId}, clientId: ${clientId}`);
+      console.log(`GmailSyncService: Successfully logged communication for message ID: ${messageId} (Subject: "${subject}")`);
     } catch (dbError: any) {
       if (dbError.message && dbError.message.includes('duplicate key value violates unique constraint')) {
-        console.warn(`GmailSyncService: Communication with externalId ${messageId} already exists. Skipping.`);
+        console.warn(`GmailSyncService: Communication with externalId ${messageId} already exists. Skipping DB insert.`);
+        // This should ideally be caught by the check earlier, but this is a safety net.
       } else {
-        console.error('GmailSyncService: Error saving communication to DB:', dbError);
+        console.error(`GmailSyncService: Error saving communication with externalId ${messageId} to DB:`, dbError);
       }
     }
   }
 }
-
-// AI service functionality is integrated directly in the GmailSyncService
-// No need for a separate AIService instance
