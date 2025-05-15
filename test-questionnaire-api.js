@@ -41,7 +41,7 @@ async function makeRequest(method, endpoint, data = null) {
 async function login() {
   const loginData = {
     username: 'admin',
-    password: 'password'
+    password: 'admin123'
   };
   
   const response = await makeRequest('POST', '/api/auth/login', loginData);
@@ -75,10 +75,24 @@ async function runTests() {
       version: '1.0'
     };
 
-    // This endpoint doesn't exist yet, so this will fail until we implement it
-    // But we need a definition ID to test the page endpoints
-    const definitionId = 1; // Temporarily hardcoded for testing
-    console.log(`Using definition ID: ${definitionId} for testing`);
+    const definitionResponse = await makeRequest(
+      'POST',
+      '/api/admin/questionnaires/definitions',
+      definitionData
+    );
+    
+    console.log(`Create Definition Response (${definitionResponse.statusCode}):`, definitionResponse.data);
+    
+    // Get the definition ID from the response
+    let definitionId;
+    if (definitionResponse.statusCode === 201 && definitionResponse.data && definitionResponse.data.id) {
+      definitionId = definitionResponse.data.id;
+      console.log(`Created definition with ID: ${definitionId}`);
+    } else {
+      // Fall back to using ID 1 if creation fails
+      definitionId = 1;
+      console.log(`Failed to create definition, using fallback ID: ${definitionId} for testing`);
+    }
 
     // 2. Test creating a page
     console.log('\n=== Test creating a page ===');

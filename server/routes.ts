@@ -1597,6 +1597,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Questionnaire Management Routes =====
   
+  // Questionnaire Definitions
+  app.post('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertQuestionnaireDefinitionSchema.parse(req.body);
+      const definition = await storage.createQuestionnaireDefinition(validatedData);
+      
+      res.status(201).json(definition);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error creating questionnaire definition:', error);
+      res.status(500).json({ message: 'Server error creating questionnaire definition' });
+    }
+  });
+  
   // 1. Create a New Page for a Definition
   app.post('/api/admin/questionnaires/definitions/:definitionId/pages', isAdmin, async (req: Request, res: Response) => {
     try {

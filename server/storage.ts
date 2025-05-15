@@ -125,6 +125,7 @@ export interface IStorage {
   
   // Questionnaire management methods
   // Questionnaire Definitions
+  createQuestionnaireDefinition(definition: z.infer<typeof insertQuestionnaireDefinitionSchema>): Promise<QuestionnaireDefinition>;
   getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined>;
   
   // Questionnaire Pages
@@ -850,6 +851,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Questionnaire Definitions Implementation
+  
+  async createQuestionnaireDefinition(definition: z.infer<typeof insertQuestionnaireDefinitionSchema>): Promise<QuestionnaireDefinition> {
+    try {
+      const [newDefinition] = await db
+        .insert(questionnaireDefinitions)
+        .values(definition)
+        .returning();
+      
+      return newDefinition;
+    } catch (error) {
+      console.error('Error creating questionnaire definition:', error);
+      throw error;
+    }
+  }
   
   async getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined> {
     try {
