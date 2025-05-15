@@ -69,7 +69,9 @@ export default function MenuItemFilters({ onFilterChange }: MenuItemFiltersProps
   
   // Handler for category selection
   const handleCategoryChange = (value: string) => {
-    setFilters({ ...filters, category: value });
+    // If "all" is selected, treat it as empty string for filtering logic
+    const categoryValue = value === "all" ? "" : value;
+    setFilters({ ...filters, category: categoryValue });
   };
   
   // Handler for dietary filter changes
@@ -130,7 +132,7 @@ export default function MenuItemFilters({ onFilterChange }: MenuItemFiltersProps
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category} value={category}>{category}</SelectItem>
               ))}

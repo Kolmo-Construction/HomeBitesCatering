@@ -213,7 +213,8 @@ export default function MenuItemList() {
       <DataTable 
         columns={columns} 
         data={filteredMenuItems} 
-        // Do not pass searchKey when using our custom search
+        // We need to pass searchKey for the table, but we'll manage filtering ourselves
+        searchKey="name"
         loading={isLoading}
         emptyMessage={
           Object.values(filters).some(v => !!v) || Object.values(filters.dietary).some(v => v)
