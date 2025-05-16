@@ -3339,7 +3339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Assistant API endpoint
   app.post('/api/admin/questionnaires/ai-generate', isAdmin, async (req: Request, res: Response) => {
     try {
-      const { prompt, questionnaireContext } = req.body;
+      const { prompt, questionnaireContext, format, contextType } = req.body;
       
       if (!prompt) {
         return res.status(400).json({ message: 'Prompt is required' });
@@ -3353,14 +3353,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Generate questionnaire content using AI
-      const content = await generateQuestionnaireContent(prompt, questionnaireContext);
-      
-      res.json({ content });
+      // Handle different request formats
+      if (format === 'json' && contextType === 'api_request') {
+        console.log('Generating JSON API request with AI for prompt:', prompt);
+        
+        try {
+          const anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+          });
+          
+          const systemPrompt = `You are an AI assistant that generates JSON API requests for a catering management system.
+The system has the following API endpoints:
+
+1. POST /api/admin/questionnaires/definitions - Create a new questionnaire definition
+2. POST /api/admin/questionnaires/complete - Create a complete questionnaire with pages, questions and conditional logic
+3. POST /api/admin/questionnaires/definitions/:definitionId/pages - Create a new page for a questionnaire
+4. POST /api/admin/questionnaires/pages/:pageId/questions - Create questions for a page (accepts array of questions)
+5. POST /api/admin/questionnaires/definitions/:definitionId/conditional-logic - Create conditional logic rules
+
+For complex questionnaires with many pages and questions, use the /api/admin/questionnaires/complete endpoint.
+For page-by-page creation, use the individual endpoints.
+
+Return your response as valid JSON in the following format:
+{
+  "endpoint": "the API endpoint to use",
+  "method": "POST",
+  "json": "stringified JSON of the request body"
+}`;
+          
+          console.log('Calling Anthropic API for JSON generation');
+          const response = await anthropic.messages.create({
+            model: "claude-3-7-sonnet-20250219", // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+            max_tokens: 4000,
+            system: systemPrompt,
+            messages: [
+              { 
+                role: 'user', 
+                content: `Generate a JSON API request based on this description: ${prompt}
+                
+Return ONLY the JSON object with endpoint, method, and json fields. The json field should be a VALID JSON string that can be parsed.`
+              }
+            ]
+          });
+          
+          // Extract JSON from response
+          const content = response.content[0].text;
+          console.log('AI generated content received');
+          
+          try {
+            // Try to parse as JSON
+            const parsedResponse = JSON.parse(content);
+            return res.json(parsedResponse);
+          } catch (parseError) {
+            console.error('Error parsing AI response as JSON:', parseError);
+            
+            // Try to extract JSON with regex as a fallback
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              try {
+                const extractedJson = JSON.parse(jsonMatch[0]);
+                return res.json(extractedJson);
+              } catch (e) {
+                throw new Error('Could not parse AI-generated content as JSON');
+              }
+            } else {
+              // If we couldn't extract valid JSON, return the raw text
+              return res.json({ json: content });
+            }
+          }
+        } catch (aiError) {
+          console.error('Error generating JSON with AI:', aiError);
+          return res.status(500).json({
+            message: 'Failed to generate JSON content',
+            error: aiError.message
+          });
+        }
+      } else {
+        // Original behavior - generate questionnaire content
+        console.log('Generating questionnaire content with AI');
+        const content = await generateQuestionnaireContent(prompt, questionnaireContext);
+        res.json({ content });
+      }
     } catch (error) {
-      console.error('Error generating questionnaire with AI:', error);
+      console.error('Error generating content with AI:', error);
       res.status(500).json({ 
-        message: 'Failed to generate questionnaire content',
+        message: 'Failed to generate content',
         error: error.message 
       });
     }
