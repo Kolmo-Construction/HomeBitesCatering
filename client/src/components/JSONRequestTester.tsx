@@ -1,0 +1,214 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+const JSONRequestTester = () => {
+  const { toast } = useToast();
+  const [method, setMethod] = useState<"GET" | "POST" | "PUT" | "DELETE">("POST");
+  const [endpoint, setEndpoint] = useState("");
+  const [requestBody, setRequestBody] = useState("");
+  const [response, setResponse] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!endpoint) {
+      toast({
+        title: "Error",
+        description: "Please provide an API endpoint",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      let parsedBody = null;
+      
+      // Parse JSON for non-GET requests
+      if (method !== "GET" && requestBody.trim()) {
+        try {
+          parsedBody = JSON.parse(requestBody);
+        } catch (e) {
+          toast({
+            title: "Invalid JSON",
+            description: "The request body is not valid JSON",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const apiRes = await apiRequest(
+        method, 
+        endpoint, 
+        method !== "GET" ? parsedBody : undefined
+      );
+
+      const data = await apiRes.json();
+      setResponse(JSON.stringify(data, null, 2));
+      
+      toast({
+        title: "Request Successful",
+        description: `${method} request to ${endpoint} completed successfully`
+      });
+    } catch (error: any) {
+      setResponse(JSON.stringify({ error: error.message || "Unknown error occurred" }, null, 2));
+      toast({
+        title: "Request Failed",
+        description: error.message || "Failed to execute request",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMethodChange = (value: string) => {
+    setMethod(value as "GET" | "POST" | "PUT" | "DELETE");
+  };
+
+  const handleRequestBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setRequestBody(e.target.value);
+  };
+
+  const handleEndpointChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEndpoint(e.target.value);
+  };
+
+  const requestExamples = {
+    "Create Questionnaire Definition": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/definitions",
+      body: {
+        title: "Customer Satisfaction Survey",
+        description: "A survey to gather feedback about our catering services",
+        versionName: "v1"
+      }
+    },
+    "Create Conditional Logic": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/definitions/{definitionId}/conditional-logic",
+      body: {
+        triggerQuestionKey: "question_1",
+        triggerCondition: "equals",
+        triggerValue: "yes",
+        actionType: "show_question",
+        targetQuestionKey: "question_2"
+      }
+    },
+    "Submit Questionnaire": {
+      method: "POST",
+      endpoint: "/api/questionnaires/submit",
+      body: {
+        definitionId: 1,
+        submittedData: {
+          question_1: "yes",
+          question_2: "Very satisfied"
+        }
+      }
+    },
+    "AI Generate Questionnaire": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/ai-generate",
+      body: {
+        title: "Corporate Event Planning Survey",
+        description: "A questionnaire to gather requirements for a corporate event",
+        additionalInstructions: "Include questions about dietary restrictions and AV needs"
+      }
+    }
+  };
+
+  const loadExample = (exampleKey: keyof typeof requestExamples) => {
+    const example = requestExamples[exampleKey];
+    setMethod(example.method as "GET" | "POST" | "PUT" | "DELETE");
+    setEndpoint(example.endpoint);
+    setRequestBody(example.body ? JSON.stringify(example.body, null, 2) : "");
+  };
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>JSON Request Tester</CardTitle>
+        <CardDescription>
+          Test API endpoints directly with JSON requests
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-none">
+              <Tabs defaultValue="POST" className="w-[300px]" onValueChange={handleMethodChange}>
+                <TabsList className="grid grid-cols-4">
+                  <TabsTrigger value="GET">GET</TabsTrigger>
+                  <TabsTrigger value="POST">POST</TabsTrigger>
+                  <TabsTrigger value="PUT">PUT</TabsTrigger>
+                  <TabsTrigger value="DELETE">DELETE</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className="flex-grow">
+              <Textarea 
+                placeholder="API endpoint (e.g., /api/questionnaires/submit)" 
+                className="min-h-[40px]"
+                value={endpoint}
+                onChange={handleEndpointChange}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-md font-medium mb-2">Request Body (JSON)</h3>
+              <Textarea 
+                placeholder="Enter JSON request body..." 
+                className="min-h-[300px] font-mono"
+                value={requestBody}
+                onChange={handleRequestBodyChange}
+              />
+              <div className="mt-2 space-y-2">
+                <h4 className="text-sm font-medium">Examples:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(requestExamples).map((example) => (
+                    <Button 
+                      key={example} 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => loadExample(example as keyof typeof requestExamples)}
+                    >
+                      {example}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-md font-medium mb-2">Response</h3>
+              <Textarea 
+                readOnly 
+                value={response} 
+                className="min-h-[300px] font-mono bg-slate-50 dark:bg-slate-900"
+                placeholder="Response will appear here..."
+              />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className="w-full"
+        >
+          {isLoading ? "Sending Request..." : "Send Request"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default JSONRequestTester;

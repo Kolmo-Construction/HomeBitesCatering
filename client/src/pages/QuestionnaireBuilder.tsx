@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import JSONRequestTester from '@/components/JSONRequestTester';
 
 import {
   Card,
@@ -711,6 +712,15 @@ const QuestionnaireBuilder = () => {
                 ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               Preview
+            </button>
+            <button
+              onClick={() => setActiveTab("apiTester")}
+              className={`${activeTab === "apiTester" 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              API Tester
             </button>
           </nav>
         </div>
