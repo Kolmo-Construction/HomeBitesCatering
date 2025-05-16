@@ -84,18 +84,26 @@ const AIQuestionGenerator: React.FC<AIQuestionGeneratorProps> = ({
       const questions = generatedContent.pages?.[0]?.questions || [];
       const importPromises = questions.map(async (question: any) => {
         // Map the AI-generated question to the format expected by the API
-        const questionData = {
+        const questionData: any = {
           questionText: question.questionText,
           questionKey: question.questionKey,
           questionType: question.questionType,
-          isRequired: question.isRequired,
-          order: question.order,
-          helpText: question.helpText,
-          placeholderText: question.placeholderText,
-          options: question.options,
-          matrixColumns: question.matrixColumns,
-          matrixRows: question.matrixRows
+          isRequired: question.isRequired || false,
+          order: question.order || 0,
+          helpText: question.helpText || "",
+          placeholderText: question.placeholderText || ""
         };
+        
+        // Only include options for appropriate question types
+        if (question.options && ['select', 'radio', 'checkbox'].includes(question.questionType)) {
+          questionData.options = question.options;
+        }
+        
+        // Only include matrix data for matrix question type
+        if (question.questionType === 'matrix') {
+          if (question.matrixColumns) questionData.matrixColumns = question.matrixColumns;
+          if (question.matrixRows) questionData.matrixRows = question.matrixRows;
+        }
         
         const response = await apiRequest('POST', `/api/admin/questionnaires/pages/${pageId}/questions`, questionData);
         
