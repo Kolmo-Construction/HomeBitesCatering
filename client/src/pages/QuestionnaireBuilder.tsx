@@ -190,24 +190,24 @@ const QuestionnaireBuilder = () => {
   // Queries
   const { data: definitions, isLoading: isLoadingDefinitions } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions'],
-    queryFn: () => apiRequest('/api/admin/questionnaires/definitions', 'GET')
+    queryFn: () => apiRequest('GET', '/api/admin/questionnaires/definitions')
   });
 
   const { data: pages, isLoading: isLoadingPages } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'],
-    queryFn: () => selectedDefinition ? apiRequest(`/api/admin/questionnaires/definitions/${selectedDefinition}/pages`, 'GET') : null,
+    queryFn: () => selectedDefinition ? apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`) : null,
     enabled: !!selectedDefinition
   });
 
   const { data: questions, isLoading: isLoadingQuestions } = useQuery({
     queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'],
-    queryFn: () => selectedPage ? apiRequest(`/api/admin/questionnaires/pages/${selectedPage}/questions`, 'GET') : null,
+    queryFn: () => selectedPage ? apiRequest('GET', `/api/admin/questionnaires/pages/${selectedPage}/questions`) : null,
     enabled: !!selectedPage
   });
 
   const { data: conditionalLogic, isLoading: isLoadingConditionalLogic } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'],
-    queryFn: () => selectedDefinition ? apiRequest(`/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`, 'GET') : null,
+    queryFn: () => selectedDefinition ? apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`) : null,
     enabled: !!selectedDefinition
   });
 
@@ -220,7 +220,7 @@ const QuestionnaireBuilder = () => {
       // Fetch questions for each page
       const allQuestions = [];
       for (const page of pages) {
-        const pageQuestions = await apiRequest(`/api/admin/questionnaires/pages/${page.id}/questions`, 'GET');
+        const pageQuestions = await apiRequest('GET', `/api/admin/questionnaires/pages/${page.id}/questions`);
         if (pageQuestions) {
           allQuestions.push(...pageQuestions);
         }
@@ -233,7 +233,7 @@ const QuestionnaireBuilder = () => {
   // Mutations
   const createDefinitionMutation = useMutation({
     mutationFn: (data: z.infer<typeof definitionFormSchema>) => 
-      apiRequest('/api/admin/questionnaires/definitions', 'POST', data),
+      apiRequest('POST', '/api/admin/questionnaires/definitions', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
       setDefinitionDialogOpen(false);
@@ -254,7 +254,7 @@ const QuestionnaireBuilder = () => {
 
   const createPageMutation = useMutation({
     mutationFn: (data: z.infer<typeof pageFormSchema>) => 
-      apiRequest(`/api/admin/questionnaires/definitions/${selectedDefinition}/pages`, 'POST', data),
+      apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
       setPageDialogOpen(false);
@@ -279,7 +279,7 @@ const QuestionnaireBuilder = () => {
       if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
         data.options = questionOptions;
       }
-      return apiRequest(`/api/admin/questionnaires/pages/${selectedPage}/questions`, 'POST', data);
+      return apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
@@ -303,7 +303,7 @@ const QuestionnaireBuilder = () => {
 
   const createConditionalLogicMutation = useMutation({
     mutationFn: (data: z.infer<typeof conditionalLogicFormSchema>) => 
-      apiRequest(`/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`, 'POST', data),
+      apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
       setConditionalLogicDialogOpen(false);
@@ -323,7 +323,7 @@ const QuestionnaireBuilder = () => {
   });
 
   const deleteDefinitionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/admin/questionnaires/definitions/${id}`, 'DELETE'),
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/definitions/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
       setSelectedDefinition(null);
@@ -335,7 +335,7 @@ const QuestionnaireBuilder = () => {
   });
 
   const deletePageMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/admin/questionnaires/pages/${id}`, 'DELETE'),
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/pages/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
       setSelectedPage(null);
@@ -347,7 +347,7 @@ const QuestionnaireBuilder = () => {
   });
 
   const deleteQuestionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/admin/questionnaires/questions/${id}`, 'DELETE'),
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/questions/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
@@ -359,7 +359,7 @@ const QuestionnaireBuilder = () => {
   });
 
   const deleteConditionalLogicMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/admin/questionnaires/conditional-logic/${id}`, 'DELETE'),
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/conditional-logic/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
       toast({
