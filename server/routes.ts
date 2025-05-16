@@ -3169,6 +3169,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     status: z.enum(['draft', 'submitted', 'archived']).default('submitted')
   });
   
+  // Unified Builder API Schemas
+  const formBuilderSchema = z.object({
+    action: z.enum([
+      'createDefinition', 
+      'addPage', 
+      'addQuestions', 
+      'updatePage', 
+      'updateQuestion', 
+      'deletePage', 
+      'deleteQuestion',
+      'addConditionalLogic',
+      'updateConditionalLogic',
+      'deleteConditionalLogic',
+      'getFullQuestionnaire'
+    ]),
+    data: z.object({}).passthrough() // We'll validate the specific data format based on the action
+  });
+  
   // 1. Get Active Questionnaire 
   app.get('/api/questionnaires/active', async (req: Request, res: Response) => {
     try {
@@ -3633,6 +3651,478 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
   });
   
   // Smart JSON Endpoint - Unified API that detects operation from JSON structure
+  // Unified Form Builder API - all operations through a single endpoint with action parameter
+  app.post('/api/questionnaires/builder', isAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log('Form Builder API received request with action:', req.body.action);
+      
+      // Validate the request structure
+      const { action, data } = formBuilderSchema.parse(req.body);
+      
+      // Process based on the action parameter
+      switch (action) {
+        case 'createDefinition': {
+          // Create a questionnaire definition
+          console.log('Creating questionnaire definition with data:', data);
+          
+          // Validate data for this specific action
+          const definitionData = insertQuestionnaireDefinitionSchema.parse(data);
+          
+          // If setting as active, deactivate other definitions
+          if (definitionData.isActive) {
+            console.log('Setting as active definition, deactivating others');
+            await db
+              .update(questionnaireDefinitions)
+              .set({ isActive: false })
+              .where(eq(questionnaireDefinitions.isActive, true));
+          }
+          
+          console.log('Calling storage.createQuestionnaireDefinition');
+          // Create the definition
+          const definition = await storage.createQuestionnaireDefinition(definitionData);
+          console.log('Definition created successfully:', definition);
+          
+          return res.status(201).json({
+            success: true,
+            message: 'Questionnaire definition created successfully',
+            definition
+          });
+        }
+          
+        case 'addPage': {
+          // Add a page to a definition
+          console.log('Adding page with data:', data);
+          
+          // For page addition, we need definitionId in the data
+          if (!data.definitionId) {
+            return res.status(400).json({
+              success: false,
+              message: 'definitionId is required for adding a page'
+            });
+          }
+          
+          // Check if the definition exists
+          const definition = await storage.getQuestionnaireDefinition(data.definitionId);
+          if (!definition) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire definition with ID ${data.definitionId} not found`
+            });
+          }
+          
+          // Create the page
+          const page = await storage.createQuestionnairePage({
+            definitionId: data.definitionId,
+            title: data.title,
+            order: data.order || 0
+          });
+          
+          return res.status(201).json({
+            success: true,
+            message: 'Page added successfully',
+            page
+          });
+        }
+          
+        case 'addQuestions': {
+          // Add questions to a page
+          console.log('Adding questions with data:', data);
+          
+          // For question addition, we need pageId in the data
+          if (!data.pageId) {
+            return res.status(400).json({
+              success: false,
+              message: 'pageId is required for adding questions'
+            });
+          }
+          
+          // Check if the page exists
+          const page = await storage.getQuestionnairePage(data.pageId);
+          if (!page) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire page with ID ${data.pageId} not found`
+            });
+          }
+          
+          // Validate questions array
+          if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'questions array is required and must not be empty'
+            });
+          }
+          
+          // Process each question
+          const createdQuestions = [];
+          
+          for (let i = 0; i < data.questions.length; i++) {
+            const questionData = data.questions[i];
+            
+            // Create the question
+            const question = await storage.createQuestionnaireQuestion({
+              pageId: data.pageId,
+              questionText: questionData.questionText,
+              questionKey: questionData.questionKey,
+              questionType: questionData.questionType,
+              order: questionData.order || i,
+              isRequired: questionData.isRequired !== undefined ? questionData.isRequired : false,
+              placeholderText: questionData.placeholderText,
+              helpText: questionData.helpText,
+              validationRules: questionData.validationRules
+            });
+            
+            // If question has options, create them
+            if (questionData.options && Array.isArray(questionData.options) && questionData.options.length > 0) {
+              const options = [];
+              
+              for (let j = 0; j < questionData.options.length; j++) {
+                const optionData = questionData.options[j];
+                
+                const option = await storage.createQuestionnaireQuestionOption({
+                  questionId: question.id,
+                  optionText: optionData.optionText,
+                  optionValue: optionData.optionValue,
+                  order: optionData.order || j,
+                  defaultSelectionIndicator: optionData.defaultSelectionIndicator,
+                  relatedMenuItemId: optionData.relatedMenuItemId
+                });
+                
+                options.push(option);
+              }
+              
+              question.options = options;
+            }
+            
+            createdQuestions.push(question);
+          }
+          
+          return res.status(201).json({
+            success: true,
+            message: 'Questions added successfully',
+            questions: createdQuestions
+          });
+        }
+          
+        case 'addConditionalLogic': {
+          // Add conditional logic rules
+          console.log('Adding conditional logic with data:', data);
+          
+          // For conditional logic, we need definitionId in the data
+          if (!data.definitionId) {
+            return res.status(400).json({
+              success: false,
+              message: 'definitionId is required for adding conditional logic'
+            });
+          }
+          
+          // Check if the definition exists
+          const definition = await storage.getQuestionnaireDefinition(data.definitionId);
+          if (!definition) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire definition with ID ${data.definitionId} not found`
+            });
+          }
+          
+          // Validate rules array
+          if (!data.rules || !Array.isArray(data.rules) || data.rules.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'rules array is required and must not be empty'
+            });
+          }
+          
+          // Process each rule
+          const createdRules = [];
+          
+          for (const ruleData of data.rules) {
+            // Create the rule
+            const rule = await storage.createQuestionnaireConditionalLogic({
+              definitionId: data.definitionId,
+              triggerQuestionKey: ruleData.triggerQuestionKey,
+              triggerCondition: ruleData.triggerCondition,
+              triggerValue: ruleData.triggerValue,
+              actionType: ruleData.actionType,
+              targetQuestionKey: ruleData.targetQuestionKey,
+              targetPageId: ruleData.targetPageId,
+              targetOptionValue: ruleData.targetOptionValue
+            });
+            
+            createdRules.push(rule);
+          }
+          
+          return res.status(201).json({
+            success: true,
+            message: 'Conditional logic rules added successfully',
+            rules: createdRules
+          });
+        }
+          
+        case 'updatePage': {
+          // Update a page
+          console.log('Updating page with data:', data);
+          
+          if (!data.pageId) {
+            return res.status(400).json({
+              success: false,
+              message: 'pageId is required for updating a page'
+            });
+          }
+          
+          // Check if the page exists
+          const page = await storage.getQuestionnairePage(data.pageId);
+          if (!page) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire page with ID ${data.pageId} not found`
+            });
+          }
+          
+          // Update the page
+          const updatedPage = await storage.updateQuestionnairePage(data.pageId, {
+            title: data.title,
+            order: data.order
+          });
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Page updated successfully',
+            page: updatedPage
+          });
+        }
+          
+        case 'updateQuestion': {
+          // Update a question
+          console.log('Updating question with data:', data);
+          
+          if (!data.questionId) {
+            return res.status(400).json({
+              success: false,
+              message: 'questionId is required for updating a question'
+            });
+          }
+          
+          // Check if the question exists
+          const question = await storage.getQuestionnaireQuestion(data.questionId);
+          if (!question) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire question with ID ${data.questionId} not found`
+            });
+          }
+          
+          // Update the question
+          const updatedQuestion = await storage.updateQuestionnaireQuestion(data.questionId, {
+            questionText: data.questionText,
+            questionKey: data.questionKey,
+            questionType: data.questionType,
+            order: data.order,
+            isRequired: data.isRequired,
+            placeholderText: data.placeholderText,
+            helpText: data.helpText,
+            validationRules: data.validationRules
+          });
+          
+          // Handle options if provided
+          if (data.options && Array.isArray(data.options)) {
+            // Delete existing options if needed
+            if (data.replaceOptions) {
+              await storage.deleteQuestionnaireQuestionOptions(data.questionId);
+            }
+            
+            // Add new options
+            for (let i = 0; i < data.options.length; i++) {
+              const optionData = data.options[i];
+              
+              await storage.createQuestionnaireQuestionOption({
+                questionId: data.questionId,
+                optionText: optionData.optionText,
+                optionValue: optionData.optionValue,
+                order: optionData.order || i,
+                defaultSelectionIndicator: optionData.defaultSelectionIndicator,
+                relatedMenuItemId: optionData.relatedMenuItemId
+              });
+            }
+          }
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Question updated successfully',
+            question: updatedQuestion
+          });
+        }
+          
+        case 'deletePage': {
+          // Delete a page
+          console.log('Deleting page with ID:', data.pageId);
+          
+          if (!data.pageId) {
+            return res.status(400).json({
+              success: false,
+              message: 'pageId is required for deleting a page'
+            });
+          }
+          
+          // Delete the page
+          const result = await storage.deleteQuestionnairePage(data.pageId);
+          
+          if (!result) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire page with ID ${data.pageId} not found or could not be deleted`
+            });
+          }
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Page deleted successfully'
+          });
+        }
+          
+        case 'deleteQuestion': {
+          // Delete a question
+          console.log('Deleting question with ID:', data.questionId);
+          
+          if (!data.questionId) {
+            return res.status(400).json({
+              success: false,
+              message: 'questionId is required for deleting a question'
+            });
+          }
+          
+          // Delete the question
+          const result = await storage.deleteQuestionnaireQuestion(data.questionId);
+          
+          if (!result) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire question with ID ${data.questionId} not found or could not be deleted`
+            });
+          }
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Question deleted successfully'
+          });
+        }
+          
+        case 'updateConditionalLogic': {
+          // Update conditional logic rule
+          console.log('Updating conditional logic rule with data:', data);
+          
+          if (!data.ruleId) {
+            return res.status(400).json({
+              success: false,
+              message: 'ruleId is required for updating a conditional logic rule'
+            });
+          }
+          
+          // Update the rule
+          const updatedRule = await storage.updateQuestionnaireConditionalLogic(data.ruleId, {
+            triggerQuestionKey: data.triggerQuestionKey,
+            triggerCondition: data.triggerCondition,
+            triggerValue: data.triggerValue,
+            actionType: data.actionType,
+            targetQuestionKey: data.targetQuestionKey,
+            targetPageId: data.targetPageId,
+            targetOptionValue: data.targetOptionValue
+          });
+          
+          if (!updatedRule) {
+            return res.status(404).json({
+              success: false,
+              message: `Conditional logic rule with ID ${data.ruleId} not found or could not be updated`
+            });
+          }
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Conditional logic rule updated successfully',
+            rule: updatedRule
+          });
+        }
+          
+        case 'deleteConditionalLogic': {
+          // Delete conditional logic rule
+          console.log('Deleting conditional logic rule with ID:', data.ruleId);
+          
+          if (!data.ruleId) {
+            return res.status(400).json({
+              success: false,
+              message: 'ruleId is required for deleting a conditional logic rule'
+            });
+          }
+          
+          // Delete the rule
+          const result = await storage.deleteQuestionnaireConditionalLogic(data.ruleId);
+          
+          if (!result) {
+            return res.status(404).json({
+              success: false,
+              message: `Conditional logic rule with ID ${data.ruleId} not found or could not be deleted`
+            });
+          }
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Conditional logic rule deleted successfully'
+          });
+        }
+          
+        case 'getFullQuestionnaire': {
+          // Get full questionnaire structure
+          console.log('Getting full questionnaire structure for definition:', data.definitionId);
+          
+          if (!data.definitionId) {
+            return res.status(400).json({
+              success: false,
+              message: 'definitionId is required to get a full questionnaire'
+            });
+          }
+          
+          // Get the questionnaire structure
+          const questionnaireStructure = await storage.getPublicQuestionnaireStructure(data.definitionId);
+          
+          if (!questionnaireStructure) {
+            return res.status(404).json({
+              success: false,
+              message: `Questionnaire with definition ID ${data.definitionId} not found`
+            });
+          }
+          
+          return res.status(200).json({
+            success: true,
+            questionnaire: questionnaireStructure
+          });
+        }
+          
+        default:
+          return res.status(400).json({
+            success: false,
+            message: `Unknown action: ${action}`
+          });
+      }
+    } catch (error) {
+      console.error('Error in form builder API:', error);
+      
+      // Handle validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: 'Server error processing form builder request',
+        error: error.message
+      });
+    }
+  });
+  
   app.post('/api/admin/questionnaires/smart', isAdmin, async (req: Request, res: Response) => {
     try {
       console.log('Smart questionnaire API received request');
