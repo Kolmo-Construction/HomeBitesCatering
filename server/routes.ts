@@ -1708,6 +1708,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete a questionnaire definition
+  app.delete('/api/admin/questionnaires/definitions/:definitionId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ message: 'Invalid definition ID' });
+      }
+      
+      // Check if the definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ message: 'Questionnaire definition not found' });
+      }
+      
+      // Delete the definition (which will cascade delete pages, questions, options, etc.)
+      const deleted = await storage.deleteQuestionnaireDefinition(definitionId);
+      
+      if (deleted) {
+        console.log(`Successfully deleted questionnaire definition ${definitionId}`);
+        res.json({ message: 'Questionnaire definition deleted successfully' });
+      } else {
+        console.error(`Failed to delete questionnaire definition ${definitionId}`);
+        res.status(500).json({ message: 'Failed to delete questionnaire definition' });
+      }
+    } catch (error) {
+      console.error('Error deleting questionnaire definition:', error);
+      res.status(500).json({ message: 'Server error deleting questionnaire definition' });
+    }
+  });
+  
   // Create a new questionnaire definition
   app.post('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
     try {
@@ -1861,7 +1891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 5. Delete a Page
+  // 5. Delete a Page (with definitionId path)
   app.delete('/api/admin/questionnaires/definitions/:definitionId/pages/:pageId', isAdmin, async (req: Request, res: Response) => {
     try {
       const definitionId = Number(req.params.definitionId);
@@ -1886,8 +1916,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete the page (and its associated questions, options, etc. via cascade delete)
       const deleted = await storage.deleteQuestionnairePage(pageId);
       if (deleted) {
+        console.log(`Successfully deleted page ${pageId} of definition ${definitionId}`);
         res.json({ message: 'Page deleted successfully' });
       } else {
+        console.error(`Failed to delete page ${pageId}`);
+        res.status(500).json({ message: 'Failed to delete page' });
+      }
+    } catch (error) {
+      console.error('Error deleting questionnaire page:', error);
+      res.status(500).json({ message: 'Server error deleting questionnaire page' });
+    }
+  })
+  
+  // 5b. Delete a Page (simplified path without definitionId)
+  app.delete('/api/admin/questionnaires/pages/:pageId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const pageId = Number(req.params.pageId);
+      
+      if (isNaN(pageId) || pageId <= 0) {
+        return res.status(400).json({ message: 'Invalid page ID' });
+      }
+      
+      // Check if the page exists
+      const page = await storage.getQuestionnairePage(pageId);
+      if (!page) {
+        return res.status(404).json({ message: 'Questionnaire page not found' });
+      }
+      
+      // Delete the page (and its associated questions, options, etc. via cascade delete)
+      const deleted = await storage.deleteQuestionnairePage(pageId);
+      if (deleted) {
+        console.log(`Successfully deleted page ${pageId}`);
+        res.json({ message: 'Page deleted successfully' });
+      } else {
+        console.error(`Failed to delete page ${pageId}`);
         res.status(500).json({ message: 'Failed to delete page' });
       }
     } catch (error) {

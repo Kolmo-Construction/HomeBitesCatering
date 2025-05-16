@@ -925,6 +925,43 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
   }
+  
+  async deleteQuestionnaireDefinition(definitionId: number): Promise<boolean> {
+    try {
+      console.log(`Attempting to delete questionnaire definition ID: ${definitionId}`);
+      // First find all pages for this definition to delete their questions, options, etc.
+      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
+      
+      // Delete all pages and their associated content in a transaction
+      await db.transaction(async (tx) => {
+        // Delete all pages one by one (which will cascade delete questions, options, etc.)
+        for (const page of pages) {
+          console.log(`Deleting page ID ${page.id} from definition ${definitionId}`);
+          await tx
+            .delete(questionnairePages)
+            .where(eq(questionnairePages.id, page.id));
+        }
+        
+        // Delete conditional logic rules for this definition
+        console.log(`Deleting conditional logic rules for definition ${definitionId}`);
+        await tx
+          .delete(questionnaireConditionalLogic)
+          .where(eq(questionnaireConditionalLogic.definitionId, definitionId));
+        
+        // Finally delete the definition itself
+        console.log(`Deleting definition ${definitionId} itself`);
+        await tx
+          .delete(questionnaireDefinitions)
+          .where(eq(questionnaireDefinitions.id, definitionId));
+      });
+      
+      console.log(`Successfully deleted questionnaire definition ${definitionId}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting questionnaire definition ${definitionId}:`, error);
+      return false;
+    }
+  }
 
   // Questionnaire Pages Implementation
 
