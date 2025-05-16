@@ -67,8 +67,9 @@ import {
 
 import { PlusCircle, Trash2, Edit, Eye, Save, List, Plus, ArrowUp, ArrowDown, Check, X, Sparkles } from 'lucide-react';
 
-// Import the AIQuestionGenerator component
+// Import components
 import AIQuestionGenerator from "@/components/AIQuestionGenerator";
+import QuestionnairePreview from "@/components/QuestionnairePreview";
 
 // Define schemas for the forms
 const definitionFormSchema = z.object({
@@ -139,6 +140,7 @@ const QuestionnaireBuilder = () => {
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [conditionalLogicDialogOpen, setConditionalLogicDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   
   // Additional state for options and matrix columns/rows
   const [questionOptions, setQuestionOptions] = useState<{ optionText: string; optionValue: string; order: number }[]>([]);
@@ -148,6 +150,67 @@ const QuestionnaireBuilder = () => {
   // State for tracking which items are being edited
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
   const [editingPageId, setEditingPageId] = useState<number | null>(null);
+  
+  // State for questionnaire preview
+  const [questionsMap, setQuestionsMap] = useState<Record<number, any[]>>({});
+  
+  // Function to load all questions for preview
+  const loadAllQuestionsForPreview = async () => {
+    if (!selectedDefinition || !pages || pages.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select a questionnaire with pages first."
+      });
+      return false;
+    }
+    
+    try {
+      const questionsForAllPages: Record<number, any[]> = {};
+      
+      // For each page, load its questions
+      for (const page of pages) {
+        const response = await fetch(`/api/admin/questionnaires/pages/${page.id}/questions`);
+        
+        if (response.ok) {
+          const pageQuestions = await response.json();
+          if (Array.isArray(pageQuestions)) {
+            // Also load options for each question that needs them
+            for (let i = 0; i < pageQuestions.length; i++) {
+              const question = pageQuestions[i];
+              if (['select', 'radio', 'checkbox'].includes(question.questionType)) {
+                const optionsResponse = await fetch(`/api/admin/questionnaires/questions/${question.id}/options`);
+                if (optionsResponse.ok) {
+                  const options = await optionsResponse.json();
+                  pageQuestions[i].options = options;
+                }
+              }
+            }
+            questionsForAllPages[page.id] = pageQuestions;
+          }
+        }
+      }
+      
+      setQuestionsMap(questionsForAllPages);
+      return true;
+    } catch (error) {
+      console.error("Error loading questions for preview:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load all questions for preview."
+      });
+      return false;
+    }
+  }
+  
+  // Handle opening the preview dialog
+  const handleOpenPreview = async () => {
+    const success = await loadAllQuestionsForPreview();
+    if (success) {
+      setPreviewDialogOpen(true);
+    }
+  };
   const [editingConditionalLogicId, setEditingConditionalLogicId] = useState<number | null>(null);
   
   // Forms
@@ -869,8 +932,20 @@ const QuestionnaireBuilder = () => {
                               setActiveTab("pages");
                             }}
                           >
+                            <List className="h-4 w-4 mr-1" />
+                            Pages
+                          </Button>
+                          <Button
+                            variant="outline" 
+                            size="sm"
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                            onClick={() => {
+                              setSelectedDefinition(def.id);
+                              handleOpenPreview();
+                            }}
+                          >
                             <Eye className="h-4 w-4 mr-1" />
-                            View
+                            Preview
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -2002,6 +2077,26 @@ const QuestionnaireBuilder = () => {
             </CardContent>
           </Card>
         )}
+        {/* Preview Dialog */}
+        <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+          <DialogContent className="max-w-5xl h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Questionnaire Preview</DialogTitle>
+              <DialogDescription>
+                This is how your questionnaire will appear to users. You can navigate through pages to test the experience.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedDefinition && (
+              <QuestionnairePreview
+                definitionId={selectedDefinition}
+                pages={pages || []}
+                questionsMap={questionsMap}
+                onClose={() => setPreviewDialogOpen(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
