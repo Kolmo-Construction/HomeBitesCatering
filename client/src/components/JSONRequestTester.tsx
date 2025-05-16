@@ -90,6 +90,34 @@ const JSONRequestTester = () => {
         versionName: "v1"
       }
     },
+    "Create Page with Questions": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/pages/{pageId}/questions",
+      body: [
+        {
+          "questionText": "How would you rate our food quality?",
+          "questionKey": "food_quality",
+          "questionType": "radio",
+          "isRequired": true,
+          "order": 1,
+          "helpText": "Please rate based on taste, presentation, and freshness",
+          "options": [
+            { "optionText": "Excellent", "optionValue": "excellent", "order": 1 },
+            { "optionText": "Good", "optionValue": "good", "order": 2 },
+            { "optionText": "Average", "optionValue": "average", "order": 3 },
+            { "optionText": "Poor", "optionValue": "poor", "order": 4 }
+          ]
+        },
+        {
+          "questionText": "What did you enjoy most about our service?",
+          "questionKey": "enjoy_most",
+          "questionType": "text",
+          "isRequired": false,
+          "order": 2,
+          "placeholderText": "Please share your thoughts..."
+        }
+      ]
+    },
     "Create Complete Questionnaire": {
       method: "POST",
       endpoint: "/api/admin/questionnaires/complete",
