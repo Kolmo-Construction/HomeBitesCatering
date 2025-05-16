@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
@@ -61,7 +61,7 @@ function AppContent() {
             <Route path="/questionnaire-docs" component={QuestionnaireDocumentation} />
             <Route path="/form-builder-tester" component={FormBuilderTester} />
             <Route path="/form-builder-docs" component={UnifiedFormBuilderDocs} />
-            <Route path="/form-examples/home-bites" component={() => import("@/examples/HomeBitesQuotationForm").then(mod => <mod.default />)} />
+            <Route path="/form-examples/home-bites" component={FormBuilderTester} />
             <Route path="/menu-items" component={MenuItems} />
             <Route path="/menu-items/new" component={MenuItems} />
             <Route path="/menu-items/:id" component={MenuItems} />
