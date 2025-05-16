@@ -18,6 +18,7 @@ import QuestionnaireBuilder from "@/pages/QuestionnaireBuilder";
 import QuestionnaireDocumentation from "@/pages/QuestionnaireDocumentation";
 import FormBuilderTester from "@/pages/FormBuilderTester";
 import UnifiedFormBuilderDocs from "@/pages/UnifiedFormBuilderDocs";
+import HomeBites2025Form from "@/examples/HomeBites2025Form";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -62,6 +63,7 @@ function AppContent() {
             <Route path="/form-builder-tester" component={FormBuilderTester} />
             <Route path="/form-builder-docs" component={UnifiedFormBuilderDocs} />
             <Route path="/form-examples/home-bites" component={FormBuilderTester} />
+            <Route path="/form-examples/home-bites-2025" component={HomeBites2025Form} />
             <Route path="/menu-items" component={MenuItems} />
             <Route path="/menu-items/new" component={MenuItems} />
             <Route path="/menu-items/:id" component={MenuItems} />
