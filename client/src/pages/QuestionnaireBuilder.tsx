@@ -258,15 +258,29 @@ const QuestionnaireBuilder = () => {
   });
 
   const createPageMutation = useMutation({
-    mutationFn: (data: z.infer<typeof pageFormSchema>) => 
-      apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`, data),
-    onSuccess: () => {
+    mutationFn: async (data: z.infer<typeof pageFormSchema>) => {
+      const response = await apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`, data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
       setPageDialogOpen(false);
       pageForm.reset();
+      
+      // Get the new page ID from the response
+      const newPageId = data.id;
+      console.log("Created new page with ID:", newPageId);
+      
+      // Auto-select the newly created page
+      if (newPageId) {
+        setSelectedPage(newPageId);
+        // Also switch to the questions tab
+        setActiveTab("questions");
+      }
+      
       toast({
         title: "Success",
-        description: "Page created successfully"
+        description: "Page created successfully. You can now add questions to this page."
       });
     },
     onError: (error: any) => {
@@ -279,19 +293,23 @@ const QuestionnaireBuilder = () => {
   });
 
   const createQuestionMutation = useMutation({
-    mutationFn: (data: z.infer<typeof questionFormSchema>) => {
+    mutationFn: async (data: z.infer<typeof questionFormSchema>) => {
       // Add options to the data if they exist
       if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
         data.options = questionOptions;
       }
-      return apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, data);
+      const response = await apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, data);
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
       setQuestionOptions([]);
       setQuestionDialogOpen(false);
       questionForm.reset();
+      
+      console.log("Created new question with ID:", data.id);
+      
       toast({
         title: "Success",
         description: "Question created successfully"
@@ -307,12 +325,17 @@ const QuestionnaireBuilder = () => {
   });
 
   const createConditionalLogicMutation = useMutation({
-    mutationFn: (data: z.infer<typeof conditionalLogicFormSchema>) => 
-      apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`, data),
-    onSuccess: () => {
+    mutationFn: async (data: z.infer<typeof conditionalLogicFormSchema>) => {
+      const response = await apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`, data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
       setConditionalLogicDialogOpen(false);
       conditionalLogicForm.reset();
+      
+      console.log("Created new conditional logic rule with ID:", data.id);
+      
       toast({
         title: "Success",
         description: "Conditional logic rule created successfully"
