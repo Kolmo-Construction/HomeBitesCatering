@@ -726,7 +726,7 @@ const QuestionnaireBuilder = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pages.map((page: any) => (
+                    {Array.isArray(pages) && pages.map((page: any) => (
                       <TableRow key={page.id} className={selectedPage === page.id ? "bg-muted/50" : ""}>
                         <TableCell>{page.order}</TableCell>
                         <TableCell>{page.title}</TableCell>
@@ -782,8 +782,8 @@ const QuestionnaireBuilder = () => {
                 <div>
                   <CardTitle>Questions</CardTitle>
                   <CardDescription>
-                    {selectedPage && pages ? (
-                      <span>Managing questions for page: <strong>{pages.find((p: any) => p.id === selectedPage)?.title}</strong></span>
+                    {selectedPage && pages && Array.isArray(pages) ? (
+                      <span>Managing questions for page: <strong>{pages.find((p: any) => p.id === selectedPage)?.title || 'Unknown'}</strong></span>
                     ) : (
                       <span>Select a page first</span>
                     )}
