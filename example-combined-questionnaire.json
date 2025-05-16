@@ -1,0 +1,171 @@
+{
+  "definition": {
+    "title": "Event Planning Questionnaire",
+    "description": "Complete questionnaire for planning catering events",
+    "versionName": "1.0"
+  },
+  "pages": [
+    {
+      "title": "Event Basics",
+      "description": "Basic information about your event",
+      "order": 0,
+      "questions": [
+        {
+          "questionText": "What type of event are you planning?",
+          "questionKey": "event_type",
+          "questionType": "select",
+          "isRequired": true,
+          "order": 0,
+          "helpText": "Select the type of event you're planning",
+          "options": [
+            {
+              "optionText": "Wedding",
+              "optionValue": "wedding",
+              "order": 0
+            },
+            {
+              "optionText": "Corporate Event",
+              "optionValue": "corporate",
+              "order": 1
+            },
+            {
+              "optionText": "Birthday Party",
+              "optionValue": "birthday",
+              "order": 2
+            },
+            {
+              "optionText": "Other",
+              "optionValue": "other",
+              "order": 3
+            }
+          ]
+        },
+        {
+          "questionText": "How many guests do you expect?",
+          "questionKey": "guest_count",
+          "questionType": "number",
+          "isRequired": true,
+          "order": 1,
+          "placeholderText": "Enter number of guests"
+        }
+      ]
+    },
+    {
+      "title": "Menu Preferences",
+      "description": "Tell us about your food preferences",
+      "order": 1,
+      "questions": [
+        {
+          "questionText": "Do you need special dietary accommodations?",
+          "questionKey": "dietary_needs",
+          "questionType": "radio",
+          "isRequired": true,
+          "order": 0,
+          "options": [
+            {
+              "optionText": "Yes",
+              "optionValue": "yes",
+              "order": 0
+            },
+            {
+              "optionText": "No",
+              "optionValue": "no",
+              "order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Dietary Restrictions",
+      "description": "Please specify your dietary needs",
+      "order": 2,
+      "questions": [
+        {
+          "questionText": "Please select all dietary restrictions that apply",
+          "questionKey": "restrictions",
+          "questionType": "checkbox",
+          "isRequired": true,
+          "order": 0,
+          "options": [
+            {
+              "optionText": "Vegetarian",
+              "optionValue": "vegetarian",
+              "order": 0
+            },
+            {
+              "optionText": "Vegan",
+              "optionValue": "vegan",
+              "order": 1
+            },
+            {
+              "optionText": "Gluten-Free",
+              "optionValue": "gluten_free",
+              "order": 2
+            },
+            {
+              "optionText": "Nut Allergies",
+              "optionValue": "nut_allergies",
+              "order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Wedding Details",
+      "description": "Additional details for wedding events",
+      "order": 3,
+      "questions": [
+        {
+          "questionText": "Wedding date",
+          "questionKey": "wedding_date",
+          "questionType": "date",
+          "isRequired": true,
+          "order": 0
+        },
+        {
+          "questionText": "Do you need a wedding cake?",
+          "questionKey": "wedding_cake",
+          "questionType": "radio",
+          "isRequired": true,
+          "order": 1,
+          "options": [
+            {
+              "optionText": "Yes",
+              "optionValue": "yes",
+              "order": 0
+            },
+            {
+              "optionText": "No",
+              "optionValue": "no",
+              "order": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "conditionalLogic": [
+    {
+      "description": "Show dietary restrictions page only if they need special accommodations",
+      "condition": {
+        "questionKey": "dietary_needs",
+        "operator": "equals",
+        "value": "yes"
+      },
+      "action": "show_page",
+      "targetPageIndex": 2
+    },
+    {
+      "description": "Show wedding details page only for wedding events",
+      "condition": {
+        "questionKey": "event_type",
+        "operator": "equals",
+        "value": "wedding"
+      },
+      "action": "show_page",
+      "targetPageIndex": 3
+    }
+  ]
+}

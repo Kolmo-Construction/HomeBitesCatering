@@ -1770,6 +1770,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Create a complete questionnaire (definition + pages + questions + logic) in one request
+  app.post('/api/admin/questionnaires/complete', isAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log('Creating complete questionnaire from combined request');
+      const { definition, pages, conditionalLogic } = req.body;
+      
+      if (!definition || !definition.title || !definition.versionName) {
+        return res.status(400).json({ message: 'Definition with title and version is required' });
+      }
+      
+      // Validate that pages exist if provided
+      if (pages && !Array.isArray(pages)) {
+        return res.status(400).json({ message: 'Pages must be an array' });
+      }
+      
+      // Validate that conditional logic exists if provided
+      if (conditionalLogic && !Array.isArray(conditionalLogic)) {
+        return res.status(400).json({ message: 'Conditional logic must be an array' });
+      }
+      
+      // Use a transaction to ensure all operations succeed or fail together
+      const result = await db.transaction(async (tx) => {
+        // 1. Create the questionnaire definition
+        console.log(`Creating definition: ${definition.title}`);
+        const [createdDefinition] = await tx
+          .insert(questionnaireDefinitions)
+          .values({
+            ...definition,
+            isActive: definition.isActive || false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        
+        const definitionId = createdDefinition.id;
+        console.log(`Created definition with ID: ${definitionId}`);
+        
+        // Track created pages for conditional logic reference
+        const createdPages = [];
+        
+        // 2. Create pages with nested questions if provided
+        if (pages && pages.length > 0) {
+          for (const pageData of pages) {
+            // Extract questions before creating the page
+            const { questions, ...pageInfo } = pageData;
+            
+            // Create the page
+            const [createdPage] = await tx
+              .insert(questionnairePages)
+              .values({
+                ...pageInfo,
+                definitionId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              })
+              .returning();
+            
+            createdPages.push(createdPage);
+            console.log(`Created page: ${createdPage.title} with ID: ${createdPage.id}`);
+            
+            // Create questions for this page if provided
+            if (questions && Array.isArray(questions) && questions.length > 0) {
+              for (const questionData of questions) {
+                // Extract options before creating the question
+                const { options, ...questionInfo } = questionData;
+                
+                // Create the question
+                const [createdQuestion] = await tx
+                  .insert(questionnaireQuestions)
+                  .values({
+                    ...questionInfo,
+                    pageId: createdPage.id,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                  })
+                  .returning();
+                
+                console.log(`Created question: ${createdQuestion.questionText} with ID: ${createdQuestion.id}`);
+                
+                // Create options for this question if provided
+                if (options && Array.isArray(options) && options.length > 0) {
+                  const optionsToInsert = options.map(option => ({
+                    ...option,
+                    questionId: createdQuestion.id,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                  }));
+                  
+                  await tx
+                    .insert(questionnaireQuestionOptions)
+                    .values(optionsToInsert);
+                  
+                  console.log(`Created ${options.length} options for question ID: ${createdQuestion.id}`);
+                }
+              }
+            }
+          }
+        }
+        
+        // 3. Create conditional logic rules if provided
+        if (conditionalLogic && conditionalLogic.length > 0) {
+          for (const ruleData of conditionalLogic) {
+            // Replace targetPageIndex with actual targetPageId if needed
+            let targetPageId = null;
+            
+            if (ruleData.targetPageIndex !== undefined && createdPages.length > 0) {
+              // Make sure the index is valid
+              const pageIndex = ruleData.targetPageIndex;
+              if (pageIndex >= 0 && pageIndex < createdPages.length) {
+                targetPageId = createdPages[pageIndex].id;
+              }
+            }
+            
+            // Create the conditional logic rule
+            const [createdRule] = await tx
+              .insert(questionnaireConditionalLogic)
+              .values({
+                description: ruleData.description,
+                condition: ruleData.condition,
+                action: ruleData.action,
+                targetPageId: targetPageId,
+                definitionId: definitionId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              })
+              .returning();
+            
+            console.log(`Created conditional logic rule: ${createdRule.description} with ID: ${createdRule.id}`);
+          }
+        }
+        
+        // Return the complete structure with all created components
+        return {
+          definition: createdDefinition,
+          pages: createdPages,
+          message: 'Complete questionnaire created successfully'
+        };
+      });
+      
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('Error creating complete questionnaire:', error);
+      res.status(500).json({ message: 'Server error creating complete questionnaire' });
+    }
+  });
+  
   // 1. Create a New Page for a Definition
   app.post('/api/admin/questionnaires/definitions/:definitionId/pages', isAdmin, async (req: Request, res: Response) => {
     try {
