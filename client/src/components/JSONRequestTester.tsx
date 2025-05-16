@@ -228,6 +228,60 @@ const JSONRequestTester = () => {
         description: "A questionnaire to gather requirements for a corporate event",
         additionalInstructions: "Include questions about dietary restrictions and AV needs"
       }
+    },
+    "Smart: Create Definition": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/smart",
+      body: {
+        title: "Home Bites Quotation Form",
+        description: "Help us understand your event needs and preferences",
+        versionName: "v1.0",
+        isActive: true
+      }
+    },
+    "Smart: Create Page with Questions": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/smart",
+      body: {
+        title: "Event Basics",
+        description: "Tell us about your event",
+        order: 1,
+        definitionKey: "v1.0",
+        questions: [
+          {
+            questionText: "What type of event are you planning?",
+            questionKey: "event_type",
+            questionType: "select",
+            isRequired: true,
+            order: 1,
+            options: [
+              { optionText: "Wedding", optionValue: "wedding", order: 1 },
+              { optionText: "Corporate", optionValue: "corporate", order: 2 },
+              { optionText: "Birthday", optionValue: "birthday", order: 3 },
+              { optionText: "Other", optionValue: "other", order: 4 }
+            ]
+          },
+          {
+            questionText: "Approximate number of guests?",
+            questionKey: "guest_count",
+            questionType: "number",
+            isRequired: true,
+            order: 2
+          }
+        ]
+      }
+    },
+    "Smart: Add Conditional Logic": {
+      method: "POST", 
+      endpoint: "/api/admin/questionnaires/smart",
+      body: {
+        definitionKey: "v1.0",
+        triggerQuestionKey: "event_type",
+        triggerCondition: "equals",
+        triggerValue: "wedding",
+        actionType: "show_question",
+        targetQuestionKey: "ceremony_details"
+      }
     }
   };
 
