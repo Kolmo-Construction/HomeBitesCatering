@@ -233,10 +233,22 @@ const JSONRequestTester = () => {
       method: "POST",
       endpoint: "/api/admin/questionnaires/smart",
       body: {
-        title: "Home Bites Quotation Form",
-        description: "Help us understand your event needs and preferences",
+        title: "Home Bites - 2025 Quotation Form",
+        description: "At Home Bites, we understand that every occasion is unique. That's why we've designed our \"Themed Menus\" to provide a variety of options to suit all your different needs. We also offer an exciting food truck option for smaller parties with a menu that has something for everyone. Our food is simple, approachable, affordable, and most importantly, prepared with love and care. So go ahead and choose the menu that best suits your event. We'll get back to you soon with a cost estimate. Thank you for considering Home Bites!",
         versionName: "v1.0",
         isActive: true
+      }
+    },
+    "Smart: Create Definition (Alt Format)": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/smart",
+      body: {
+        "definition": {
+          "title": "Home Bites - 2025 Quotation Form",
+          "description": "At Home Bites, we understand that every occasion is unique. That's why we've designed our \"Themed Menus\" to provide a variety of options to suit all your different needs.",
+          "versionName": "v1.0",
+          "isActive": true
+        }
       }
     },
     "Smart: Create Page with Questions": {
