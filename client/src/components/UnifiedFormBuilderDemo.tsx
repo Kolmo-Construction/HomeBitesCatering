@@ -20,7 +20,8 @@ const UnifiedFormBuilderDemo: React.FC = () => {
         title: 'Catering Inquiry Form',
         description: 'A form to collect information about catering inquiries',
         status: 'draft',
-        version: '1.0'
+        version: '1.0',
+        versionName: 'catering-inquiry-v1'
       }
     }, null, 2),
     'add-page': JSON.stringify({
