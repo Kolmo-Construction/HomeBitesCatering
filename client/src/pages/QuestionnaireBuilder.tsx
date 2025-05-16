@@ -1613,7 +1613,23 @@ const QuestionnaireBuilder = () => {
                     Managing logic for: <strong>{definitions?.find((d: any) => d.id === selectedDefinition)?.versionName}</strong>
                   </CardDescription>
                 </div>
-                <Dialog open={conditionalLogicDialogOpen} onOpenChange={setConditionalLogicDialogOpen}>
+                <Dialog 
+                  open={conditionalLogicDialogOpen} 
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      // Reset form and editing state when dialog is closed
+                      setEditingConditionalLogicId(null);
+                      conditionalLogicForm.reset({
+                        triggerQuestionKey: "",
+                        triggerCondition: "equals",
+                        triggerValue: "",
+                        actionType: "show_question",
+                        targetQuestionKey: ""
+                      });
+                    }
+                    setConditionalLogicDialogOpen(open);
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button disabled={!allDefinitionQuestions || !Array.isArray(allDefinitionQuestions) || allDefinitionQuestions.length < 1}>
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -1622,9 +1638,11 @@ const QuestionnaireBuilder = () => {
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Create Conditional Logic Rule</DialogTitle>
+                      <DialogTitle>{editingConditionalLogicId ? "Edit Logic Rule" : "Create Conditional Logic Rule"}</DialogTitle>
                       <DialogDescription>
-                        Define behavior based on answers to questions.
+                        {editingConditionalLogicId 
+                          ? "Update this conditional logic rule." 
+                          : "Define behavior based on answers to questions."}
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...conditionalLogicForm}>
@@ -1791,8 +1809,11 @@ const QuestionnaireBuilder = () => {
                         </div>
                         
                         <DialogFooter>
-                          <Button type="submit" disabled={createConditionalLogicMutation.isPending}>
-                            {createConditionalLogicMutation.isPending ? "Creating..." : "Create Logic Rule"}
+                          <Button type="submit" disabled={createConditionalLogicMutation.isPending || updateConditionalLogicMutation.isPending}>
+                            {editingConditionalLogicId
+                              ? (updateConditionalLogicMutation.isPending ? "Updating..." : "Update Logic Rule")
+                              : (createConditionalLogicMutation.isPending ? "Creating..." : "Create Logic Rule")
+                            }
                           </Button>
                         </DialogFooter>
                       </form>
@@ -1850,7 +1871,30 @@ const QuestionnaireBuilder = () => {
                         <TableCell>
                           {allDefinitionQuestions.find((q: any) => q.questionKey === rule.targetQuestionKey)?.questionText || rule.targetQuestionKey}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              // Set up form values for the selected conditional logic rule
+                              conditionalLogicForm.reset({
+                                triggerQuestionKey: rule.triggerQuestionKey,
+                                triggerCondition: rule.triggerCondition,
+                                triggerValue: rule.triggerValue || "",
+                                actionType: rule.actionType,
+                                targetQuestionKey: rule.targetQuestionKey
+                              });
+                              
+                              // Set the current rule being edited
+                              setEditingConditionalLogicId(rule.id);
+                              
+                              // Open dialog
+                              setConditionalLogicDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm">
