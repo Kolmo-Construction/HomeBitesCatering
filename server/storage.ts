@@ -1,4 +1,5 @@
 // server/storage.ts
+import { Pool } from '@neondatabase/serverless';
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, processedEmails,
@@ -929,33 +930,49 @@ export class DatabaseStorage implements IStorage {
   async deleteQuestionnaireDefinition(definitionId: number): Promise<boolean> {
     try {
       console.log(`Attempting to delete questionnaire definition ID: ${definitionId}`);
-      // First find all pages for this definition to delete their questions, options, etc.
+      
+      // First find all pages for this definition
       const pages = await this.getQuestionnairePagesByDefinition(definitionId);
+      console.log(`Found ${pages.length} pages for definition ${definitionId}`);
       
-      // Delete all pages and their associated content in a transaction
-      await db.transaction(async (tx) => {
-        // Delete all pages one by one (which will cascade delete questions, options, etc.)
-        for (const page of pages) {
-          console.log(`Deleting page ID ${page.id} from definition ${definitionId}`);
-          await tx
-            .delete(questionnairePages)
-            .where(eq(questionnairePages.id, page.id));
-        }
+      // Execute direct SQL delete statements because they're more reliable than ORM operations
+      const client = await db.execute(sql`
+        -- First, delete all options and matrix columns for questions in this definition
+        DELETE FROM questionnaire_question_options 
+        WHERE question_id IN (
+          SELECT qq.id FROM questionnaire_questions qq
+          JOIN questionnaire_pages qp ON qq.page_id = qp.id
+          WHERE qp.definition_id = ${definitionId}
+        );
         
-        // Delete conditional logic rules for this definition
-        console.log(`Deleting conditional logic rules for definition ${definitionId}`);
-        await tx
-          .delete(questionnaireConditionalLogic)
-          .where(eq(questionnaireConditionalLogic.definitionId, definitionId));
+        DELETE FROM questionnaire_matrix_columns 
+        WHERE question_id IN (
+          SELECT qq.id FROM questionnaire_questions qq
+          JOIN questionnaire_pages qp ON qq.page_id = qp.id
+          WHERE qp.definition_id = ${definitionId}
+        );
         
-        // Finally delete the definition itself
-        console.log(`Deleting definition ${definitionId} itself`);
-        await tx
-          .delete(questionnaireDefinitions)
-          .where(eq(questionnaireDefinitions.id, definitionId));
-      });
+        -- Then delete all questions for this definition
+        DELETE FROM questionnaire_questions
+        WHERE page_id IN (
+          SELECT id FROM questionnaire_pages
+          WHERE definition_id = ${definitionId}
+        );
+        
+        -- Delete conditional logic rules
+        DELETE FROM questionnaire_conditional_logic
+        WHERE definition_id = ${definitionId};
+        
+        -- Delete all pages
+        DELETE FROM questionnaire_pages
+        WHERE definition_id = ${definitionId};
+        
+        -- Finally delete the definition
+        DELETE FROM questionnaire_definitions
+        WHERE id = ${definitionId};
+      `);
       
-      console.log(`Successfully deleted questionnaire definition ${definitionId}`);
+      console.log(`Successfully executed delete operations for definition ${definitionId}`);
       return true;
     } catch (error) {
       console.error(`Error deleting questionnaire definition ${definitionId}:`, error);
@@ -1023,11 +1040,32 @@ export class DatabaseStorage implements IStorage {
 
   async deleteQuestionnairePage(pageId: number): Promise<boolean> {
     try {
-      // Due to cascade delete, this will also remove associated questions, options, and matrix columns
-      const result = await db
-        .delete(questionnairePages)
-        .where(eq(questionnairePages.id, pageId));
+      console.log(`Attempting to delete questionnaire page ID: ${pageId}`);
       
+      // Execute direct SQL delete statements
+      await db.execute(sql`
+        -- First delete question options for all questions in this page
+        DELETE FROM questionnaire_question_options 
+        WHERE question_id IN (
+          SELECT id FROM questionnaire_questions WHERE page_id = ${pageId}
+        );
+        
+        -- Delete matrix columns for all questions in this page
+        DELETE FROM questionnaire_matrix_columns
+        WHERE question_id IN (
+          SELECT id FROM questionnaire_questions WHERE page_id = ${pageId}
+        );
+        
+        -- Delete all questions for this page
+        DELETE FROM questionnaire_questions
+        WHERE page_id = ${pageId};
+        
+        -- Finally delete the page itself
+        DELETE FROM questionnaire_pages
+        WHERE id = ${pageId};
+      `);
+      
+      console.log(`Successfully deleted page ${pageId}`);
       return true;
     } catch (error) {
       console.error(`Error deleting questionnaire page ${pageId}:`, error);
