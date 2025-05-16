@@ -891,7 +891,20 @@ const QuestionnaireBuilder = () => {
                     )}
                   </CardDescription>
                 </div>
-                <Dialog open={pageDialogOpen} onOpenChange={setPageDialogOpen}>
+                <Dialog 
+                  open={pageDialogOpen} 
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      // Reset form and editing state when dialog is closed
+                      setEditingPageId(null);
+                      pageForm.reset({
+                        title: "",
+                        order: 0
+                      });
+                    }
+                    setPageDialogOpen(open);
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button disabled={!selectedDefinition}>
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -998,6 +1011,26 @@ const QuestionnaireBuilder = () => {
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View Questions
+                          </Button>
+                          <Button
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              // Set up form values for the selected page
+                              pageForm.reset({
+                                title: page.title,
+                                order: page.order
+                              });
+                              
+                              // Set the current page being edited
+                              setEditingPageId(page.id);
+                              
+                              // Open dialog
+                              setPageDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
