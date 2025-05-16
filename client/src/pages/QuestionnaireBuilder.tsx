@@ -1030,6 +1030,7 @@ const QuestionnaireBuilder = () => {
                                     <SelectItem value="select">Dropdown</SelectItem>
                                     <SelectItem value="radio">Radio Buttons</SelectItem>
                                     <SelectItem value="checkbox">Checkboxes</SelectItem>
+                                    <SelectItem value="matrix">Matrix</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormDescription>
