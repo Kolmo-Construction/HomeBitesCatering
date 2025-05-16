@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { eq } from "drizzle-orm"; // For equality operations
+import { generateQuestionnaireContent } from "./services/anthropic";
 import {
   insertUserSchema, 
   insertOpportunitySchema, 
