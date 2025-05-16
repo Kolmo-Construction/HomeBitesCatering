@@ -90,6 +90,73 @@ const JSONRequestTester = () => {
         versionName: "v1"
       }
     },
+    "Create Complete Questionnaire": {
+      method: "POST",
+      endpoint: "/api/admin/questionnaires/complete",
+      body: {
+        "definition": {
+          "title": "Event Planning Questionnaire",
+          "description": "Help us understand your event needs",
+          "versionName": "v1.0",
+          "isActive": true
+        },
+        "pages": [
+          {
+            "title": "Basic Information",
+            "description": "Let's start with the basics",
+            "order": 1,
+            "questions": [
+              {
+                "questionText": "What type of event are you planning?",
+                "questionKey": "event_type",
+                "questionType": "select",
+                "isRequired": true,
+                "order": 1,
+                "options": [
+                  { "optionText": "Wedding", "optionValue": "wedding", "order": 1 },
+                  { "optionText": "Corporate Event", "optionValue": "corporate", "order": 2 },
+                  { "optionText": "Birthday Party", "optionValue": "birthday", "order": 3 },
+                  { "optionText": "Other", "optionValue": "other", "order": 4 }
+                ]
+              },
+              {
+                "questionText": "Approximately how many guests will attend?",
+                "questionKey": "guest_count",
+                "questionType": "number",
+                "isRequired": true,
+                "order": 2
+              }
+            ]
+          },
+          {
+            "title": "Venue Information",
+            "description": "Tell us about where you'd like to host your event",
+            "order": 2,
+            "questions": [
+              {
+                "questionText": "Do you have a venue already selected?",
+                "questionKey": "has_venue",
+                "questionType": "radio",
+                "isRequired": true,
+                "order": 1,
+                "options": [
+                  { "optionText": "Yes", "optionValue": "yes", "order": 1 },
+                  { "optionText": "No", "optionValue": "no", "order": 2 }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditionalLogic": [
+          {
+            "description": "Show venue details page only if they have a venue",
+            "condition": "has_venue == 'yes'",
+            "action": "show_page",
+            "targetPageIndex": 1
+          }
+        ]
+      }
+    },
     "Create Conditional Logic": {
       method: "POST",
       endpoint: "/api/admin/questionnaires/definitions/{definitionId}/conditional-logic",

@@ -1,170 +1,195 @@
 {
   "definition": {
-    "title": "Event Planning Questionnaire",
-    "description": "Complete questionnaire for planning catering events",
-    "versionName": "1.0"
+    "title": "Event Planning Questionnaire", 
+    "description": "Help us understand your event needs",
+    "versionName": "v1.0",
+    "isActive": true
   },
   "pages": [
     {
-      "title": "Event Basics",
-      "description": "Basic information about your event",
-      "order": 0,
+      "title": "Basic Information",
+      "description": "Let's start with the basics",
+      "order": 1,
       "questions": [
         {
           "questionText": "What type of event are you planning?",
           "questionKey": "event_type",
           "questionType": "select",
           "isRequired": true,
-          "order": 0,
-          "helpText": "Select the type of event you're planning",
+          "order": 1,
           "options": [
-            {
-              "optionText": "Wedding",
-              "optionValue": "wedding",
-              "order": 0
-            },
-            {
-              "optionText": "Corporate Event",
-              "optionValue": "corporate",
-              "order": 1
-            },
-            {
-              "optionText": "Birthday Party",
-              "optionValue": "birthday",
-              "order": 2
-            },
-            {
-              "optionText": "Other",
-              "optionValue": "other",
-              "order": 3
-            }
+            { "optionText": "Wedding", "optionValue": "wedding", "order": 1 },
+            { "optionText": "Corporate Event", "optionValue": "corporate", "order": 2 },
+            { "optionText": "Birthday Party", "optionValue": "birthday", "order": 3 },
+            { "optionText": "Other", "optionValue": "other", "order": 4 }
           ]
         },
         {
-          "questionText": "How many guests do you expect?",
+          "questionText": "Approximately how many guests will attend?",
           "questionKey": "guest_count",
           "questionType": "number",
           "isRequired": true,
-          "order": 1,
-          "placeholderText": "Enter number of guests"
-        }
-      ]
-    },
-    {
-      "title": "Menu Preferences",
-      "description": "Tell us about your food preferences",
-      "order": 1,
-      "questions": [
+          "order": 2
+        },
         {
-          "questionText": "Do you need special dietary accommodations?",
-          "questionKey": "dietary_needs",
-          "questionType": "radio",
+          "questionText": "What is the tentative date of your event?",
+          "questionKey": "event_date",
+          "questionType": "date",
           "isRequired": true,
-          "order": 0,
-          "options": [
-            {
-              "optionText": "Yes",
-              "optionValue": "yes",
-              "order": 0
-            },
-            {
-              "optionText": "No",
-              "optionValue": "no",
-              "order": 1
-            }
-          ]
+          "order": 3
         }
       ]
     },
     {
-      "title": "Dietary Restrictions",
-      "description": "Please specify your dietary needs",
+      "title": "Contact Information",
+      "description": "Your contact details",
       "order": 2,
       "questions": [
         {
-          "questionText": "Please select all dietary restrictions that apply",
-          "questionKey": "restrictions",
-          "questionType": "checkbox",
+          "questionText": "Your name",
+          "questionKey": "name",
+          "questionType": "text",
           "isRequired": true,
-          "order": 0,
-          "options": [
-            {
-              "optionText": "Vegetarian",
-              "optionValue": "vegetarian",
-              "order": 0
-            },
-            {
-              "optionText": "Vegan",
-              "optionValue": "vegan",
-              "order": 1
-            },
-            {
-              "optionText": "Gluten-Free",
-              "optionValue": "gluten_free",
-              "order": 2
-            },
-            {
-              "optionText": "Nut Allergies",
-              "optionValue": "nut_allergies",
-              "order": 3
-            }
-          ]
+          "order": 1
+        },
+        {
+          "questionText": "Email address",
+          "questionKey": "email",
+          "questionType": "email", 
+          "isRequired": true,
+          "order": 2
+        },
+        {
+          "questionText": "Phone number",
+          "questionKey": "phone",
+          "questionType": "tel",
+          "isRequired": false,
+          "order": 3
         }
       ]
     },
     {
-      "title": "Wedding Details",
-      "description": "Additional details for wedding events",
+      "title": "Venue Details",
+      "description": "Tell us about your venue",
       "order": 3,
       "questions": [
         {
-          "questionText": "Wedding date",
-          "questionKey": "wedding_date",
-          "questionType": "date",
-          "isRequired": true,
-          "order": 0
-        },
-        {
-          "questionText": "Do you need a wedding cake?",
-          "questionKey": "wedding_cake",
+          "questionText": "Do you have a venue already selected?",
+          "questionKey": "has_venue",
           "questionType": "radio",
           "isRequired": true,
           "order": 1,
           "options": [
-            {
-              "optionText": "Yes",
-              "optionValue": "yes",
-              "order": 0
-            },
-            {
-              "optionText": "No",
-              "optionValue": "no",
-              "order": 1
-            }
+            { "optionText": "Yes", "optionValue": "yes", "order": 1 },
+            { "optionText": "No", "optionValue": "no", "order": 2 }
           ]
+        },
+        {
+          "questionText": "Venue name (if known)",
+          "questionKey": "venue_name",
+          "questionType": "text",
+          "isRequired": false,
+          "order": 2
+        },
+        {
+          "questionText": "Venue address (if known)",
+          "questionKey": "venue_address",
+          "questionType": "textarea",
+          "isRequired": false,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "title": "Catering Requirements",
+      "description": "Food and beverage preferences",
+      "order": 4,
+      "questions": [
+        {
+          "questionText": "What type of service are you interested in?",
+          "questionKey": "service_type",
+          "questionType": "select",
+          "isRequired": true,
+          "order": 1,
+          "options": [
+            { "optionText": "Full-service catering", "optionValue": "full", "order": 1 },
+            { "optionText": "Drop-off catering", "optionValue": "drop_off", "order": 2 },
+            { "optionText": "Food station setup", "optionValue": "station", "order": 3 },
+            { "optionText": "Not sure yet", "optionValue": "unsure", "order": 4 }
+          ]
+        },
+        {
+          "questionText": "Are there any dietary restrictions we should be aware of?",
+          "questionKey": "dietary_restrictions",
+          "questionType": "multiselect",
+          "isRequired": false,
+          "order": 2,
+          "options": [
+            { "optionText": "Vegetarian", "optionValue": "vegetarian", "order": 1 },
+            { "optionText": "Vegan", "optionValue": "vegan", "order": 2 },
+            { "optionText": "Gluten-free", "optionValue": "gluten_free", "order": 3 },
+            { "optionText": "Dairy-free", "optionValue": "dairy_free", "order": 4 },
+            { "optionText": "Nut allergies", "optionValue": "nut_allergies", "order": 5 },
+            { "optionText": "Other (please specify)", "optionValue": "other", "order": 6 }
+          ]
+        },
+        {
+          "questionText": "Please specify other dietary restrictions or allergies",
+          "questionKey": "other_dietary",
+          "questionType": "textarea",
+          "isRequired": false,
+          "order": 3,
+          "placeholderText": "Please list any other dietary needs or allergies here"
+        }
+      ]
+    },
+    {
+      "title": "Additional Information",
+      "description": "Any other details you'd like to share",
+      "order": 5,
+      "questions": [
+        {
+          "questionText": "How did you hear about us?",
+          "questionKey": "referral_source",
+          "questionType": "select",
+          "isRequired": false,
+          "order": 1,
+          "options": [
+            { "optionText": "Google search", "optionValue": "google", "order": 1 },
+            { "optionText": "Social media", "optionValue": "social", "order": 2 },
+            { "optionText": "Referral", "optionValue": "referral", "order": 3 },
+            { "optionText": "Past client", "optionValue": "past_client", "order": 4 },
+            { "optionText": "Other", "optionValue": "other", "order": 5 }
+          ]
+        },
+        {
+          "questionText": "Any additional comments or requests?",
+          "questionKey": "comments",
+          "questionType": "textarea",
+          "isRequired": false,
+          "order": 2,
+          "placeholderText": "Please share any other details that would help us understand your needs"
         }
       ]
     }
   ],
   "conditionalLogic": [
     {
-      "description": "Show dietary restrictions page only if they need special accommodations",
-      "condition": {
-        "questionKey": "dietary_needs",
-        "operator": "equals",
-        "value": "yes"
-      },
-      "action": "show_page",
-      "targetPageIndex": 2
+      "description": "Only ask for 'other dietary restrictions' if 'Other' is selected",
+      "condition": "dietary_restrictions && dietary_restrictions.includes('other')",
+      "action": "show_question",
+      "targetQuestionKey": "other_dietary"
     },
     {
-      "description": "Show wedding details page only for wedding events",
-      "condition": {
-        "questionKey": "event_type",
-        "operator": "equals",
-        "value": "wedding"
-      },
-      "action": "show_page",
+      "description": "Only show venue details questions if they have a venue",
+      "condition": "has_venue === 'yes'",
+      "action": "show_questions",
+      "targetQuestionKeys": ["venue_name", "venue_address"]
+    },
+    {
+      "description": "Skip to catering requirements if no venue selected",
+      "condition": "has_venue === 'no'",
+      "action": "jump_to_page",
       "targetPageIndex": 3
     }
   ]
