@@ -1955,6 +1955,11 @@ const QuestionnaireBuilder = () => {
           </Card>
         )}
         
+        {/* API Tester Tab Content */}
+        {activeTab === "apiTester" && (
+          <JSONRequestTester />
+        )}
+        
         {/* Preview Tab Content */}
         {activeTab === "preview" && (
           <Card>
