@@ -175,21 +175,31 @@
   ],
   "conditionalLogic": [
     {
-      "description": "Only ask for 'other dietary restrictions' if 'Other' is selected",
-      "condition": "dietary_restrictions && dietary_restrictions.includes('other')",
-      "action": "show_question",
+      "triggerQuestionKey": "dietary_restrictions",
+      "triggerCondition": "contains",
+      "triggerValue": "other",
+      "actionType": "show_question",
       "targetQuestionKey": "other_dietary"
     },
     {
-      "description": "Only show venue details questions if they have a venue",
-      "condition": "has_venue === 'yes'",
-      "action": "show_questions",
-      "targetQuestionKeys": ["venue_name", "venue_address"]
+      "triggerQuestionKey": "has_venue",
+      "triggerCondition": "equals",
+      "triggerValue": "yes",
+      "actionType": "show_question",
+      "targetQuestionKey": "venue_name"
     },
     {
-      "description": "Skip to catering requirements if no venue selected",
-      "condition": "has_venue === 'no'",
-      "action": "jump_to_page",
+      "triggerQuestionKey": "has_venue",
+      "triggerCondition": "equals",
+      "triggerValue": "yes",
+      "actionType": "show_question",
+      "targetQuestionKey": "venue_address"
+    },
+    {
+      "triggerQuestionKey": "has_venue",
+      "triggerCondition": "equals",
+      "triggerValue": "no",
+      "actionType": "skip_to_page",
       "targetPageIndex": 3
     }
   ]

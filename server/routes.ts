@@ -1885,21 +1885,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // Create the conditional logic rule
+            // Make sure we have the required trigger information
+            // Extract information from the condition string if provided (e.g., "has_venue === 'yes'")
+            let triggerQuestionKey = ruleData.triggerQuestionKey;
+            let triggerCondition = ruleData.triggerCondition;
+            let triggerValue = ruleData.triggerValue;
+            
+            // Try to parse from condition if not directly provided
+            if (!triggerQuestionKey && ruleData.condition) {
+              const parts = ruleData.condition.split(/\s*(==|===|!=|!==|>|<|>=|<=)\s*/);
+              if (parts.length >= 3) {
+                triggerQuestionKey = parts[0].trim();
+                
+                // Map the operator to our enum values
+                const operatorMap: Record<string, string> = {
+                  "==": "equals",
+                  "===": "equals",
+                  "!=": "not_equals",
+                  "!==": "not_equals",
+                  ">": "greater_than",
+                  "<": "less_than",
+                  ">=": "greater_than_equals",
+                  "<=": "less_than_equals"
+                };
+                
+                triggerCondition = operatorMap[parts[1].trim()] || "equals";
+                
+                // Extract value, removing quotes if present
+                triggerValue = parts[2].trim().replace(/^['"](.*)['"]$/, "$1");
+              }
+            }
+            
+            if (!triggerQuestionKey) {
+              console.warn(`Skipping conditional logic rule due to missing triggerQuestionKey`);
+              continue;
+            }
+            
+            if (!triggerCondition) {
+              triggerCondition = "equals"; // Default value
+            }
+            
+            // Map action type (e.g., "show_page" to proper enum value)
+            let actionType = ruleData.actionType;
+            if (!actionType && ruleData.action) {
+              // Map actions to enum values
+              const actionMap: Record<string, string> = {
+                "show_page": "show_page",
+                "hide_page": "hide_page",
+                "jump_to_page": "skip_to_page",
+                "show_question": "show_question",
+                "hide_question": "hide_question"
+              };
+              
+              actionType = actionMap[ruleData.action] || "show_question";
+            }
+            
+            // Determine target question key from the rule data
+            const targetQuestionKey = ruleData.targetQuestionKey;
+            
+            // Create the conditional logic rule with all required fields
+            console.log(`Creating conditional logic rule with triggerQuestionKey: ${triggerQuestionKey}, triggerCondition: ${triggerCondition}`);
+            
             const [createdRule] = await tx
               .insert(questionnaireConditionalLogic)
               .values({
-                description: ruleData.description,
-                condition: ruleData.condition,
-                action: ruleData.action,
-                targetPageId: targetPageId,
                 definitionId: definitionId,
+                triggerQuestionKey: triggerQuestionKey,
+                triggerCondition: triggerCondition as any,
+                triggerValue: triggerValue || "",
+                actionType: actionType as any,
+                targetQuestionKey: targetQuestionKey,
+                targetPageId: targetPageId,
                 createdAt: new Date(),
                 updatedAt: new Date()
               })
               .returning();
             
-            console.log(`Created conditional logic rule: ${createdRule.description} with ID: ${createdRule.id}`);
+            console.log(`Created conditional logic rule for trigger question: ${createdRule.triggerQuestionKey} with ID: ${createdRule.id}`);
           }
         }
         

@@ -149,9 +149,17 @@ const JSONRequestTester = () => {
         ],
         "conditionalLogic": [
           {
-            "description": "Show venue details page only if they have a venue",
-            "condition": "has_venue == 'yes'",
-            "action": "show_page",
+            "triggerQuestionKey": "has_venue",
+            "triggerCondition": "equals",
+            "triggerValue": "yes",
+            "actionType": "show_question",
+            "targetQuestionKey": "venue_name"
+          },
+          {
+            "triggerQuestionKey": "has_venue",
+            "triggerCondition": "equals", 
+            "triggerValue": "no",
+            "actionType": "skip_to_page",
             "targetPageIndex": 1
           }
         ]
