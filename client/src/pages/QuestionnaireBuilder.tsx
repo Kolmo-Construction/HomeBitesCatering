@@ -432,11 +432,29 @@ const QuestionnaireBuilder = () => {
       await apiRequest('DELETE', `/api/admin/questionnaires/definitions/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
+      // Clear all related states
       setSelectedDefinition(null);
+      setSelectedPage(null);
+      setEditingPageId(null);
+      setEditingQuestionId(null);
+      setEditingConditionalLogicId(null);
+      
+      // Set active tab back to definitions
+      setActiveTab("definitions");
+      
+      // Invalidate all related queries to ensure proper cache updates
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
+      
       toast({
         title: "Success",
         description: "Questionnaire definition deleted successfully"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete questionnaire definition",
+        variant: "destructive"
       });
     }
   });
