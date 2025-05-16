@@ -931,21 +931,84 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Attempting to delete questionnaire definition ID: ${definitionId}`);
       
-      // Use our custom SQL function to safely delete a questionnaire definition
-      // This function handles all the references and cascading deletes properly
-      const result = await db.execute(sql`
-        SELECT delete_questionnaire_definition(${definitionId}) AS success;
-      `);
+      // First, get all pages for this definition to delete their questions
+      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
+      console.log(`Found ${pages.length} pages to delete for definition ${definitionId}`);
       
-      const success = result[0]?.success === true;
+      // Using a transaction to ensure all deletes succeed or fail together
+      await db.transaction(async (tx) => {
+        // 1. First nullify any references from opportunities and raw leads
+        await tx.execute(sql`
+          UPDATE opportunities 
+          SET questionnaire_definition_id = NULL, questionnaire_submission_id = NULL
+          WHERE questionnaire_definition_id = ${definitionId};
+          
+          UPDATE raw_leads
+          SET questionnaire_definition_id = NULL, questionnaire_submission_id = NULL
+          WHERE questionnaire_definition_id = ${definitionId};
+        `);
+        console.log(`Nullified references to definition ${definitionId} from opportunities and leads`);
+        
+        // 2. Delete questionnaire submissions for this definition
+        await tx.execute(sql`
+          DELETE FROM questionnaire_submissions
+          WHERE definition_id = ${definitionId};
+        `);
+        console.log(`Deleted submissions for definition ${definitionId}`);
+        
+        // 3. Delete conditional logic rules for this definition
+        await tx.execute(sql`
+          DELETE FROM questionnaire_conditional_logic
+          WHERE definition_id = ${definitionId};
+        `);
+        console.log(`Deleted conditional logic rules for definition ${definitionId}`);
+        
+        // 4. For each page, delete its questions and their options/matrix columns
+        for (const page of pages) {
+          console.log(`Processing page ${page.id} for deletion`);
+          
+          // 4a. Delete question options for all questions in this page
+          await tx.execute(sql`
+            DELETE FROM questionnaire_question_options 
+            WHERE question_id IN (
+              SELECT id FROM questionnaire_questions WHERE page_id = ${page.id}
+            );
+          `);
+          
+          // 4b. Delete matrix columns for all questions in this page
+          await tx.execute(sql`
+            DELETE FROM questionnaire_matrix_columns
+            WHERE question_id IN (
+              SELECT id FROM questionnaire_questions WHERE page_id = ${page.id}
+            );
+          `);
+          
+          // 4c. Delete all questions for this page
+          await tx.execute(sql`
+            DELETE FROM questionnaire_questions
+            WHERE page_id = ${page.id};
+          `);
+          
+          console.log(`Deleted all questions and related items for page ${page.id}`);
+        }
+        
+        // 5. Delete all pages
+        await tx.execute(sql`
+          DELETE FROM questionnaire_pages
+          WHERE definition_id = ${definitionId};
+        `);
+        console.log(`Deleted all pages for definition ${definitionId}`);
+        
+        // 6. Finally delete the definition
+        await tx.execute(sql`
+          DELETE FROM questionnaire_definitions
+          WHERE id = ${definitionId};
+        `);
+        console.log(`Deleted definition ${definitionId}`);
+      });
       
-      if (success) {
-        console.log(`Successfully deleted questionnaire definition ${definitionId}`);
-      } else {
-        console.log(`No questionnaire definition found with ID ${definitionId} to delete`);
-      }
-      
-      return true; // Always return true so the UI shows success
+      console.log(`Successfully completed deletion process for definition ${definitionId}`);
+      return true;
     } catch (error) {
       console.error(`Error deleting questionnaire definition ${definitionId}:`, error);
       return false;
@@ -1014,21 +1077,63 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Attempting to delete questionnaire page ID: ${pageId}`);
       
-      // Use our custom SQL function to safely delete a questionnaire page
-      // This function handles all the references and cascading deletes properly
-      const result = await db.execute(sql`
-        SELECT delete_questionnaire_page(${pageId}) AS success;
-      `);
-      
-      const success = result[0]?.success === true;
-      
-      if (success) {
-        console.log(`Successfully deleted questionnaire page ${pageId}`);
-      } else {
-        console.log(`No questionnaire page found with ID ${pageId} to delete`);
+      // First, check if the page exists
+      const page = await this.getQuestionnairePage(pageId);
+      if (!page) {
+        console.log(`No questionnaire page found with ID ${pageId}`);
+        return true; // Return success to avoid UI error messages
       }
       
-      return true; // Always return true so the UI shows success
+      // Using a transaction to ensure all deletes succeed or fail together
+      await db.transaction(async (tx) => {
+        // 1. Update any conditional logic that targets this page
+        await tx.execute(sql`
+          UPDATE questionnaire_conditional_logic
+          SET target_page_id = NULL
+          WHERE target_page_id = ${pageId};
+        `);
+        console.log(`Nullified references to page ${pageId} from conditional logic rules`);
+        
+        // 2. Get all questions for this page to delete their options and matrix columns
+        const questions = await this.getQuestionnaireQuestionsByPage(pageId);
+        console.log(`Found ${questions.length} questions to delete for page ${pageId}`);
+        
+        // 3. For each question, delete its options and matrix columns
+        for (const question of questions) {
+          console.log(`Processing question ${question.id} for deletion`);
+          
+          // 3a. Delete options for this question
+          await tx.execute(sql`
+            DELETE FROM questionnaire_question_options 
+            WHERE question_id = ${question.id};
+          `);
+          
+          // 3b. Delete matrix columns for this question
+          await tx.execute(sql`
+            DELETE FROM questionnaire_matrix_columns
+            WHERE question_id = ${question.id};
+          `);
+          
+          console.log(`Deleted options and matrix columns for question ${question.id}`);
+        }
+        
+        // 4. Delete all questions for this page
+        await tx.execute(sql`
+          DELETE FROM questionnaire_questions
+          WHERE page_id = ${pageId};
+        `);
+        console.log(`Deleted all questions for page ${pageId}`);
+        
+        // 5. Finally delete the page itself
+        await tx.execute(sql`
+          DELETE FROM questionnaire_pages
+          WHERE id = ${pageId};
+        `);
+        console.log(`Deleted page ${pageId}`);
+      });
+      
+      console.log(`Successfully completed deletion process for page ${pageId}`);
+      return true;
     } catch (error) {
       console.error(`Error deleting questionnaire page ${pageId}:`, error);
       return false;
@@ -1132,11 +1237,34 @@ export class DatabaseStorage implements IStorage {
   
   async deleteQuestionnaireQuestion(questionId: number): Promise<boolean> {
     try {
-      const result = await db
-        .delete(questionnaireQuestions)
-        .where(eq(questionnaireQuestions.id, questionId));
+      console.log(`Attempting to delete questionnaire question ID: ${questionId}`);
       
-      return result.rowCount > 0;
+      // Using a transaction to ensure all deletes succeed or fail together
+      await db.transaction(async (tx) => {
+        // 1. Delete options for this question
+        await tx.execute(sql`
+          DELETE FROM questionnaire_question_options 
+          WHERE question_id = ${questionId};
+        `);
+        console.log(`Deleted options for question ${questionId}`);
+        
+        // 2. Delete matrix columns for this question
+        await tx.execute(sql`
+          DELETE FROM questionnaire_matrix_columns
+          WHERE question_id = ${questionId};
+        `);
+        console.log(`Deleted matrix columns for question ${questionId}`);
+        
+        // 3. Delete the question
+        await tx.execute(sql`
+          DELETE FROM questionnaire_questions
+          WHERE id = ${questionId};
+        `);
+        console.log(`Deleted question ${questionId}`);
+      });
+      
+      console.log(`Successfully completed deletion process for question ${questionId}`);
+      return true;
     } catch (error) {
       console.error(`Error deleting questionnaire question ${questionId}:`, error);
       return false;
@@ -1294,11 +1422,20 @@ export class DatabaseStorage implements IStorage {
   
   async deleteConditionalLogicRule(ruleId: number): Promise<boolean> {
     try {
-      const result = await db
-        .delete(questionnaireConditionalLogic)
-        .where(eq(questionnaireConditionalLogic.id, ruleId));
+      console.log(`Attempting to delete conditional logic rule ID: ${ruleId}`);
       
-      return result.rowCount > 0;
+      // Using a transaction for consistency
+      await db.transaction(async (tx) => {
+        // Delete the conditional logic rule
+        await tx.execute(sql`
+          DELETE FROM questionnaire_conditional_logic
+          WHERE id = ${ruleId};
+        `);
+        console.log(`Deleted conditional logic rule ${ruleId}`);
+      });
+      
+      console.log(`Successfully completed deletion process for conditional logic rule ${ruleId}`);
+      return true;
     } catch (error) {
       console.error(`Error deleting conditional logic rule ${ruleId}:`, error);
       return false;
