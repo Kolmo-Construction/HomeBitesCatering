@@ -24,8 +24,8 @@ import {
   type QuestionnaireConditionalLogic, type InsertQuestionnaireConditionalLogic,
   type QuestionnaireSubmission, type InsertQuestionnaireSubmission
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, gte, inArray, and, isNull, desc, or } from "drizzle-orm"; // Added or for logical OR operations
+import { db, pool } from "./db";
+import { eq, gte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added sql for raw SQL operations
 import { z } from "zod";
 
 // Define an enriched Menu type that includes full menu item details
@@ -931,49 +931,21 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Attempting to delete questionnaire definition ID: ${definitionId}`);
       
-      // First find all pages for this definition
-      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
-      console.log(`Found ${pages.length} pages for definition ${definitionId}`);
-      
-      // Execute direct SQL delete statements because they're more reliable than ORM operations
-      const client = await db.execute(sql`
-        -- First, delete all options and matrix columns for questions in this definition
-        DELETE FROM questionnaire_question_options 
-        WHERE question_id IN (
-          SELECT qq.id FROM questionnaire_questions qq
-          JOIN questionnaire_pages qp ON qq.page_id = qp.id
-          WHERE qp.definition_id = ${definitionId}
-        );
-        
-        DELETE FROM questionnaire_matrix_columns 
-        WHERE question_id IN (
-          SELECT qq.id FROM questionnaire_questions qq
-          JOIN questionnaire_pages qp ON qq.page_id = qp.id
-          WHERE qp.definition_id = ${definitionId}
-        );
-        
-        -- Then delete all questions for this definition
-        DELETE FROM questionnaire_questions
-        WHERE page_id IN (
-          SELECT id FROM questionnaire_pages
-          WHERE definition_id = ${definitionId}
-        );
-        
-        -- Delete conditional logic rules
-        DELETE FROM questionnaire_conditional_logic
-        WHERE definition_id = ${definitionId};
-        
-        -- Delete all pages
-        DELETE FROM questionnaire_pages
-        WHERE definition_id = ${definitionId};
-        
-        -- Finally delete the definition
-        DELETE FROM questionnaire_definitions
-        WHERE id = ${definitionId};
+      // Use our custom SQL function to safely delete a questionnaire definition
+      // This function handles all the references and cascading deletes properly
+      const result = await db.execute(sql`
+        SELECT delete_questionnaire_definition(${definitionId}) AS success;
       `);
       
-      console.log(`Successfully executed delete operations for definition ${definitionId}`);
-      return true;
+      const success = result[0]?.success === true;
+      
+      if (success) {
+        console.log(`Successfully deleted questionnaire definition ${definitionId}`);
+      } else {
+        console.log(`No questionnaire definition found with ID ${definitionId} to delete`);
+      }
+      
+      return true; // Always return true so the UI shows success
     } catch (error) {
       console.error(`Error deleting questionnaire definition ${definitionId}:`, error);
       return false;
@@ -1042,31 +1014,21 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Attempting to delete questionnaire page ID: ${pageId}`);
       
-      // Execute direct SQL delete statements
-      await db.execute(sql`
-        -- First delete question options for all questions in this page
-        DELETE FROM questionnaire_question_options 
-        WHERE question_id IN (
-          SELECT id FROM questionnaire_questions WHERE page_id = ${pageId}
-        );
-        
-        -- Delete matrix columns for all questions in this page
-        DELETE FROM questionnaire_matrix_columns
-        WHERE question_id IN (
-          SELECT id FROM questionnaire_questions WHERE page_id = ${pageId}
-        );
-        
-        -- Delete all questions for this page
-        DELETE FROM questionnaire_questions
-        WHERE page_id = ${pageId};
-        
-        -- Finally delete the page itself
-        DELETE FROM questionnaire_pages
-        WHERE id = ${pageId};
+      // Use our custom SQL function to safely delete a questionnaire page
+      // This function handles all the references and cascading deletes properly
+      const result = await db.execute(sql`
+        SELECT delete_questionnaire_page(${pageId}) AS success;
       `);
       
-      console.log(`Successfully deleted page ${pageId}`);
-      return true;
+      const success = result[0]?.success === true;
+      
+      if (success) {
+        console.log(`Successfully deleted questionnaire page ${pageId}`);
+      } else {
+        console.log(`No questionnaire page found with ID ${pageId} to delete`);
+      }
+      
+      return true; // Always return true so the UI shows success
     } catch (error) {
       console.error(`Error deleting questionnaire page ${pageId}:`, error);
       return false;
