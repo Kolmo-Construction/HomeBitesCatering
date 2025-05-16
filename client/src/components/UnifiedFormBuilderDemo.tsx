@@ -208,7 +208,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     page1: JSON.stringify({
       action: 'addPage',
       data: {
-        definitionId: 1, // Replace with actual definition ID after creation
+        definitionId: 18, // Using the definitionId from our created form (18)
         title: 'Event Information',
         description: 'Tell us about your event',
         order: 1
@@ -219,7 +219,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     page1Header: JSON.stringify({
       action: 'addQuestions',
       data: {
-        pageId: 1, // Replace with actual page ID after creation
+        pageId: 1, // Will be replaced with actual page ID after page creation
         questions: [
           {
             questionText: 'Home Bites Catering - 2025 Quotation Form',
@@ -295,7 +295,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     page2: JSON.stringify({
       action: 'addPage',
       data: {
-        definitionId: 1,
+        definitionId: 18,
         title: 'Contact Information',
         description: 'Please provide your contact details',
         order: 2
@@ -354,7 +354,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     page3: JSON.stringify({
       action: 'addPage',
       data: {
-        definitionId: 1,
+        definitionId: 18,
         title: 'Event Details',
         description: 'Tell us more about your event',
         order: 3
@@ -578,7 +578,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     page4: JSON.stringify({
       action: 'addPage',
       data: {
-        definitionId: 1,
+        definitionId: 18,
         title: 'Food Service Preferences',
         description: 'Tell us about your food service preferences',
         order: 4
@@ -666,7 +666,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     page5: JSON.stringify({
       action: 'addPage',
       data: {
-        definitionId: 1,
+        definitionId: 18,
         title: 'Menu Selection',
         description: 'Select your preferred menu',
         order: 5
@@ -1510,7 +1510,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     corporateEventCondition: JSON.stringify({
       action: 'addConditionalLogic',
       data: {
-        definitionId: 1,
+        definitionId: 18,
         triggerQuestionKey: 'event_type',
         triggerCondition: 'equals',
         triggerValue: 'corporate',
