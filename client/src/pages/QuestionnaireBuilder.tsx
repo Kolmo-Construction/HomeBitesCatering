@@ -28,12 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -200,49 +194,70 @@ const QuestionnaireBuilder = () => {
 
   const { data: pages, isLoading: isLoadingPages } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'],
-    queryFn: () => selectedDefinition ? apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`) : null,
+    queryFn: async () => {
+      if (!selectedDefinition) return null;
+      const response = await apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`);
+      return await response.json();
+    },
     enabled: !!selectedDefinition
   });
 
   const { data: questions, isLoading: isLoadingQuestions } = useQuery({
     queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'],
-    queryFn: () => selectedPage ? apiRequest('GET', `/api/admin/questionnaires/pages/${selectedPage}/questions`) : null,
+    queryFn: async () => {
+      if (!selectedPage) return null;
+      const response = await apiRequest('GET', `/api/admin/questionnaires/pages/${selectedPage}/questions`);
+      return await response.json();
+    },
     enabled: !!selectedPage
   });
 
   const { data: conditionalLogic, isLoading: isLoadingConditionalLogic } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'],
-    queryFn: () => selectedDefinition ? apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`) : null,
+    queryFn: async () => {
+      if (!selectedDefinition) return null;
+      const response = await apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`);
+      return await response.json();
+    },
     enabled: !!selectedDefinition
   });
 
   // Get all questions for the selected definition (for conditional logic dropdown)
-  const { data: allDefinitionQuestions } = useQuery({
+  const { data: allDefinitionQuestions, isLoading: isLoadingAllQuestions } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'],
     queryFn: async () => {
-      if (!selectedDefinition || !pages?.length) return [];
+      if (!selectedDefinition || !pages) return [];
       
-      // Fetch questions for each page
       const allQuestions = [];
       for (const page of pages) {
-        const pageQuestions = await apiRequest('GET', `/api/admin/questionnaires/pages/${page.id}/questions`);
+        const response = await apiRequest('GET', `/api/admin/questionnaires/pages/${page.id}/questions`);
+        const pageQuestions = await response.json();
         if (pageQuestions) {
           allQuestions.push(...pageQuestions);
         }
       }
       return allQuestions;
     },
-    enabled: !!selectedDefinition && !!pages?.length
+    enabled: !!selectedDefinition && Array.isArray(pages) && pages.length > 0
   });
 
   // Mutations
   const createDefinitionMutation = useMutation({
-    mutationFn: (data: z.infer<typeof definitionFormSchema>) => 
-      apiRequest('POST', '/api/admin/questionnaires/definitions', data),
-    onSuccess: () => {
+    mutationFn: async (data: z.infer<typeof definitionFormSchema>) => {
+      const response = await apiRequest('POST', '/api/admin/questionnaires/definitions', data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
       setDefinitionDialogOpen(false);
       definitionForm.reset();
+      
+      // Auto-select the newly created definition
+      if (data && data.id) {
+        setSelectedDefinition(data.id);
+        setActiveTab("pages");
+      }
+      
       toast({
         title: "Success",
         description: "Questionnaire definition created successfully"
@@ -267,14 +282,9 @@ const QuestionnaireBuilder = () => {
       setPageDialogOpen(false);
       pageForm.reset();
       
-      // Get the new page ID from the response
-      const newPageId = data.id;
-      console.log("Created new page with ID:", newPageId);
-      
       // Auto-select the newly created page
-      if (newPageId) {
-        setSelectedPage(newPageId);
-        // Also switch to the questions tab
+      if (data && data.id) {
+        setSelectedPage(data.id);
         setActiveTab("questions");
       }
       
@@ -295,10 +305,11 @@ const QuestionnaireBuilder = () => {
   const createQuestionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof questionFormSchema>) => {
       // Add options to the data if they exist
+      const formData = { ...data };
       if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
-        data.options = questionOptions;
+        formData.options = questionOptions;
       }
-      const response = await apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, data);
+      const response = await apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, formData);
       return await response.json();
     },
     onSuccess: (data) => {
@@ -307,8 +318,6 @@ const QuestionnaireBuilder = () => {
       setQuestionOptions([]);
       setQuestionDialogOpen(false);
       questionForm.reset();
-      
-      console.log("Created new question with ID:", data.id);
       
       toast({
         title: "Success",
@@ -334,8 +343,6 @@ const QuestionnaireBuilder = () => {
       setConditionalLogicDialogOpen(false);
       conditionalLogicForm.reset();
       
-      console.log("Created new conditional logic rule with ID:", data.id);
-      
       toast({
         title: "Success",
         description: "Conditional logic rule created successfully"
@@ -351,7 +358,9 @@ const QuestionnaireBuilder = () => {
   });
 
   const deleteDefinitionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/definitions/${id}`),
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/admin/questionnaires/definitions/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
       setSelectedDefinition(null);
@@ -363,7 +372,9 @@ const QuestionnaireBuilder = () => {
   });
 
   const deletePageMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/pages/${id}`),
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/admin/questionnaires/pages/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
       setSelectedPage(null);
@@ -375,7 +386,9 @@ const QuestionnaireBuilder = () => {
   });
 
   const deleteQuestionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/questions/${id}`),
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/admin/questionnaires/questions/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
@@ -387,7 +400,9 @@ const QuestionnaireBuilder = () => {
   });
 
   const deleteConditionalLogicMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/admin/questionnaires/conditional-logic/${id}`),
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/admin/questionnaires/conditional-logic/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
       toast({
@@ -443,7 +458,7 @@ const QuestionnaireBuilder = () => {
 
   // Effect to set the initial order for new questions
   useEffect(() => {
-    if (questions?.length) {
+    if (questions && Array.isArray(questions) && questions.length > 0) {
       questionForm.setValue('order', questions.length);
     } else {
       questionForm.setValue('order', 0);
@@ -452,7 +467,7 @@ const QuestionnaireBuilder = () => {
 
   // Effect to set the initial order for new pages
   useEffect(() => {
-    if (pages?.length) {
+    if (pages && Array.isArray(pages) && pages.length > 0) {
       pageForm.setValue('order', pages.length);
     } else {
       pageForm.setValue('order', 0);
@@ -462,17 +477,67 @@ const QuestionnaireBuilder = () => {
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">Questionnaire Builder</h1>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="definitions">Questionnaire Definitions</TabsTrigger>
-          <TabsTrigger value="pages" disabled={!selectedDefinition}>Pages</TabsTrigger>
-          <TabsTrigger value="questions" disabled={!selectedPage}>Questions</TabsTrigger>
-          <TabsTrigger value="conditionalLogic" disabled={!selectedDefinition}>Conditional Logic</TabsTrigger>
-          <TabsTrigger value="preview" disabled={!selectedDefinition}>Preview</TabsTrigger>
-        </TabsList>
+      <div className="space-y-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab("definitions")} 
+              className={`${activeTab === "definitions" 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Questionnaire Definitions
+            </button>
+            <button
+              onClick={() => selectedDefinition && setActiveTab("pages")}
+              disabled={!selectedDefinition}
+              className={`${activeTab === "pages" 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              Pages
+            </button>
+            <button
+              onClick={() => selectedPage && setActiveTab("questions")}
+              disabled={!selectedPage}
+              className={`${activeTab === "questions" 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${!selectedPage ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              Questions
+            </button>
+            <button
+              onClick={() => selectedDefinition && setActiveTab("conditionalLogic")}
+              disabled={!selectedDefinition}
+              className={`${activeTab === "conditionalLogic" 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              Conditional Logic
+            </button>
+            <button
+              onClick={() => selectedDefinition && setActiveTab("preview")}
+              disabled={!selectedDefinition}
+              className={`${activeTab === "preview" 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              Preview
+            </button>
+          </nav>
+        </div>
         
-        {/* Definitions Tab */}
-        <TabsContent value="definitions">
+        {/* Definitions Tab Content */}
+        {activeTab === "definitions" && (
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -513,7 +578,11 @@ const QuestionnaireBuilder = () => {
                             <FormItem>
                               <FormLabel>Description</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="Describe the purpose of this questionnaire" {...field} />
+                                <Textarea 
+                                  placeholder="Describe the purpose of this questionnaire" 
+                                  {...field} 
+                                  value={field.value || ""}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -523,13 +592,11 @@ const QuestionnaireBuilder = () => {
                           control={definitionForm.control}
                           name="isActive"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                               <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                  Active Status
-                                </FormLabel>
+                                <FormLabel>Active</FormLabel>
                                 <FormDescription>
-                                  Make this the active questionnaire that will be shown to users
+                                  Make this questionnaire available to clients
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -551,93 +618,107 @@ const QuestionnaireBuilder = () => {
                   </DialogContent>
                 </Dialog>
               </div>
-              <CardDescription>
-                Manage your questionnaire definitions here. Each definition can have multiple pages and questions.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingDefinitions ? (
                 <div className="text-center py-4">Loading definitions...</div>
-              ) : !definitions?.length ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No questionnaire definitions found. Create your first one!
-                </div>
-              ) : (
+              ) : definitions && Array.isArray(definitions) && definitions.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {definitions.map((definition: any) => (
-                      <TableRow key={definition.id} className={selectedDefinition === definition.id ? "bg-muted/50" : ""}>
-                        <TableCell>{definition.versionName}</TableCell>
-                        <TableCell>{definition.description}</TableCell>
+                    {definitions.map((def: any) => (
+                      <TableRow 
+                        key={def.id}
+                        className={selectedDefinition === def.id ? "bg-primary/10" : ""}
+                      >
                         <TableCell>
-                          {definition.isActive ? (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
-                              Inactive
-                            </span>
-                          )}
+                          <div className="font-medium">{def.versionName}</div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => setSelectedDefinition(definition.id)}>
-                              <Eye className="h-4 w-4 mr-1" /> View
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50">
-                                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete the questionnaire definition and all associated pages, questions, and conditional logic rules.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-red-500 hover:bg-red-600"
-                                    onClick={() => deleteDefinitionMutation.mutate(definition.id)}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                        <TableCell>{def.description || "—"}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            def.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                          }`}>
+                            {def.isActive ? "Active" : "Draft"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(def.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedDefinition(def.id);
+                              setActiveTab("pages");
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Questionnaire Definition</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this questionnaire definition? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deleteDefinitionMutation.mutate(def.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              ) : (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Questionnaire Definitions Yet</h3>
+                  <p className="text-gray-600 mb-4">Create your first questionnaire definition to get started.</p>
+                  <Button onClick={() => setDefinitionDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create First Definition
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
         
-        {/* Pages Tab */}
-        <TabsContent value="pages">
+        {/* Pages Tab Content */}
+        {activeTab === "pages" && (
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Pages</CardTitle>
                   <CardDescription>
-                    {selectedDefinition ? (
-                      <span>Managing pages for: <strong>{definitions?.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
+                    {selectedDefinition && definitions ? (
+                      <span>Managing pages for: <strong>{definitions.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
                     ) : (
                       <span>Select a definition first</span>
                     )}
@@ -652,9 +733,9 @@ const QuestionnaireBuilder = () => {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Create Page</DialogTitle>
+                      <DialogTitle>Add New Page</DialogTitle>
                       <DialogDescription>
-                        Add a new page to your questionnaire.
+                        Create a new page for your questionnaire.
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...pageForm}>
@@ -666,7 +747,7 @@ const QuestionnaireBuilder = () => {
                             <FormItem>
                               <FormLabel>Page Title</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g., Personal Information" {...field} />
+                                <Input placeholder="e.g., Event Details" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -677,17 +758,17 @@ const QuestionnaireBuilder = () => {
                           name="order"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Display Order</FormLabel>
+                              <FormLabel>Order</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
+                                <Input 
+                                  type="number" 
                                   min="0"
                                   {...field}
                                   onChange={(e) => field.onChange(parseInt(e.target.value))}
                                 />
                               </FormControl>
                               <FormDescription>
-                                Order in which this page will appear in the questionnaire.
+                                The order in which this page appears in the questionnaire.
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -706,16 +787,16 @@ const QuestionnaireBuilder = () => {
             </CardHeader>
             <CardContent>
               {!selectedDefinition ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  Please select a questionnaire definition first.
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Definition Selected</h3>
+                  <p className="text-gray-600 mb-4">Select a questionnaire definition to manage its pages.</p>
+                  <Button onClick={() => setActiveTab("definitions")}>
+                    Go to Definitions
+                  </Button>
                 </div>
               ) : isLoadingPages ? (
                 <div className="text-center py-4">Loading pages...</div>
-              ) : !pages?.length ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No pages found. Create your first page!
-                </div>
-              ) : (
+              ) : pages && Array.isArray(pages) && pages.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -726,64 +807,87 @@ const QuestionnaireBuilder = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Array.isArray(pages) && pages.map((page: any) => (
-                      <TableRow key={page.id} className={selectedPage === page.id ? "bg-muted/50" : ""}>
+                    {pages.sort((a: any, b: any) => a.order - b.order).map((page: any) => (
+                      <TableRow 
+                        key={page.id}
+                        className={selectedPage === page.id ? "bg-primary/10" : ""}
+                      >
                         <TableCell>{page.order}</TableCell>
-                        <TableCell>{page.title}</TableCell>
                         <TableCell>
-                          {/* We don't have question count here, would need to add a query */}
-                          -
+                          <div className="font-medium">{page.title}</div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => setSelectedPage(page.id)}>
-                              <List className="h-4 w-4 mr-1" /> Questions
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50">
-                                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete this page and all its questions.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-red-500 hover:bg-red-600"
-                                    onClick={() => deletePageMutation.mutate(page.id)}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                        <TableCell>
+                          {/* Ideally we'd show the count of questions, but for simplicity we'll leave it empty */}
+                          —
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedPage(page.id);
+                              setActiveTab("questions");
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Questions
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Page</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this page? All questions on this page will also be deleted. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deletePageMutation.mutate(page.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              ) : (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Pages Yet</h3>
+                  <p className="text-gray-600 mb-4">Add your first page to get started.</p>
+                  <Button onClick={() => setPageDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create First Page
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
         
-        {/* Questions Tab */}
-        <TabsContent value="questions">
+        {/* Questions Tab Content */}
+        {activeTab === "questions" && (
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Questions</CardTitle>
                   <CardDescription>
-                    {selectedPage && pages && Array.isArray(pages) ? (
-                      <span>Managing questions for page: <strong>{pages.find((p: any) => p.id === selectedPage)?.title || 'Unknown'}</strong></span>
+                    {selectedPage && pages ? (
+                      <span>
+                        Managing questions for page: <strong>{pages.find((p: any) => p.id === selectedPage)?.title}</strong>
+                      </span>
                     ) : (
                       <span>Select a page first</span>
                     )}
@@ -796,11 +900,11 @@ const QuestionnaireBuilder = () => {
                       New Question
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
+                  <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Create Question</DialogTitle>
+                      <DialogTitle>Add New Question</DialogTitle>
                       <DialogDescription>
-                        Add a new question to your questionnaire page.
+                        Create a new question for this page.
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...questionForm}>
@@ -810,15 +914,16 @@ const QuestionnaireBuilder = () => {
                             control={questionForm.control}
                             name="questionText"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="col-span-2">
                                 <FormLabel>Question Text</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., What is your name?" {...field} />
+                                  <Input placeholder="e.g., What is your email address?" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          
                           <FormField
                             control={questionForm.control}
                             name="questionKey"
@@ -826,31 +931,29 @@ const QuestionnaireBuilder = () => {
                               <FormItem>
                                 <FormLabel>Question Key</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., name" {...field} />
+                                  <Input placeholder="e.g., email_address" {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                  Unique identifier used in submissions and logic
+                                  A unique identifier for this question
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
+                          
                           <FormField
                             control={questionForm.control}
                             name="questionType"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Question Type</FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
+                                <Select 
+                                  onValueChange={field.onChange} 
                                   defaultValue={field.value}
                                 >
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Select question type" />
+                                      <SelectValue placeholder="Select a question type" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -865,34 +968,36 @@ const QuestionnaireBuilder = () => {
                                     <SelectItem value="checkbox">Checkboxes</SelectItem>
                                   </SelectContent>
                                 </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={questionForm.control}
-                            name="order"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Display Order</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  />
-                                </FormControl>
                                 <FormDescription>
-                                  Order in which this question will appear on the page.
+                                  The type of input required for this question
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
+                          
+                          <FormField
+                            control={questionForm.control}
+                            name="order"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Order</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="0" 
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Display order on the page
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
                           <FormField
                             control={questionForm.control}
                             name="placeholderText"
@@ -900,26 +1005,53 @@ const QuestionnaireBuilder = () => {
                               <FormItem>
                                 <FormLabel>Placeholder Text</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., Enter your full name" {...field} />
+                                  <Input placeholder="e.g., Enter your email..." {...field} value={field.value || ""} />
                                 </FormControl>
                                 <FormDescription>
-                                  Text shown in empty input fields
+                                  Optional placeholder text for the input
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          
+                          <FormField
+                            control={questionForm.control}
+                            name="isRequired"
+                            render={({ field }) => (
+                              <FormItem>
+                                <div className="flex items-center gap-2 pt-8">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel>Required Question</FormLabel>
+                                </div>
+                                <FormDescription>
+                                  Toggle if this question must be answered
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
                           <FormField
                             control={questionForm.control}
                             name="helpText"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="col-span-2">
                                 <FormLabel>Help Text</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., Please provide your legal name" {...field} />
+                                  <Textarea 
+                                    placeholder="Additional instructions for answering this question..."
+                                    {...field}
+                                    value={field.value || ""}
+                                  />
                                 </FormControl>
                                 <FormDescription>
-                                  Explanatory text shown below the field
+                                  Optional help text to provide context or instructions
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -927,67 +1059,42 @@ const QuestionnaireBuilder = () => {
                           />
                         </div>
                         
-                        <FormField
-                          control={questionForm.control}
-                          name="isRequired"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                  Required Question
-                                </FormLabel>
-                                <FormDescription>
-                                  Make this question mandatory for users to answer
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        
-                        {/* Options section for select, radio, checkbox */}
+                        {/* Options section for select/radio/checkbox types */}
                         {showOptions && (
-                          <div className="space-y-4 border rounded-lg p-4">
+                          <div className="space-y-4 border p-4 rounded-md mt-4">
                             <div className="flex justify-between items-center">
-                              <h3 className="text-lg font-medium">Answer Options</h3>
+                              <h4 className="font-semibold">Options</h4>
                               <Button type="button" variant="outline" size="sm" onClick={addOption}>
-                                <Plus className="h-4 w-4 mr-1" /> Add Option
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Option
                               </Button>
                             </div>
                             
                             {questionOptions.length === 0 ? (
-                              <div className="text-center py-4 text-muted-foreground">
-                                No options added yet. Click "Add Option" to create options.
-                              </div>
+                              <div className="text-center text-gray-500 py-2">No options added yet</div>
                             ) : (
                               <div className="space-y-3">
                                 {questionOptions.map((option, index) => (
                                   <div key={index} className="flex items-center gap-2">
                                     <Input
-                                      placeholder="Option Text"
+                                      placeholder="Option text"
                                       value={option.optionText}
                                       onChange={(e) => updateOption(index, 'optionText', e.target.value)}
                                       className="flex-1"
                                     />
                                     <Input
-                                      placeholder="Value"
+                                      placeholder="Option value"
                                       value={option.optionValue}
                                       onChange={(e) => updateOption(index, 'optionValue', e.target.value)}
-                                      className="w-1/3"
+                                      className="flex-1"
                                     />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
+                                    <Button 
+                                      type="button" 
+                                      variant="ghost" 
                                       size="icon"
                                       onClick={() => removeOption(index)}
-                                      className="text-red-500"
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                                      <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                   </div>
                                 ))}
@@ -1009,313 +1116,60 @@ const QuestionnaireBuilder = () => {
             </CardHeader>
             <CardContent>
               {!selectedPage ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  Please select a page first.
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Page Selected</h3>
+                  <p className="text-gray-600 mb-4">Select a page to manage its questions.</p>
+                  <Button onClick={() => setActiveTab("pages")}>
+                    Go to Pages
+                  </Button>
                 </div>
               ) : isLoadingQuestions ? (
                 <div className="text-center py-4">Loading questions...</div>
-              ) : !questions?.length ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No questions found. Create your first question!
-                </div>
-              ) : (
+              ) : questions && Array.isArray(questions) && questions.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Order</TableHead>
-                      <TableHead>Question Text</TableHead>
-                      <TableHead>Key</TableHead>
+                      <TableHead>Question</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Key</TableHead>
                       <TableHead>Required</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {questions.map((question: any) => (
+                    {questions.sort((a: any, b: any) => a.order - b.order).map((question: any) => (
                       <TableRow key={question.id}>
                         <TableCell>{question.order}</TableCell>
-                        <TableCell>{question.questionText}</TableCell>
-                        <TableCell><code>{question.questionKey}</code></TableCell>
-                        <TableCell><QuestionType value={question.questionType} /></TableCell>
-                        <TableCell>{question.isRequired ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-500" />}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50">
-                                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete this question and its options.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-red-500 hover:bg-red-600"
-                                    onClick={() => deleteQuestionMutation.mutate(question.id)}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Conditional Logic Tab */}
-        <TabsContent value="conditionalLogic">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Conditional Logic</CardTitle>
-                  <CardDescription>
-                    {selectedDefinition ? (
-                      <span>Managing logic for: <strong>{definitions?.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
-                    ) : (
-                      <span>Select a definition first</span>
-                    )}
-                  </CardDescription>
-                </div>
-                <Dialog open={conditionalLogicDialogOpen} onOpenChange={setConditionalLogicDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button disabled={!selectedDefinition || !allDefinitionQuestions?.length}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Logic Rule
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create Conditional Logic Rule</DialogTitle>
-                      <DialogDescription>
-                        Set up conditions to show or hide questions based on user responses.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...conditionalLogicForm}>
-                      <form onSubmit={conditionalLogicForm.handleSubmit(onSubmitConditionalLogic)} className="space-y-4">
-                        <FormField
-                          control={conditionalLogicForm.control}
-                          name="triggerQuestionKey"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Trigger Question</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select question" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {allDefinitionQuestions?.map((question: any) => (
-                                    <SelectItem key={question.questionKey} value={question.questionKey}>
-                                      {question.questionText} ({question.questionKey})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                The question that will trigger this condition
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
+                        <TableCell>
+                          <div className="font-medium">{question.questionText}</div>
+                          {question.helpText && (
+                            <div className="text-xs text-gray-500 truncate max-w-xs">{question.helpText}</div>
                           )}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="triggerCondition"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Condition</FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select condition" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="equals">Equals</SelectItem>
-                                    <SelectItem value="not_equals">Does Not Equal</SelectItem>
-                                    <SelectItem value="contains">Contains</SelectItem>
-                                    <SelectItem value="starts_with">Starts With</SelectItem>
-                                    <SelectItem value="ends_with">Ends With</SelectItem>
-                                    <SelectItem value="greater_than">Greater Than</SelectItem>
-                                    <SelectItem value="less_than">Less Than</SelectItem>
-                                    <SelectItem value="is_answered">Is Answered</SelectItem>
-                                    <SelectItem value="is_not_answered">Is Not Answered</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="triggerValue"
-                            render={({ field }) => {
-                              const condition = conditionalLogicForm.watch("triggerCondition");
-                              const needsValue = !['is_answered', 'is_not_answered'].includes(condition);
-                              
-                              return (
-                                <FormItem>
-                                  <FormLabel>Expected Value</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      disabled={!needsValue}
-                                      placeholder={needsValue ? "Value to compare against" : "Not needed for this condition"}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="actionType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Action</FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select action" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="show_question">Show Question</SelectItem>
-                                    <SelectItem value="hide_question">Hide Question</SelectItem>
-                                    <SelectItem value="require_question">Make Question Required</SelectItem>
-                                    <SelectItem value="unrequire_question">Make Question Optional</SelectItem>
-                                    <SelectItem value="skip_to_page">Skip to Page</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="targetQuestionKey"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Target Question</FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select target question" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {allDefinitionQuestions?.map((question: any) => (
-                                      <SelectItem key={question.questionKey} value={question.questionKey}>
-                                        {question.questionText} ({question.questionKey})
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormDescription>
-                                  The question that will be affected by this rule
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <DialogFooter>
-                          <Button type="submit" disabled={createConditionalLogicMutation.isPending}>
-                            {createConditionalLogicMutation.isPending ? "Creating..." : "Create Rule"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!selectedDefinition ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  Please select a questionnaire definition first.
-                </div>
-              ) : isLoadingConditionalLogic ? (
-                <div className="text-center py-4">Loading conditional logic rules...</div>
-              ) : !conditionalLogic?.length ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No conditional logic rules found. Create your first rule!
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Trigger Question</TableHead>
-                      <TableHead>Condition</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {conditionalLogic.map((rule: any) => (
-                      <TableRow key={rule.id}>
-                        <TableCell>{rule.triggerQuestionKey}</TableCell>
-                        <TableCell>{rule.triggerCondition}</TableCell>
-                        <TableCell>{rule.triggerValue || '-'}</TableCell>
-                        <TableCell>{rule.actionType}</TableCell>
-                        <TableCell>{rule.targetQuestionKey}</TableCell>
+                        </TableCell>
+                        <TableCell><QuestionType value={question.questionType} /></TableCell>
+                        <TableCell><code className="text-xs">{question.questionKey}</code></TableCell>
+                        <TableCell>{question.isRequired ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-gray-300" />}</TableCell>
                         <TableCell className="text-right">
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50">
-                                <Trash2 className="h-4 w-4 mr-1" /> Delete
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogTitle>Delete Question</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently delete this conditional logic rule.
+                                  Are you sure you want to delete this question? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-500 hover:bg-red-600"
-                                  onClick={() => deleteConditionalLogicMutation.mutate(rule.id)}
+                                <AlertDialogAction 
+                                  onClick={() => deleteQuestionMutation.mutate(question.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Delete
                                 </AlertDialogAction>
@@ -1327,44 +1181,338 @@ const QuestionnaireBuilder = () => {
                     ))}
                   </TableBody>
                 </Table>
+              ) : (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Questions Yet</h3>
+                  <p className="text-gray-600 mb-4">Add your first question to this page.</p>
+                  <Button onClick={() => setQuestionDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create First Question
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
         
-        {/* Preview Tab */}
-        <TabsContent value="preview">
+        {/* Conditional Logic Tab Content */}
+        {activeTab === "conditionalLogic" && (
           <Card>
             <CardHeader>
-              <CardTitle>Questionnaire Preview</CardTitle>
-              <CardDescription>
-                {selectedDefinition ? (
-                  <span>Preview of: <strong>{definitions?.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
-                ) : (
-                  <span>Select a definition first</span>
-                )}
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Conditional Logic</CardTitle>
+                  <CardDescription>
+                    Managing logic for: <strong>{definitions?.find((d: any) => d.id === selectedDefinition)?.versionName}</strong>
+                  </CardDescription>
+                </div>
+                <Dialog open={conditionalLogicDialogOpen} onOpenChange={setConditionalLogicDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={!allDefinitionQuestions || !Array.isArray(allDefinitionQuestions) || allDefinitionQuestions.length < 1}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      New Logic Rule
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Create Conditional Logic Rule</DialogTitle>
+                      <DialogDescription>
+                        Define behavior based on answers to questions.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...conditionalLogicForm}>
+                      <form onSubmit={conditionalLogicForm.handleSubmit(onSubmitConditionalLogic)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={conditionalLogicForm.control}
+                            name="triggerQuestionKey"
+                            render={({ field }) => (
+                              <FormItem className="col-span-2">
+                                <FormLabel>If Question</FormLabel>
+                                <Select 
+                                  onValueChange={field.onChange} 
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a trigger question" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {allDefinitionQuestions && Array.isArray(allDefinitionQuestions) && allDefinitionQuestions.map((q: any) => (
+                                      <SelectItem key={q.questionKey} value={q.questionKey}>
+                                        {q.questionText} ({q.questionKey})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                  The question that will trigger this rule
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={conditionalLogicForm.control}
+                            name="triggerCondition"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Condition</FormLabel>
+                                <Select 
+                                  onValueChange={field.onChange} 
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a condition" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="equals">Equals</SelectItem>
+                                    <SelectItem value="not_equals">Not Equals</SelectItem>
+                                    <SelectItem value="contains">Contains</SelectItem>
+                                    <SelectItem value="not_contains">Doesn't Contain</SelectItem>
+                                    <SelectItem value="starts_with">Starts With</SelectItem>
+                                    <SelectItem value="ends_with">Ends With</SelectItem>
+                                    <SelectItem value="greater_than">Greater Than</SelectItem>
+                                    <SelectItem value="less_than">Less Than</SelectItem>
+                                    <SelectItem value="is_answered">Is Answered</SelectItem>
+                                    <SelectItem value="is_empty">Is Empty</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          {/* Only show value field for conditions that need a comparison value */}
+                          {() => {
+                            const condition = conditionalLogicForm.watch("triggerCondition");
+                            const needsValue = !["is_answered", "is_empty"].includes(condition);
+                            
+                            return (
+                              <FormField
+                                control={conditionalLogicForm.control}
+                                name="triggerValue"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem>
+                                      <FormLabel>Expected Value</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          disabled={!needsValue}
+                                          placeholder={needsValue ? "Value to compare against" : "Not needed for this condition"}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+                            );
+                          }}
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={conditionalLogicForm.control}
+                              name="actionType"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Action</FormLabel>
+                                  <Select 
+                                    onValueChange={field.onChange} 
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select an action" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="show_question">Show Question</SelectItem>
+                                      <SelectItem value="hide_question">Hide Question</SelectItem>
+                                      <SelectItem value="require_question">Make Question Required</SelectItem>
+                                      <SelectItem value="unrequire_question">Make Question Optional</SelectItem>
+                                      <SelectItem value="skip_to_page">Skip to Page</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    The action to take when the condition is met
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={conditionalLogicForm.control}
+                              name="targetQuestionKey"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Target Question</FormLabel>
+                                  <Select 
+                                    onValueChange={field.onChange} 
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select target question" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {allDefinitionQuestions && Array.isArray(allDefinitionQuestions) && allDefinitionQuestions
+                                        .filter((q: any) => q.questionKey !== conditionalLogicForm.watch("triggerQuestionKey"))
+                                        .map((q: any) => (
+                                          <SelectItem key={q.questionKey} value={q.questionKey}>
+                                            {q.questionText} ({q.questionKey})
+                                          </SelectItem>
+                                        ))
+                                      }
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    The question affected by this rule
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                        
+                        <DialogFooter>
+                          <Button type="submit" disabled={createConditionalLogicMutation.isPending}>
+                            {createConditionalLogicMutation.isPending ? "Creating..." : "Create Logic Rule"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-10">
-                <p className="text-muted-foreground">
-                  The preview functionality will be implemented soon. For now, you can test your questionnaire using the public API endpoints:
-                </p>
-                <div className="mt-4 text-left max-w-lg mx-auto">
-                  <div className="bg-slate-100 p-4 rounded-md">
-                    <h3 className="font-mono text-sm mb-2">GET /api/questionnaires/active</h3>
-                    <p className="text-xs text-muted-foreground">Retrieves the active questionnaire with all pages and questions</p>
-                  </div>
-                  <div className="bg-slate-100 p-4 rounded-md mt-2">
-                    <h3 className="font-mono text-sm mb-2">POST /api/questionnaires/submit</h3>
-                    <p className="text-xs text-muted-foreground">Submits a questionnaire response, creates a raw lead if applicable</p>
-                  </div>
+              {!selectedDefinition ? (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Definition Selected</h3>
+                  <p className="text-gray-600 mb-4">Select a questionnaire definition to manage conditional logic.</p>
+                  <Button onClick={() => setActiveTab("definitions")}>
+                    Go to Definitions
+                  </Button>
                 </div>
+              ) : isLoadingConditionalLogic ? (
+                <div className="text-center py-4">Loading logic rules...</div>
+              ) : !allDefinitionQuestions || !Array.isArray(allDefinitionQuestions) || allDefinitionQuestions.length === 0 ? (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Questions Available</h3>
+                  <p className="text-gray-600 mb-4">Add questions to your questionnaire before creating logic rules.</p>
+                  <Button onClick={() => setActiveTab("pages")}>
+                    Go to Pages
+                  </Button>
+                </div>
+              ) : conditionalLogic && Array.isArray(conditionalLogic) && conditionalLogic.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>If Question</TableHead>
+                      <TableHead>Condition</TableHead>
+                      <TableHead>Value</TableHead>
+                      <TableHead>Then</TableHead>
+                      <TableHead>Target</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {conditionalLogic.map((rule: any) => (
+                      <TableRow key={rule.id}>
+                        <TableCell>
+                          {allDefinitionQuestions.find((q: any) => q.questionKey === rule.triggerQuestionKey)?.questionText || rule.triggerQuestionKey}
+                        </TableCell>
+                        <TableCell>
+                          {rule.triggerCondition.replace(/_/g, ' ')}
+                        </TableCell>
+                        <TableCell>
+                          {rule.triggerValue || '—'}
+                        </TableCell>
+                        <TableCell>
+                          {rule.actionType.replace(/_/g, ' ')}
+                        </TableCell>
+                        <TableCell>
+                          {allDefinitionQuestions.find((q: any) => q.questionKey === rule.targetQuestionKey)?.questionText || rule.targetQuestionKey}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Logic Rule</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this conditional logic rule? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deleteConditionalLogicMutation.mutate(rule.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No conditional logic rules yet</h3>
+                  <p className="text-gray-600 mb-4">Create your first logic rule.</p>
+                  <Button onClick={() => setConditionalLogicDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create First Logic Rule
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Preview Tab Content */}
+        {activeTab === "preview" && (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Preview</CardTitle>
+                  <CardDescription>
+                    Preview your questionnaire as it will appear to users.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-10 border rounded-md">
+                <h3 className="text-lg font-semibold mb-2">Preview Coming Soon</h3>
+                <p className="text-gray-600 mb-4">Preview functionality will be available in a future update.</p>
+                <Button onClick={() => setActiveTab("definitions")}>
+                  Return to Definitions
+                </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 };
