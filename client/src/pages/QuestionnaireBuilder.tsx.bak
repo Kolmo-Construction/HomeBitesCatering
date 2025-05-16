@@ -1327,7 +1327,7 @@ const QuestionnaireBuilder = () => {
                   </DialogContent>
                 </Dialog>
               </div>
-              </div>
+            </div>
             </CardHeader>
             <CardContent>
               {!selectedPage ? (
