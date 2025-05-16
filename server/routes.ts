@@ -30,6 +30,8 @@ import {
   questionnaireQuestions, // Table access
   questionnaireQuestionOptions, // Table access
   questionnaireMatrixColumns, // Table access
+  questionnairePages, // Table access for pages
+  questionnaireConditionalLogic, // Table access for conditional logic
   conditionTriggerOperatorEnum, // For conditional logic trigger operators
   conditionActionTypeEnum, // For conditional logic actions
   questionnaireDefinitions, // Table access for definitions
