@@ -1018,7 +1018,26 @@ const QuestionnaireBuilder = () => {
                     }}
                   />
                 
-                  <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
+                  <Dialog 
+                    open={questionDialogOpen} 
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        // Reset form and editing state when dialog is closed
+                        setEditingQuestionId(null);
+                        questionForm.reset({
+                          questionText: "",
+                          questionKey: "",
+                          questionType: "text",
+                          order: 0,
+                          isRequired: false,
+                          placeholderText: "",
+                          helpText: ""
+                        });
+                        setQuestionOptions([]);
+                      }
+                      setQuestionDialogOpen(open);
+                    }}
+                  >
                     <DialogTrigger asChild>
                       <Button disabled={!selectedPage}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -1027,9 +1046,9 @@ const QuestionnaireBuilder = () => {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>Add New Question</DialogTitle>
+                        <DialogTitle>{editingQuestionId ? "Edit Question" : "Add New Question"}</DialogTitle>
                         <DialogDescription>
-                          Create a new question for this page.
+                          {editingQuestionId ? "Modify this question's properties." : "Create a new question for this page."}
                         </DialogDescription>
                       </DialogHeader>
                       <Form {...questionForm}>
@@ -1361,8 +1380,11 @@ const QuestionnaireBuilder = () => {
                         )}
                         
                         <DialogFooter>
-                          <Button type="submit" disabled={createQuestionMutation.isPending}>
-                            {createQuestionMutation.isPending ? "Creating..." : "Create Question"}
+                          <Button type="submit" disabled={createQuestionMutation.isPending || updateQuestionMutation.isPending}>
+                            {editingQuestionId 
+                              ? (updateQuestionMutation.isPending ? "Updating..." : "Update Question") 
+                              : (createQuestionMutation.isPending ? "Creating..." : "Create Question")
+                            }
                           </Button>
                         </DialogFooter>
                       </form>
