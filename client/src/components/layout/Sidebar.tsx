@@ -34,6 +34,7 @@ export default function Sidebar() {
     { name: "Questionnaires", href: "/questionnaire-builder", icon: FileQuestion },
     { name: "Questionnaire Docs", href: "/questionnaire-docs", icon: BookOpen },
     { name: "Form Builder API", href: "/form-builder-tester", icon: Code },
+    { name: "Form Builder Docs", href: "/form-builder-docs", icon: BookOpen },
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
