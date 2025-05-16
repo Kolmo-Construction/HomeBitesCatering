@@ -1353,11 +1353,20 @@ export class DatabaseStorage implements IStorage {
   
   async deleteQuestionnaireQuestionOption(optionId: number): Promise<boolean> {
     try {
-      const result = await db
-        .delete(questionnaireQuestionOptions)
-        .where(eq(questionnaireQuestionOptions.id, optionId));
+      console.log(`Attempting to delete questionnaire question option ID: ${optionId}`);
       
-      return result.rowCount > 0;
+      // Using a transaction for consistency
+      await db.transaction(async (tx) => {
+        // Delete the question option
+        await tx.execute(sql`
+          DELETE FROM questionnaire_question_options
+          WHERE id = ${optionId};
+        `);
+        console.log(`Deleted question option ${optionId}`);
+      });
+      
+      console.log(`Successfully completed deletion process for question option ${optionId}`);
+      return true;
     } catch (error) {
       console.error(`Error deleting questionnaire question option ${optionId}:`, error);
       return false;
