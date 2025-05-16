@@ -76,6 +76,31 @@ Key rules to follow:
 5. Ensure all required fields are provided
 6. Make sure all order values are sequential starting from 1
 7. Use appropriate question types for the information being requested
+8. Add conditional logic rules where appropriate to create dynamic questionnaires
+9. Include a variety of question types based on the information needed:
+   - text: For short text responses
+   - textarea: For longer text responses
+   - email: For email addresses
+   - phone: For phone numbers
+   - number: For numeric inputs
+   - date: For date selection
+   - select: For dropdown single selection
+   - radio: For single choice options
+   - checkbox: For multiple choice options
+   - matrix: For grid-based responses
+
+When adding conditional logic rules, include them in the following format:
+{
+  "conditionalLogic": [
+    {
+      "triggerQuestionKey": "string", // The question key that triggers this rule
+      "triggerCondition": "string", // One of: equals, not_equals, contains, not_contains, starts_with, ends_with, greater_than, less_than, is_answered, is_empty
+      "triggerValue": "string", // The value to compare against (not needed for is_answered/is_empty conditions)
+      "actionType": "string", // One of: show_question, hide_question, require_question, unrequire_question, skip_to_page
+      "targetQuestionKey": "string" // The question affected by this rule
+    }
+  ]
+}
 
 ${questionnaireContext ? 'Current questionnaire context: ' + JSON.stringify(questionnaireContext) : ''}`;
 

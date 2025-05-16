@@ -76,7 +76,7 @@ const AIQuestionGenerator: React.FC<AIQuestionGeneratorProps> = ({
   // Import generated content
   const importMutation = useMutation({
     mutationFn: async () => {
-      if (!pageId || !generatedContent) {
+      if (!pageId || !definitionId || !generatedContent) {
         throw new Error('No content to import');
       }
       
@@ -115,7 +115,35 @@ const AIQuestionGenerator: React.FC<AIQuestionGeneratorProps> = ({
         return response.json();
       });
       
-      return Promise.all(importPromises);
+      // Create array to store all operations (questions + conditional logic)
+      const allOperations = [Promise.all(importPromises)];
+      
+      // Process conditional logic rules if they exist
+      if (generatedContent.conditionalLogic && Array.isArray(generatedContent.conditionalLogic) && generatedContent.conditionalLogic.length > 0) {
+        const conditionalLogicPromises = generatedContent.conditionalLogic.map(async (rule: any) => {
+          const ruleData = {
+            triggerQuestionKey: rule.triggerQuestionKey,
+            triggerCondition: rule.triggerCondition,
+            triggerValue: rule.triggerValue,
+            actionType: rule.actionType,
+            targetQuestionKey: rule.targetQuestionKey
+          };
+          
+          const response = await apiRequest('POST', `/api/admin/questionnaires/definitions/${definitionId}/conditional-logic`, ruleData);
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to import conditional logic rule');
+          }
+          
+          return response.json();
+        });
+        
+        allOperations.push(Promise.all(conditionalLogicPromises));
+      }
+      
+      // Wait for all operations to complete
+      return Promise.all(allOperations);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', pageId, 'questions'] });
