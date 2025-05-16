@@ -66,6 +66,9 @@ import {
 
 import { PlusCircle, Trash2, Edit, Eye, Save, List, Plus, ArrowUp, ArrowDown, Check, X, Sparkles } from 'lucide-react';
 
+// Import the AIQuestionGenerator component
+import AIQuestionGenerator from "@/components/AIQuestionGenerator";
+
 // Define schemas for the forms
 const definitionFormSchema = z.object({
   versionName: z.string().min(1, "Version name is required"),
@@ -958,22 +961,14 @@ const QuestionnaireBuilder = () => {
                   </CardDescription>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    disabled={!selectedPage}
-                    onClick={() => {
-                      if (selectedPage) {
-                        // For demo purposes, show a message
-                        toast({
-                          title: "AI Assistant",
-                          description: "AI assistant will be available soon! We'll use Anthropic's Claude to generate questionnaire content.",
-                        });
-                      }
+                  <AIQuestionGenerator 
+                    disabled={!selectedPage} 
+                    pageId={selectedPage} 
+                    definitionId={selectedDefinition}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
                     }}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    AI Generate
-                  </Button>
+                  />
                 
                   <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
                     <DialogTrigger asChild>
