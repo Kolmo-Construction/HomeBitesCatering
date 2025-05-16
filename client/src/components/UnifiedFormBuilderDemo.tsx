@@ -12,6 +12,15 @@ const UnifiedFormBuilderDemo: React.FC = () => {
   const [requestBody, setRequestBody] = useState('');
   const [responseData, setResponseData] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [nextIds, setNextIds] = useState<{
+    definitionId: number | null;
+    pageId: number | null;
+    questionId: number | null;
+  }>({
+    definitionId: null,
+    pageId: null,
+    questionId: null
+  });
   const { toast } = useToast();
 
   // Template examples for different actions
@@ -124,11 +133,89 @@ const UnifiedFormBuilderDemo: React.FC = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    // Fetch next IDs when switching to the builder tab
+    if (value === 'builder') {
+      fetchNextAvailableIds();
+    }
   };
   
   const selectActionTemplate = (action: string) => {
     setRequestBody(templates[action as keyof typeof templates] || '');
   };
+  
+  // Function to fetch the next available IDs
+  const fetchNextAvailableIds = async () => {
+    try {
+      // Get definitions to determine next definition ID
+      const definitionsResponse = await fetch('/api/admin/questionnaires/definitions');
+      if (definitionsResponse.ok) {
+        const definitions = await definitionsResponse.json();
+        if (Array.isArray(definitions)) {
+          // Calculate next definition ID (max existing ID + 1)
+          const maxDefinitionId = definitions.length > 0 
+            ? Math.max(...definitions.map((def: any) => def.id))
+            : 0;
+          setNextIds(prev => ({ ...prev, definitionId: maxDefinitionId + 1 }));
+          
+          // If there are definitions, get pages for the latest one to determine next page ID
+          if (definitions.length > 0) {
+            const latestDefinitionId = maxDefinitionId;
+            const pagesResponse = await fetch(`/api/admin/questionnaires/definitions/${latestDefinitionId}/pages`);
+            
+            if (pagesResponse.ok) {
+              const pages = await pagesResponse.json();
+              if (Array.isArray(pages)) {
+                // Calculate next page ID
+                const maxPageId = pages.length > 0 
+                  ? Math.max(...pages.map((page: any) => page.id))
+                  : 0;
+                setNextIds(prev => ({ ...prev, pageId: maxPageId + 1 }));
+                
+                // If there are pages, get questions for the latest one to determine next question ID
+                if (pages.length > 0) {
+                  const latestPageId = maxPageId;
+                  const questionsResponse = await fetch(`/api/admin/questionnaires/pages/${latestPageId}/questions`);
+                  
+                  if (questionsResponse.ok) {
+                    const questions = await questionsResponse.json();
+                    if (Array.isArray(questions)) {
+                      // Calculate next question ID
+                      const maxQuestionId = questions.length > 0 
+                        ? Math.max(...questions.map((question: any) => question.id))
+                        : 0;
+                      setNextIds(prev => ({ ...prev, questionId: maxQuestionId + 1 }));
+                    }
+                  }
+                } else {
+                  // No pages yet, so next question ID would be 1
+                  setNextIds(prev => ({ ...prev, questionId: 1 }));
+                }
+              }
+            }
+          } else {
+            // No definitions yet, so next page ID and question ID would be 1
+            setNextIds(prev => ({ ...prev, pageId: 1, questionId: 1 }));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching next available IDs:', error);
+    }
+  };
+
+  // Fetch next IDs when component mounts
+  React.useEffect(() => {
+    fetchNextAvailableIds();
+    
+    // Also update IDs after successful API requests
+    const updateIdsAfterRequest = () => {
+      setTimeout(fetchNextAvailableIds, 1000); // Delay to ensure DB is updated
+    };
+    
+    return () => {
+      // Cleanup
+    };
+  }, []);
 
   const handleSendRequest = async () => {
     try {
@@ -244,7 +331,23 @@ const UnifiedFormBuilderDemo: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="mb-6">
-                <h3 className="text-base font-medium mb-2">Select Action:</h3>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-base font-medium">Select Action:</h3>
+                  <div className="text-sm text-gray-600 bg-gray-100 p-2 rounded-md">
+                    <span className="font-medium">Next Available IDs:</span>
+                    <span className="ml-2">Definition: <strong>{nextIds.definitionId || '?'}</strong></span>
+                    <span className="ml-2">Page: <strong>{nextIds.pageId || '?'}</strong></span>
+                    <span className="ml-2">Question: <strong>{nextIds.questionId || '?'}</strong></span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2 h-6 px-2" 
+                      onClick={fetchNextAvailableIds}
+                    >
+                      ↻
+                    </Button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4">
                   {Object.keys(templates).map((action) => (
                     <Button 
