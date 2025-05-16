@@ -143,59 +143,109 @@ const UnifiedFormBuilderDemo: React.FC = () => {
     setRequestBody(templates[action as keyof typeof templates] || '');
   };
   
-  // Function to fetch the next available IDs
+  // Function to fetch the next available IDs - simplified approach
   const fetchNextAvailableIds = async () => {
     try {
-      // Get definitions to determine next definition ID
-      const definitionsResponse = await fetch('/api/admin/questionnaires/definitions');
-      if (definitionsResponse.ok) {
-        const definitions = await definitionsResponse.json();
-        if (Array.isArray(definitions)) {
-          // Calculate next definition ID (max existing ID + 1)
-          const maxDefinitionId = definitions.length > 0 
-            ? Math.max(...definitions.map((def: any) => def.id))
-            : 0;
-          setNextIds(prev => ({ ...prev, definitionId: maxDefinitionId + 1 }));
+      console.log("Fetching next available IDs...");
+      
+      // Just fetch definitions, which is the one endpoint we know exists
+      const definitionsRes = await fetch('/api/admin/questionnaires/definitions');
+      
+      // Default values
+      let nextDefinitionId = 1;
+      let nextPageId = 1;
+      let nextQuestionId = 1;
+      
+      // Process definitions
+      if (definitionsRes.ok) {
+        const definitions = await definitionsRes.json();
+        console.log("Definitions:", definitions);
+        
+        if (Array.isArray(definitions) && definitions.length > 0) {
+          // Get highest definition ID
+          const ids = definitions.map((def: any) => def.id).filter(Boolean);
+          if (ids.length > 0) {
+            nextDefinitionId = Math.max(...ids) + 1;
+          }
           
-          // If there are definitions, get pages for the latest one to determine next page ID
-          if (definitions.length > 0) {
-            const latestDefinitionId = maxDefinitionId;
-            const pagesResponse = await fetch(`/api/admin/questionnaires/definitions/${latestDefinitionId}/pages`);
+          // Try to get pages for all definitions to find highest page ID
+          const pagePromises = definitions.map((def: any) => 
+            fetch(`/api/admin/questionnaires/definitions/${def.id}/pages`)
+              .then(res => res.json())
+              .catch(() => [])
+          );
+          
+          const allPagesResults = await Promise.all(pagePromises);
+          const allPages = allPagesResults.flat();
+          
+          if (allPages.length > 0) {
+            const pageIds = allPages.map((page: any) => page.id).filter(Boolean);
+            if (pageIds.length > 0) {
+              nextPageId = Math.max(...pageIds) + 1;
+            }
             
-            if (pagesResponse.ok) {
-              const pages = await pagesResponse.json();
-              if (Array.isArray(pages)) {
-                // Calculate next page ID
-                const maxPageId = pages.length > 0 
-                  ? Math.max(...pages.map((page: any) => page.id))
-                  : 0;
-                setNextIds(prev => ({ ...prev, pageId: maxPageId + 1 }));
-                
-                // If there are pages, get questions for the latest one to determine next question ID
-                if (pages.length > 0) {
-                  const latestPageId = maxPageId;
-                  const questionsResponse = await fetch(`/api/admin/questionnaires/pages/${latestPageId}/questions`);
-                  
-                  if (questionsResponse.ok) {
-                    const questions = await questionsResponse.json();
-                    if (Array.isArray(questions)) {
-                      // Calculate next question ID
-                      const maxQuestionId = questions.length > 0 
-                        ? Math.max(...questions.map((question: any) => question.id))
-                        : 0;
-                      setNextIds(prev => ({ ...prev, questionId: maxQuestionId + 1 }));
-                    }
-                  }
-                } else {
-                  // No pages yet, so next question ID would be 1
-                  setNextIds(prev => ({ ...prev, questionId: 1 }));
-                }
+            // Try to get questions for all pages to find highest question ID
+            const questionPromises = allPages.map((page: any) => 
+              fetch(`/api/admin/questionnaires/pages/${page.id}/questions`)
+                .then(res => res.json())
+                .catch(() => [])
+            );
+            
+            const allQuestionsResults = await Promise.all(questionPromises);
+            const allQuestions = allQuestionsResults.flat();
+            
+            if (allQuestions.length > 0) {
+              const questionIds = allQuestions.map((q: any) => q.id).filter(Boolean);
+              if (questionIds.length > 0) {
+                nextQuestionId = Math.max(...questionIds) + 1;
               }
             }
-          } else {
-            // No definitions yet, so next page ID and question ID would be 1
-            setNextIds(prev => ({ ...prev, pageId: 1, questionId: 1 }));
           }
+        }
+      }
+      
+      // Update state with new values
+      console.log("Setting next IDs:", { nextDefinitionId, nextPageId, nextQuestionId });
+      setNextIds({
+        definitionId: nextDefinitionId,
+        pageId: nextPageId,
+        questionId: nextQuestionId
+      });
+      
+      // Also check the response data if available (for direct updates based on responses)
+      if (responseData) {
+        try {
+          const response = JSON.parse(responseData);
+          
+          // Check for definition creation/update response
+          if (response?.data?.id && 
+              (response.action === 'createDefinition' || response.action === 'updateDefinition')) {
+            setNextIds(prev => ({ ...prev, definitionId: response.data.id + 1 }));
+          }
+          
+          // Check for page creation/update response
+          if (response?.data?.id && 
+              (response.action === 'addPage' || response.action === 'updatePage')) {
+            setNextIds(prev => ({ ...prev, pageId: response.data.id + 1 }));
+          }
+          
+          // Check for question creation/update response with single question
+          if (response?.data?.id && 
+              (response.action === 'addQuestion' || response.action === 'updateQuestion')) {
+            setNextIds(prev => ({ ...prev, questionId: response.data.id + 1 }));
+          }
+          
+          // Check for questions array in response
+          if (response?.data?.questions && Array.isArray(response.data.questions)) {
+            const questions = response.data.questions;
+            const ids = questions.map((q: any) => q.id).filter(Boolean);
+            if (ids.length > 0) {
+              setNextIds(prev => ({ ...prev, questionId: Math.max(...ids) + 1 }));
+            }
+          }
+        } catch (e) {
+          // Response may not be valid JSON or doesn't contain ID information
+          console.log("Could not parse response data for ID updates");
         }
       }
     } catch (error) {
@@ -266,6 +316,38 @@ const UnifiedFormBuilderDemo: React.FC = () => {
           title: "Success",
           description: "Request processed successfully",
         });
+        
+        // Update IDs after successful request
+        setTimeout(() => {
+          fetchNextAvailableIds();
+        }, 500);
+        
+        // Check the response directly for IDs
+        try {
+          const parsedRequest = JSON.parse(requestBody);
+          const action = parsedRequest.action;
+          
+          // Update appropriate ID based on action type
+          if (action === 'createDefinition' && responseJson.data && responseJson.data.id) {
+            const newDefId = responseJson.data.id + 1;
+            setNextIds(prev => ({ ...prev, definitionId: newDefId }));
+          } else if (action === 'addPage' && responseJson.data && responseJson.data.id) {
+            const newPageId = responseJson.data.id + 1;
+            setNextIds(prev => ({ ...prev, pageId: newPageId }));
+          } else if ((action === 'addQuestions' || action === 'updateQuestion') && 
+                    responseJson.data && responseJson.data.questions) {
+            const questions = responseJson.data.questions;
+            if (Array.isArray(questions) && questions.length > 0) {
+              const ids = questions.map((q: any) => q.id).filter(Boolean);
+              if (ids.length > 0) {
+                const newQuestionId = Math.max(...ids) + 1;
+                setNextIds(prev => ({ ...prev, questionId: newQuestionId }));
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing response for ID updates:', error);
+        }
       }
     } catch (error) {
       console.error('Error sending request:', error);
@@ -333,18 +415,20 @@ const UnifiedFormBuilderDemo: React.FC = () => {
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-base font-medium">Select Action:</h3>
-                  <div className="text-sm text-gray-600 bg-gray-100 p-2 rounded-md">
-                    <span className="font-medium">Next Available IDs:</span>
-                    <span className="ml-2">Definition: <strong>{nextIds.definitionId || '?'}</strong></span>
-                    <span className="ml-2">Page: <strong>{nextIds.pageId || '?'}</strong></span>
-                    <span className="ml-2">Question: <strong>{nextIds.questionId || '?'}</strong></span>
+                  <div className="text-sm text-gray-600 bg-gray-100 p-2 rounded-md flex items-center justify-between">
+                    <div>
+                      <span className="font-medium">Next Available IDs:</span>
+                      <span className="ml-2 mr-1">Definition: <strong>{nextIds.definitionId || '?'}</strong></span>
+                      <span className="mx-1">Page: <strong>{nextIds.pageId || '?'}</strong></span>
+                      <span className="mx-1">Question: <strong>{nextIds.questionId || '?'}</strong></span>
+                    </div>
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       size="sm" 
-                      className="ml-2 h-6 px-2" 
+                      className="ml-2 h-6 px-2 bg-white" 
                       onClick={fetchNextAvailableIds}
                     >
-                      ↻
+                      Refresh IDs
                     </Button>
                   </div>
                 </div>
