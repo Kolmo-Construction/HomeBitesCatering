@@ -136,8 +136,10 @@ const QuestionnaireBuilder = () => {
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [conditionalLogicDialogOpen, setConditionalLogicDialogOpen] = useState(false);
   
-  // Additional state for options
+  // Additional state for options and matrix columns/rows
   const [questionOptions, setQuestionOptions] = useState<{ optionText: string; optionValue: string; order: number }[]>([]);
+  const [matrixColumns, setMatrixColumns] = useState<{ columnText: string; columnKey: string; order: number }[]>([]);
+  const [matrixRows, setMatrixRows] = useState<{ rowText: string; rowKey: string; order: number }[]>([]);
   
   // Forms
   const definitionForm = useForm<z.infer<typeof definitionFormSchema>>({
@@ -309,6 +311,15 @@ const QuestionnaireBuilder = () => {
       if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
         formData.options = questionOptions;
       }
+      
+      // Include matrix columns and rows if it's a matrix question
+      if (data.questionType === 'matrix') {
+        // We'll add matrixColumns and matrixRows to the payload
+        // The backend will handle storing these in the appropriate tables
+        formData.matrixColumns = matrixColumns;
+        formData.matrixRows = matrixRows;
+      }
+      
       const response = await apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, formData);
       return await response.json();
     },
@@ -423,6 +434,12 @@ const QuestionnaireBuilder = () => {
 
   const onSubmitQuestion = (data: z.infer<typeof questionFormSchema>) => {
     createQuestionMutation.mutate(data);
+    
+    // Reset matrix rows and columns on submission
+    if (data.questionType === 'matrix') {
+      setMatrixRows([]);
+      setMatrixColumns([]);
+    }
   };
 
   const onSubmitConditionalLogic = (data: z.infer<typeof conditionalLogicFormSchema>) => {
@@ -452,9 +469,56 @@ const QuestionnaireBuilder = () => {
     setQuestionOptions(newOptions);
   };
 
+  // Matrix column management helpers
+  const addMatrixColumn = () => {
+    setMatrixColumns([...matrixColumns, {
+      columnText: "",
+      columnKey: "",
+      order: matrixColumns.length
+    }]);
+  };
+
+  const updateMatrixColumn = (index: number, field: 'columnText' | 'columnKey', value: string) => {
+    const newColumns = [...matrixColumns];
+    newColumns[index][field] = value;
+    setMatrixColumns(newColumns);
+  };
+
+  const removeMatrixColumn = (index: number) => {
+    const newColumns = [...matrixColumns];
+    newColumns.splice(index, 1);
+    // Update the order property
+    newColumns.forEach((col, idx) => col.order = idx);
+    setMatrixColumns(newColumns);
+  };
+
+  // Matrix row management helpers
+  const addMatrixRow = () => {
+    setMatrixRows([...matrixRows, {
+      rowText: "",
+      rowKey: "",
+      order: matrixRows.length
+    }]);
+  };
+
+  const updateMatrixRow = (index: number, field: 'rowText' | 'rowKey', value: string) => {
+    const newRows = [...matrixRows];
+    newRows[index][field] = value;
+    setMatrixRows(newRows);
+  };
+
+  const removeMatrixRow = (index: number) => {
+    const newRows = [...matrixRows];
+    newRows.splice(index, 1);
+    // Update the order property
+    newRows.forEach((row, idx) => row.order = idx);
+    setMatrixRows(newRows);
+  };
+
   // Watch for question type changes to show/hide options
   const questionType = questionForm.watch("questionType");
   const showOptions = questionType === 'select' || questionType === 'radio' || questionType === 'checkbox';
+  const showMatrix = questionType === 'matrix';
 
   // Effect to set the initial order for new questions
   useEffect(() => {
@@ -1098,6 +1162,137 @@ const QuestionnaireBuilder = () => {
                                     </Button>
                                   </div>
                                 ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Matrix question configuration */}
+                        {showMatrix && (
+                          <div className="space-y-6 border p-4 rounded-md mt-4">
+                            <h4 className="font-semibold">Matrix Configuration</h4>
+                            <p className="text-gray-500 text-sm mb-4">
+                              A matrix question displays a grid of options where respondents can select responses for each row according to the column options.
+                            </p>
+                            
+                            {/* Matrix Columns (represent the response options for each row) */}
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <h5 className="font-medium">Matrix Columns (Response Options)</h5>
+                                <Button type="button" variant="outline" size="sm" onClick={addMatrixColumn}>
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Add Column
+                                </Button>
+                              </div>
+                              
+                              {matrixColumns.length === 0 ? (
+                                <div className="text-center text-gray-500 py-2">No columns added yet</div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {matrixColumns.map((column, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <Input
+                                        placeholder="Column text (e.g., 'Strongly Agree')"
+                                        value={column.columnText}
+                                        onChange={(e) => updateMatrixColumn(index, 'columnText', e.target.value)}
+                                        className="flex-1"
+                                      />
+                                      <Input
+                                        placeholder="Column key (e.g., 'strongly_agree')"
+                                        value={column.columnKey}
+                                        onChange={(e) => updateMatrixColumn(index, 'columnKey', e.target.value)}
+                                        className="flex-1"
+                                      />
+                                      <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => removeMatrixColumn(index)}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Matrix Rows (represent the statements or questions) */}
+                            <div className="space-y-4 mt-6">
+                              <div className="flex justify-between items-center">
+                                <h5 className="font-medium">Matrix Rows (Statements)</h5>
+                                <Button type="button" variant="outline" size="sm" onClick={addMatrixRow}>
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Add Row
+                                </Button>
+                              </div>
+                              
+                              {matrixRows.length === 0 ? (
+                                <div className="text-center text-gray-500 py-2">No rows added yet</div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {matrixRows.map((row, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <Input
+                                        placeholder="Row text (e.g., 'The service was excellent')"
+                                        value={row.rowText}
+                                        onChange={(e) => updateMatrixRow(index, 'rowText', e.target.value)}
+                                        className="flex-1"
+                                      />
+                                      <Input
+                                        placeholder="Row key (e.g., 'service_quality')"
+                                        value={row.rowKey}
+                                        onChange={(e) => updateMatrixRow(index, 'rowKey', e.target.value)}
+                                        className="flex-1"
+                                      />
+                                      <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => removeMatrixRow(index)}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Matrix Preview */}
+                            {matrixColumns.length > 0 && matrixRows.length > 0 && (
+                              <div className="mt-6 space-y-2">
+                                <h5 className="font-medium">Matrix Preview</h5>
+                                <div className="border rounded-md overflow-x-auto">
+                                  <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                      <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                          Question
+                                        </th>
+                                        {matrixColumns.map((column, i) => (
+                                          <th key={i} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            {column.columnText || `Column ${i+1}`}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                      {matrixRows.map((row, i) => (
+                                        <tr key={i}>
+                                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {row.rowText || `Row ${i+1}`}
+                                          </td>
+                                          {matrixColumns.map((column, j) => (
+                                            <td key={j} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                              <div className="h-4 w-4 rounded-full border border-gray-300 mx-auto"></div>
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
                             )}
                           </div>
