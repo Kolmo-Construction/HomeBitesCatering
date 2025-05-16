@@ -1683,7 +1683,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="create-definition" className="w-full">
+              <Tabs defaultValue="create-definition" className="w-full" onValueChange={handleTabChange}>
                 <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
                   <TabsTrigger value="create-definition">Create Definition</TabsTrigger>
                   <TabsTrigger value="add-page">Add Page</TabsTrigger>
