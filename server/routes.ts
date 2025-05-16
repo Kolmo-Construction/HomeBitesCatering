@@ -1695,8 +1695,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== Questionnaire Management Routes =====
+  // NOTE: Most questionnaire management functionality has been migrated to the unified builder API
+  // at /api/questionnaires/builder which uses an action parameter in the JSON body
+  // to determine which operation to perform.
   
-  // Questionnaire Definitions
+  // Questionnaire Definitions (Legacy APIs - use unified builder API for new code)
 
   // Get all questionnaire definitions
   app.get('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
