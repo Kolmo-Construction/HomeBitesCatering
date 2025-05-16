@@ -15,7 +15,7 @@ const HomeBites2025Form: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const { toast } = useToast();
 
-  // The complete form implementation
+  // The complete form implementation with full conditional logic
   const formData = {
     // Create the form definition
     createDefinition: JSON.stringify({
@@ -26,6 +26,211 @@ const HomeBites2025Form: React.FC = () => {
         status: 'active',
         version: '1.0',
         versionName: 'home-bites-2025'
+      }
+    }, null, 2),
+    
+    // Conditional Logic - Key rules for form navigation
+    venueSecuredCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'venue_secured',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['venue_name', 'venue_location']
+        }
+      }
+    }, null, 2),
+    
+    // Conditional logic for Promo Code
+    promoCodeCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'has_promo_code',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['promo_code']
+        }
+      }
+    }, null, 2),
+    
+    // Conditional Logic for Cocktail Hour timing
+    cocktailHourCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'cocktail_hour',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['cocktail_start_time', 'cocktail_end_time']
+        }
+      }
+    }, null, 2),
+    
+    // Conditional Logic for Menu Theme Selection
+    tacoFiestaMenuCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'menu_theme',
+          triggerCondition: 'equals',
+          triggerValue: 'taco_fiesta',
+          targetAction: 'show_pages',
+          targetPageIds: [6]
+        }
+      }
+    }, null, 2),
+    
+    americanBBQMenuCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'menu_theme',
+          triggerCondition: 'equals',
+          triggerValue: 'american_bbq',
+          targetAction: 'show_pages',
+          targetPageIds: [7]
+        }
+      }
+    }, null, 2),
+    
+    greekMenuCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'menu_theme',
+          triggerCondition: 'equals',
+          triggerValue: 'greek',
+          targetAction: 'show_pages',
+          targetPageIds: [8]
+        }
+      }
+    }, null, 2),
+    
+    kebabPartyMenuCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'menu_theme',
+          triggerCondition: 'equals',
+          triggerValue: 'kebab_party',
+          targetAction: 'show_pages',
+          targetPageIds: [9]
+        }
+      }
+    }, null, 2),
+    
+    italianMenuCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'menu_theme',
+          triggerCondition: 'equals',
+          triggerValue: 'italian',
+          targetAction: 'show_pages',
+          targetPageIds: [10]
+        }
+      }
+    }, null, 2),
+    
+    foodTruckMenuCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'menu_theme',
+          triggerCondition: 'equals',
+          triggerValue: 'food_truck_menu',
+          targetAction: 'show_pages',
+          targetPageIds: [11]
+        }
+      }
+    }, null, 2),
+    
+    // Conditional Logic for Desserts
+    dessertCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'add_desserts',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['dessert_options']
+        }
+      }
+    }, null, 2),
+    
+    // Conditional Logic for Beverages
+    beverageCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'add_beverages',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['beverage_package']
+        }
+      }
+    }, null, 2),
+    
+    // Conditional Logic for Staff
+    staffCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'add_staff',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['staff_hours', 'staff_count']
+        }
+      }
+    }, null, 2),
+    
+    // Conditional Logic for Rentals
+    rentalsCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'need_rentals',
+          triggerCondition: 'equals',
+          triggerValue: 'yes',
+          targetAction: 'show_questions',
+          targetQuestionKeys: ['rental_items']
+        }
+      }
+    }, null, 2),
+    
+    // Special Conditional Logic for Food Truck (skip some pages)
+    foodTruckSkipCondition: JSON.stringify({
+      action: 'addConditionalLogic',
+      data: {
+        definitionId: 18,
+        rule: {
+          triggerQuestionKey: 'event_type',
+          triggerCondition: 'equals',
+          triggerValue: 'food_truck',
+          targetAction: 'skip_to_page',
+          targetPageIds: [11] // Skip to Food Truck Menu page
+        }
       }
     }, null, 2),
 
@@ -787,12 +992,121 @@ const HomeBites2025Form: React.FC = () => {
 
     let success = true;
     let currentResponse = "";
+    let formId = null;
 
     try {
-      // Implementation of step-by-step API calls omitted for brevity
-      // This would make a series of API calls to build the entire form according to the specification
+      // Step 1: Create the form definition
+      const createDefResponse = await fetch('/api/questionnaires/builder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: formData.createDefinition,
+      });
       
-      setResponseData("Form has been fully implemented with all 16 pages and conditional logic");
+      if (!createDefResponse.ok) {
+        throw new Error(`Failed to create form definition: ${createDefResponse.statusText}`);
+      }
+      
+      const defData = await createDefResponse.json();
+      formId = defData.id;
+      setResponseData(`Form definition created with ID: ${formId}`);
+      
+      // Update progress
+      setCurrentStep(2);
+      
+      // Step 2: Create all pages sequentially
+      const pageKeys = Object.keys(formData).filter(key => key.startsWith('page') && !key.includes('Questions'));
+      for (const pageKey of pageKeys) {
+        const pageResponse = await fetch('/api/questionnaires/builder', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: formData[pageKey],
+        });
+        
+        if (!pageResponse.ok) {
+          throw new Error(`Failed to create page ${pageKey}: ${pageResponse.statusText}`);
+        }
+        
+        const pageData = await pageResponse.json();
+        currentResponse += `Page ${pageKey} created with ID: ${pageData.id}\n`;
+        setResponseData(currentResponse);
+      }
+      
+      // Update progress
+      setCurrentStep(3);
+      
+      // Step 3: Add questions to all pages
+      const questionKeys = Object.keys(formData).filter(key => key.includes('Questions'));
+      for (const questionKey of questionKeys) {
+        const questionResponse = await fetch('/api/questionnaires/builder', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: formData[questionKey],
+        });
+        
+        if (!questionResponse.ok) {
+          throw new Error(`Failed to add questions for ${questionKey}: ${questionResponse.statusText}`);
+        }
+        
+        const questionData = await questionResponse.json();
+        currentResponse += `Questions added to ${questionKey}\n`;
+        setResponseData(currentResponse);
+      }
+      
+      // Update progress
+      setCurrentStep(4);
+      
+      // Step 4: Add options to radio buttons and checkboxes
+      const optionKeys = Object.keys(formData).filter(key => key.includes('Options'));
+      for (const optionKey of optionKeys) {
+        const optionResponse = await fetch('/api/questionnaires/builder', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: formData[optionKey],
+        });
+        
+        if (!optionResponse.ok) {
+          throw new Error(`Failed to add options for ${optionKey}: ${optionResponse.statusText}`);
+        }
+        
+        const optionData = await optionResponse.json();
+        currentResponse += `Options added for ${optionKey}\n`;
+        setResponseData(currentResponse);
+      }
+      
+      // Update progress
+      setCurrentStep(5);
+      
+      // Step 5: Add conditional logic
+      const conditionKeys = Object.keys(formData).filter(key => key.includes('Condition'));
+      for (const conditionKey of conditionKeys) {
+        const conditionResponse = await fetch('/api/questionnaires/builder', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: formData[conditionKey],
+        });
+        
+        if (!conditionResponse.ok) {
+          throw new Error(`Failed to add conditional logic for ${conditionKey}: ${conditionResponse.statusText}`);
+        }
+        
+        const conditionData = await conditionResponse.json();
+        currentResponse += `Conditional logic added for ${conditionKey}\n`;
+        setResponseData(currentResponse);
+      }
+      
+      currentResponse += "\nForm has been fully implemented with all 16 pages and complex conditional logic!";
+      setResponseData(currentResponse);
+      
       toast({
         title: "Success!",
         description: "The full Home Bites 2025 Quotation Form has been created"
@@ -802,7 +1116,7 @@ const HomeBites2025Form: React.FC = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create the complete form. Check console for details."
+        description: `Failed to create the complete form: ${error.message}`
       });
       success = false;
     }
@@ -832,11 +1146,52 @@ const HomeBites2025Form: React.FC = () => {
               <li>Page 4: Food Service</li>
               <li>Page 5: Service Style</li>
               <li>Page 6: Taco Fiesta Menu</li>
-              <li>Pages 7-13: Other Menu Options</li> 
+              <li>Page 7: American BBQ Menu</li>
+              <li>Page 8: Greek Menu</li>
+              <li>Page 9: Kebab Party Menu</li>
+              <li>Page 10: Italian Menu</li>
+              <li>Page 11: Food Truck Menu</li>
+              <li>Page 12-13: Additional Menu Options</li> 
               <li>Page 14: Beverage Service</li>
               <li>Page 15: Staff Service</li>
               <li>Page 16: Additional Services</li>
             </ul>
+          </div>
+          
+          <div className="bg-muted p-4 rounded-lg mt-4">
+            <h3 className="text-lg font-medium mb-2">Implementation Progress:</h3>
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${currentStep >= 1 ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {currentStep >= 1 ? '✓' : '1'}
+                </div>
+                <span>Create Form Definition</span>
+              </div>
+              <div className="flex items-center">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${currentStep >= 2 ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {currentStep >= 2 ? '✓' : '2'}
+                </div>
+                <span>Create Pages (16 total)</span>
+              </div>
+              <div className="flex items-center">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${currentStep >= 3 ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {currentStep >= 3 ? '✓' : '3'}
+                </div>
+                <span>Add Questions to Pages</span>
+              </div>
+              <div className="flex items-center">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${currentStep >= 4 ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {currentStep >= 4 ? '✓' : '4'}
+                </div>
+                <span>Add Options for Questions</span>
+              </div>
+              <div className="flex items-center">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${currentStep >= 5 ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {currentStep >= 5 ? '✓' : '5'}
+                </div>
+                <span>Set up Conditional Logic</span>
+              </div>
+            </div>
           </div>
           
           <div className="mt-4">
@@ -855,7 +1210,7 @@ const HomeBites2025Form: React.FC = () => {
               <Textarea 
                 value={responseData} 
                 readOnly 
-                className="h-32" 
+                className="h-64" 
               />
             </div>
           )}
