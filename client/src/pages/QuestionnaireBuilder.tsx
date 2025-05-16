@@ -526,7 +526,13 @@ const QuestionnaireBuilder = () => {
   };
 
   const onSubmitPage = (data: z.infer<typeof pageFormSchema>) => {
-    createPageMutation.mutate(data);
+    if (editingPageId) {
+      // If we're editing an existing page
+      updatePageMutation.mutate({ id: editingPageId, data });
+    } else {
+      // If we're creating a new page
+      createPageMutation.mutate(data);
+    }
   };
 
   const onSubmitQuestion = (data: z.infer<typeof questionFormSchema>) => {
@@ -913,9 +919,9 @@ const QuestionnaireBuilder = () => {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Add New Page</DialogTitle>
+                      <DialogTitle>{editingPageId ? "Edit Page" : "Add New Page"}</DialogTitle>
                       <DialogDescription>
-                        Create a new page for your questionnaire.
+                        {editingPageId ? "Modify this page's properties." : "Create a new page for your questionnaire."}
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...pageForm}>
@@ -955,8 +961,11 @@ const QuestionnaireBuilder = () => {
                           )}
                         />
                         <DialogFooter>
-                          <Button type="submit" disabled={createPageMutation.isPending}>
-                            {createPageMutation.isPending ? "Creating..." : "Create Page"}
+                          <Button type="submit" disabled={createPageMutation.isPending || updatePageMutation.isPending}>
+                            {editingPageId
+                              ? (updatePageMutation.isPending ? "Updating..." : "Update Page")
+                              : (createPageMutation.isPending ? "Creating..." : "Create Page")
+                            }
                           </Button>
                         </DialogFooter>
                       </form>
