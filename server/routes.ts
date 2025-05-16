@@ -2213,7 +2213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Questionnaire Questions API Endpoints =====
   
-  // 1. Create a New Question for a Page
+  // 1. Create a New Question for a Page - supports both single question and bulk creation
   app.post('/api/admin/questionnaires/pages/:pageId/questions', isAdmin, async (req: Request, res: Response) => {
     try {
       const pageId = Number(req.params.pageId);
@@ -2227,107 +2227,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Questionnaire page not found' });
       }
       
-      // Validate the request body
-      const validatedData = questionnaireQuestionCreateSchema.parse(req.body);
-      
-      // Check for questionKey uniqueness (globally)
-      const existingQuestion = await db
-        .select()
-        .from(questionnaireQuestions)
-        .where(eq(questionnaireQuestions.questionKey, validatedData.questionKey))
-        .limit(1);
-      
-      if (existingQuestion.length > 0) {
-        return res.status(400).json({ 
-          message: 'Validation error', 
-          errors: [{ 
-            path: ['questionKey'], 
-            message: 'Question key must be globally unique',
-            code: 'custom' 
-          }]
-        });
-      }
-      
-      // Extract any options and matrixColumns from the validated data
-      const { options, matrixColumns, ...questionData } = validatedData;
-      
-      // Validate questionType against provided options/matrixColumns
-      const requiresOptions = ['select', 'radio', 'checkbox_group'].includes(questionData.questionType);
-      const requiresMatrixColumns = ['matrix_single', 'matrix_multi'].includes(questionData.questionType);
-      
-      if (requiresOptions && (!options || options.length === 0)) {
-        return res.status(400).json({ 
-          message: 'Validation error', 
-          errors: [{ 
-            path: ['options'], 
-            message: `Question type '${questionData.questionType}' requires at least one option`,
-            code: 'custom' 
-          }]
-        });
-      }
-      
-      if (requiresMatrixColumns && (!matrixColumns || matrixColumns.length === 0)) {
-        return res.status(400).json({ 
-          message: 'Validation error', 
-          errors: [{ 
-            path: ['matrixColumns'], 
-            message: `Question type '${questionData.questionType}' requires at least one matrix column`,
-            code: 'custom' 
-          }]
-        });
-      }
-      
-      // Create everything in a transaction
-      let newQuestion;
-      const questionWithRelations: any = {};
-      
-      await db.transaction(async (tx) => {
-        // 1. Create the question
-        const [createdQuestion] = await tx
-          .insert(questionnaireQuestions)
-          .values({
-            ...questionData,
-            pageId
-          })
-          .returning();
+      // Handle bulk creation (array of questions)
+      if (Array.isArray(req.body)) {
+        console.log(`Processing bulk creation of ${req.body.length} questions for page ${pageId}`);
         
-        newQuestion = createdQuestion;
-        questionWithRelations.question = createdQuestion;
-        questionWithRelations.options = [];
-        questionWithRelations.matrixColumns = [];
+        const result = await db.transaction(async (tx) => {
+          const createdQuestions = [];
+          
+          for (let i = 0; i < req.body.length; i++) {
+            const questionData = req.body[i];
+            try {
+              // Validate each question
+              const validatedData = questionnaireQuestionCreateSchema.parse(questionData);
+              
+              // Check for questionKey uniqueness (globally)
+              const existingQuestion = await tx
+                .select()
+                .from(questionnaireQuestions)
+                .where(eq(questionnaireQuestions.questionKey, validatedData.questionKey))
+                .limit(1);
+              
+              if (existingQuestion.length > 0) {
+                createdQuestions.push({
+                  error: `Question key '${validatedData.questionKey}' already exists`,
+                  index: i
+                });
+                continue;
+              }
+              
+              // Extract any options and matrixColumns from the validated data
+              const { options, matrixColumns, ...questionInfo } = validatedData;
+              
+              // Validate questionType against provided options/matrixColumns
+              const requiresOptions = ['select', 'radio', 'checkbox_group'].includes(questionInfo.questionType);
+              const requiresMatrixColumns = ['matrix_single', 'matrix_multi'].includes(questionInfo.questionType);
+              
+              if (requiresOptions && (!options || options.length === 0)) {
+                createdQuestions.push({
+                  error: `Question type '${questionInfo.questionType}' requires at least one option`,
+                  index: i
+                });
+                continue;
+              }
+              
+              if (requiresMatrixColumns && (!matrixColumns || matrixColumns.length === 0)) {
+                createdQuestions.push({
+                  error: `Question type '${questionInfo.questionType}' requires at least one matrix column`,
+                  index: i
+                });
+                continue;
+              }
+              
+              // Create the question
+              const [createdQuestion] = await tx
+                .insert(questionnaireQuestions)
+                .values({
+                  ...questionInfo,
+                  pageId,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                })
+                .returning();
+              
+              console.log(`Created question: ${questionInfo.questionText} with ID: ${createdQuestion.id}`);
+              
+              const questionWithRelations: any = {
+                question: createdQuestion,
+                options: [],
+                matrixColumns: []
+              };
+              
+              // Create options if provided
+              if (options && options.length > 0) {
+                const optionsToInsert = options.map(option => ({
+                  ...option,
+                  questionId: createdQuestion.id,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                }));
+                
+                const createdOptions = await tx
+                  .insert(questionnaireQuestionOptions)
+                  .values(optionsToInsert)
+                  .returning();
+                
+                console.log(`Created ${createdOptions.length} options for question ID: ${createdQuestion.id}`);
+                questionWithRelations.options = createdOptions;
+              }
+              
+              // Create matrix columns if provided
+              if (matrixColumns && matrixColumns.length > 0) {
+                const columnsToInsert = matrixColumns.map(column => ({
+                  ...column,
+                  questionId: createdQuestion.id,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                }));
+                
+                const createdColumns = await tx
+                  .insert(questionnaireMatrixColumns)
+                  .values(columnsToInsert)
+                  .returning();
+                
+                console.log(`Created ${createdColumns.length} matrix columns for question ID: ${createdQuestion.id}`);
+                questionWithRelations.matrixColumns = createdColumns;
+              }
+              
+              createdQuestions.push(questionWithRelations);
+            } catch (error) {
+              console.error(`Error processing question at index ${i}:`, error);
+              createdQuestions.push({
+                error: error instanceof z.ZodError 
+                  ? `Validation error: ${JSON.stringify(error.errors)}`
+                  : error instanceof Error 
+                    ? error.message 
+                    : 'Unknown error',
+                index: i
+              });
+            }
+          }
+          
+          return createdQuestions;
+        });
         
-        // 2. Create options if provided
-        if (options && options.length > 0) {
-          const optionsToInsert = options.map(option => ({
-            ...option,
-            questionId: createdQuestion.id
-          }));
-          
-          const createdOptions = await tx
-            .insert(questionnaireQuestionOptions)
-            .values(optionsToInsert)
-            .returning();
-          
-          questionWithRelations.options = createdOptions;
+        // Return all created questions or error information
+        res.status(201).json({
+          message: `Processed ${result.length} questions for page ${pageId}`,
+          results: result
+        });
+      } else {
+        // Handle single question creation (original behavior)
+        // Validate the request body
+        const validatedData = questionnaireQuestionCreateSchema.parse(req.body);
+        
+        // Check for questionKey uniqueness (globally)
+        const existingQuestion = await db
+          .select()
+          .from(questionnaireQuestions)
+          .where(eq(questionnaireQuestions.questionKey, validatedData.questionKey))
+          .limit(1);
+        
+        if (existingQuestion.length > 0) {
+          return res.status(400).json({ 
+            message: 'Validation error', 
+            errors: [{ 
+              path: ['questionKey'], 
+              message: 'Question key must be globally unique',
+              code: 'custom' 
+            }]
+          });
         }
         
-        // 3. Create matrix columns if provided
-        if (matrixColumns && matrixColumns.length > 0) {
-          const columnsToInsert = matrixColumns.map(column => ({
-            ...column,
-            questionId: createdQuestion.id
-          }));
-          
-          const createdColumns = await tx
-            .insert(questionnaireMatrixColumns)
-            .values(columnsToInsert)
+        // Extract any options and matrixColumns from the validated data
+        const { options, matrixColumns, ...questionData } = validatedData;
+        
+        // Validate questionType against provided options/matrixColumns
+        const requiresOptions = ['select', 'radio', 'checkbox_group'].includes(questionData.questionType);
+        const requiresMatrixColumns = ['matrix_single', 'matrix_multi'].includes(questionData.questionType);
+        
+        if (requiresOptions && (!options || options.length === 0)) {
+          return res.status(400).json({ 
+            message: 'Validation error', 
+            errors: [{ 
+              path: ['options'], 
+              message: `Question type '${questionData.questionType}' requires at least one option`,
+              code: 'custom' 
+            }]
+          });
+        }
+        
+        if (requiresMatrixColumns && (!matrixColumns || matrixColumns.length === 0)) {
+          return res.status(400).json({ 
+            message: 'Validation error', 
+            errors: [{ 
+              path: ['matrixColumns'], 
+              message: `Question type '${questionData.questionType}' requires at least one matrix column`,
+              code: 'custom' 
+            }]
+          });
+        }
+        
+        // Create everything in a transaction
+        let newQuestion;
+        const questionWithRelations: any = {};
+        
+        await db.transaction(async (tx) => {
+          // 1. Create the question
+          const [createdQuestion] = await tx
+            .insert(questionnaireQuestions)
+            .values({
+              ...questionData,
+              pageId
+            })
             .returning();
           
-          questionWithRelations.matrixColumns = createdColumns;
-        }
-      });
-      
-      res.status(201).json(questionWithRelations);
+          newQuestion = createdQuestion;
+          questionWithRelations.question = createdQuestion;
+          questionWithRelations.options = [];
+          questionWithRelations.matrixColumns = [];
+          
+          // 2. Create options if provided
+          if (options && options.length > 0) {
+            const optionsToInsert = options.map(option => ({
+              ...option,
+              questionId: createdQuestion.id
+            }));
+            
+            const createdOptions = await tx
+              .insert(questionnaireQuestionOptions)
+              .values(optionsToInsert)
+              .returning();
+            
+            questionWithRelations.options = createdOptions;
+          }
+          
+          // 3. Create matrix columns if provided
+          if (matrixColumns && matrixColumns.length > 0) {
+            const columnsToInsert = matrixColumns.map(column => ({
+              ...column,
+              questionId: createdQuestion.id
+            }));
+            
+            const createdColumns = await tx
+              .insert(questionnaireMatrixColumns)
+              .values(columnsToInsert)
+              .returning();
+            
+            questionWithRelations.matrixColumns = createdColumns;
+          }
+        });
+        
+        res.status(201).json(questionWithRelations);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
