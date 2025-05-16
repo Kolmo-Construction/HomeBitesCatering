@@ -5,6 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sparkles } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 
 const JSONRequestTester = () => {
   const { toast } = useToast();
@@ -13,6 +16,8 @@ const JSONRequestTester = () => {
   const [requestBody, setRequestBody] = useState("");
   const [response, setResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   const handleSubmit = async () => {
     if (!endpoint) {
@@ -232,6 +237,83 @@ const JSONRequestTester = () => {
     setEndpoint(example.endpoint);
     setRequestBody(example.body ? JSON.stringify(example.body, null, 2) : "");
   };
+  
+  // AI generation mutation
+  const generateJsonMutation = useMutation({
+    mutationFn: async (prompt: string) => {
+      const response = await apiRequest('POST', '/api/admin/questionnaires/ai-generate', {
+        prompt: prompt,
+        format: 'json',
+        contextType: 'api_request'
+      });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      if (data.json) {
+        try {
+          // Try to parse and set the generated JSON
+          const parsedJson = JSON.parse(data.json);
+          
+          // If we have endpoint and method info, set those too
+          if (data.endpoint) {
+            setEndpoint(data.endpoint);
+          }
+          
+          if (data.method) {
+            setMethod(data.method as "GET" | "POST" | "PUT" | "DELETE");
+          }
+          
+          // Set the request body
+          setRequestBody(JSON.stringify(parsedJson, null, 2));
+          
+          toast({
+            title: "AI Generation Complete",
+            description: "Generated JSON has been added to the request body"
+          });
+        } catch (e) {
+          // If parsing fails, just set it as text
+          setRequestBody(data.json);
+          
+          toast({
+            title: "JSON Generated",
+            description: "The AI output has been added to the request body"
+          });
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate valid JSON",
+          variant: "destructive"
+        });
+      }
+      
+      setAiDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "AI Generation Failed",
+        description: error.message || "Failed to generate JSON",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleAiPromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAiPrompt(e.target.value);
+  };
+  
+  const handleAiGenerate = () => {
+    if (!aiPrompt.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a prompt for the AI",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    generateJsonMutation.mutate(aiPrompt);
+  };
 
   return (
     <Card className="w-full">
@@ -301,15 +383,62 @@ const JSONRequestTester = () => {
           </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? "Sending Request..." : "Send Request"}
-        </Button>
+      <CardFooter className="flex flex-col gap-4">
+        <div className="flex w-full gap-4">
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="flex-1"
+          >
+            {isLoading ? "Sending Request..." : "Send Request"}
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => setAiDialogOpen(true)}
+            className="gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            AI Assist
+          </Button>
+        </div>
       </CardFooter>
+      
+      {/* AI Assistant Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>AI Request Generator</DialogTitle>
+            <DialogDescription>
+              Describe what API request you want to create, and the AI will generate the JSON for you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Textarea
+              placeholder="E.g. Create a questionnaire definition with 3 pages and 5 questions on each page focusing on customer feedback about our catering service."
+              value={aiPrompt}
+              onChange={handleAiPromptChange}
+              className="min-h-[200px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={handleAiGenerate} 
+              className="gap-2"
+              disabled={generateJsonMutation.isPending}
+            >
+              {generateJsonMutation.isPending ? (
+                "Generating..."
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate JSON
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
