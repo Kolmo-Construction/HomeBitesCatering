@@ -190,7 +190,12 @@ const QuestionnaireBuilder = () => {
   // Queries
   const { data: definitions, isLoading: isLoadingDefinitions } = useQuery({
     queryKey: ['/api/admin/questionnaires/definitions'],
-    queryFn: () => apiRequest('GET', '/api/admin/questionnaires/definitions')
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/questionnaires/definitions');
+      const data = await response.json();
+      console.log('Fetched questionnaire definitions:', data);
+      return data;
+    }
   });
 
   const { data: pages, isLoading: isLoadingPages } = useQuery({
