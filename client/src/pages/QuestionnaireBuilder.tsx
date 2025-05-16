@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import JSONRequestTester from '@/components/JSONRequestTester';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 
 import {
   Card,
@@ -2052,13 +2053,32 @@ const QuestionnaireBuilder = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-10 border rounded-md">
-                <h3 className="text-lg font-semibold mb-2">Preview Coming Soon</h3>
-                <p className="text-gray-600 mb-4">Preview functionality will be available in a future update.</p>
-                <Button onClick={() => setActiveTab("definitions")}>
-                  Return to Definitions
-                </Button>
-              </div>
+              {selectedDefinition && pages && pages.length > 0 ? (
+                <div>
+                  <div className="mb-4">
+                    <Button onClick={() => setActiveTab("definitions")} variant="outline" className="mr-2">
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Return to Definitions
+                    </Button>
+                    <Button onClick={() => loadAllQuestionsForPreview()} variant="outline">
+                      <RefreshCw className="mr-2 h-4 w-4" /> Refresh Preview
+                    </Button>
+                  </div>
+                  <QuestionnairePreview
+                    definitionId={selectedDefinition}
+                    pages={pages || []}
+                    questionsMap={questionsMap}
+                    onClose={() => setActiveTab("definitions")}
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Questionnaire Selected</h3>
+                  <p className="text-gray-600 mb-4">Please select a questionnaire definition to preview.</p>
+                  <Button onClick={() => setActiveTab("definitions")}>
+                    Return to Definitions
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
