@@ -935,18 +935,6 @@ const QuestionnaireBuilder = () => {
                             <List className="h-4 w-4 mr-1" />
                             Pages
                           </Button>
-                          <Button
-                            variant="outline" 
-                            size="sm"
-                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-                            onClick={() => {
-                              setSelectedDefinition(def.id);
-                              handleOpenPreview();
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Preview
-                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm">
@@ -994,32 +982,29 @@ const QuestionnaireBuilder = () => {
         {/* Pages Tab Content */}
         {activeTab === "pages" && (
           <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Pages</CardTitle>
-                  <CardDescription>
-                    {selectedDefinition && definitions ? (
-                      <span>Managing pages for: <strong>{definitions.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
-                    ) : (
-                      <span>Select a definition first</span>
-                    )}
-                  </CardDescription>
-                </div>
-                <Dialog 
-                  open={pageDialogOpen} 
-                  onOpenChange={(open) => {
-                    if (!open) {
-                      // Reset form and editing state when dialog is closed
-                      setEditingPageId(null);
-                      pageForm.reset({
-                        title: "",
-                        order: 0
-                      });
-                    }
-                    setPageDialogOpen(open);
-                  }}
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Pages</CardTitle>
+                <CardDescription>
+                  {selectedDefinition && definitions ? (
+                    <span>Managing pages for: <strong>{definitions.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
+                  ) : (
+                    <span>Select a definition first</span>
+                  )}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  disabled={!selectedDefinition || !pages || pages.length === 0}
+                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                  onClick={handleOpenPreview}
                 >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview Form
+                </Button>
+                
+                <Dialog open={pageDialogOpen} onOpenChange={setPageDialogOpen}>
                   <DialogTrigger asChild>
                     <Button disabled={!selectedDefinition}>
                       <PlusCircle className="mr-2 h-4 w-4" />
