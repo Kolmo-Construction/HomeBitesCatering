@@ -4022,14 +4022,14 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
           }
           
           // Update the rule
-          const updatedRule = await storage.updateQuestionnaireConditionalLogic(data.ruleId, {
-            triggerQuestionKey: data.triggerQuestionKey,
-            triggerCondition: data.triggerCondition,
-            triggerValue: data.triggerValue,
-            actionType: data.actionType,
-            targetQuestionKey: data.targetQuestionKey,
-            targetPageId: data.targetPageId,
-            targetOptionValue: data.targetOptionValue
+          const updatedRule = await storage.updateConditionalLogicRule(data.ruleId, {
+            triggerQuestionKey: data.updatedRule.triggerQuestionKey,
+            triggerCondition: data.updatedRule.triggerCondition,
+            triggerValue: data.updatedRule.triggerValue,
+            actionType: data.updatedRule.actionType,
+            targetQuestionKey: data.updatedRule.targetQuestionKey,
+            targetPageId: data.updatedRule.targetPageId,
+            targetOptionValue: data.updatedRule.targetOptionValue
           });
           
           if (!updatedRule) {
