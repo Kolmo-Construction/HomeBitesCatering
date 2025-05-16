@@ -1,0 +1,80 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+QuestionnaireBuilder.tsx:201 Fetched questionnaire definitions: []
+hook.js:608 Warning: Using UNSAFE_componentWillMount in strict mode is not recommended and may indicate bugs in your code. See https://reactjs.org/link/unsafe-component-lifecycles for details.
+
+* Move code with side effects to componentDidMount, and set initial state in the constructor.
+
+Please update the following components: SideEffect(NullComponent2)
+overrideMethod @ hook.js:608
+printWarning @ chunk-XQLYTHWV.js?v=9db7b8cc:521
+error @ chunk-XQLYTHWV.js?v=9db7b8cc:505
+ReactStrictModeWarnings.flushPendingUnsafeLifecycleWarnings @ chunk-XQLYTHWV.js?v=9db7b8cc:9762
+flushRenderPhaseStrictModeWarningsInDEV @ chunk-XQLYTHWV.js?v=9db7b8cc:19673
+commitRootImpl @ chunk-XQLYTHWV.js?v=9db7b8cc:19288
+commitRoot @ chunk-XQLYTHWV.js?v=9db7b8cc:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=9db7b8cc:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=9db7b8cc:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=9db7b8cc:18627
+HomeBites2025Form.tsx:1041 
+            
+            
+           GET https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/api/admin/questionnaires/definitions/undefined/pages 400 (Bad Request)
+executeFullForm @ HomeBites2025Form.tsx:1041
+await in executeFullForm
+callCallback2 @ chunk-XQLYTHWV.js?v=9db7b8cc:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=9db7b8cc:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=9db7b8cc:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=9db7b8cc:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=9db7b8cc:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=9db7b8cc:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=9db7b8cc:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=9db7b8cc:7051
+(anonymous) @ chunk-XQLYTHWV.js?v=9db7b8cc:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=9db7b8cc:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=9db7b8cc:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=9db7b8cc:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=9db7b8cc:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=9db7b8cc:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=9db7b8cc:5449
+HomeBites2025Form.tsx:1083 
+            
+            
+           POST https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/api/questionnaires/builder 400 (Bad Request)
+executeFullForm @ HomeBites2025Form.tsx:1083
+await in executeFullForm
+callCallback2 @ chunk-XQLYTHWV.js?v=9db7b8cc:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=9db7b8cc:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=9db7b8cc:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=9db7b8cc:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=9db7b8cc:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=9db7b8cc:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=9db7b8cc:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=9db7b8cc:7051
+(anonymous) @ chunk-XQLYTHWV.js?v=9db7b8cc:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=9db7b8cc:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=9db7b8cc:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=9db7b8cc:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=9db7b8cc:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=9db7b8cc:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=9db7b8cc:5449
+HomeBites2025Form.tsx:1183 Error creating form: Error: Failed to create page page1: Bad Request
+    at executeFullForm (HomeBites2025Form.tsx:1092:19)
+overrideMethod @ hook.js:608
+executeFullForm @ HomeBites2025Form.tsx:1183
+await in executeFullForm
+callCallback2 @ chunk-XQLYTHWV.js?v=9db7b8cc:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=9db7b8cc:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=9db7b8cc:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-XQLYTHWV.js?v=9db7b8cc:3736
+executeDispatch @ chunk-XQLYTHWV.js?v=9db7b8cc:7014
+processDispatchQueueItemsInOrder @ chunk-XQLYTHWV.js?v=9db7b8cc:7034
+processDispatchQueue @ chunk-XQLYTHWV.js?v=9db7b8cc:7043
+dispatchEventsForPlugins @ chunk-XQLYTHWV.js?v=9db7b8cc:7051
+(anonymous) @ chunk-XQLYTHWV.js?v=9db7b8cc:7174
+batchedUpdates$1 @ chunk-XQLYTHWV.js?v=9db7b8cc:18913
+batchedUpdates @ chunk-XQLYTHWV.js?v=9db7b8cc:3579
+dispatchEventForPluginEventSystem @ chunk-XQLYTHWV.js?v=9db7b8cc:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-XQLYTHWV.js?v=9db7b8cc:5478
+dispatchEvent @ chunk-XQLYTHWV.js?v=9db7b8cc:5472
+dispatchDiscreteEvent @ chunk-XQLYTHWV.js?v=9db7b8cc:5449
