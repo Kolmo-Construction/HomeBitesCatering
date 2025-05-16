@@ -144,6 +144,9 @@ const QuestionnaireBuilder = () => {
   const [matrixColumns, setMatrixColumns] = useState<{ columnText: string; columnKey: string; order: number }[]>([]);
   const [matrixRows, setMatrixRows] = useState<{ rowText: string; rowKey: string; order: number }[]>([]);
   
+  // State for tracking which question is being edited
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  
   // Forms
   const definitionForm = useForm<z.infer<typeof definitionFormSchema>>({
     resolver: zodResolver(definitionFormSchema),
@@ -399,6 +402,45 @@ const QuestionnaireBuilder = () => {
     }
   });
 
+  const updateQuestionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      // Add options to the data if they exist
+      const formData = { ...data };
+      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
+        formData.options = questionOptions;
+      }
+      
+      // Include matrix columns and rows if it's a matrix question
+      if (data.questionType === 'matrix') {
+        formData.matrixColumns = matrixColumns;
+        formData.matrixRows = matrixRows;
+      }
+      
+      const response = await apiRequest('PUT', `/api/admin/questionnaires/questions/${id}`, formData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
+      setQuestionOptions([]);
+      setEditingQuestionId(null);
+      setQuestionDialogOpen(false);
+      questionForm.reset();
+      
+      toast({
+        title: "Success",
+        description: "Question updated successfully"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update question",
+        variant: "destructive"
+      });
+    }
+  });
+
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest('DELETE', `/api/admin/questionnaires/questions/${id}`);
@@ -436,7 +478,13 @@ const QuestionnaireBuilder = () => {
   };
 
   const onSubmitQuestion = (data: z.infer<typeof questionFormSchema>) => {
-    createQuestionMutation.mutate(data);
+    if (editingQuestionId) {
+      // Update existing question
+      updateQuestionMutation.mutate({ id: editingQuestionId, data });
+    } else {
+      // Create new question
+      createQuestionMutation.mutate(data);
+    }
     
     // Reset matrix rows and columns on submission
     if (data.questionType === 'matrix') {
