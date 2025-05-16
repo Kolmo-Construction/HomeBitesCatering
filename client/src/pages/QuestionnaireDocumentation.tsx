@@ -1,801 +1,813 @@
-import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Helmet } from "react-helmet";
 
-const QuestionnaireDocumentation = () => {
+export default function QuestionnaireDocumentation() {
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-2">Questionnaire System Documentation</h1>
-      <p className="text-muted-foreground mb-8">
-        Complete guide to using the dynamic questionnaire system for catering inquiries
-      </p>
+    <>
+      <Helmet>
+        <title>Questionnaire Documentation | Home Bites CMS</title>
+        <meta name="description" content="Documentation for the dynamic questionnaire system API endpoints and usage" />
+      </Helmet>
+      
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-col mb-6">
+          <h1 className="text-2xl font-bold">Dynamic Questionnaire System Documentation</h1>
+          <p className="text-muted-foreground mt-2">
+            Comprehensive guide for integrating and using the questionnaire system
+          </p>
+        </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="admin-api">Admin API</TabsTrigger>
-          <TabsTrigger value="public-api">Public API</TabsTrigger>
-          <TabsTrigger value="bulk-import">Bulk Import</TabsTrigger>
-          <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="admin-api">Admin API</TabsTrigger>
+            <TabsTrigger value="public-api">Public API</TabsTrigger>
+            <TabsTrigger value="bulk-import">Bulk Import</TabsTrigger>
+            <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
+          </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Overview</CardTitle>
-              <CardDescription>
-                Understanding the questionnaire system architecture and components
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Core Components</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  The questionnaire system consists of several interconnected components:
-                </p>
-                <ul className="list-disc pl-6 space-y-2">
-                  <li><strong>Questionnaire Definitions</strong> - The top-level container for a questionnaire</li>
-                  <li><strong>Pages</strong> - Groups of related questions that can be displayed together</li>
-                  <li><strong>Questions</strong> - Individual form elements that collect specific pieces of information</li>
-                  <li><strong>Conditional Logic</strong> - Rules that control the visibility or requirements of questions</li>
-                  <li><strong>Submissions</strong> - Customer responses that can be linked to leads and opportunities</li>
-                </ul>
-              </div>
+          <TabsContent value="overview" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Architecture</CardTitle>
+                <CardDescription>
+                  Understanding the questionnaire system components
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[60vh]">
+                  <div className="space-y-4">
+                    <section>
+                      <h3 className="text-lg font-medium">Introduction</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        The dynamic questionnaire system is designed to create customizable forms for collecting 
+                        information from leads and clients. It supports various question types, conditional logic, 
+                        and integrates with the existing lead management workflow.
+                      </p>
+                    </section>
 
-              <Separator />
+                    <Separator className="my-4" />
 
-              <div>
-                <h3 className="text-lg font-medium mb-2">Data Flow</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  How information flows through the questionnaire system:
-                </p>
-                <ol className="list-decimal pl-6 space-y-2">
-                  <li>Administrators create questionnaire definitions with pages and questions</li>
-                  <li>One questionnaire can be designated as "active" for public display</li>
-                  <li>Customers access the active questionnaire through the public API</li>
-                  <li>Submissions are processed and stored, with contact information extracted</li>
-                  <li>New raw leads are created based on questionnaire submissions</li>
-                  <li>Raw leads can be converted to opportunities for follow-up</li>
-                </ol>
-              </div>
+                    <section>
+                      <h3 className="text-lg font-medium">Core Components</h3>
+                      <ul className="mt-2 list-disc pl-5 text-sm space-y-2">
+                        <li>
+                          <strong>Questionnaire Definitions</strong>: The top-level container for a questionnaire, including metadata like version name and active status.
+                        </li>
+                        <li>
+                          <strong>Pages</strong>: Groups of questions that are presented together, allowing for multi-step forms.
+                        </li>
+                        <li>
+                          <strong>Questions</strong>: Individual form fields with various types (text, number, select, etc.).
+                        </li>
+                        <li>
+                          <strong>Options</strong>: Possible values for select/choice-based questions.
+                        </li>
+                        <li>
+                          <strong>Conditional Logic</strong>: Rules that control the visibility and flow of questions based on previous answers.
+                        </li>
+                        <li>
+                          <strong>Submissions</strong>: Stored responses from users, linked to raw leads or opportunities.
+                        </li>
+                      </ul>
+                    </section>
 
-              <Separator />
+                    <Separator className="my-4" />
 
-              <div>
-                <h3 className="text-lg font-medium mb-2">Question Types</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  The system supports the following question types:
-                </p>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Options Required</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell><code>text</code></TableCell>
-                      <TableCell>Single-line text input</TableCell>
-                      <TableCell>No</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>email</code></TableCell>
-                      <TableCell>Email address input with validation</TableCell>
-                      <TableCell>No</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>phone</code></TableCell>
-                      <TableCell>Phone number input</TableCell>
-                      <TableCell>No</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>number</code></TableCell>
-                      <TableCell>Numeric input with optional validation</TableCell>
-                      <TableCell>No</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>date</code></TableCell>
-                      <TableCell>Date picker</TableCell>
-                      <TableCell>No</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>textarea</code></TableCell>
-                      <TableCell>Multi-line text input</TableCell>
-                      <TableCell>No</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>select</code></TableCell>
-                      <TableCell>Dropdown menu with options</TableCell>
-                      <TableCell>Yes</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>radio</code></TableCell>
-                      <TableCell>Radio button group (single selection)</TableCell>
-                      <TableCell>Yes</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>checkbox</code></TableCell>
-                      <TableCell>Checkbox group (multiple selection)</TableCell>
-                      <TableCell>Yes</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <section>
+                      <h3 className="text-lg font-medium">Data Model</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        The questionnaire system uses the following database tables:
+                      </p>
+                      <ul className="mt-2 list-disc pl-5 text-sm space-y-2">
+                        <li><code>questionnaire_definitions</code>: Stores metadata about questionnaires</li>
+                        <li><code>questionnaire_pages</code>: Stores pages within questionnaires</li>
+                        <li><code>questionnaire_questions</code>: Stores individual questions</li>
+                        <li><code>questionnaire_options</code>: Stores options for select/multi-select questions</li>
+                        <li><code>questionnaire_conditional_logic</code>: Stores conditional display rules</li>
+                        <li><code>questionnaire_submissions</code>: Stores user responses</li>
+                        <li><code>questionnaire_answers</code>: Stores individual answers within submissions</li>
+                      </ul>
+                    </section>
 
-        {/* Admin API Tab */}
-        <TabsContent value="admin-api">
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin API Reference</CardTitle>
-              <CardDescription>
-                API endpoints for administrative management of questionnaires
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              {/* Definitions API */}
-              <div>
-                <h3 className="text-lg font-medium mb-2">Questionnaire Definitions</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">POST /api/admin/questionnaires/definitions</h4>
-                    <p className="text-sm mt-1">Create a new questionnaire definition</p>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Request Body:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Integration Points</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        The questionnaire system integrates with the following components:
+                      </p>
+                      <ul className="mt-2 list-disc pl-5 text-sm space-y-2">
+                        <li>
+                          <strong>Raw Leads</strong>: When a questionnaire is submitted by a new lead, a record is created in the raw_leads table.
+                        </li>
+                        <li>
+                          <strong>Opportunities</strong>: Questionnaire submissions can be linked to existing opportunities to collect additional information.
+                        </li>
+                        <li>
+                          <strong>Clients</strong>: Once a raw lead is converted to an opportunity and then to a client, the questionnaire data remains linked.
+                        </li>
+                      </ul>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Versioning</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        The system supports multiple versions of questionnaires, with only one being active at a time.
+                        This allows for testing new versions without affecting the live questionnaire.
+                      </p>
+                    </section>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="admin-api" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin API Reference</CardTitle>
+                <CardDescription>
+                  Endpoints for managing questionnaires (admin access required)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[60vh]">
+                  <div className="space-y-4">
+                    <section>
+                      <h3 className="text-lg font-medium">Authentication</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        All admin API endpoints require authentication with an admin user account.
+                        Requests without proper authentication will receive a 401 Unauthorized or 403 Forbidden response.
+                      </p>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Questionnaire Definitions</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Create Questionnaire Definition</h4>
+                        <p className="text-xs text-muted-foreground mt-1">POST /api/admin/questionnaires/definitions</p>
+                        <p className="text-sm mt-2">Creates a new questionnaire definition.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
 {`{
-  "versionName": "Customer Intake Form v1", // Required
-  "description": "Collect catering inquiry details", // Optional
-  "isActive": true // Optional, defaults to false
+  "versionName": "Customer Intake v1",
+  "description": "Initial questionnaire for new customers",
+  "isActive": true
 }`}
-                      </pre>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">GET /api/admin/questionnaires/definitions</h4>
-                    <p className="text-sm mt-1">List all questionnaire definitions</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pages API */}
-              <div>
-                <h3 className="text-lg font-medium mb-2">Questionnaire Pages</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">POST /api/admin/questionnaires/definitions/:definitionId/pages</h4>
-                    <p className="text-sm mt-1">Create a new page in a questionnaire</p>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Request Body:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
+                          </pre>
+                        </div>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Response:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
 {`{
-  "title": "Contact Information", // Required
-  "order": 0 // Required, determines display order
+  "id": 1,
+  "versionName": "Customer Intake v1",
+  "description": "Initial questionnaire for new customers",
+  "isActive": true,
+  "createdAt": "2023-05-15T12:00:00Z",
+  "updatedAt": "2023-05-15T12:00:00Z"
 }`}
-                      </pre>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">GET /api/admin/questionnaires/definitions/:definitionId/pages</h4>
-                    <p className="text-sm mt-1">List all pages in a questionnaire</p>
-                  </div>
-                </div>
-              </div>
+                          </pre>
+                        </div>
+                      </div>
 
-              {/* Questions API */}
-              <div>
-                <h3 className="text-lg font-medium mb-2">Questionnaire Questions</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">POST /api/admin/questionnaires/pages/:pageId/questions</h4>
-                    <p className="text-sm mt-1">Create a new question in a page</p>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Request Body:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Get Questionnaire Definitions</h4>
+                        <p className="text-xs text-muted-foreground mt-1">GET /api/admin/questionnaires/definitions</p>
+                        <p className="text-sm mt-2">Retrieves all questionnaire definitions.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Response:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`[
+  {
+    "id": 1,
+    "versionName": "Customer Intake v1",
+    "description": "Initial questionnaire for new customers",
+    "isActive": true,
+    "createdAt": "2023-05-15T12:00:00Z",
+    "updatedAt": "2023-05-15T12:00:00Z"
+  },
+  ...
+]`}
+                          </pre>
+                        </div>
+                      </div>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Pages</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Create Page</h4>
+                        <p className="text-xs text-muted-foreground mt-1">POST /api/admin/questionnaires/definitions/:definitionId/pages</p>
+                        <p className="text-sm mt-2">Creates a new page within a questionnaire definition.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
 {`{
-  "questionText": "What is your name?", // Required
-  "questionKey": "name", // Required, unique identifier
-  "questionType": "text", // Required: text, email, phone, etc.
-  "order": 0, // Required, determines display order
-  "isRequired": true, // Optional, defaults to false
-  "placeholderText": "Enter your full name", // Optional
-  "helpText": "Please provide your legal name", // Optional
-  "options": [ // Required for select, radio, checkbox
+  "title": "Basic Information",
+  "order": 1
+}`}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Reorder Pages</h4>
+                        <p className="text-xs text-muted-foreground mt-1">PATCH /api/admin/questionnaires/definitions/:definitionId/pages/reorder</p>
+                        <p className="text-sm mt-2">Updates the order of pages within a questionnaire.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`{
+  "pageOrders": [
+    { "id": 1, "order": 2 },
+    { "id": 2, "order": 1 }
+  ]
+}`}
+                          </pre>
+                        </div>
+                      </div>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Questions</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Create Question</h4>
+                        <p className="text-xs text-muted-foreground mt-1">POST /api/admin/questionnaires/pages/:pageId/questions</p>
+                        <p className="text-sm mt-2">Creates a new question within a page.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`{
+  "questionText": "What is your name?",
+  "questionKey": "customer_name",
+  "questionType": "text",
+  "isRequired": true,
+  "helpText": "Please enter your full name",
+  "order": 1,
+  "options": []
+}`}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Create Question with Options</h4>
+                        <p className="text-xs text-muted-foreground mt-1">POST /api/admin/questionnaires/pages/:pageId/questions</p>
+                        <p className="text-sm mt-2">Creates a new select question with options.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`{
+  "questionText": "What type of event are you planning?",
+  "questionKey": "event_type",
+  "questionType": "select",
+  "isRequired": true,
+  "helpText": "Select the type of event",
+  "order": 2,
+  "options": [
     {
-      "optionText": "Display Text",
-      "optionValue": "stored_value",
-      "order": 0
+      "value": "wedding",
+      "label": "Wedding",
+      "order": 1
+    },
+    {
+      "value": "corporate",
+      "label": "Corporate Event",
+      "order": 2
+    },
+    {
+      "value": "birthday",
+      "label": "Birthday Party",
+      "order": 3
     }
   ]
 }`}
-                      </pre>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">GET /api/admin/questionnaires/pages/:pageId/questions</h4>
-                    <p className="text-sm mt-1">List all questions in a page</p>
-                  </div>
-                </div>
-              </div>
+                          </pre>
+                        </div>
+                      </div>
+                    </section>
 
-              {/* Conditional Logic API */}
-              <div>
-                <h3 className="text-lg font-medium mb-2">Conditional Logic</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">POST /api/admin/questionnaires/definitions/:definitionId/conditional-logic</h4>
-                    <p className="text-sm mt-1">Create a conditional logic rule</p>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Request Body:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
-{`{
-  "triggerQuestionKey": "eventType", // Required, the question key that triggers the rule
-  "triggerCondition": "equals", // Required: equals, not_equals, contains, etc.
-  "triggerValue": "wedding", // Required for most conditions (except is_answered)
-  "actionType": "show_question", // Required: show_question, hide_question, etc.
-  "targetQuestionKey": "weddingDetails" // Required, the question affected by this rule
-}`}
-                      </pre>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">GET /api/admin/questionnaires/definitions/:definitionId/conditional-logic</h4>
-                    <p className="text-sm mt-1">List all conditional logic rules for a questionnaire</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <Separator className="my-4" />
 
-        {/* Public API Tab */}
-        <TabsContent value="public-api">
-          <Card>
-            <CardHeader>
-              <CardTitle>Public API Reference</CardTitle>
-              <CardDescription>
-                API endpoints for public access to questionnaires
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Retrieving Questionnaires</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">GET /api/questionnaires/active</h4>
-                    <p className="text-sm mt-1">Get the currently active questionnaire</p>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Response:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
+                    <section>
+                      <h3 className="text-lg font-medium">Conditional Logic</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Create Conditional Logic Rule</h4>
+                        <p className="text-xs text-muted-foreground mt-1">POST /api/admin/questionnaires/definitions/:definitionId/conditional-logic</p>
+                        <p className="text-sm mt-2">Creates a new conditional logic rule.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
 {`{
-  "success": true,
-  "questionnaire": {
-    "definition": {
-      "id": 1,
-      "versionName": "Customer Intake Form v1",
-      "description": "Collect catering inquiry details",
-      "isActive": true,
-      "createdAt": "2025-05-15T12:00:00.000Z",
-      "updatedAt": "2025-05-15T12:00:00.000Z"
-    },
-    "pages": [
-      {
-        "page": {
-          "id": 1,
-          "definitionId": 1,
-          "title": "Contact Information",
-          "order": 0,
-          "createdAt": "2025-05-15T12:00:00.000Z",
-          "updatedAt": "2025-05-15T12:00:00.000Z"
-        },
-        "questions": [
-          {
-            "question": {
-              "id": 1,
-              "pageId": 1,
-              "questionText": "What is your name?",
-              "questionKey": "name",
-              "questionType": "text",
-              "order": 0,
-              "isRequired": true,
-              "placeholderText": "Enter your full name",
-              "helpText": null,
-              "validationRules": null,
-              "createdAt": "2025-05-15T12:00:00.000Z",
-              "updatedAt": "2025-05-15T12:00:00.000Z"
-            },
-            "options": [],
-            "matrixColumns": []
-          }
-        ]
-      }
-    ],
-    "conditionalLogic": []
-  }
+  "name": "Show dietary restrictions when special diet is selected",
+  "triggerQuestionId": 3,
+  "triggerCondition": "equals",
+  "triggerValue": "yes",
+  "actionType": "show",
+  "targetQuestionId": 4
 }`}
-                      </pre>
-                    </div>
+                          </pre>
+                        </div>
+                      </div>
+                    </section>
                   </div>
-                  
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">GET /api/questionnaires/:definitionId</h4>
-                    <p className="text-sm mt-1">Get a specific questionnaire by ID</p>
-                  </div>
-                </div>
-              </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <div>
-                <h3 className="text-lg font-medium mb-2">Submitting Responses</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-mono text-sm font-bold">POST /api/questionnaires/submit</h4>
-                    <p className="text-sm mt-1">Submit a response to a questionnaire</p>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Request Body:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
+          <TabsContent value="public-api" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Public API Reference</CardTitle>
+                <CardDescription>
+                  Endpoints for accessing and submitting questionnaires (public access)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[60vh]">
+                  <div className="space-y-4">
+                    <section>
+                      <h3 className="text-lg font-medium">Authentication</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Public API endpoints do not require authentication. They are designed to be accessible 
+                        to anonymous users for viewing and submitting questionnaires.
+                      </p>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Fetching Questionnaires</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Get Active Questionnaire</h4>
+                        <p className="text-xs text-muted-foreground mt-1">GET /api/questionnaires/active</p>
+                        <p className="text-sm mt-2">Retrieves the currently active questionnaire with all its pages, questions, and options.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Response:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
 {`{
-  "definitionId": 1, // Required, the questionnaire being answered
-  "submittedData": { // Required, the answers to questions
-    "name": "John Smith",
-    "email": "john@example.com",
-    "phone": "555-123-4567",
-    "eventType": "wedding",
-    "guestCount": 150,
-    "eventDate": "2025-12-31",
-    "message": "Looking for catering services for my wedding"
-  },
-  "clientIdentifier": "session-123", // Optional, for tracking anonymous users
-  "userId": 1, // Optional, if the user is logged in
-  "rawLeadId": 123, // Optional, if this is updating an existing lead
-  "status": "submitted" // Optional, defaults to "submitted"
-}`}
-                      </pre>
-                    </div>
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold">Response:</p>
-                      <pre className="bg-slate-200 p-2 rounded text-xs mt-1 overflow-auto">
-{`{
-  "success": true,
-  "message": "Questionnaire submitted successfully",
-  "submission": {
+  "definition": {
     "id": 1,
-    "definitionId": 1,
-    "status": "submitted",
-    "submittedAt": "2025-05-15T12:00:00.000Z",
-    "rawLeadId": 123
-  }
-}`}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Bulk Import Tab */}
-        <TabsContent value="bulk-import">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bulk Import Guide</CardTitle>
-              <CardDescription>
-                How to bulk import questionnaires and questions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Import Script Example</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Below is an example script for bulk importing questionnaire data using the API endpoints:
-                </p>
-                <pre className="bg-slate-200 p-4 rounded text-xs overflow-auto">
-{`// questionnaire-import.js
-import fetch from 'node-fetch';
-
-// Authentication
-async function login() {
-  const response = await fetch('http://localhost:5000/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: 'admin',
-      password: 'admin123'
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error('Authentication failed');
-  }
-  
-  return response.headers.get('set-cookie');
-}
-
-// Import function
-async function importQuestionnaire(authCookie, template) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Cookie': authCookie
-  };
-  
-  // 1. Create questionnaire definition
-  console.log('Creating questionnaire definition...');
-  const definitionRes = await fetch('http://localhost:5000/api/admin/questionnaires/definitions', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(template.definition)
-  });
-  
-  if (!definitionRes.ok) {
-    throw new Error(\`Failed to create definition: \${await definitionRes.text()}\`);
-  }
-  
-  const definition = await definitionRes.json();
-  const definitionId = definition.id;
-  console.log(\`Created definition with ID: \${definitionId}\`);
-  
-  // 2. Create pages
-  const pageIds = [];
-  console.log('Creating pages...');
-  
-  for (const page of template.pages) {
-    const pageRes = await fetch(\`http://localhost:5000/api/admin/questionnaires/definitions/\${definitionId}/pages\`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        title: page.title,
-        order: page.order
-      })
-    });
-    
-    if (!pageRes.ok) {
-      throw new Error(\`Failed to create page '\${page.title}': \${await pageRes.text()}\`);
-    }
-    
-    const createdPage = await pageRes.json();
-    pageIds.push(createdPage.id);
-    console.log(\`Created page '\${page.title}' with ID: \${createdPage.id}\`);
-    
-    // 3. Create questions for this page
-    for (const question of page.questions) {
-      const questionRes = await fetch(\`http://localhost:5000/api/admin/questionnaires/pages/\${createdPage.id}/questions\`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(question)
-      });
-      
-      if (!questionRes.ok) {
-        throw new Error(\`Failed to create question '\${question.questionText}': \${await questionRes.text()}\`);
-      }
-      
-      const createdQuestion = await questionRes.json();
-      console.log(\`Created question '\${question.questionText}' with key: \${question.questionKey}\`);
-    }
-  }
-  
-  // 4. Create conditional logic rules
-  console.log('Creating conditional logic rules...');
-  
-  for (const rule of template.conditionalLogic || []) {
-    const ruleRes = await fetch(\`http://localhost:5000/api/admin/questionnaires/definitions/\${definitionId}/conditional-logic\`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(rule)
-    });
-    
-    if (!ruleRes.ok) {
-      throw new Error(\`Failed to create rule: \${await ruleRes.text()}\`);
-    }
-    
-    const createdRule = await ruleRes.json();
-    console.log(\`Created conditional logic rule: \${rule.triggerQuestionKey} => \${rule.actionType} \${rule.targetQuestionKey}\`);
-  }
-  
-  console.log('Import completed successfully!');
-  return definitionId;
-}
-
-// Define your questionnaire template
-const template = {
-  definition: {
-    versionName: "Catering Inquiry Form v1",
-    description: "Form to gather client catering requirements",
-    isActive: true
+    "versionName": "Customer Intake v1",
+    "description": "Initial questionnaire for new customers",
+    "isActive": true
   },
-  pages: [
+  "pages": [
     {
-      title: "Contact Information",
-      order: 0,
-      questions: [
+      "id": 1,
+      "title": "Basic Information",
+      "order": 1,
+      "questions": [
         {
-          questionText: "First Name",
-          questionKey: "firstName",
-          questionType: "text",
-          order: 0,
-          isRequired: true,
-          placeholderText: "Enter your first name"
+          "id": 1,
+          "questionText": "What is your name?",
+          "questionKey": "customer_name",
+          "questionType": "text",
+          "isRequired": true,
+          "helpText": "Please enter your full name",
+          "order": 1,
+          "options": []
         },
         {
-          questionText: "Last Name",
-          questionKey: "lastName",
-          questionType: "text",
-          order: 1,
-          isRequired: true,
-          placeholderText: "Enter your last name"
-        },
-        {
-          questionText: "Email Address",
-          questionKey: "email",
-          questionType: "email",
-          order: 2,
-          isRequired: true,
-          placeholderText: "Enter your email address"
-        },
-        {
-          questionText: "Phone Number",
-          questionKey: "phone",
-          questionType: "phone",
-          order: 3,
-          isRequired: true,
-          placeholderText: "Enter your phone number"
-        }
-      ]
-    },
-    {
-      title: "Event Details",
-      order: 1,
-      questions: [
-        {
-          questionText: "Event Type",
-          questionKey: "eventType",
-          questionType: "radio",
-          order: 0,
-          isRequired: true,
-          options: [
-            { optionText: "Wedding", optionValue: "wedding", order: 0 },
-            { optionText: "Corporate Event", optionValue: "corporate", order: 1 },
-            { optionText: "Birthday Party", optionValue: "birthday", order: 2 },
-            { optionText: "Other", optionValue: "other", order: 3 }
+          "id": 2,
+          "questionText": "What type of event are you planning?",
+          "questionKey": "event_type",
+          "questionType": "select",
+          "isRequired": true,
+          "helpText": "Select the type of event",
+          "order": 2,
+          "options": [
+            {
+              "id": 1,
+              "value": "wedding",
+              "label": "Wedding",
+              "order": 1
+            },
+            {
+              "id": 2,
+              "value": "corporate",
+              "label": "Corporate Event",
+              "order": 2
+            },
+            {
+              "id": 3,
+              "value": "birthday",
+              "label": "Birthday Party",
+              "order": 3
+            }
           ]
-        },
-        {
-          questionText: "Event Date",
-          questionKey: "eventDate",
-          questionType: "date",
-          order: 1,
-          isRequired: true
-        },
-        {
-          questionText: "Number of Guests",
-          questionKey: "guestCount",
-          questionType: "number",
-          order: 2,
-          isRequired: true,
-          placeholderText: "Estimated guest count"
-        },
-        {
-          questionText: "Venue Information",
-          questionKey: "venue",
-          questionType: "text",
-          order: 3,
-          isRequired: false,
-          placeholderText: "Enter venue name and address if known"
-        },
-        {
-          questionText: "Additional Details",
-          questionKey: "additionalDetails",
-          questionType: "textarea",
-          order: 4,
-          isRequired: false,
-          placeholderText: "Any special requirements or details about your event"
         }
       ]
     }
   ],
-  conditionalLogic: [
+  "conditionalLogic": [
     {
-      triggerQuestionKey: "eventType",
-      triggerCondition: "equals",
-      triggerValue: "other",
-      actionType: "require_question",
-      targetQuestionKey: "additionalDetails"
+      "id": 1,
+      "name": "Show dietary restrictions when special diet is selected",
+      "triggerQuestionId": 3,
+      "triggerCondition": "equals",
+      "triggerValue": "yes",
+      "actionType": "show",
+      "targetQuestionId": 4
     }
   ]
-};
+}`}
+                          </pre>
+                        </div>
+                      </div>
 
-// Run the import
-async function run() {
-  try {
-    const authCookie = await login();
-    const definitionId = await importQuestionnaire(authCookie, template);
-    console.log(\`Successfully imported questionnaire with ID: \${definitionId}\`);
-  } catch (error) {
-    console.error('Import failed:', error.message);
-  }
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Get Specific Questionnaire</h4>
+                        <p className="text-xs text-muted-foreground mt-1">GET /api/questionnaires/:definitionId</p>
+                        <p className="text-sm mt-2">Retrieves a specific questionnaire by ID.</p>
+                      </div>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Submitting Responses</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Submit Questionnaire Response</h4>
+                        <p className="text-xs text-muted-foreground mt-1">POST /api/questionnaires/submit</p>
+                        <p className="text-sm mt-2">Submits responses to a questionnaire. If no opportunityId is provided, a new raw lead will be created.</p>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Request Body:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`{
+  "definitionId": 1,
+  "opportunityId": null,  // Optional, if submitting for an existing opportunity
+  "contactInfo": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phone": "555-123-4567"
+  },
+  "answers": [
+    {
+      "questionId": 1,
+      "value": "John Doe"
+    },
+    {
+      "questionId": 2,
+      "value": "wedding"
+    },
+    {
+      "questionId": 3,
+      "value": "yes"
+    },
+    {
+      "questionId": 4,
+      "value": "Vegetarian, Gluten-free"
+    }
+  ]
+}`}
+                          </pre>
+                        </div>
+                        <div className="mt-2">
+                          <h5 className="text-sm font-medium">Response:</h5>
+                          <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`{
+  "success": true,
+  "submissionId": 123,
+  "rawLeadId": 456,  // Only included if a new raw lead was created
+  "message": "Questionnaire submitted successfully"
+}`}
+                          </pre>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="bulk-import" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bulk Import Guide</CardTitle>
+                <CardDescription>
+                  How to create questionnaires in bulk using scripts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[60vh]">
+                  <div className="space-y-4">
+                    <section>
+                      <h3 className="text-lg font-medium">Overview</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        For complex questionnaires, it may be more efficient to create them programmatically 
+                        rather than through the UI. This guide shows how to create a complete questionnaire 
+                        with a single script.
+                      </p>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Example Script</h3>
+                      <pre className="bg-muted p-2 rounded-md text-xs mt-1 overflow-auto">
+{`const axios = require('axios');
+
+async function login() {
+  const response = await axios.post('http://localhost:5000/api/auth/login', {
+    username: 'admin',
+    password: 'password'
+  });
+  
+  return response.data.token;
 }
 
-run();
-`}
-                </pre>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Template Structure</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Your questionnaire template should follow this structure:
-                </p>
-                <ul className="list-disc pl-6 space-y-1 text-sm">
-                  <li><strong>definition</strong> - Contains basic information about the questionnaire</li>
-                  <li><strong>pages</strong> - Array of page objects, each with a title, order, and questions array</li>
-                  <li><strong>questions</strong> - Array of question objects within each page</li>
-                  <li><strong>options</strong> - Array of option objects for select, radio, or checkbox questions</li>
-                  <li><strong>conditionalLogic</strong> - Array of conditional logic rules</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Running the Import</h3>
-                <p className="text-sm text-muted-foreground">
-                  To run the import script:
-                </p>
-                <ol className="list-decimal pl-6 space-y-1 text-sm mt-2">
-                  <li>Save the script as <code>questionnaire-import.js</code></li>
-                  <li>Install dependencies: <code>npm install node-fetch</code></li>
-                  <li>Run: <code>node questionnaire-import.js</code></li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Troubleshooting Tab */}
-        <TabsContent value="troubleshooting">
-          <Card>
-            <CardHeader>
-              <CardTitle>Troubleshooting Guide</CardTitle>
-              <CardDescription>
-                Common issues and solutions when working with questionnaires
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Common Issues</h3>
-                <div className="space-y-4">
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-medium">Error: "questionnaireDefinitions is not defined"</h4>
-                    <p className="text-sm mt-1">
-                      <strong>Problem:</strong> Missing table import in server/routes.ts or server/storage.ts
-                    </p>
-                    <p className="text-sm mt-1">
-                      <strong>Solution:</strong> Ensure you've imported the questionnaireDefinitions table at the top of the file:
-                    </p>
-                    <pre className="bg-slate-200 p-2 rounded text-xs mt-1">
-                      {`import { questionnaireDefinitions } from "@shared/schema";`}
-                    </pre>
-                  </div>
-
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-medium">Error: "Field [x] is required" when creating questions</h4>
-                    <p className="text-sm mt-1">
-                      <strong>Problem:</strong> Missing required fields in your API request
-                    </p>
-                    <p className="text-sm mt-1">
-                      <strong>Solution:</strong> Ensure all required fields are included in your request body. For questions, you must include:
-                    </p>
-                    <ul className="list-disc pl-6 text-xs mt-1">
-                      <li>questionText</li>
-                      <li>questionKey</li>
-                      <li>questionType</li>
-                      <li>order</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-medium">Error: "Question key already exists" when creating questions</h4>
-                    <p className="text-sm mt-1">
-                      <strong>Problem:</strong> Duplicate question key within the same questionnaire
-                    </p>
-                    <p className="text-sm mt-1">
-                      <strong>Solution:</strong> Ensure each question has a unique questionKey. This is important for:
-                    </p>
-                    <ul className="list-disc pl-6 text-xs mt-1">
-                      <li>Properly identifying submitted data</li>
-                      <li>Setting up correct conditional logic</li>
-                      <li>Avoiding database constraint errors</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-slate-100 rounded-md p-4">
-                    <h4 className="font-medium">Error: "Options required for question type [x]"</h4>
-                    <p className="text-sm mt-1">
-                      <strong>Problem:</strong> Missing options array for select, radio, or checkbox questions
-                    </p>
-                    <p className="text-sm mt-1">
-                      <strong>Solution:</strong> For question types that require options (select, radio, checkbox), include an options array:
-                    </p>
-                    <pre className="bg-slate-200 p-2 rounded text-xs mt-1">
-{`"options": [
-  {
-    "optionText": "Display Text",
-    "optionValue": "stored_value",
-    "order": 0
-  }
-]`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Testing API Endpoints</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  You can test the public API endpoints using our test script:
-                </p>
-                <pre className="bg-slate-200 p-2 rounded text-xs">
-                  {`node test-public-questionnaire-api.js`}
-                </pre>
-                <p className="text-sm text-muted-foreground mt-4 mb-2">
-                  Or manually with cURL:
-                </p>
-                <pre className="bg-slate-200 p-2 rounded text-xs">
-{`# Get active questionnaire
-curl -X GET http://localhost:5000/api/questionnaires/active
-
-# Submit a response
-curl -X POST http://localhost:5000/api/questionnaires/submit \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "definitionId": 1,
-    "submittedData": {
-      "firstName": "Test",
-      "lastName": "User",
-      "email": "test@example.com",
-      "phone": "555-123-4567",
-      "eventType": "wedding",
-      "eventDate": "2025-12-31",
-      "guestCount": 100
+async function createQuestionnaire() {
+  const token = await login();
+  
+  // 1. Create the questionnaire definition
+  const definitionResponse = await axios.post(
+    'http://localhost:5000/api/admin/questionnaires/definitions',
+    {
+      versionName: "Event Planning Questionnaire",
+      description: "Comprehensive questionnaire for event planning clients",
+      isActive: true
+    },
+    {
+      headers: { Authorization: \`Bearer \${token}\` }
     }
-  }'`}
-                </pre>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
   );
-};
+  
+  const definitionId = definitionResponse.data.id;
+  console.log(\`Created questionnaire definition with ID \${definitionId}\`);
+  
+  // 2. Create pages
+  const pages = [
+    { title: "Contact Information", order: 1 },
+    { title: "Event Details", order: 2 },
+    { title: "Catering Preferences", order: 3 }
+  ];
+  
+  const pageIds = [];
+  
+  for (const page of pages) {
+    const pageResponse = await axios.post(
+      \`http://localhost:5000/api/admin/questionnaires/definitions/\${definitionId}/pages\`,
+      page,
+      {
+        headers: { Authorization: \`Bearer \${token}\` }
+      }
+    );
+    
+    pageIds.push(pageResponse.data.id);
+    console.log(\`Created page "\${page.title}" with ID \${pageResponse.data.id}\`);
+  }
+  
+  // 3. Create questions for page 1 (Contact Information)
+  const contactQuestions = [
+    {
+      questionText: "First Name",
+      questionKey: "first_name",
+      questionType: "text",
+      isRequired: true,
+      helpText: "Your first name",
+      order: 1
+    },
+    {
+      questionText: "Last Name",
+      questionKey: "last_name",
+      questionType: "text",
+      isRequired: true,
+      helpText: "Your last name",
+      order: 2
+    },
+    {
+      questionText: "Email Address",
+      questionKey: "email",
+      questionType: "email",
+      isRequired: true,
+      helpText: "Your email address",
+      order: 3
+    },
+    {
+      questionText: "Phone Number",
+      questionKey: "phone",
+      questionType: "text",
+      isRequired: true,
+      helpText: "Your phone number",
+      order: 4
+    }
+  ];
+  
+  for (const question of contactQuestions) {
+    await axios.post(
+      \`http://localhost:5000/api/admin/questionnaires/pages/\${pageIds[0]}/questions\`,
+      question,
+      {
+        headers: { Authorization: \`Bearer \${token}\` }
+      }
+    );
+    console.log(\`Created question "\${question.questionText}"\`);
+  }
+  
+  // 4. Create questions for page 2 (Event Details)
+  const eventTypeQuestion = {
+    questionText: "What type of event are you planning?",
+    questionKey: "event_type",
+    questionType: "select",
+    isRequired: true,
+    helpText: "Select the type of event",
+    order: 1,
+    options: [
+      { value: "wedding", label: "Wedding", order: 1 },
+      { value: "corporate", label: "Corporate Event", order: 2 },
+      { value: "birthday", label: "Birthday Party", order: 3 },
+      { value: "other", label: "Other", order: 4 }
+    ]
+  };
+  
+  const eventTypeResponse = await axios.post(
+    \`http://localhost:5000/api/admin/questionnaires/pages/\${pageIds[1]}/questions\`,
+    eventTypeQuestion,
+    {
+      headers: { Authorization: \`Bearer \${token}\` }
+    }
+  );
+  
+  const eventTypeQuestionId = eventTypeResponse.data.id;
+  console.log(\`Created question "Event Type" with ID \${eventTypeQuestionId}\`);
+  
+  // Add more questions and conditional logic as needed...
+  
+  console.log('Questionnaire creation completed successfully!');
+}
 
-export default QuestionnaireDocumentation;
+createQuestionnaire().catch(error => {
+  console.error('Error creating questionnaire:', error.response?.data || error.message);
+});`}
+                      </pre>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Bulk Processing Tips</h3>
+                      <ul className="mt-2 list-disc pl-5 text-sm space-y-2">
+                        <li>
+                          <strong>Use Transactions</strong>: When creating complex questionnaires, consider wrapping your operations in transactions to ensure data consistency.
+                        </li>
+                        <li>
+                          <strong>Error Handling</strong>: Implement proper error handling to identify and fix issues during bulk creation.
+                        </li>
+                        <li>
+                          <strong>Data Validation</strong>: Perform validation checks on your data before sending it to the API.
+                        </li>
+                        <li>
+                          <strong>Rate Limiting</strong>: Be aware of rate limits on the API to avoid overwhelming the server.
+                        </li>
+                      </ul>
+                    </section>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="troubleshooting" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Troubleshooting Guide</CardTitle>
+                <CardDescription>
+                  Common issues and solutions when working with the questionnaire system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[60vh]">
+                  <div className="space-y-4">
+                    <section>
+                      <h3 className="text-lg font-medium">Common Issues</h3>
+                      
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Questionnaire Not Displaying</h4>
+                        <p className="text-sm mt-2">If the questionnaire is not displaying on the public page:</p>
+                        <ul className="mt-2 list-disc pl-5 text-sm">
+                          <li>Check if any questionnaire is set to active (only one can be active at a time)</li>
+                          <li>Verify that the active questionnaire has at least one page and question</li>
+                          <li>Check the browser console for JavaScript errors</li>
+                        </ul>
+                      </div>
+
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Conditional Logic Not Working</h4>
+                        <p className="text-sm mt-2">If conditional logic rules are not working properly:</p>
+                        <ul className="mt-2 list-disc pl-5 text-sm">
+                          <li>Confirm that trigger and target questions exist in the questionnaire</li>
+                          <li>Check for conflicting rules that might cancel each other out</li>
+                          <li>Verify the syntax of trigger conditions and values</li>
+                        </ul>
+                      </div>
+
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Submission Failures</h4>
+                        <p className="text-sm mt-2">If submissions are failing:</p>
+                        <ul className="mt-2 list-disc pl-5 text-sm">
+                          <li>Check that all required fields have values</li>
+                          <li>Verify the format of email addresses and other validated fields</li>
+                          <li>Ensure the contact information section is complete</li>
+                          <li>Check for server-side validation errors in the response</li>
+                        </ul>
+                      </div>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">API Error Messages</h3>
+                      
+                      <div className="mt-2">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2">Error Code</th>
+                              <th className="text-left py-2">Description</th>
+                              <th className="text-left py-2">Solution</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b">
+                              <td className="py-2">400</td>
+                              <td className="py-2">Validation error</td>
+                              <td className="py-2">Check the request body against the API documentation</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">401</td>
+                              <td className="py-2">Unauthorized</td>
+                              <td className="py-2">Ensure you're logged in and have a valid token</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">403</td>
+                              <td className="py-2">Forbidden</td>
+                              <td className="py-2">Check that your user account has admin privileges</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">404</td>
+                              <td className="py-2">Resource not found</td>
+                              <td className="py-2">Verify the ID of the resource you're trying to access</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">409</td>
+                              <td className="py-2">Conflict</td>
+                              <td className="py-2">Check for duplicate keys or conflicting operations</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">500</td>
+                              <td className="py-2">Server error</td>
+                              <td className="py-2">Contact system administrator with the error details</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+
+                    <Separator className="my-4" />
+
+                    <section>
+                      <h3 className="text-lg font-medium">Getting Help</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        If you're experiencing issues not covered in this guide:
+                      </p>
+                      <ul className="mt-2 list-disc pl-5 text-sm">
+                        <li>Check the server logs for detailed error messages</li>
+                        <li>Review the API documentation for correct request formats</li>
+                        <li>Test API endpoints directly using a tool like Postman</li>
+                        <li>Contact the development team with detailed information about the issue</li>
+                      </ul>
+                    </section>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </>
+  );
+}

@@ -63,8 +63,7 @@ export default function EmailSyncToggle() {
         return { enabled: false, configured: false, error: error.message };
       }
     },
-    enabled: isAdmin, // Only fetch if user is admin
-    refetchInterval: 30000000000000, // Refresh every 30 seconds
+    enabled: false, // Disable fetching completely
   });
 
   // Update local state when API data loads
