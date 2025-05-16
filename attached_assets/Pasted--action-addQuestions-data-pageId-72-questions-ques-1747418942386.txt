@@ -1,0 +1,95 @@
+{
+  "action": "addQuestions",
+  "data": {
+    "pageId": 72,
+    "questions": [
+      {
+        "questionText": "Taco Fiesta - Bronze - Protein - Choose 3 Proteins",
+        "questionKey": "id_8",
+        "questionType": "checkbox_group",
+        "isRequired": false,
+        "order": 3,
+        "helpText": "Select exactly 3 protein options for the Bronze package. (Note: Max Selections: 3, Min Selections: 3 as per PDF)",
+        "options": [
+          { "optionText": "Barbacoa", "optionValue": "barbacoa", "order": 1 },
+          { "optionText": "Flank steak Fajitas upcharge of $2.00 pp", "optionValue": "flank_steak_fajitas_upcharge", "order": 2 },
+          { "optionText": "Ground Beef", "optionValue": "ground_beef", "order": 3 },
+          { "optionText": "Pork Carnitas", "optionValue": "pork_carnitas", "order": 4 },
+          { "optionText": "Pork Belly", "optionValue": "pork_belly", "order": 5 },
+          { "optionText": "Chorizo", "optionValue": "chorizo", "order": 6 },
+          { "optionText": "Beef Birria", "optionValue": "beef_birria", "order": 7 },
+          { "optionText": "Mexican Chicken", "optionValue": "mexican_chicken", "order": 8 },
+          { "optionText": "Cod", "optionValue": "cod", "order": 9 },
+          { "optionText": "Shrimp", "optionValue": "shrimp", "order": 10 },
+          { "optionText": "Tofu", "optionValue": "tofu", "order": 11 },
+          { "optionText": "Roasted Vegetables", "optionValue": "roasted_vegetables", "order": 12 },
+          { "optionText": "Escabeche - House-made picked vegetable medley", "optionValue": "escabeche", "order": 13 }
+        ]
+      },
+      {
+        "questionText": "Taco Fiesta Sides - Bronze - Choose 2 Sides",
+        "questionKey": "id_29",
+        "questionType": "checkbox_group",
+        "isRequired": false,
+        "order": 4,
+        "helpText": "Select exactly 2 side options for the Bronze package. (Note: Max Selections: 2, Min Selections: 2 as per PDF)",
+        "options": [
+          { "optionText": "Refried Beans", "optionValue": "refried_beans", "order": 1 },
+          { "optionText": "Mexican Street corn (Elotes)", "optionValue": "elotes", "order": 2 },
+          { "optionText": "Queso Dip", "optionValue": "queso_dip", "order": 3 },
+          { "optionText": "Chorizo Queso Dip", "optionValue": "chorizo_queso_dip", "order": 4 },
+          { "optionText": "Stuffed Poblano peppers", "optionValue": "stuffed_poblano_peppers", "order": 5 },
+          { "optionText": "Mexican Rice", "optionValue": "mexican_rice", "order": 6 },
+          { "optionText": "Cilantro Lime Rice", "optionValue": "cilantro_lime_rice", "order": 7 },
+          { "optionText": "Rice and Beans", "optionValue": "rice_and_beans", "order": 8 },
+          { "optionText": "Jalapeno cornbread", "optionValue": "jalapeno_cornbread", "order": 9 },
+          { "optionText": "Grilled Vegetables", "optionValue": "grilled_vegetables", "order": 10 },
+          { "optionText": "Mexican Slaw with Mango", "optionValue": "mexican_slaw_mango", "order": 11 },
+          { "optionText": "Vegetarian Empanadas", "optionValue": "vegetarian_empanadas", "order": 12 }
+        ]
+      },
+      {
+        "questionText": "Taco Fiesta - Bronze - Salsas - Choose 3 Salsas",
+        "questionKey": "id_31",
+        "questionType": "checkbox_group",
+        "isRequired": false,
+        "order": 5,
+        "helpText": "Select exactly 3 salsa options for the Bronze package. (Note: Max Selections: 3, Min Selections: 3 as per PDF)",
+        "options": [
+          { "optionText": "Classic Pico de Gallo", "optionValue": "pico_de_gallo", "order": 1 },
+          { "optionText": "Fresh Mango Salsa", "optionValue": "mango_salsa", "order": 2 },
+          { "optionText": "Pineapple Habanero Salsa", "optionValue": "pineapple_habanero_salsa", "order": 3 },
+          { "optionText": "Cucumber & Apple Salsa", "optionValue": "cucumber_apple_salsa", "order": 4 },
+          { "optionText": "Jicama and Papaya Salsa", "optionValue": "jicama_papaya_salsa", "order": 5 },
+          { "optionText": "Salsa Roja (red sauce)", "optionValue": "salsa_roja", "order": 6 },
+          { "optionText": "Salsa Verde (green sauce)", "optionValue": "salsa_verde", "order": 7 },
+          { "optionText": "Creamy Salsa Verde (green sauce)", "optionValue": "creamy_salsa_verde", "order": 8 },
+          { "optionText": "Salsa Macha -(contains peanuts and sesame seeds)", "optionValue": "salsa_macha", "order": 9 }
+        ]
+      },
+      {
+        "questionText": "Taco Fiesta - Bronze Choose 4 Condiments",
+        "questionKey": "id_33",
+        "questionType": "checkbox_group",
+        "isRequired": false,
+        "order": 6,
+        "helpText": "Select 4 condiment options for the Bronze package. (Note: PDF states Max Selections: 5, Min Selections: 4)",
+        "options": [
+          { "optionText": "Shredded cheese", "optionValue": "shredded_cheese", "order": 1 },
+          { "optionText": "Shredded vegan cheese", "optionValue": "shredded_vegan_cheese", "order": 2 },
+          { "optionText": "Diced Onions", "optionValue": "diced_onions", "order": 3 },
+          { "optionText": "Lime wedges", "optionValue": "lime_wedges", "order": 4 },
+          { "optionText": "Jalapeños", "optionValue": "jalapenos", "order": 5 },
+          { "optionText": "Sour Cream", "optionValue": "sour_cream", "order": 6 },
+          { "optionText": "Diced bell peppers", "optionValue": "diced_bell_peppers", "order": 7 },
+          { "optionText": "Guacamole", "optionValue": "guacamole", "order": 8 },
+          { "optionText": "Fire roasted bell peppers", "optionValue": "fire_roasted_bell_peppers", "order": 9 },
+          { "optionText": "Sliced radish", "optionValue": "sliced_radish", "order": 10 },
+          { "optionText": "Cilantro", "optionValue": "cilantro", "order": 11 },
+          { "optionText": "Pickled cabbage", "optionValue": "pickled_cabbage", "order": 12 },
+          { "optionText": "Escabeche - House-made picked vegetable medley", "optionValue": "escabeche_condiment", "order": 13 }
+        ]
+      }
+    ]
+  }
+}
