@@ -61,6 +61,7 @@ function AppContent() {
             <Route path="/questionnaire-docs" component={QuestionnaireDocumentation} />
             <Route path="/form-builder-tester" component={FormBuilderTester} />
             <Route path="/form-builder-docs" component={UnifiedFormBuilderDocs} />
+            <Route path="/form-examples/home-bites" component={() => import("@/examples/HomeBitesQuotationForm").then(mod => <mod.default />)} />
             <Route path="/menu-items" component={MenuItems} />
             <Route path="/menu-items/new" component={MenuItems} />
             <Route path="/menu-items/:id" component={MenuItems} />

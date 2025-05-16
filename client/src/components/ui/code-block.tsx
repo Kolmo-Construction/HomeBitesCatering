@@ -1,39 +1,32 @@
 import React from 'react';
-import { Check, Clipboard } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 interface CodeBlockProps {
-  code: string;
   language?: string;
+  value: string;
+  className?: string;
 }
 
-export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = 'json' }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+export const CodeBlockWithCopy: React.FC<CodeBlockProps> = ({ language = 'javascript', value, className = '' }) => {
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(value);
   };
 
   return (
-    <div className="relative bg-muted rounded-md">
-      {language && (
-        <div className="absolute top-2 right-2 flex">
-          <div className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground">
-            {language}
-          </div>
-        </div>
-      )}
-      <button
-        onClick={copyToClipboard}
-        className="absolute top-2 right-16 p-2 rounded-md transition-colors hover:bg-muted-foreground/20"
-        title="Copy to clipboard"
-      >
-        {copied ? <Check size={16} /> : <Clipboard size={16} />}
-      </button>
-      <pre className="p-4 text-sm overflow-x-auto">
-        <code className="text-sm">{code}</code>
+    <div className={`relative rounded-md bg-slate-950 ${className}`}>
+      <pre className="overflow-x-auto p-4 text-sm text-slate-50">
+        <code>{value}</code>
       </pre>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="absolute top-2 right-2 text-slate-400 hover:text-slate-100 bg-slate-800 hover:bg-slate-700"
+        onClick={copyToClipboard}
+      >
+        Copy
+      </Button>
     </div>
   );
 };
+
+export default CodeBlockWithCopy;
