@@ -2932,6 +2932,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Assistant API endpoint
+  app.post('/api/admin/questionnaires/ai-generate', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { prompt, questionnaireContext } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ message: 'Prompt is required' });
+      }
+      
+      // If we don't have an API key configured, return an error
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(503).json({ 
+          message: 'Anthropic API key not configured', 
+          solution: 'Please set the ANTHROPIC_API_KEY environment variable'
+        });
+      }
+      
+      // Generate questionnaire content using AI
+      const content = await generateQuestionnaireContent(prompt, questionnaireContext);
+      
+      res.json({ content });
+    } catch (error) {
+      console.error('Error generating questionnaire with AI:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate questionnaire content',
+        error: error.message 
+      });
+    }
+  });
+
   // Create HTTP server
   
   // Email sync service should NOT be started automatically
