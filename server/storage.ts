@@ -942,7 +942,9 @@ export class DatabaseStorage implements IStorage {
           UPDATE opportunities 
           SET questionnaire_definition_id = NULL, questionnaire_submission_id = NULL
           WHERE questionnaire_definition_id = ${definitionId};
-          
+        `);
+        
+        await tx.execute(sql`
           UPDATE raw_leads
           SET questionnaire_definition_id = NULL, questionnaire_submission_id = NULL
           WHERE questionnaire_definition_id = ${definitionId};
