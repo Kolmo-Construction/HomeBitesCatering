@@ -552,7 +552,13 @@ const QuestionnaireBuilder = () => {
   };
 
   const onSubmitConditionalLogic = (data: z.infer<typeof conditionalLogicFormSchema>) => {
-    createConditionalLogicMutation.mutate(data);
+    if (editingConditionalLogicId) {
+      // Update existing conditional logic rule
+      updateConditionalLogicMutation.mutate({ id: editingConditionalLogicId, data });
+    } else {
+      // Create new conditional logic rule
+      createConditionalLogicMutation.mutate(data);
+    }
   };
 
   // Option management helpers
