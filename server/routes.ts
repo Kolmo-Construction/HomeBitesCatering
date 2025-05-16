@@ -3841,7 +3841,7 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
           
           for (const ruleData of data.rules) {
             // Create the rule
-            const rule = await storage.createQuestionnaireConditionalLogic({
+            const rule = await storage.createConditionalLogicRule({
               definitionId: data.definitionId,
               triggerQuestionKey: ruleData.triggerQuestionKey,
               triggerCondition: ruleData.triggerCondition,
