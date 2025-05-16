@@ -1360,7 +1360,40 @@ const QuestionnaireBuilder = () => {
                         <TableCell><QuestionType value={question.questionType} /></TableCell>
                         <TableCell><code className="text-xs">{question.questionKey}</code></TableCell>
                         <TableCell>{question.isRequired ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-gray-300" />}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              // Set up form values for the selected question
+                              questionForm.reset({
+                                questionText: question.questionText,
+                                questionKey: question.questionKey,
+                                questionType: question.questionType,
+                                order: question.order,
+                                isRequired: question.isRequired,
+                                placeholderText: question.placeholderText || "",
+                                helpText: question.helpText || ""
+                              });
+                              
+                              // Set options if they exist
+                              if (question.options && question.options.length > 0) {
+                                setQuestionOptions(question.options);
+                              } else {
+                                setQuestionOptions([]);
+                              }
+                              
+                              // Set the current question being edited
+                              setEditingQuestionId(question.id);
+                              
+                              // Open dialog
+                              setQuestionDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm">
