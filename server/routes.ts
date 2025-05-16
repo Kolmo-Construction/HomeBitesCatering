@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { eq } from "drizzle-orm"; // For equality operations
+import Anthropic from "@anthropic-ai/sdk";
 import { generateQuestionnaireContent } from "./services/anthropic";
 import {
   insertUserSchema, 
@@ -3370,9 +3371,10 @@ The system has the following API endpoints:
 3. POST /api/admin/questionnaires/definitions/:definitionId/pages - Create a new page for a questionnaire
 4. POST /api/admin/questionnaires/pages/:pageId/questions - Create questions for a page (accepts array of questions)
 5. POST /api/admin/questionnaires/definitions/:definitionId/conditional-logic - Create conditional logic rules
+6. POST /api/admin/questionnaires/smart - NEW! Smart unified endpoint that detects operation from JSON structure
 
 For complex questionnaires with many pages and questions, use the /api/admin/questionnaires/complete endpoint.
-For page-by-page creation, use the individual endpoints.
+For page-by-page creation without managing IDs, use the new /api/admin/questionnaires/smart endpoint.
 
 Return your response as valid JSON in the following format:
 {
@@ -3439,6 +3441,304 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
       res.status(500).json({ 
         message: 'Failed to generate content',
         error: error.message 
+      });
+    }
+  });
+  
+  // Smart JSON Endpoint - Unified API that detects operation from JSON structure
+  app.post('/api/admin/questionnaires/smart', isAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log('Smart questionnaire API received request');
+      
+      // First, determine what type of request this is based on content
+      const requestBody = req.body;
+      
+      // Case 1: Definition only (has title and versionName but no pages)
+      if (requestBody.definition || 
+          (requestBody.title && requestBody.versionName && !requestBody.pages && !requestBody.questions)) {
+        console.log('Processing as definition creation request');
+        
+        try {
+          // Format the data appropriately
+          const definitionData = requestBody.definition || {
+            title: requestBody.title,
+            description: requestBody.description || '',
+            versionName: requestBody.versionName,
+            isActive: requestBody.isActive !== undefined ? requestBody.isActive : false
+          };
+          
+          // Create definition
+          const newDefinition = await storage.createQuestionnaireDefinition(definitionData);
+          
+          return res.status(201).json({
+            message: 'Questionnaire definition created successfully',
+            success: true,
+            definition: newDefinition,
+            definitionId: newDefinition.id
+          });
+        } catch (defError) {
+          console.error('Error creating definition in smart endpoint:', defError);
+          return res.status(400).json({
+            message: 'Failed to create questionnaire definition',
+            success: false,
+            error: defError.message
+          });
+        }
+      }
+      
+      // Case 2: Page with or without questions
+      if (requestBody.title && requestBody.definitionKey) {
+        console.log('Processing as page creation request with definitionKey');
+        
+        try {
+          // Find the definition by versionName (using it as the key)
+          const [definition] = await db
+            .select()
+            .from(questionnaireDefinitions)
+            .where(eq(questionnaireDefinitions.versionName, requestBody.definitionKey));
+            
+          if (!definition) {
+            return res.status(404).json({
+              message: `No questionnaire definition found with versionName "${requestBody.definitionKey}"`,
+              success: false
+            });
+          }
+          
+          // Extract questions if they exist
+          const { questions, definitionKey, ...pageData } = requestBody;
+          
+          // Create the page
+          const pageToCreate = {
+            ...pageData,
+            definitionId: definition.id
+          };
+          
+          const newPage = await storage.createQuestionnairePage(pageToCreate);
+          
+          // Create questions if they exist
+          const createdQuestions = [];
+          
+          if (questions && Array.isArray(questions)) {
+            for (const question of questions) {
+              // Add pageId to the question data
+              const questionWithPageId = {
+                ...question,
+                pageId: newPage.id
+              };
+              
+              // Extract options, matrix rows, and columns
+              const { options, matrixRows, matrixColumns, ...questionData } = questionWithPageId;
+              
+              // Create the question
+              const newQuestion = await storage.createQuestionnaireQuestion(questionData);
+              
+              // Create options if provided
+              if (options && Array.isArray(options)) {
+                for (const option of options) {
+                  await storage.createQuestionnaireQuestionOption({
+                    ...option,
+                    questionId: newQuestion.id
+                  });
+                }
+              }
+              
+              // Create matrix rows and columns if provided
+              if (matrixRows && Array.isArray(matrixRows)) {
+                for (const row of matrixRows) {
+                  await storage.createQuestionnaireMatrixRow({
+                    ...row,
+                    questionId: newQuestion.id
+                  });
+                }
+              }
+              
+              if (matrixColumns && Array.isArray(matrixColumns)) {
+                for (const column of matrixColumns) {
+                  await storage.createQuestionnaireMatrixColumn({
+                    ...column,
+                    questionId: newQuestion.id
+                  });
+                }
+              }
+              
+              createdQuestions.push(newQuestion);
+            }
+          }
+          
+          return res.status(201).json({
+            message: 'Page created successfully',
+            success: true,
+            page: newPage,
+            pageId: newPage.id,
+            questions: createdQuestions
+          });
+        } catch (pageError) {
+          console.error('Error creating page in smart endpoint:', pageError);
+          return res.status(400).json({
+            message: 'Failed to create page',
+            success: false,
+            error: pageError.message
+          });
+        }
+      }
+      
+      // Case 3: Conditional logic rule with definitionKey
+      if (requestBody.triggerQuestionKey && requestBody.actionType && requestBody.definitionKey) {
+        console.log('Processing as conditional logic creation request with definitionKey');
+        
+        try {
+          // Find the definition by versionName (using it as the key)
+          const [definition] = await db
+            .select()
+            .from(questionnaireDefinitions)
+            .where(eq(questionnaireDefinitions.versionName, requestBody.definitionKey));
+            
+          if (!definition) {
+            return res.status(404).json({
+              message: `No questionnaire definition found with versionName "${requestBody.definitionKey}"`,
+              success: false
+            });
+          }
+          
+          const { definitionKey, ...ruleData } = requestBody;
+          
+          const newRule = await storage.createConditionalLogicRule({
+            ...ruleData,
+            definitionId: definition.id
+          });
+          
+          return res.status(201).json({
+            message: 'Conditional logic rule created successfully',
+            success: true,
+            rule: newRule,
+            ruleId: newRule.id
+          });
+        } catch (ruleError) {
+          console.error('Error creating rule in smart endpoint:', ruleError);
+          return res.status(400).json({
+            message: 'Failed to create conditional logic rule',
+            success: false,
+            error: ruleError.message
+          });
+        }
+      }
+      
+      // Case 4: Complete questionnaire with unified format
+      if (requestBody.definition && requestBody.pages) {
+        console.log('Processing as complete questionnaire creation request');
+        
+        // Forward to the existing complete endpoint handler
+        return await (async () => {
+          try {
+            const result = await db.transaction(async (tx) => {
+              // 1. Create the questionnaire definition first
+              const newDefinition = await storage.createQuestionnaireDefinition(requestBody.definition, tx);
+              const definitionId = newDefinition.id;
+              
+              // 2. Create all pages with questions
+              const createdPages = [];
+              for (const page of requestBody.pages) {
+                const { questions, ...pageData } = page;
+                
+                // Create the page
+                const newPage = await storage.createQuestionnairePage({
+                  ...pageData,
+                  definitionId
+                }, tx);
+                
+                // Create all questions for this page
+                if (questions && Array.isArray(questions)) {
+                  for (const question of questions) {
+                    const { options, matrixRows, matrixColumns, ...questionData } = question;
+                    
+                    // Create the question
+                    const newQuestion = await storage.createQuestionnaireQuestion({
+                      ...questionData,
+                      pageId: newPage.id
+                    }, tx);
+                    
+                    // Create options if provided
+                    if (options && Array.isArray(options)) {
+                      for (const option of options) {
+                        await storage.createQuestionnaireQuestionOption({
+                          ...option,
+                          questionId: newQuestion.id
+                        }, tx);
+                      }
+                    }
+                    
+                    // Create matrix rows if provided
+                    if (matrixRows && Array.isArray(matrixRows)) {
+                      for (const row of matrixRows) {
+                        await storage.createQuestionnaireMatrixRow({
+                          ...row,
+                          questionId: newQuestion.id
+                        }, tx);
+                      }
+                    }
+                    
+                    // Create matrix columns if provided
+                    if (matrixColumns && Array.isArray(matrixColumns)) {
+                      for (const column of matrixColumns) {
+                        await storage.createQuestionnaireMatrixColumn({
+                          ...column,
+                          questionId: newQuestion.id
+                        }, tx);
+                      }
+                    }
+                  }
+                }
+                
+                createdPages.push(newPage);
+              }
+              
+              // 3. Create conditional logic rules if provided
+              const createdRules = [];
+              if (requestBody.conditionalLogic && Array.isArray(requestBody.conditionalLogic)) {
+                for (const rule of requestBody.conditionalLogic) {
+                  const newRule = await storage.createConditionalLogicRule({
+                    ...rule,
+                    definitionId
+                  }, tx);
+                  createdRules.push(newRule);
+                }
+              }
+              
+              return {
+                definition: newDefinition,
+                pages: createdPages,
+                conditionalLogic: createdRules
+              };
+            });
+            
+            return res.status(201).json({
+              message: 'Questionnaire created successfully',
+              success: true,
+              questionnaire: result
+            });
+          } catch (completeError) {
+            console.error('Error in complete questionnaire creation:', completeError);
+            return res.status(500).json({
+              message: 'Failed to create complete questionnaire',
+              success: false,
+              error: completeError.message
+            });
+          }
+        })();
+      }
+      
+      // If we get here, it's an unknown request type
+      return res.status(400).json({
+        message: 'Unable to determine request type from JSON structure. Please include appropriate keys (definition, pages, title+definitionKey, or triggerQuestionKey+actionType+definitionKey).',
+        success: false
+      });
+      
+    } catch (error) {
+      console.error('Error in smart questionnaire endpoint:', error);
+      res.status(500).json({
+        message: 'Server error processing questionnaire data',
+        success: false,
+        error: error.message
       });
     }
   });
