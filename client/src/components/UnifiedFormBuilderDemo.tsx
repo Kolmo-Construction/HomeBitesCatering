@@ -12,6 +12,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
   const [requestBody, setRequestBody] = useState('');
   const [responseData, setResponseData] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeActionTab, setActiveActionTab] = useState('create-definition');
   const { toast } = useToast();
 
   // Template examples for different actions
@@ -124,6 +125,10 @@ const UnifiedFormBuilderDemo: React.FC = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+  
+  const handleActionTabChange = (value: string) => {
+    setActiveActionTab(value);
     setRequestBody(templates[value as keyof typeof templates] || '');
   };
 
@@ -1683,7 +1688,7 @@ const UnifiedFormBuilderDemo: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="create-definition" className="w-full" onValueChange={handleTabChange}>
+              <Tabs value={activeActionTab} className="w-full" onValueChange={handleActionTabChange}>
                 <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
                   <TabsTrigger value="create-definition">Create Definition</TabsTrigger>
                   <TabsTrigger value="add-page">Add Page</TabsTrigger>
