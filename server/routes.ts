@@ -3445,6 +3445,193 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
     }
   });
   
+  // Self-Referenced API - Processes a complete questionnaire with internal ID references
+  app.post('/api/admin/questionnaires/self-referenced', isAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log('Processing self-referenced questionnaire structure');
+      const { definition, pages, conditions } = req.body;
+      
+      if (!definition) {
+        return res.status(400).json({
+          success: false,
+          message: 'Definition is required'
+        });
+      }
+      
+      if (!pages || !Array.isArray(pages) || pages.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one page is required'
+        });
+      }
+      
+      // Run everything in a transaction
+      const result = await db.transaction(async (tx) => {
+        // ID maps to convert custom IDs to database IDs
+        const pageIdMap = new Map();
+        const questionIdMap = new Map();
+        
+        // 1. Create the definition
+        console.log('Creating questionnaire definition');
+        const [newDefinition] = await tx
+          .insert(questionnaireDefinitions)
+          .values({
+            ...definition,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+          
+        console.log(`Created definition with ID: ${newDefinition.id}`);
+        
+        // 2. Create all pages
+        console.log('Creating pages');
+        const createdPages = [];
+        
+        for (const page of pages) {
+          const { id: customPageId, questions, ...pageData } = page;
+          
+          if (!customPageId) {
+            throw new Error('Each page must have an id field for reference');
+          }
+          
+          // Create the page
+          const [newPage] = await tx
+            .insert(questionnairePages)
+            .values({
+              ...pageData,
+              definitionId: newDefinition.id,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            })
+            .returning();
+            
+          // Store the ID mapping
+          pageIdMap.set(customPageId, newPage.id);
+          createdPages.push(newPage);
+          
+          console.log(`Created page ${customPageId} with DB ID ${newPage.id}`);
+          
+          // 3. Create all questions for this page
+          if (questions && Array.isArray(questions)) {
+            for (const question of questions) {
+              const { id: customQuestionId, options, ...questionData } = question;
+              
+              if (!customQuestionId) {
+                throw new Error('Each question must have an id field for reference');
+              }
+              
+              // Create the question
+              const [newQuestion] = await tx
+                .insert(questionnaireQuestions)
+                .values({
+                  ...questionData,
+                  pageId: newPage.id,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                })
+                .returning();
+                
+              // Store the ID mapping
+              questionIdMap.set(customQuestionId, newQuestion.id);
+              console.log(`Created question ${customQuestionId} with DB ID ${newQuestion.id}`);
+              
+              // Create options if provided
+              if (options && Array.isArray(options)) {
+                const optionsToInsert = options.map(option => ({
+                  ...option,
+                  questionId: newQuestion.id,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                }));
+                
+                await tx
+                  .insert(questionnaireQuestionOptions)
+                  .values(optionsToInsert);
+                
+                console.log(`Created ${options.length} options for question ${customQuestionId}`);
+              }
+            }
+          }
+        }
+        
+        // 4. Create all conditions
+        const createdConditions = [];
+        if (conditions && Array.isArray(conditions)) {
+          console.log('Creating conditional logic rules');
+          
+          for (const condition of conditions) {
+            const { 
+              triggerQuestionId, 
+              targetQuestionId, 
+              targetPageId,
+              ...conditionData 
+            } = condition;
+            
+            // Validate that referenced IDs exist in our maps
+            if (triggerQuestionId && !questionIdMap.has(triggerQuestionId)) {
+              throw new Error(`Trigger question ID ${triggerQuestionId} not found in defined questions`);
+            }
+            
+            if (targetQuestionId && !questionIdMap.has(targetQuestionId)) {
+              throw new Error(`Target question ID ${targetQuestionId} not found in defined questions`);
+            }
+            
+            if (targetPageId && !pageIdMap.has(targetPageId)) {
+              throw new Error(`Target page ID ${targetPageId} not found in defined pages`);
+            }
+            
+            // Create the condition with mapped IDs
+            const [newCondition] = await tx
+              .insert(questionnaireConditionalLogic)
+              .values({
+                ...conditionData,
+                definitionId: newDefinition.id,
+                // Map custom IDs to real database IDs
+                triggerQuestionKey: triggerQuestionId ? 
+                  (await db.select().from(questionnaireQuestions).where(eq(questionnaireQuestions.id, questionIdMap.get(triggerQuestionId))))[0]?.questionKey : 
+                  condition.triggerQuestionKey,
+                targetQuestionKey: targetQuestionId ? 
+                  (await db.select().from(questionnaireQuestions).where(eq(questionnaireQuestions.id, questionIdMap.get(targetQuestionId))))[0]?.questionKey : 
+                  condition.targetQuestionKey,
+                targetPageId: targetPageId ? pageIdMap.get(targetPageId) : condition.targetPageId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              })
+              .returning();
+              
+            createdConditions.push(newCondition);
+            console.log(`Created condition rule with DB ID ${newCondition.id}`);
+          }
+        }
+        
+        return {
+          definition: newDefinition,
+          pages: createdPages,
+          conditions: createdConditions,
+          // Include ID mappings for reference
+          mappings: {
+            pageIdMap: Object.fromEntries(pageIdMap),
+            questionIdMap: Object.fromEntries(questionIdMap)
+          }
+        };
+      });
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Self-referenced questionnaire created successfully',
+        questionnaire: result
+      });
+    } catch (error) {
+      console.error('Error processing self-referenced questionnaire:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error processing self-referenced questionnaire',
+        error: error.message
+      });
+    }
+  });
+  
   // Smart JSON Endpoint - Unified API that detects operation from JSON structure
   app.post('/api/admin/questionnaires/smart', isAdmin, async (req: Request, res: Response) => {
     try {
