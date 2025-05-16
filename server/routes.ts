@@ -1693,6 +1693,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== Questionnaire Management Routes =====
   
   // Questionnaire Definitions
+
+  // Get all questionnaire definitions
+  app.get('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log('Fetching all questionnaire definitions');
+      const definitions = await db.select().from(questionnaireDefinitions);
+      console.log(`Found ${definitions.length} questionnaire definitions`);
+      res.json(definitions);
+    } catch (error) {
+      console.error('Error fetching questionnaire definitions:', error);
+      res.status(500).json({ message: 'Server error fetching questionnaire definitions' });
+    }
+  });
+  
+  // Create a new questionnaire definition
   app.post('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
     try {
       console.log('Creating questionnaire definition with data:', req.body);
