@@ -957,20 +957,52 @@ const QuestionnaireBuilder = () => {
                     )}
                   </CardDescription>
                 </div>
-                <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button disabled={!selectedPage}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Question
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Add New Question</DialogTitle>
-                      <DialogDescription>
-                        Create a new question for this page.
-                      </DialogDescription>
-                    </DialogHeader>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    disabled={!selectedPage}
+                    onClick={() => {
+                      if (selectedPage) {
+                        // Import the AI assistant component dynamically
+                        import('@/components/AIQuestionGenerator').then(module => {
+                          const AIQuestionGenerator = module.default;
+                          // Create a new instance in a div, the component will handle its own dialog
+                          const container = document.createElement('div');
+                          document.body.appendChild(container);
+                          // Could render with React.render, but this is just a sketch
+                          console.log('Would render AIQuestionGenerator with:', {
+                            pageId: selectedPage,
+                            definitionId: selectedDefinition
+                          });
+                          // For demo purposes, show a message
+                          toast({
+                            title: "AI Assistant",
+                            description: "AI assistant will be available soon!",
+                          });
+                        }).catch(error => {
+                          console.error('Failed to load AI component:', error);
+                        });
+                      }
+                    }}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    AI Generate
+                  </Button>
+                
+                  <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button disabled={!selectedPage}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        New Question
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add New Question</DialogTitle>
+                        <DialogDescription>
+                          Create a new question for this page.
+                        </DialogDescription>
+                      </DialogHeader>
                     <Form {...questionForm}>
                       <form onSubmit={questionForm.handleSubmit(onSubmitQuestion)} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
