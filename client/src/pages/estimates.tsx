@@ -37,17 +37,24 @@ export default function Estimates() {
     queryFn: async ({ queryKey }) => {
       // queryKey[1] is selectedEstimateId
       if (!queryKey[1]) return null; // Do not fetch if ID is null
-      const res = await fetch(`/api/estimates/${queryKey[1]}`);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(errorData.message || `Failed to fetch estimate ${queryKey[1]}`);
+      
+      try {
+        const res = await fetch(`/api/estimates/${queryKey[1]}`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: res.statusText }));
+          throw new Error(errorData.message || `Failed to fetch estimate ${queryKey[1]}`);
+        }
+        return res.json();
+      } catch (fetchError) {
+        console.error("Fetch error:", fetchError);
+        throw new Error(`Network error when fetching estimate ${queryKey[1]}`);
       }
-      return res.json();
     },
     enabled: (mode === "edit" || mode === "view") && !!selectedEstimateId,
     staleTime: 0,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    retry: 1, // Only retry once
     onSuccess: (data) => {
       console.log(`Loaded raw estimate data for ID ${selectedEstimateId}:`, data);
     },
