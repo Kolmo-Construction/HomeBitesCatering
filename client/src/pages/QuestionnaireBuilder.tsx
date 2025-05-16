@@ -144,8 +144,10 @@ const QuestionnaireBuilder = () => {
   const [matrixColumns, setMatrixColumns] = useState<{ columnText: string; columnKey: string; order: number }[]>([]);
   const [matrixRows, setMatrixRows] = useState<{ rowText: string; rowKey: string; order: number }[]>([]);
   
-  // State for tracking which question is being edited
+  // State for tracking which items are being edited
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [editingPageId, setEditingPageId] = useState<number | null>(null);
+  const [editingConditionalLogicId, setEditingConditionalLogicId] = useState<number | null>(null);
   
   // Forms
   const definitionForm = useForm<z.infer<typeof definitionFormSchema>>({
@@ -309,6 +311,31 @@ const QuestionnaireBuilder = () => {
       });
     }
   });
+  
+  const updatePageMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof pageFormSchema> }) => {
+      const response = await apiRequest('PUT', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages/${id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
+      setEditingPageId(null);
+      setPageDialogOpen(false);
+      pageForm.reset();
+      
+      toast({
+        title: "Success",
+        description: "Page updated successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update page",
+        variant: "destructive"
+      });
+    }
+  });
 
   const createQuestionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof questionFormSchema>) => {
@@ -369,6 +396,31 @@ const QuestionnaireBuilder = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to create conditional logic rule",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const updateConditionalLogicMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof conditionalLogicFormSchema> }) => {
+      const response = await apiRequest('PUT', `/api/admin/questionnaires/conditional-logic/${id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
+      setEditingConditionalLogicId(null);
+      setConditionalLogicDialogOpen(false);
+      conditionalLogicForm.reset();
+      
+      toast({
+        title: "Success",
+        description: "Conditional logic rule updated successfully"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update conditional logic rule",
         variant: "destructive"
       });
     }
