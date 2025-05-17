@@ -175,8 +175,8 @@ export const questionnaireQuestionOptions = pgTable('questionnaire_question_opti
   optionText: text('option_text').notNull(),
   optionValue: text('option_value'),
   order: integer('order').notNull(),
-  isDefault: boolean('is_default').default(false),
-  metadata: json('metadata'),
+  defaultSelectionIndicator: text('default_selection_indicator'),
+  relatedMenuItemId: integer('related_menu_item_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });

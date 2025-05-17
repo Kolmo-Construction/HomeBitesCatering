@@ -590,8 +590,7 @@ async function handleAddQuestionOptions(res: Response, data: any) {
         optionText: option.optionText,
         optionValue: option.optionValue,
         order: option.order,
-        isDefault: option.isDefault,
-        metadata: option.metadata
+        defaultSelectionIndicator: option.defaultSelectionIndicator || option.isDefault || 'false',
       })
       .returning();
     
