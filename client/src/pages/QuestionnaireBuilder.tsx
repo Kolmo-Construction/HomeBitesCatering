@@ -622,7 +622,7 @@ const QuestionnaireBuilder = () => {
     mutationFn: async (data: z.infer<typeof questionFormSchema>) => {
       // Add options to the data if they exist
       const formData = { ...data };
-      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
+      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox_group')) {
         formData.options = questionOptions;
       }
       
@@ -967,10 +967,10 @@ const QuestionnaireBuilder = () => {
 
   // Watch for question type changes to show/hide options and configurations
   const questionType = questionForm.watch("questionType");
-  const showOptions = questionType === 'select' || questionType === 'radio' || questionType === 'checkbox';
+  const showOptions = questionType === 'select' || questionType === 'radio' || questionType === 'checkbox_group';
   const showMatrix = questionType === 'matrix';
   const showSliderConfig = questionType === 'slider';
-  const showCheckboxConfig = questionType === 'checkbox' || questionType === 'checkbox_group';
+  const showCheckboxConfig = questionType === 'checkbox_group';
 
   // Effect to set the initial order for new questions
   useEffect(() => {
