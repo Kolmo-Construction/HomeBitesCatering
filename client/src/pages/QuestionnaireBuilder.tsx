@@ -2161,25 +2161,27 @@ const QuestionnaireBuilder = () => {
                             size="sm" 
                             onClick={() => {
                               // Set up form values for the selected question
-                              // Process validation rules to use in the form
-                              // Handle both cases: when it's already an object or when it's a JSON string
-                              let validationRules = {};
+                              console.log("Loading question for editing:", question);
+                              
+                              // For checkboxes with selection limits, we need to handle validation rules
+                              let parsedValidationRules = {};
                               
                               if (question.validationRules) {
                                 try {
                                   // If it's a string, parse it as JSON
                                   if (typeof question.validationRules === 'string') {
-                                    validationRules = JSON.parse(question.validationRules);
+                                    parsedValidationRules = JSON.parse(question.validationRules);
                                   } 
                                   // If it's already an object, use it directly
                                   else if (typeof question.validationRules === 'object') {
-                                    validationRules = question.validationRules;
+                                    parsedValidationRules = question.validationRules;
                                   }
                                 } catch (e) {
                                   console.error("Error parsing validation rules:", e);
                                 }
                               }
                               
+                              // Reset form with base values
                               questionForm.reset({
                                 questionText: question.questionText,
                                 questionKey: question.questionKey,
@@ -2189,12 +2191,12 @@ const QuestionnaireBuilder = () => {
                                 placeholderText: question.placeholderText || "",
                                 helpText: question.helpText || "",
                                 validationRules: {
-                                  min: validationRules.min,
-                                  max: validationRules.max,
-                                  step: validationRules.step,
-                                  exactCount: validationRules.exactCount,
-                                  minCount: validationRules.minCount,
-                                  maxCount: validationRules.maxCount
+                                  min: parsedValidationRules.min,
+                                  max: parsedValidationRules.max, 
+                                  step: parsedValidationRules.step,
+                                  exactCount: parsedValidationRules.exactCount,
+                                  minCount: parsedValidationRules.minCount,
+                                  maxCount: parsedValidationRules.maxCount
                                 }
                               });
                               
