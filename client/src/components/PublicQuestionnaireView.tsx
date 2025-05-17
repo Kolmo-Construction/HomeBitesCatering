@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import NutritionChart from '@/components/nutrition/NutritionChart';
@@ -1023,6 +1024,108 @@ const PublicQuestionnaireView: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'slider':
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Min: 0</span>
+                <span className="text-sm font-medium">{formData[questionKey] || 0}</span>
+                <span className="text-sm text-gray-500">Max: 100</span>
+              </div>
+              
+              <Slider
+                id={questionKey}
+                defaultValue={[formData[questionKey] || 0]}
+                min={0}
+                max={100}
+                step={1}
+                onValueChange={(values) => {
+                  handleInputChange(questionKey, values[0]);
+                }}
+                className={cn(
+                  errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
+                )}
+              />
+            </div>
+            
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'incrementer':
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            
+            <div className="flex items-center h-10 w-full max-w-[200px]">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="rounded-r-none h-full"
+                onClick={() => {
+                  const currentValue = parseInt(formData[questionKey] || '0');
+                  if (currentValue > 0) {
+                    handleInputChange(questionKey, currentValue - 1);
+                  }
+                }}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              
+              <Input
+                id={questionKey}
+                type="number"
+                min="0"
+                className="h-full text-center rounded-none border-x-0"
+                value={formData[questionKey] || '0'}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value >= 0) {
+                    handleInputChange(questionKey, value);
+                  }
+                }}
+              />
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="rounded-l-none h-full"
+                onClick={() => {
+                  const currentValue = parseInt(formData[questionKey] || '0');
+                  handleInputChange(questionKey, currentValue + 1);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
             
             {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
