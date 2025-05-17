@@ -194,14 +194,16 @@ async function testSectionQuestions(sectionId, authCookie) {
           text: 'Name of the Contact Person',
           helpText: 'Full name of the primary contact',
           isRequired: true,
-          questionOrder: 1
+          questionOrder: 1,
+          questionKey: 'contact_name'
         },
         {
           componentTypeId: 1, // Using a default component type ID
           text: 'Email Address',
           helpText: 'We will send confirmation details to this email',
           isRequired: true,
-          questionOrder: 2
+          questionOrder: 2,
+          questionKey: 'contact_email'
         }
       ]
     }

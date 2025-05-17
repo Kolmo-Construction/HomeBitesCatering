@@ -324,7 +324,8 @@ async function handleAddSectionQuestions(res: Response, data: any) {
         validationRules: question.validationRules,
         defaultValue: question.defaultValue,
         questionType: 'text', // Default to text type when using component type
-        order: question.questionOrder // Use the question order here
+        order: question.questionOrder, // Use the question order here
+        questionKey: `question_${Date.now()}_${Math.floor(Math.random() * 1000)}` // Generate a unique question key
       })
       .returning();
     
