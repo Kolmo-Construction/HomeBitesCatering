@@ -20,6 +20,7 @@ import FormBuilderTester from "@/pages/FormBuilderTester";
 import UnifiedFormBuilderDocs from "@/pages/UnifiedFormBuilderDocs";
 import HomeBites2025Form from "@/examples/HomeBites2025Form";
 import PublicQuestionnaire from "@/pages/PublicQuestionnaire";
+import ConditionVisualizerPage from "@/pages/ConditionVisualizerPage";
 import ThankYou from "@/pages/ThankYou";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
