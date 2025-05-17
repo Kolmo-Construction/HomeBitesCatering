@@ -1046,49 +1046,29 @@ const QuestionnaireBuilder = () => {
                                 
                                 <DropdownMenuSeparator />
                                 
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Questionnaire Definition</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        <p className="mb-2">Are you sure you want to delete this questionnaire definition? This action cannot be undone.</p>
-                                        <p className="font-medium">To confirm deletion, type the questionnaire name below:</p>
-                                        <Input 
-                                          className="mt-2 mb-2"
-                                          placeholder={def.versionName}
-                                          onChange={(e) => setDeleteConfirmation(e.target.value)}
-                                        />
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction 
-                                        onClick={() => {
-                                          if (deleteConfirmation === def.versionName) {
-                                            deleteDefinitionMutation.mutate(def.id);
-                                            setDeleteConfirmation("");
-                                          } else {
-                                            toast({
-                                              title: "Confirmation Failed",
-                                              description: "The name you entered doesn't match. Deletion cancelled.",
-                                              variant: "destructive"
-                                            });
-                                          }
-                                        }}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        disabled={deleteConfirmation !== def.versionName}
-                                      >
-                                        Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    // Show a confirmation dialog using the existing Alert Dialog
+                                    const confirmDelete = window.confirm(
+                                      `Are you absolutely sure you want to delete "${def.versionName}"? This action cannot be undone.`
+                                    );
+                                    
+                                    if (confirmDelete) {
+                                      deleteDefinitionMutation.mutate(def.id, {
+                                        onSuccess: () => {
+                                          toast({
+                                            title: "Questionnaire Deleted",
+                                            description: "The questionnaire has been successfully deleted.",
+                                          });
+                                        }
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -1267,31 +1247,30 @@ const QuestionnaireBuilder = () => {
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Page</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this page? All questions on this page will also be deleted. This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => deletePageMutation.mutate(page.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => {
+                              const confirmDelete = window.confirm(
+                                `Are you sure you want to delete the page "${page.title}"? All questions on this page will also be deleted. This action cannot be undone.`
+                              );
+                              
+                              if (confirmDelete) {
+                                deletePageMutation.mutate(page.id, {
+                                  onSuccess: () => {
+                                    toast({
+                                      title: "Page Deleted",
+                                      description: "The page and its questions have been deleted."
+                                    });
+                                  }
+                                });
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
