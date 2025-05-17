@@ -867,33 +867,43 @@ const QuestionnaireBuilder = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Questionnaire Builder</h1>
         
-        {/* Search bar */}
+        {/* Search bar with auto-complete */}
         <div className="w-1/3">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search questions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10"
-            />
-            {searchQuery && (
-              <button 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setSearchQuery('')}
-              >
-                ×
-              </button>
-            )}
-          </div>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (searchResults.length > 0) {
+              // Navigate to the first result when Enter is pressed
+              navigateToQuestion(searchResults[0].pageId, searchResults[0].questionId);
+            }
+          }}>
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Search questions... (press Enter to navigate)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pr-10"
+                autoComplete="off"
+              />
+              {searchQuery && (
+                <button 
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setSearchQuery('')}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </form>
           
-          {/* Search results dropdown */}
+          {/* Search results dropdown with auto-complete */}
           {searchResults.length > 0 && searchQuery && (
             <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
-              {searchResults.map((result) => (
+              {searchResults.map((result, index) => (
                 <div
                   key={`${result.pageId}-${result.questionId}`}
-                  className="cursor-pointer hover:bg-gray-100 p-3"
+                  className={`cursor-pointer hover:bg-gray-100 p-3 ${index === 0 ? 'bg-gray-50' : ''}`}
                   onClick={() => navigateToQuestion(result.pageId, result.questionId)}
                 >
                   <div className="font-medium truncate">{result.questionText}</div>
