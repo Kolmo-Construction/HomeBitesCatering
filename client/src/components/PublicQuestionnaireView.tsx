@@ -701,6 +701,9 @@ const PublicQuestionnaireView: React.FC = () => {
   };
   
   // Render a question based on its type
+  // Initialize toast
+  const { toast } = useToast();
+  
   const renderQuestion = (question: Question) => {
     // Skip rendering if the question is not visible due to conditional logic
     if (!isQuestionVisible(question.questionKey)) {
