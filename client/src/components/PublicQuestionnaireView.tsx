@@ -147,10 +147,33 @@ const PublicQuestionnaireView: React.FC = () => {
           throw new Error(data.message || 'Failed to load questionnaire data.');
         }
         
-        setQuestionnaire(data.questionnaire);
+        // Transform the data structure to match our component expectations
+        const transformedQuestionnaire = {
+          ...data.questionnaire,
+          pages: data.questionnaire.pages.map((pageData: any) => ({
+            id: pageData.page.id,
+            title: pageData.page.title,
+            description: pageData.page.description,
+            order: pageData.page.order,
+            questions: pageData.questions.map((q: any) => ({
+              id: q.question.id,
+              questionText: q.question.questionText,
+              questionKey: q.question.questionKey,
+              questionType: q.question.questionType,
+              isRequired: q.question.isRequired,
+              helpText: q.question.helpText,
+              placeholderText: q.question.placeholderText,
+              order: q.question.order,
+              options: q.options,
+              matrixColumns: q.matrixColumns
+            }))
+          }))
+        };
+        
+        setQuestionnaire(transformedQuestionnaire);
         
         // Initialize the menu items if there are food-related questions
-        initializeMenuItems(data.questionnaire);
+        initializeMenuItems(transformedQuestionnaire);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
         toast({
