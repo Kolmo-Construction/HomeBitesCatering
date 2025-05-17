@@ -9,6 +9,7 @@ import MemoryStore from "memorystore";
 import { eq } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import { generateQuestionnaireContent } from "./services/anthropic";
+import { generateSuggestion, getQuestionTypeHelp, analyzeFormData } from "./services/ai-suggestions";
 import {
   insertUserSchema, 
   insertOpportunitySchema, 
