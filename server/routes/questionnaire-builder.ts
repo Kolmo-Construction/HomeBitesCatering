@@ -24,12 +24,12 @@ import {
 
 // Action schemas
 const registerComponentTypeSchema = z.object({
-  name: z.string(),
+  typeKey: z.string(),
+  componentCategory: z.string(),
+  displayName: z.string(),
   description: z.string().optional(),
-  validationSchema: z.any().optional(),
-  uiSchema: z.any().optional(),
-  dataSchema: z.any().optional(),
-  isCustom: z.boolean().default(false)
+  configSchema: z.any().optional(),
+  isActive: z.boolean().default(true)
 });
 
 const createSectionSchema = z.object({
@@ -191,7 +191,7 @@ async function handleRegisterComponentType(res: Response, data: any) {
   // Check if component type already exists
   const existingComponent = await db.select()
     .from(componentTypes)
-    .where(eq(componentTypes.name, componentTypeData.name));
+    .where(eq(componentTypes.typeKey, componentTypeData.typeKey));
   
   if (existingComponent.length > 0) {
     return res.status(409).json({
@@ -204,12 +204,12 @@ async function handleRegisterComponentType(res: Response, data: any) {
   // Create new component type
   const [newComponentType] = await db.insert(componentTypes)
     .values({
-      name: componentTypeData.name,
+      typeKey: componentTypeData.typeKey,
+      componentCategory: componentTypeData.componentCategory,
+      displayName: componentTypeData.displayName,
       description: componentTypeData.description,
-      validationSchema: componentTypeData.validationSchema,
-      uiSchema: componentTypeData.uiSchema,
-      dataSchema: componentTypeData.dataSchema,
-      isCustom: componentTypeData.isCustom
+      configSchema: componentTypeData.configSchema,
+      isActive: componentTypeData.isActive
     })
     .returning();
   

@@ -64,14 +64,19 @@ async function testComponentTypes() {
   const customComponentResponse = await makeRequest('POST', '/api/questionnaires/builder', {
     action: 'registerComponentType',
     data: {
-      name: 'rating_stars',
+      typeKey: 'rating_stars',
+      componentCategory: 'question',
+      displayName: 'Rating Stars',
       description: 'Star rating component (1-5 stars)',
-      validationSchema: { type: 'number', minimum: 1, maximum: 5 },
-      uiSchema: { 
-        uiWidget: 'stars',
-        displayOptions: { showLabels: true }
+      configSchema: { 
+        type: 'object', 
+        properties: {
+          min: { type: 'number', default: 1 },
+          max: { type: 'number', default: 5 },
+          showLabels: { type: 'boolean', default: true }
+        }
       },
-      isCustom: true
+      isActive: true
     }
   });
   

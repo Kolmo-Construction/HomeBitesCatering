@@ -8,12 +8,12 @@ import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm';
 // ----------------
 export const componentTypes = pgTable('questionnaire_component_types', {
   id: serial('id').primaryKey(),
-  name: text('name').notNull().unique(),
+  typeKey: text('type_key').notNull().unique(),
+  componentCategory: text('component_category'),
+  displayName: text('display_name').notNull(),
   description: text('description'),
-  validationSchema: json('validation_schema'),
-  uiSchema: json('ui_schema'),
-  dataSchema: json('data_schema'),
-  isCustom: boolean('is_custom').default(false),
+  configSchema: json('config_schema'),
+  isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
