@@ -925,10 +925,11 @@ const QuestionnaireBuilder = () => {
     setMatrixRows(newRows);
   };
 
-  // Watch for question type changes to show/hide options
+  // Watch for question type changes to show/hide options and configurations
   const questionType = questionForm.watch("questionType");
   const showOptions = questionType === 'select' || questionType === 'radio' || questionType === 'checkbox';
   const showMatrix = questionType === 'matrix';
+  const showSliderConfig = questionType === 'slider';
 
   // Effect to set the initial order for new questions
   useEffect(() => {
