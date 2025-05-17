@@ -189,50 +189,12 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
     alert('Preview complete! In production, this form would be submitted with the collected data.');
   };
 
-  // Helper function to check if a question should be displayed based on its dependencies
-  const shouldQuestionBeVisible = (question: Question): boolean => {
-    // If question has no dependency, always show it
-    if (!question.dependsOn || !question.showIf) {
-      return true;
-    }
-    
-    // Get the value of the field this question depends on
-    const dependentFieldValue = formData[question.dependsOn];
-    
-    // If the dependent field has no value yet, don't show dependent questions
-    if (dependentFieldValue === undefined || dependentFieldValue === null) {
-      return false;
-    }
-    
-    // For boolean toggles (true/false)
-    if (question.showIf === 'true' || question.showIf === 'false') {
-      const expectedValue = question.showIf === 'true';
-      
-      // Compare based on the type of the dependent field's value
-      if (typeof dependentFieldValue === 'boolean') {
-        return dependentFieldValue === expectedValue;
-      } else if (dependentFieldValue === 'true' || dependentFieldValue === 'false') {
-        return (dependentFieldValue === 'true') === expectedValue;
-      }
-    }
-    
-    // For numeric fields (sliders, incrementers)
-    if (!isNaN(Number(question.showIf))) {
-      const expectedValue = Number(question.showIf);
-      const actualValue = typeof dependentFieldValue === 'number' 
-        ? dependentFieldValue 
-        : Number(dependentFieldValue);
-        
-      return actualValue === expectedValue;
-    }
-    
-    // For other value types, do a string comparison
-    return String(dependentFieldValue) === question.showIf;
-  };
+  // The isQuestionVisible function above is now the single source of truth for checking visibility
+  // This function is called directly in renderQuestion
 
   const renderQuestion = (question: Question) => {
     // Skip rendering if this question shouldn't be visible based on dependencies
-    if (!shouldQuestionBeVisible(question)) {
+    if (!isQuestionVisible(question)) {
       return null;
     }
     
