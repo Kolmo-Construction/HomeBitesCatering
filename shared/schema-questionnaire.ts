@@ -36,13 +36,12 @@ export const eventTypeEnum = pgEnum('event_type', [
 
 export const questionnaireDefinitions = pgTable('questionnaire_definitions', {
   id: serial('id').primaryKey(),
-  name: text('name').notNull(),
+  name: text('name'),
   description: text('description'),
   versionName: text('version_name').notNull(),
-  eventType: eventTypeEnum('event_type').notNull(),
+  eventType: eventTypeEnum('event_type'),
   isActive: boolean('is_active').default(true),
   isPublished: boolean('is_published').default(false),
-  metadata: json('metadata'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
@@ -125,13 +124,36 @@ export const insertPageSectionSchema = createInsertSchema(pageSections).omit({
 // ----------------
 // Questions
 // ----------------
+export const questionTypeEnum = pgEnum('question_type', [
+  'text',
+  'textarea',
+  'email',
+  'phone',
+  'select',
+  'multiselect',
+  'checkbox',
+  'radio',
+  'date',
+  'time',
+  'file',
+  'matrix',
+  'rating',
+  'signature',
+  'address',
+  'custom'
+]);
+
 export const questionnaireQuestions = pgTable('questionnaire_questions', {
   id: serial('id').primaryKey(),
-  componentTypeId: integer('component_type_id').references(() => componentTypes.id),
+  componentTypeId: integer('component_type_id'),
+  pageId: integer('page_id'),
+  questionType: questionTypeEnum('question_type'),
+  questionKey: text('question_key'),
   text: text('question_text').notNull(),
   helpText: text('help_text'),
   placeholderText: text('placeholder_text'),
   isRequired: boolean('is_required').default(false),
+  order: integer('order'),
   validationRules: json('validation_rules'),
   defaultValue: json('default_value'),
   metadata: json('metadata'),

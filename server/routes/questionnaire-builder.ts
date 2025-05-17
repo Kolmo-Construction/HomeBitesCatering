@@ -323,7 +323,9 @@ async function handleAddSectionQuestions(res: Response, data: any) {
         placeholderText: question.placeholderText,
         isRequired: question.isRequired,
         validationRules: question.validationRules,
-        defaultValue: question.defaultValue
+        defaultValue: question.defaultValue,
+        questionType: 'custom', // Default to custom when using component type
+        order: question.questionOrder // Use the question order here
       })
       .returning();
     
@@ -366,8 +368,7 @@ async function handleCreateDefinition(res: Response, data: any) {
       versionName: definitionData.versionName,
       eventType: definitionData.eventType,
       isActive: definitionData.isActive,
-      isPublished: definitionData.isPublished,
-      metadata: definitionData.metadata
+      isPublished: definitionData.isPublished
     })
     .returning();
   
@@ -536,7 +537,8 @@ async function handleAddQuestion(res: Response, data: any) {
       isRequired: questionData.isRequired,
       validationRules: questionData.validationRules,
       defaultValue: questionData.defaultValue,
-      metadata: questionData.metadata
+      metadata: questionData.metadata,
+      questionType: 'custom' // Default to custom when using component type
     })
     .returning();
   
