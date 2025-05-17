@@ -58,11 +58,22 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
 
   // Toggle collapsible state for a group
   const toggleGroupCollapse = useCallback((pageId: string) => {
-    setCollapsedGroups(prev => ({
-      ...prev,
-      [pageId]: !prev[pageId]
-    }));
-  }, []);
+    setCollapsedGroups(prev => {
+      const newState = {
+        ...prev,
+        [pageId]: !prev[pageId]
+      };
+      return newState;
+    });
+    
+    // Schedule a re-render after state update
+    setTimeout(() => {
+      if (nodes.length) {
+        const updatedNodes = [...nodes];
+        setNodes(updatedNodes);
+      }
+    }, 50);
+  }, [nodes]);
   
   // Function to collapse/expand all groups
   const toggleAllGroups = useCallback((collapse: boolean) => {
@@ -74,7 +85,59 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
     });
     
     setCollapsedGroups(newState);
-  }, [pages]);
+    
+    // Schedule layout update after state change
+    setTimeout(() => {
+      // Use a direct approach to update the layout without causing loops
+      // Apply layout based on current collapsed state
+      if (nodes.length) {
+        const questionNodes = nodes.filter(node => node.id.startsWith('question-'));
+        const pageNodes = nodes.filter(node => node.id.startsWith('page-'));
+        
+        // Update visibility of nodes and edges based on collapsed state
+        const updatedNodes = [...pageNodes, ...questionNodes].map(node => {
+          // Hide questions from collapsed page groups
+          if (node.id.startsWith('question-')) {
+            const pageId = node.data.questionData?.pageId;
+            const isHidden = pageId && newState[`page-${pageId}`];
+            return {
+              ...node,
+              hidden: isHidden
+            };
+          }
+          return node;
+        });
+        
+        setNodes(updatedNodes);
+        
+        // Update edges
+        const updatedEdges = edges.map(edge => {
+          // Get source and target nodes
+          const sourceNodeId = edge.source;
+          const targetNodeId = edge.target;
+          
+          // Check if either node is hidden (part of collapsed group)
+          const sourceNode = updatedNodes.find(n => n.id === sourceNodeId);
+          const targetNode = updatedNodes.find(n => n.id === targetNodeId);
+          
+          const isSourceHidden = sourceNode?.hidden;
+          const isTargetHidden = targetNode?.hidden;
+          
+          return {
+            ...edge,
+            hidden: isSourceHidden || isTargetHidden ? true : undefined
+          };
+        });
+        
+        setEdges(updatedEdges);
+        
+        // Fit view
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView();
+        }
+      }
+    }, 100);
+  }, [pages, nodes, edges, reactFlowInstance]);
   
   // Function to apply automatic layout to nodes and handle collapsed groups
   const applyAutoLayout = useCallback(() => {
@@ -343,10 +406,19 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
     setEdges(newEdges);
     
     // Auto-layout the graph on initial load (or filter change)
-    setTimeout(() => {
-      applyAutoLayout();
+    // But don't do it every time collapsedGroups changes to prevent infinite loop
+    const timeoutId = setTimeout(() => {
+      // Use a ref to keep track of the last time layout was applied
+      // to prevent rapid re-layouts causing flicker
+      if (reactFlowInstance) {
+        reactFlowInstance.fitView(fitViewOptions);
+      }
     }, 200);
-  }, [questions, pages, conditionalLogic, selectedFilters, applyAutoLayout]);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [questions, pages, conditionalLogic, selectedFilters, reactFlowInstance, fitViewOptions]);
 
   // Handle node click
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
