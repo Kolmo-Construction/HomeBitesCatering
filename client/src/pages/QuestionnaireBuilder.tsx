@@ -917,18 +917,7 @@ const QuestionnaireBuilder = () => {
           )}
         </div>
       </div>
-      {/* Add styles for search highlight effect */}
-      <style jsx global>{`
-        .highlight-element {
-          animation: highlight-pulse 2s;
-        }
-        
-        @keyframes highlight-pulse {
-          0% { background-color: rgba(59, 130, 246, 0.2); }
-          50% { background-color: rgba(59, 130, 246, 0.3); }
-          100% { background-color: transparent; }
-        }
-      `}</style>
+      {/* Highlight style added via className */}
       
       <div className="space-y-6">
         <div className="border-b border-gray-200">
