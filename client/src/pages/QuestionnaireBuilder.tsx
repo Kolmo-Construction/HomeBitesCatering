@@ -122,7 +122,9 @@ const QuestionType = ({ value }: { value: string }) => {
     'radio': 'Radio Buttons',
     'checkbox': 'Checkboxes',
     'matrix': 'Matrix',
-    'file': 'File Upload'
+    'file': 'File Upload',
+    'name': 'Full Name (First/Last)',
+    'address': 'Address'
   };
   
   return <span>{types[value] || value}</span>;
@@ -1340,6 +1342,8 @@ const QuestionnaireBuilder = () => {
                                     <SelectItem value="date">Date</SelectItem>
                                     <SelectItem value="textarea">Multiline Text</SelectItem>
                                     <SelectItem value="select">Dropdown</SelectItem>
+                                    <SelectItem value="name">Full Name (First/Last)</SelectItem>
+                                    <SelectItem value="address">Address</SelectItem>
                                     <SelectItem value="radio">Radio Buttons</SelectItem>
                                     <SelectItem value="checkbox">Checkboxes</SelectItem>
                                     <SelectItem value="matrix">Matrix</SelectItem>
