@@ -2178,32 +2178,31 @@ const QuestionnaireBuilder = () => {
                           />
                           
                           {/* Only show value field for conditions that need a comparison value */}
-                          {() => {
-                            const condition = conditionalLogicForm.watch("triggerCondition");
-                            const needsValue = !["is_answered", "is_empty"].includes(condition);
-                            
-                            return (
-                              <FormField
-                                control={conditionalLogicForm.control}
-                                name="triggerValue"
-                                render={({ field }) => {
-                                  return (
-                                    <FormItem>
-                                      <FormLabel>Expected Value</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          {...field}
-                                          disabled={!needsValue}
-                                          placeholder={needsValue ? "Value to compare against" : "Not needed for this condition"}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  );
-                                }}
-                              />
-                            );
-                          }}
+                          <FormField
+                            control={conditionalLogicForm.control}
+                            name="triggerValue"
+                            render={({ field }) => {
+                              const condition = conditionalLogicForm.watch("triggerCondition");
+                              const needsValue = !["is_answered", "is_empty"].includes(condition);
+                              
+                              return (
+                                <FormItem>
+                                  <FormLabel>Expected Value</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      disabled={!needsValue}
+                                      placeholder={needsValue ? "Value to compare against" : "Not needed for this condition"}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    The value to compare against in the condition
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              );
+                            }}
+                          />
                           
                           <div className="grid grid-cols-2 gap-4">
                             <FormField
