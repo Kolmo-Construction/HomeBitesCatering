@@ -178,7 +178,7 @@ const ConditionalRenderingTest: React.FC = () => {
   };
   
   // Render fields based on their type
-  const renderField = (question: any) => {
+  const renderField = (question: Question) => {
     const { questionType, questionText, questionKey, helpText, options } = question;
     
     switch (questionType) {
