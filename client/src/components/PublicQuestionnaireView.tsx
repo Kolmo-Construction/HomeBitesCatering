@@ -579,7 +579,6 @@ const PublicQuestionnaireView: React.FC = () => {
     switch (questionType) {
       case 'text':
       case 'email':
-      case 'phone':
         return (
           <div className="space-y-2">
             <Label 
@@ -603,6 +602,54 @@ const PublicQuestionnaireView: React.FC = () => {
                 errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
               )}
             />
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'phone':
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:border-input">
+              <span className="pl-3 text-gray-500">📞</span>
+              <Input 
+                id={questionKey}
+                type="tel" 
+                placeholder={placeholderText || "(123) 456-7890"} 
+                value={formData[questionKey] || ''}
+                onChange={(e) => {
+                  // Auto-format the phone number as user types
+                  const input = e.target.value;
+                  // Only keep digits
+                  const digitsOnly = input.replace(/\D/g, '');
+                  
+                  let formattedNumber = '';
+                  // Format according to North American number format
+                  if (digitsOnly.length <= 3) {
+                    formattedNumber = digitsOnly;
+                  } else if (digitsOnly.length <= 6) {
+                    formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`;
+                  } else {
+                    formattedNumber = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, 10)}`;
+                  }
+                  
+                  handleInputChange(questionKey, formattedNumber);
+                }}
+                className={cn(
+                  'border-0 focus-visible:ring-0 focus-visible:ring-offset-0',
+                  errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
+                )}
+              />
+            </div>
             {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
           </div>
         );
