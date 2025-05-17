@@ -117,6 +117,25 @@ const PublicQuestionnaireView: React.FC = () => {
   const [helpSidebarOpen, setHelpSidebarOpen] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   
+  // List of question types that should display help buttons
+  // You can customize this list to control exactly which question types get help
+  const questionsWithHelp = [
+    'text',             // Show help for text fields
+    'textarea',         // Show help for longer text fields
+    'date',             // Show help for date fields
+    'time',             // Show help for time fields
+    'time_picker',      // Show help for time picker
+    'address',          // Show help for address fields
+    'select',           // Show help for dropdown selections
+    'radio',            // Show help for radio options
+    'checkbox_group',   // Show help for checkbox groups
+    'name',             // Show help for name fields
+    'phone',            // Show help for phone fields
+    'slider',           // Show help for sliders
+    'incrementer',      // Show help for incrementers
+    'matrix'            // Show help for matrix questions
+  ];
+  
   // Nutrition tracking state
   const [selectedMenuItems, setSelectedMenuItems] = useState<MenuItemNutrition[]>([]);
   const [nutritionSummary, setNutritionSummary] = useState<NutritionalInfo>({
@@ -603,7 +622,10 @@ const PublicQuestionnaireView: React.FC = () => {
               >
                 {questionText}
               </Label>
-              <HelpButton question={question} onOpenHelp={openHelpForQuestion} />
+              {/* Only show help button for question types in our configuration list */}
+              {questionsWithHelp.includes(questionType) && (
+                <HelpButton question={question} onOpenHelp={openHelpForQuestion} />
+              )}
             </div>
             {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
             <Input 
