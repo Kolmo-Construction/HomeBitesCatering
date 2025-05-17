@@ -21,6 +21,7 @@ import UnifiedFormBuilderDocs from "@/pages/UnifiedFormBuilderDocs";
 import HomeBites2025Form from "@/examples/HomeBites2025Form";
 import PublicQuestionnaire from "@/pages/PublicQuestionnaire";
 import ThankYou from "@/pages/ThankYou";
+import ConditionalRenderingTestPage from "@/pages/ConditionalRenderingTestPage";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -78,6 +79,7 @@ function AppContent() {
             <Route path="/raw-leads" component={RawLeadsPage} />
             <Route path="/raw-leads/new" component={RawLeadFormPage} />
             <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
+            <Route path="/conditional-rendering-test" component={ConditionalRenderingTestPage} />
             <Route>
               <Dashboard />
             </Route>
