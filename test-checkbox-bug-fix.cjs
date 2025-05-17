@@ -11,31 +11,51 @@ class TestCheckboxQuestion {
   // This simulates loading a question with validation rules
   loadForEditing() {
     // Parse validation rules similar to how it's done in QuestionnaireBuilder.tsx
-    let parsedValidationRules = {};
+    let parsedValidationRules = {
+      min: undefined, 
+      max: undefined, 
+      step: undefined,
+      exactCount: undefined,
+      minCount: undefined,
+      maxCount: undefined
+    };
     
     try {
       if (this.validationRules) {
-        // If it's a string, parse it
+        // If it's a string, try to parse it as JSON
         if (typeof this.validationRules === 'string') {
-          parsedValidationRules = JSON.parse(this.validationRules);
+          // Skip parsing if it's "[object Object]" which is a common issue
+          if (this.validationRules !== "[object Object]") {
+            const parsed = JSON.parse(this.validationRules);
+            if (parsed) {
+              // Extract only the properties we need
+              if (parsed.exactCount !== undefined) parsedValidationRules.exactCount = parsed.exactCount;
+              if (parsed.minCount !== undefined) parsedValidationRules.minCount = parsed.minCount;
+              if (parsed.maxCount !== undefined) parsedValidationRules.maxCount = parsed.maxCount;
+              if (parsed.min !== undefined) parsedValidationRules.min = parsed.min;
+              if (parsed.max !== undefined) parsedValidationRules.max = parsed.max;
+              if (parsed.step !== undefined) parsedValidationRules.step = parsed.step;
+            }
+          }
         } 
-        // If it's already an object, use it directly
-        else if (typeof this.validationRules === 'object') {
-          parsedValidationRules = this.validationRules;
+        // If it's already an object, extract the properties we need
+        else if (typeof this.validationRules === 'object' && this.validationRules !== null) {
+          const rules = this.validationRules;
+          if (rules.exactCount !== undefined) parsedValidationRules.exactCount = rules.exactCount;
+          if (rules.minCount !== undefined) parsedValidationRules.minCount = rules.minCount;
+          if (rules.maxCount !== undefined) parsedValidationRules.maxCount = rules.maxCount;
+          if (rules.min !== undefined) parsedValidationRules.min = rules.min;
+          if (rules.max !== undefined) parsedValidationRules.max = rules.max;
+          if (rules.step !== undefined) parsedValidationRules.step = rules.step;
         }
       }
     } catch (e) {
       console.error("Error parsing validation rules:", e);
-      return {};
     }
     
     // Return what would be set in the form when editing
     return {
-      validationRules: {
-        exactCount: parsedValidationRules.exactCount,
-        minCount: parsedValidationRules.minCount,
-        maxCount: parsedValidationRules.maxCount
-      }
+      validationRules: parsedValidationRules
     };
   }
   
@@ -50,14 +70,33 @@ class TestCheckboxQuestion {
   
   // Check if more options can be selected based on validation rules
   canSelectMoreOptions() {
-    let parsedRules = {};
+    let parsedRules = {
+      exactCount: undefined,
+      minCount: undefined,
+      maxCount: undefined
+    };
     
     try {
       if (this.validationRules) {
+        // If it's a string, try to parse it as JSON
         if (typeof this.validationRules === 'string') {
-          parsedRules = JSON.parse(this.validationRules);
-        } else {
-          parsedRules = this.validationRules;
+          // Skip parsing if it's "[object Object]" which is a common issue
+          if (this.validationRules !== "[object Object]") {
+            const parsed = JSON.parse(this.validationRules);
+            if (parsed) {
+              // Extract only the properties we need
+              if (parsed.exactCount !== undefined) parsedRules.exactCount = parsed.exactCount;
+              if (parsed.minCount !== undefined) parsedRules.minCount = parsed.minCount;
+              if (parsed.maxCount !== undefined) parsedRules.maxCount = parsed.maxCount;
+            }
+          }
+        } 
+        // If it's already an object, extract the properties we need
+        else if (typeof this.validationRules === 'object' && this.validationRules !== null) {
+          const rules = this.validationRules;
+          if (rules.exactCount !== undefined) parsedRules.exactCount = rules.exactCount;
+          if (rules.minCount !== undefined) parsedRules.minCount = rules.minCount;
+          if (rules.maxCount !== undefined) parsedRules.maxCount = rules.maxCount;
         }
       }
     } catch (e) {
@@ -65,14 +104,14 @@ class TestCheckboxQuestion {
       return true; // If parsing fails, allow selection
     }
     
-    const { exactCount, maxCount } = parsedRules;
-    
     // Check if maximum selections reached
-    if (exactCount !== undefined && this.selectedOptions.length >= exactCount) {
+    if (parsedRules.exactCount !== undefined && this.selectedOptions.length >= parsedRules.exactCount) {
+      console.log(`Selection limit reached: exactCount=${parsedRules.exactCount}`);
       return false;
     }
     
-    if (maxCount !== undefined && this.selectedOptions.length >= maxCount) {
+    if (parsedRules.maxCount !== undefined && this.selectedOptions.length >= parsedRules.maxCount) {
+      console.log(`Selection limit reached: maxCount=${parsedRules.maxCount}`);
       return false;
     }
     

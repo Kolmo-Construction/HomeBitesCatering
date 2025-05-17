@@ -380,8 +380,61 @@ const PublicQuestionnaireView: React.FC = () => {
     return undefined;
   };
   
+  // Check if more checkbox options can be selected based on validation rules
+  const canSelectMoreCheckboxOptions = (questionKey: string, currentValues: any[]): boolean => {
+    if (!questionnaire) return true;
+    
+    // Find the question by key
+    let targetQuestion: Question | undefined;
+    
+    for (const page of questionnaire.pages) {
+      targetQuestion = page.questions.find(q => q.questionKey === questionKey);
+      if (targetQuestion) break;
+    }
+    
+    if (!targetQuestion) return true;
+    
+    // Get validation rules
+    const validationRules = targetQuestion.validationRules || {};
+    
+    // Check if maximum selections reached
+    if (validationRules.exactCount !== undefined && currentValues.length >= validationRules.exactCount) {
+      toast({
+        title: "Selection limit reached",
+        description: `You can only select ${validationRules.exactCount} options.`,
+        duration: 3000
+      });
+      return false;
+    }
+    
+    if (validationRules.maxCount !== undefined && currentValues.length >= validationRules.maxCount) {
+      toast({
+        title: "Selection limit reached",
+        description: `You can select up to ${validationRules.maxCount} options.`,
+        duration: 3000
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
   // Update form data when input changes
   const handleInputChange = (questionKey: string, value: any) => {
+    // Special handling for checkbox groups
+    if (Array.isArray(value)) {
+      const currentValues = formData[questionKey] || [];
+      
+      // If we're adding a value (value array is longer than current values)
+      if (value.length > currentValues.length) {
+        // Check if we can add more options
+        if (!canSelectMoreCheckboxOptions(questionKey, currentValues)) {
+          // If we can't add more, just return without updating the form
+          return;
+        }
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       [questionKey]: value

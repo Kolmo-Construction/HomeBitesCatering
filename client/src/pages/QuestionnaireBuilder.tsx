@@ -2163,23 +2163,50 @@ const QuestionnaireBuilder = () => {
                               // Set up form values for the selected question
                               console.log("Loading question for editing:", question);
                               
-                              // For checkboxes with selection limits, we need to handle validation rules
-                              let parsedValidationRules = {};
+                              // For checkboxes with selection limits, we need to handle validation rules safely
+                              let parsedValidationRules = {
+                                min: undefined, 
+                                max: undefined, 
+                                step: undefined,
+                                exactCount: undefined,
+                                minCount: undefined,
+                                maxCount: undefined
+                              };
                               
-                              if (question.validationRules) {
-                                try {
-                                  // If it's a string, parse it as JSON
+                              try {
+                                if (question.validationRules) {
+                                  // If it's a string, try to parse it as JSON
                                   if (typeof question.validationRules === 'string') {
-                                    parsedValidationRules = JSON.parse(question.validationRules);
+                                    // Skip parsing if it's "[object Object]" which is a string representation of an object that can't be parsed as JSON
+                                    if (question.validationRules !== "[object Object]") {
+                                      const parsed = JSON.parse(question.validationRules);
+                                      if (parsed) {
+                                        // Extract only the properties we need
+                                        if (parsed.exactCount !== undefined) parsedValidationRules.exactCount = parsed.exactCount;
+                                        if (parsed.minCount !== undefined) parsedValidationRules.minCount = parsed.minCount;
+                                        if (parsed.maxCount !== undefined) parsedValidationRules.maxCount = parsed.maxCount;
+                                        if (parsed.min !== undefined) parsedValidationRules.min = parsed.min;
+                                        if (parsed.max !== undefined) parsedValidationRules.max = parsed.max;
+                                        if (parsed.step !== undefined) parsedValidationRules.step = parsed.step;
+                                      }
+                                    }
                                   } 
-                                  // If it's already an object, use it directly
-                                  else if (typeof question.validationRules === 'object') {
-                                    parsedValidationRules = question.validationRules;
+                                  // If it's already an object, extract the properties we need
+                                  else if (typeof question.validationRules === 'object' && question.validationRules !== null) {
+                                    const rules = question.validationRules;
+                                    if (rules.exactCount !== undefined) parsedValidationRules.exactCount = rules.exactCount;
+                                    if (rules.minCount !== undefined) parsedValidationRules.minCount = rules.minCount;
+                                    if (rules.maxCount !== undefined) parsedValidationRules.maxCount = rules.maxCount;
+                                    if (rules.min !== undefined) parsedValidationRules.min = rules.min;
+                                    if (rules.max !== undefined) parsedValidationRules.max = rules.max;
+                                    if (rules.step !== undefined) parsedValidationRules.step = rules.step;
                                   }
-                                } catch (e) {
-                                  console.error("Error parsing validation rules:", e);
                                 }
+                              } catch (e) {
+                                console.error("Error parsing validation rules:", e);
                               }
+                              
+                              console.log("Parsed validation rules:", parsedValidationRules);
                               
                               // Reset form with base values
                               questionForm.reset({
@@ -2190,14 +2217,7 @@ const QuestionnaireBuilder = () => {
                                 isRequired: question.isRequired,
                                 placeholderText: question.placeholderText || "",
                                 helpText: question.helpText || "",
-                                validationRules: {
-                                  min: parsedValidationRules.min,
-                                  max: parsedValidationRules.max, 
-                                  step: parsedValidationRules.step,
-                                  exactCount: parsedValidationRules.exactCount,
-                                  minCount: parsedValidationRules.minCount,
-                                  maxCount: parsedValidationRules.maxCount
-                                }
+                                validationRules: parsedValidationRules
                               });
                               
                               // Set options if they exist
