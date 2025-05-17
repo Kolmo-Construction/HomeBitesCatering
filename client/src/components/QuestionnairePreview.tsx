@@ -519,27 +519,6 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
           </div>
         );
         
-      case 'toggle':
-        return (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor={questionKey} className={cn(isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500')}>
-                {questionText}
-              </Label>
-              <Switch
-                id={questionKey}
-                checked={formData[questionKey] === true || formData[questionKey] === 'true'}
-                onCheckedChange={(checked) => {
-                  // Store as boolean for consistent conditional logic evaluation
-                  handleInputChange(questionKey, checked);
-                }}
-              />
-            </div>
-            {helpText && <p className="text-sm text-gray-500">{helpText}</p>}
-            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
-          </div>
-        );
-        
       default:
         return (
           <div className="space-y-2">
