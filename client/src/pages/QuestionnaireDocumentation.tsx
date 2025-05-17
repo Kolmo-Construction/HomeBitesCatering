@@ -735,6 +735,44 @@ createQuestionnaire().catch(error => {
                           <li>Check for server-side validation errors in the response</li>
                         </ul>
                       </div>
+
+                      <div className="mt-4 border rounded-md p-4">
+                        <h4 className="font-medium">Setting Checkbox Selection Limits</h4>
+                        <p className="text-sm mt-2">How to limit the number of options users can select in checkbox groups:</p>
+                        
+                        <h5 className="text-sm font-medium mt-3">Method 1: Using Validation Rules</h5>
+                        <p className="text-sm mt-1">
+                          When creating or editing a checkbox group question in the Questionnaire Builder:
+                        </p>
+                        <ol className="mt-2 list-decimal pl-5 text-sm">
+                          <li>Set the question type to "Checkboxes"</li>
+                          <li>Under validation rules, set one or more of the following:
+                            <ul className="list-disc pl-5 text-sm mt-1">
+                              <li><strong>Exact Selection Count</strong> - Forces users to select exactly this many options</li>
+                              <li><strong>Minimum Selection Count</strong> - Sets the minimum number of required selections</li>
+                              <li><strong>Maximum Selection Count</strong> - Sets the maximum allowed selections</li>
+                            </ul>
+                          </li>
+                          <li>Save the question</li>
+                        </ol>
+                        
+                        <h5 className="text-sm font-medium mt-3">Method 2: Using Question Text</h5>
+                        <p className="text-sm mt-1">
+                          You can also use specific patterns in your question text to enforce limits:
+                        </p>
+                        <ul className="mt-2 list-disc pl-5 text-sm">
+                          <li>Use "Select exactly X" in the question text (e.g., "Select exactly 3 protein options")</li>
+                          <li>Use "Choose X" in the question text (e.g., "Choose 2 side dishes")</li>
+                        </ul>
+                        
+                        <p className="text-sm mt-3">
+                          <strong>Example:</strong> For a food selection questionnaire where users must choose exactly 3 protein options:
+                        </p>
+                        <pre className="bg-gray-100 p-2 text-xs mt-1 rounded-md">
+{`Question Text: "Taco Fiesta - Bronze - Protein - Choose 3 Proteins"
+Validation Rule: Set "Exact Selection Count" to 3`}
+                        </pre>
+                      </div>
                     </section>
 
                     <Separator className="my-4" />

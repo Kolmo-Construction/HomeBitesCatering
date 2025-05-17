@@ -1057,15 +1057,23 @@ const PublicQuestionnaireView: React.FC = () => {
                           if (checked) {
                             // If trying to add a new selection
                             if (!currentValues.includes(option.optionValue)) {
-                              // Parse exact selection requirements from the help text
+                              // Check for validation rules in the question data
+                              const validationRules = question.validationRules || {};
+                              const exactCount = validationRules.exactCount;
+                              const minCount = validationRules.minCount;
+                              const maxCount = validationRules.maxCount;
+                              
+                              // Parse exact selection requirements from the help text as fallback
                               const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/);
                               const exactSelections = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : null;
                               
                               // Check if adding would exceed the maximum selections needed
                               if ((hasSelectionLimit && maxSelections && currentValues.length >= maxSelections) ||
-                                  (exactSelections && currentValues.length >= exactSelections)) {
+                                  (exactSelections && currentValues.length >= exactSelections) ||
+                                  (exactCount && currentValues.length >= exactCount) ||
+                                  (maxCount && currentValues.length >= maxCount)) {
                                 // Determine the limit based on which rule matched
-                                const limit = exactSelections || maxSelections;
+                                const limit = exactCount || exactSelections || maxCount || maxSelections;
                                 // If max selections reached, show toast notification
                                 toast({
                                   title: "Selection limit reached",
