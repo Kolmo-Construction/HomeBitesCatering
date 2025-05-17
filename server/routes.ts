@@ -1800,11 +1800,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Create a new questionnaire definition
+  // Create a new questionnaire definition (or clone an existing one)
   app.post('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
     try {
       console.log('Creating questionnaire definition with data:', req.body);
-      const validatedData = insertQuestionnaireDefinitionSchema.parse(req.body);
+      
+      // Extract source definition ID for cloning if provided
+      const sourceDefinitionId = req.body.sourceDefinitionId;
+      const isCloneOperation = !!sourceDefinitionId;
+      
+      // We need to handle the sourceDefinitionId separately since it's not in the schema
+      let validatedData;
+      try {
+        validatedData = insertQuestionnaireDefinitionSchema.parse(req.body);
+      } catch (validationError) {
+        console.error('Validation error:', validationError);
+        return res.status(400).json({ 
+          message: 'Invalid questionnaire definition data', 
+          errors: validationError.errors 
+        });
+      }
+      
       console.log('Validated data:', validatedData);
       
       // If setting this definition to active, ensure only one definition is active at a time
@@ -1817,11 +1833,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(questionnaireDefinitions.isActive, true));
       }
       
-      console.log('Calling storage.createQuestionnaireDefinition');
-      const definition = await storage.createQuestionnaireDefinition(validatedData);
-      console.log('Definition created successfully:', definition);
+      // Add the sourceDefinitionId for cloning if it exists (needs type assertion since it's not in the schema)
+      const definitionData = {
+        ...validatedData,
+        ...(isCloneOperation ? { sourceDefinitionId } : {})
+      };
       
-      res.status(201).json(definition);
+      console.log('Calling storage.createQuestionnaireDefinition' + (isCloneOperation ? ' with cloning' : ''));
+      const definition = await storage.createQuestionnaireDefinition(definitionData as any);
+      
+      if (isCloneOperation) {
+        console.log(`Questionnaire cloned successfully from ID ${sourceDefinitionId} to ${definition.id}`);
+        res.status(201).json({
+          ...definition,
+          _cloned: true,
+          _message: 'Questionnaire cloned successfully with all pages, questions, and conditional logic'
+        });
+      } else {
+        console.log('Definition created successfully:', definition);
+        res.status(201).json(definition);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error('Validation error:', error.errors);

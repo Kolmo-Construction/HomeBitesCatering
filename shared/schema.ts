@@ -628,11 +628,16 @@ export type QuestionnaireConditionalLogic = typeof questionnaireConditionalLogic
 export type QuestionnaireSubmission = typeof questionnaireSubmissions.$inferSelect;
 
 // Create insert schemas for the questionnaire tables
-export const insertQuestionnaireDefinitionSchema = createInsertSchema(questionnaireDefinitions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true
-});
+export const insertQuestionnaireDefinitionSchema = createInsertSchema(questionnaireDefinitions)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true
+  })
+  .extend({
+    // Add sourceDefinitionId as an optional field for cloning operations
+    sourceDefinitionId: z.number().optional().describe('Source definition ID for cloning operations')
+  });
 
 export const insertQuestionnairePageSchema = createInsertSchema(questionnairePages).omit({
   id: true,
