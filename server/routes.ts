@@ -4121,20 +4121,30 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
                 processedValidationRules = {};
                 
                 // For checkbox questions, we need special processing
-                if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
+                if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group' || question.questionType === 'checkbox_group') {
                   const rules = data.validationRules;
                   
-                  // Only copy non-empty values that should be numbers
-                  if (rules.exactCount !== undefined && rules.exactCount !== '' && !isNaN(Number(rules.exactCount))) {
-                    processedValidationRules.exactCount = Number(rules.exactCount);
-                  }
+                  // Log the actual validation rules structure for debugging
+                  console.log('Processing checkbox validation rules:', JSON.stringify(rules));
                   
-                  if (rules.minCount !== undefined && rules.minCount !== '' && !isNaN(Number(rules.minCount))) {
-                    processedValidationRules.minCount = Number(rules.minCount);
-                  }
-                  
-                  if (rules.maxCount !== undefined && rules.maxCount !== '' && !isNaN(Number(rules.maxCount))) {
-                    processedValidationRules.maxCount = Number(rules.maxCount);
+                  // Handle both object format and string/number format for validation rules
+                  if (typeof rules === 'object' && rules !== null) {
+                    // Only copy non-empty values that should be numbers
+                    if (rules.exactCount !== undefined && rules.exactCount !== '' && !isNaN(Number(rules.exactCount))) {
+                      processedValidationRules.exactCount = Number(rules.exactCount);
+                    }
+                    
+                    if (rules.minCount !== undefined && rules.minCount !== '' && !isNaN(Number(rules.minCount))) {
+                      processedValidationRules.minCount = Number(rules.minCount);
+                    }
+                    
+                    if (rules.maxCount !== undefined && rules.maxCount !== '' && !isNaN(Number(rules.maxCount))) {
+                      processedValidationRules.maxCount = Number(rules.maxCount);
+                    }
+                  } else {
+                    // If the rules are not in object format, use the existing validation rules from the question
+                    console.log('Using existing validation rules from question:', question.validationRules);
+                    processedValidationRules = question.validationRules;
                   }
                   
                   // For other numeric fields (min, max, step)
