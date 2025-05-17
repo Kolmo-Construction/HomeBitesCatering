@@ -443,6 +443,26 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
           </div>
         );
         
+      case 'toggle':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor={questionKey} className={cn(isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500')}>
+                {questionText}
+              </Label>
+              <Switch
+                id={questionKey}
+                checked={formData[questionKey] === true}
+                onCheckedChange={(checked) => {
+                  handleInputChange(questionKey, checked);
+                }}
+              />
+            </div>
+            {helpText && <p className="text-sm text-gray-500">{helpText}</p>}
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
       case 'info_text':
         return (
           <div className="space-y-2">
@@ -583,14 +603,43 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
         <div className="space-y-6">
           {(questionsMap[currentPage.id] || [])
             .sort((a, b) => a.order - b.order)
-            .map((question) => (
-              // Only render the question if it should be visible based on dependencies
-              isQuestionVisible(question) && (
+            .map((question) => {
+              // Check if the question has a dependency
+              if (question.dependsOn && question.showIf) {
+                // Get the value of the field this question depends on
+                const dependentFieldValue = formData[question.dependsOn];
+                
+                // Compare with the condition
+                let shouldShow = false;
+                
+                // Convert the showIf value to the appropriate type based on the field type
+                if (typeof dependentFieldValue === 'boolean') {
+                  // For toggle/boolean fields
+                  shouldShow = dependentFieldValue === (question.showIf === 'true');
+                } else if (typeof dependentFieldValue === 'number') {
+                  // For numeric fields like sliders and incrementers
+                  shouldShow = dependentFieldValue === Number(question.showIf);
+                } else if (dependentFieldValue === 'true' || dependentFieldValue === 'false') {
+                  // For string boolean values
+                  shouldShow = (dependentFieldValue === 'true') === (question.showIf === 'true');
+                } else {
+                  // For string values
+                  shouldShow = String(dependentFieldValue) === question.showIf;
+                }
+                
+                // Only render if the condition is met
+                if (!shouldShow) {
+                  return null;
+                }
+              }
+              
+              // If we get here, the question should be displayed
+              return (
                 <div key={question.id} className="pb-4">
                   {renderQuestion(question)}
                 </div>
-              )
-            ))}
+              );
+            })}
         </div>
       </CardContent>
       
