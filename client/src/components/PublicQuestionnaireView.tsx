@@ -1225,7 +1225,9 @@ const PublicQuestionnaireView: React.FC = () => {
                 id={questionKey}
                 checked={formData[questionKey] === 'true' || formData[questionKey] === true}
                 onCheckedChange={(checked) => {
-                  handleInputChange(questionKey, checked);
+                  // Store toggle value as string 'true'/'false' for consistent conditional logic
+                  handleInputChange(questionKey, String(checked));
+                  console.log(`Toggle ${questionKey} changed to: ${checked} (${typeof checked}), stored as: ${String(checked)}`);
                 }}
               />
               <Label
