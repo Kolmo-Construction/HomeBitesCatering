@@ -147,9 +147,12 @@ const PublicQuestionnaireView: React.FC = () => {
           throw new Error(data.message || 'Failed to load questionnaire data.');
         }
         
+        // Log the raw data structure to understand it better
+        console.log('Raw questionnaire data:', JSON.stringify(data.questionnaire.pages[0], null, 2));
+        
         // Transform the data structure to match our component expectations
         const transformedQuestionnaire = {
-          ...data.questionnaire,
+          definition: data.questionnaire.definition,
           pages: data.questionnaire.pages.map((pageData: any) => ({
             id: pageData.page.id,
             title: pageData.page.title,
@@ -167,7 +170,8 @@ const PublicQuestionnaireView: React.FC = () => {
               options: q.options,
               matrixColumns: q.matrixColumns
             }))
-          }))
+          })),
+          conditionalLogic: data.questionnaire.conditionalLogic || []
         };
         
         setQuestionnaire(transformedQuestionnaire);
