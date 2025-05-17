@@ -404,8 +404,11 @@ export const questionTypeEnum = pgEnum('question_type_enum', [
   'checkbox', // single boolean checkbox
   'checkbox_group', // multiple choice checkbox
   'date',
-  'time',
+  'time', // Standard time input
+  'time_picker', // Enhanced time picker with hour, minutes, AM/PM
   'number',
+  'slider', // Range slider with min/max values
+  'incrementer', // Step incrementer (number input with +/- buttons)
   'matrix_single', // matrix where each row can have one selection from columns
   'matrix_multi', // matrix where each row can have multiple selections from columns
   'info_text', // for displaying read-only information blocks

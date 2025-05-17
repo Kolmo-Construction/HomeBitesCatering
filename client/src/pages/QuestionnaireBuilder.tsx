@@ -124,12 +124,16 @@ const QuestionType = ({ value }: { value: string }) => {
     'phone': 'Phone Number',
     'number': 'Number',
     'date': 'Date',
+    'time': 'Time',
+    'time_picker': 'Time Picker (Hours/Minutes/AM-PM)',
     'textarea': 'Multiline Text',
     'select': 'Dropdown',
     'radio': 'Radio Buttons',
     'checkbox': 'Checkboxes',
     'matrix': 'Matrix',
     'file': 'File Upload',
+    'slider': 'Slider',
+    'incrementer': 'Step Counter',
     'name': 'Full Name (First/Last)',
     'address': 'Address'
   };
@@ -1405,12 +1409,16 @@ const QuestionnaireBuilder = () => {
                                     <SelectItem value="phone">Phone Number</SelectItem>
                                     <SelectItem value="number">Number</SelectItem>
                                     <SelectItem value="date">Date</SelectItem>
+                                    <SelectItem value="time">Time</SelectItem>
+                                    <SelectItem value="time_picker">Time Picker (Hours/Minutes/AM-PM)</SelectItem>
                                     <SelectItem value="textarea">Multiline Text</SelectItem>
                                     <SelectItem value="select">Dropdown</SelectItem>
                                     <SelectItem value="name">Full Name (First/Last)</SelectItem>
                                     <SelectItem value="address">Address</SelectItem>
                                     <SelectItem value="radio">Radio Buttons</SelectItem>
                                     <SelectItem value="checkbox">Checkboxes</SelectItem>
+                                    <SelectItem value="slider">Slider</SelectItem>
+                                    <SelectItem value="incrementer">Step Counter</SelectItem>
                                     <SelectItem value="matrix">Matrix</SelectItem>
                                   </SelectContent>
                                 </Select>

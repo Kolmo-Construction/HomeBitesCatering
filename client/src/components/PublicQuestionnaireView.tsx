@@ -907,6 +907,128 @@ const PublicQuestionnaireView: React.FC = () => {
           </div>
         );
         
+      case 'time':
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <Input 
+              id={questionKey}
+              type="time" 
+              value={formData[questionKey] || ''}
+              onChange={(e) => handleInputChange(questionKey, e.target.value)}
+              className={cn(
+                errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
+              )}
+            />
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'time_picker':
+        // Enhanced time picker with hours, minutes, AM/PM
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Hour selector */}
+              <div className="space-y-1">
+                <Label htmlFor={`${questionKey}-hour`} className="text-xs">Hour</Label>
+                <Select
+                  value={(formData[questionKey]?.hour || "").toString()}
+                  onValueChange={(value) => {
+                    const currentValue = formData[questionKey] || {};
+                    handleInputChange(questionKey, {
+                      ...currentValue,
+                      hour: value
+                    });
+                  }}
+                >
+                  <SelectTrigger id={`${questionKey}-hour`} className="w-[80px]">
+                    <SelectValue placeholder="Hour" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({length: 12}, (_, i) => i + 1).map(hour => (
+                      <SelectItem key={hour} value={hour.toString()}>
+                        {hour}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Minute selector */}
+              <div className="space-y-1">
+                <Label htmlFor={`${questionKey}-minute`} className="text-xs">Minute</Label>
+                <Select
+                  value={(formData[questionKey]?.minute || "").toString()}
+                  onValueChange={(value) => {
+                    const currentValue = formData[questionKey] || {};
+                    handleInputChange(questionKey, {
+                      ...currentValue,
+                      minute: value
+                    });
+                  }}
+                >
+                  <SelectTrigger id={`${questionKey}-minute`} className="w-[80px]">
+                    <SelectValue placeholder="Min" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["00", "15", "30", "45"].map(minute => (
+                      <SelectItem key={minute} value={minute}>
+                        {minute}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* AM/PM selector */}
+              <div className="space-y-1">
+                <Label htmlFor={`${questionKey}-period`} className="text-xs">AM/PM</Label>
+                <Select
+                  value={formData[questionKey]?.period || ""}
+                  onValueChange={(value) => {
+                    const currentValue = formData[questionKey] || {};
+                    handleInputChange(questionKey, {
+                      ...currentValue,
+                      period: value
+                    });
+                  }}
+                >
+                  <SelectTrigger id={`${questionKey}-period`} className="w-[80px]">
+                    <SelectValue placeholder="AM/PM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AM">AM</SelectItem>
+                    <SelectItem value="PM">PM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
       case 'info_text':
         return (
           <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
