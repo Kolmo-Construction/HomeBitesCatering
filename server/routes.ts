@@ -4357,7 +4357,9 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
             isActive: data.isActive || false,
             versionName: data.versionName || `v${Date.now()}`,
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            // Pass source definition ID if this is a clone operation
+            sourceDefinitionId: data.sourceDefinitionId
           };
           
           // If setting as active, deactivate other definitions
@@ -4370,19 +4372,26 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
           }
           
           console.log('Calling storage to create questionnaire definition');
-          // Create the definition
-          const [definition] = await db
-            .insert(questionnaireDefinitions)
-            .values(definitionData)
-            .returning();
-            
-          console.log('Definition created successfully:', definition);
           
-          return res.status(201).json({
-            success: true,
-            message: 'Questionnaire definition created successfully',
-            definition
-          });
+          // Use the storage method which now supports cloning
+          const definition = await storage.createQuestionnaireDefinition(definitionData);
+          
+          // If this was a clone operation
+          if (data.sourceDefinitionId) {
+            console.log(`Cloned questionnaire from ID ${data.sourceDefinitionId} to ${definition.id}`);
+            return res.status(201).json({
+              success: true,
+              message: 'Questionnaire cloned successfully with all pages, questions, and logic',
+              definition
+            });
+          } else {
+            console.log('Definition created successfully:', definition);
+            return res.status(201).json({
+              success: true,
+              message: 'Questionnaire definition created successfully',
+              definition
+            });
+          }
         }
           
         case 'addPage': {

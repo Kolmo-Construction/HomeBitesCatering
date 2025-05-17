@@ -902,14 +902,122 @@ export class DatabaseStorage implements IStorage {
   
   async createQuestionnaireDefinition(definition: z.infer<typeof insertQuestionnaireDefinitionSchema>): Promise<QuestionnaireDefinition> {
     try {
+      // Check if this is a clone operation (sourceDefinitionId is provided)
+      const sourceDefinitionId = (definition as any).sourceDefinitionId;
+      
+      // Remove sourceDefinitionId from the definition object before insertion
+      const { sourceDefinitionId: _, ...definitionToInsert } = definition as any;
+      
+      // Create the new definition
       const [newDefinition] = await db
         .insert(questionnaireDefinitions)
-        .values(definition)
+        .values(definitionToInsert)
         .returning();
+      
+      // If this is a clone operation, copy all pages, questions, options, and conditional logic
+      if (sourceDefinitionId) {
+        console.log(`Cloning questionnaire from source ID ${sourceDefinitionId} to new ID ${newDefinition.id}`);
+        await this.cloneQuestionnaireContent(sourceDefinitionId, newDefinition.id);
+      }
       
       return newDefinition;
     } catch (error) {
       console.error('Error creating questionnaire definition:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Clones all content (pages, questions, options, conditional logic) from a source questionnaire to a target questionnaire
+   */
+  async cloneQuestionnaireContent(sourceDefinitionId: number, targetDefinitionId: number): Promise<void> {
+    try {
+      console.log(`Starting deep clone from definition ${sourceDefinitionId} to ${targetDefinitionId}`);
+      
+      // 1. First, get all pages from the source definition
+      const sourcePages = await this.getQuestionnairePagesByDefinition(sourceDefinitionId);
+      
+      // Create a mapping of original page IDs to new page IDs for reference when cloning questions
+      const pageIdMap = new Map<number, number>();
+      
+      // 2. Clone each page
+      for (const sourcePage of sourcePages) {
+        const pageToCreate = {
+          definitionId: targetDefinitionId,
+          title: sourcePage.title,
+          description: sourcePage.description,
+          order: sourcePage.order
+        };
+        
+        const newPage = await this.createQuestionnairePage(pageToCreate);
+        pageIdMap.set(sourcePage.id, newPage.id);
+        
+        // 3. Get all questions for this page
+        const sourceQuestions = await this.getQuestionnaireQuestionsByPage(sourcePage.id);
+        
+        // Create a mapping of original question IDs to new question IDs for reference when cloning options
+        const questionIdMap = new Map<number, number>();
+        const questionKeyMap = new Map<string, string>();
+        
+        // 4. Clone each question
+        for (const sourceQuestion of sourceQuestions) {
+          const questionToCreate = {
+            pageId: newPage.id,
+            questionText: sourceQuestion.questionText,
+            questionKey: sourceQuestion.questionKey,
+            questionType: sourceQuestion.questionType,
+            isRequired: sourceQuestion.isRequired,
+            order: sourceQuestion.order,
+            helpText: sourceQuestion.helpText,
+            placeholderText: sourceQuestion.placeholderText,
+            validationRules: sourceQuestion.validationRules
+          };
+          
+          const newQuestion = await this.createQuestionnaireQuestion(questionToCreate);
+          questionIdMap.set(sourceQuestion.id, newQuestion.id);
+          questionKeyMap.set(sourceQuestion.questionKey, sourceQuestion.questionKey);
+          
+          // 5. If this is a question with options, clone those too
+          if (['select', 'radio', 'checkbox_group', 'matrix_single', 'matrix_multi'].includes(sourceQuestion.questionType)) {
+            const sourceOptions = await this.getQuestionnaireQuestionOptions(sourceQuestion.id);
+            
+            for (const sourceOption of sourceOptions) {
+              const optionToCreate = {
+                questionId: newQuestion.id,
+                optionText: sourceOption.optionText,
+                optionValue: sourceOption.optionValue,
+                order: sourceOption.order
+              };
+              
+              await this.createQuestionnaireQuestionOption(optionToCreate);
+            }
+          }
+        }
+        
+        // 6. Clone conditional logic rules last (after all questions are created)
+        if (pageIdMap.size > 0 && questionIdMap.size > 0) {
+          const sourceLogicRules = await this.getConditionalLogicRulesByDefinition(sourceDefinitionId);
+          
+          for (const sourceRule of sourceLogicRules) {
+            const ruleToCreate = {
+              definitionId: targetDefinitionId,
+              triggerQuestionKey: sourceRule.triggerQuestionKey,
+              triggerCondition: sourceRule.triggerCondition,
+              triggerValue: sourceRule.triggerValue,
+              actionType: sourceRule.actionType,
+              targetQuestionKey: sourceRule.targetQuestionKey,
+              targetPageId: sourceRule.targetPageId ? pageIdMap.get(sourceRule.targetPageId) : null,
+              targetOptionValue: sourceRule.targetOptionValue
+            };
+            
+            await this.createConditionalLogicRule(ruleToCreate);
+          }
+        }
+      }
+      
+      console.log(`Deep clone completed successfully from definition ${sourceDefinitionId} to ${targetDefinitionId}`);
+    } catch (error) {
+      console.error('Error cloning questionnaire content:', error);
       throw error;
     }
   }

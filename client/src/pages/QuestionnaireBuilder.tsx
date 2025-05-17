@@ -1304,18 +1304,24 @@ const QuestionnaireBuilder = () => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    // Clone the current definition
+                                    // Clone the current definition with source ID
                                     const newVersion = {
                                       versionName: `${def.versionName} (Copy)`,
                                       description: def.description,
-                                      isActive: false
+                                      isActive: false,
+                                      sourceDefinitionId: def.id // Added source ID for complete cloning
                                     };
+                                    
+                                    toast({
+                                      title: "Cloning Questionnaire",
+                                      description: "Please wait while we clone the entire questionnaire structure...",
+                                    });
                                     
                                     createDefinitionMutation.mutate(newVersion, {
                                       onSuccess: (data) => {
                                         toast({
-                                          title: "Questionnaire Cloned",
-                                          description: "Created a new copy of the questionnaire definition",
+                                          title: "Questionnaire Cloned Successfully",
+                                          description: "Created a complete copy with all pages, questions, and logic rules",
                                         });
                                         
                                         // Select the new definition and navigate to its pages
