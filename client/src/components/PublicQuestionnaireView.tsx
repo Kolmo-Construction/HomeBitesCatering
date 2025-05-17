@@ -888,6 +888,201 @@ const PublicQuestionnaireView: React.FC = () => {
           </div>
         );
         
+      case 'matrix':
+        // Matrix/Grid question type
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="p-2 border bg-muted"></th>
+                    {question.matrixColumns?.map((column) => (
+                      <th key={column.id} className="p-2 border bg-muted text-center">
+                        {column.columnText}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {options?.map((option) => (
+                    <tr key={option.id}>
+                      <td className="p-2 border">{option.optionText}</td>
+                      {question.matrixColumns?.map((column) => {
+                        const inputId = `${questionKey}_${option.id}_${column.id}`;
+                        const matrixValues = formData[questionKey] || {};
+                        const isChecked = matrixValues[option.optionValue] === column.columnKey;
+                        
+                        return (
+                          <td key={column.id} className="p-2 border text-center">
+                            <RadioGroupItem 
+                              value={column.columnKey}
+                              id={inputId}
+                              checked={isChecked}
+                              onClick={() => {
+                                const updatedMatrixValues = {
+                                  ...(formData[questionKey] || {}),
+                                  [option.optionValue]: column.columnKey
+                                };
+                                handleInputChange(questionKey, updatedMatrixValues);
+                              }}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'file_upload':
+        // File upload question type
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <div className="flex items-center justify-center w-full">
+              <label 
+                htmlFor={questionKey}
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                  </svg>
+                  <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                  <p className="text-xs text-gray-500">SVG, PNG, JPG or PDF (MAX. 10MB)</p>
+                </div>
+                <input 
+                  id={questionKey} 
+                  type="file" 
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // For the demo, we're just storing the file name
+                      // In a real app, you'd handle the file upload
+                      handleInputChange(questionKey, file.name);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {formData[questionKey] && (
+              <p className="text-sm text-primary">Selected file: {formData[questionKey]}</p>
+            )}
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'rating':
+        // Rating question type (1-5 stars)
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <div className="flex items-center space-x-1">
+              {[1, 2, 3, 4, 5].map(value => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleInputChange(questionKey, value)}
+                  className={cn(
+                    "p-1.5 rounded-full transition-colors",
+                    parseInt(formData[questionKey]) >= value
+                      ? "text-yellow-400"
+                      : "text-gray-300 hover:text-yellow-200"
+                  )}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor" 
+                    className="w-8 h-8"
+                  >
+                    <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+            {formData[questionKey] && (
+              <p className="text-sm text-primary">Your rating: {formData[questionKey]} star(s)</p>
+            )}
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'slider':
+        // Slider question type
+        const min = 0;
+        const max = 100;
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <div className="pt-4 pb-2">
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>{min}</span>
+                <span>{max}</span>
+              </div>
+              <input 
+                id={questionKey}
+                type="range" 
+                min={min} 
+                max={max} 
+                value={formData[questionKey] || 50} 
+                onChange={(e) => handleInputChange(questionKey, parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="text-center mt-2">
+                <span className="text-sm font-medium">
+                  {formData[questionKey] || 50}
+                </span>
+              </div>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
       default:
         return (
           <div className="space-y-2">
