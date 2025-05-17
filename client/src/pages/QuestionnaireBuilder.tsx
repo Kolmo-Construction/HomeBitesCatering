@@ -2161,6 +2161,9 @@ const QuestionnaireBuilder = () => {
                             size="sm" 
                             onClick={() => {
                               // Set up form values for the selected question
+                              // Parse validation rules to use in the form
+                              const validationRules = question.validationRules ? JSON.parse(question.validationRules) : {};
+                              
                               questionForm.reset({
                                 questionText: question.questionText,
                                 questionKey: question.questionKey,
@@ -2168,7 +2171,15 @@ const QuestionnaireBuilder = () => {
                                 order: question.order,
                                 isRequired: question.isRequired,
                                 placeholderText: question.placeholderText || "",
-                                helpText: question.helpText || ""
+                                helpText: question.helpText || "",
+                                validationRules: {
+                                  min: validationRules.min,
+                                  max: validationRules.max,
+                                  step: validationRules.step,
+                                  exactCount: validationRules.exactCount,
+                                  minCount: validationRules.minCount,
+                                  maxCount: validationRules.maxCount
+                                }
                               });
                               
                               // Set options if they exist
