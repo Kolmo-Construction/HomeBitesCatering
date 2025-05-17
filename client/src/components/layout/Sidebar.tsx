@@ -15,8 +15,7 @@ import {
   Inbox,
   FileQuestion,
   BookOpen,
-  Code,
-  Network
+  Code
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -33,7 +32,6 @@ export default function Sidebar() {
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { name: "Questionnaires", href: "/questionnaire-builder", icon: FileQuestion },
-    { name: "Condition Visualizer", href: "/questionnaire-visualizer", icon: Network },
     { name: "Questionnaire Docs", href: "/questionnaire-docs", icon: BookOpen },
     { name: "Form Builder API", href: "/form-builder-tester", icon: Code },
     { name: "Form Builder Docs", href: "/form-builder-docs", icon: BookOpen },

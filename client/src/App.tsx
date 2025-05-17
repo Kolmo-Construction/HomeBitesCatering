@@ -20,7 +20,6 @@ import FormBuilderTester from "@/pages/FormBuilderTester";
 import UnifiedFormBuilderDocs from "@/pages/UnifiedFormBuilderDocs";
 import HomeBites2025Form from "@/examples/HomeBites2025Form";
 import PublicQuestionnaire from "@/pages/PublicQuestionnaire";
-import ConditionVisualizerPage from "@/pages/ConditionVisualizerPage";
 import ThankYou from "@/pages/ThankYou";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
@@ -63,7 +62,6 @@ function AppContent() {
             <Route path="/estimates/:id/edit" component={Estimates} />
             <Route path="/questionnaire-builder" component={QuestionnaireBuilder} />
             <Route path="/questionnaire-docs" component={QuestionnaireDocumentation} />
-            <Route path="/questionnaire-visualizer" component={ConditionVisualizerPage} />
             <Route path="/form-builder-tester" component={FormBuilderTester} />
             <Route path="/form-builder-docs" component={UnifiedFormBuilderDocs} />
             <Route path="/form-examples/home-bites" component={FormBuilderTester} />
