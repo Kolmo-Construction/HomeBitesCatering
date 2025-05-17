@@ -147,6 +147,9 @@ const PublicQuestionnaireView: React.FC = () => {
     'matrix'            // Show help for matrix questions
   ];
   
+  // Option to only show help icons for questions that actually have help text
+  const showHelpOnlyWhenHelpTextExists = true;
+  
   // Nutrition tracking state
   const [selectedMenuItems, setSelectedMenuItems] = useState<MenuItemNutrition[]>([]);
   const [nutritionSummary, setNutritionSummary] = useState<NutritionalInfo>({
@@ -749,8 +752,9 @@ const PublicQuestionnaireView: React.FC = () => {
               >
                 {questionText}
               </Label>
-              {/* Only show help button for question types in our configuration list */}
-              {questionsWithHelp.includes(questionType) && (
+              {/* Only show help button for configured question types AND when help text exists (if configured) */}
+              {questionsWithHelp.includes(questionType) && 
+               (!showHelpOnlyWhenHelpTextExists || (question.helpText && question.helpText.trim() !== '')) && (
                 <HelpButton question={question} onOpenHelp={openHelpForQuestion} />
               )}
             </div>
