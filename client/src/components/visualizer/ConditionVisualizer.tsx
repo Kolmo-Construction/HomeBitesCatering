@@ -227,15 +227,17 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
   useEffect(() => {
     if (!questions?.length && !pages?.length) return;
     
-    const newNodes: Node[] = [];
-    const newEdges: Edge[] = [];
-    const nodeMap: Record<string, boolean> = {};
-
-    // Add page nodes if the filter is active
+    // Create optimized data structures for fast lookups
+    const nodeMap = new Map();
+    const newNodes = [];
+    const newEdges = [];
+    
+    // Optimize page node creation
     if (selectedFilters.showPages && pages && pages.length > 0) {
-      pages.forEach((page, index) => {
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
         const nodeId = `page-${page.id}`;
-        nodeMap[nodeId] = true;
+        nodeMap.set(nodeId, true);
         
         newNodes.push({
           id: nodeId,
@@ -243,7 +245,7 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
             label: `Page: ${page.title || page.id}`,
             pageData: page 
           },
-          position: { x: 150, y: index * 100 },
+          position: { x: 150, y: i * 100 },
           style: { 
             background: 'rgba(97, 205, 187, 0.8)',
             color: '#000',
@@ -253,14 +255,18 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
             width: 200
           }
         });
-      });
+      }
     }
 
-    // Add question nodes if the filter is active
+    // Optimize question node creation
     if (selectedFilters.showQuestions && questions && questions.length > 0) {
-      questions.forEach((question, index) => {
+      // Batch edge creation instead of doing it one by one
+      const pageLinkEdges = [];
+      
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
         const nodeId = `question-${question.id}`;
-        nodeMap[nodeId] = true;
+        nodeMap.set(nodeId, true);
         
         // Find which page this question belongs to
         const pageId = question.pageId || null;
@@ -271,7 +277,7 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
             label: `Q: ${question.questionText || question.questionKey}`,
             questionData: question 
           },
-          position: { x: 450, y: index * 80 },
+          position: { x: 450, y: i * 80 },
           style: { 
             background: 'rgba(144, 175, 255, 0.8)',
             color: '#000',
@@ -282,9 +288,9 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
           }
         });
         
-        // Connect question to its page
-        if (selectedFilters.showPages && pageId && nodeMap[`page-${pageId}`]) {
-          newEdges.push({
+        // Create edge (but don't push one by one - more efficient)
+        if (selectedFilters.showPages && pageId && nodeMap.has(`page-${pageId}`)) {
+          pageLinkEdges.push({
             id: `page-${pageId}-to-${nodeId}`,
             source: `page-${pageId}`,
             target: nodeId,
@@ -293,14 +299,32 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
             style: { stroke: '#888' }
           });
         }
-      });
+      }
+      
+      // Batch add all page link edges at once
+      if (pageLinkEdges.length > 0) {
+        newEdges.push(...pageLinkEdges);
+      }
     }
 
-    // Add conditional logic edges if the filter is active
+    // Optimize conditional logic edge creation
     if (selectedFilters.showConditions && conditionalLogic && conditionalLogic.length > 0) {
-      conditionalLogic.forEach((rule, index) => {
+      // Pre-calculate edge properties for different rule types
+      const edgeProps = {
+        'show_question': { color: 'green', label: 'Shows', animated: true },
+        'hide_question': { color: 'red', label: 'Hides', animated: false },
+        'skip_to_page': { color: 'orange', label: 'Skips to', animated: true }
+      };
+      
+      // Batch conditional edges
+      const conditionalEdges = [];
+      
+      for (let i = 0; i < conditionalLogic.length; i++) {
+        const rule = conditionalLogic[i];
+        
         // Get source question (trigger)
         const sourceId = `question-${rule.triggerQuestionId}`;
+        
         // Get target based on action type (could be question or page)
         let targetId;
         
@@ -310,57 +334,48 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
           targetId = `page-${rule.targetPageId}`;
         }
         
-        // Only add edge if both nodes exist
-        if (nodeMap[sourceId] && targetId && nodeMap[targetId]) {
-          // Determine edge color based on action type
-          let edgeColor = '#666';
-          let edgeLabel = '';
-          let animated = false;
+        // Only add edge if both nodes exist - fast lookup with Map
+        if (nodeMap.has(sourceId) && targetId && nodeMap.has(targetId)) {
+          // Get edge properties from pre-calculated map
+          const props = edgeProps[rule.targetAction] || { color: '#666', label: '', animated: false };
           
-          if (rule.targetAction === 'show_question') {
-            edgeColor = 'green';
-            edgeLabel = 'Shows';
-            animated = true;
-          } else if (rule.targetAction === 'hide_question') {
-            edgeColor = 'red';
-            edgeLabel = 'Hides';
-          } else if (rule.targetAction === 'skip_to_page') {
-            edgeColor = 'orange';
-            edgeLabel = 'Skips to';
-            animated = true;
-          }
-          
-          newEdges.push({
+          conditionalEdges.push({
             id: `rule-${rule.id}`,
             source: sourceId,
             target: targetId,
             type: 'smoothstep',
-            animated: animated,
-            label: edgeLabel,
-            labelStyle: { fill: edgeColor, fontWeight: 'bold' },
+            animated: props.animated,
+            label: props.label,
+            labelStyle: { fill: props.color, fontWeight: 'bold' },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: edgeColor,
+              color: props.color,
             },
-            style: { stroke: edgeColor, strokeWidth: 2 },
+            style: { stroke: props.color, strokeWidth: 2 },
             data: { ruleData: rule }
           });
         }
-      });
+      }
+      
+      // Batch add all conditional edges at once
+      if (conditionalEdges.length > 0) {
+        newEdges.push(...conditionalEdges);
+      }
     }
 
+    // Single batch state update for all nodes
     setNodes(newNodes);
+    
+    // Single batch state update for all edges
     setEdges(newEdges);
     
-    // Auto-layout the graph on initial load (or filter change)
-    // But don't do it every time collapsedGroups changes to prevent infinite loop
+    // Performance optimization: Debounce layout changes
+    // Don't call fitView on every small change
     const timeoutId = setTimeout(() => {
-      // Use a ref to keep track of the last time layout was applied
-      // to prevent rapid re-layouts causing flicker
       if (reactFlowInstance) {
         reactFlowInstance.fitView(fitViewOptions);
       }
-    }, 200);
+    }, 250); // Use slightly longer timeout for better performance
     
     return () => {
       clearTimeout(timeoutId);
