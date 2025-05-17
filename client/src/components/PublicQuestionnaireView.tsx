@@ -1414,9 +1414,20 @@ const PublicQuestionnaireView: React.FC = () => {
         );
         
       case 'slider':
-        // Slider question type
-        const min = 0;
-        const max = 100;
+        // Slider question type - get min, max, step from validation rules or use defaults
+        const defaultValue = 50;
+        const sliderRules = question.validationRules || {};
+        const min = sliderRules.min !== undefined ? sliderRules.min : 0;
+        const max = sliderRules.max !== undefined ? sliderRules.max : 100;
+        const step = sliderRules.step !== undefined ? sliderRules.step : 1;
+        
+        // Initialize value if not set
+        if (formData[questionKey] === undefined) {
+          setTimeout(() => {
+            handleInputChange(questionKey, defaultValue);
+          }, 0);
+        }
+        
         return (
           <div className="space-y-2">
             <Label 
@@ -1439,13 +1450,14 @@ const PublicQuestionnaireView: React.FC = () => {
                 type="range" 
                 min={min} 
                 max={max} 
-                value={formData[questionKey] || 50} 
+                step={step}
+                value={formData[questionKey] !== undefined ? formData[questionKey] : defaultValue} 
                 onChange={(e) => handleInputChange(questionKey, parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="text-center mt-2">
                 <span className="text-sm font-medium">
-                  {formData[questionKey] || 50}
+                  {formData[questionKey] !== undefined ? formData[questionKey] : defaultValue}
                 </span>
               </div>
             </div>

@@ -99,6 +99,11 @@ const questionFormSchema = z.object({
   isRequired: z.boolean().default(false),
   placeholderText: z.string().optional(),
   helpText: z.string().optional(),
+  validationRules: z.object({
+    min: z.number().optional(),
+    max: z.number().optional(),
+    step: z.number().optional()
+  }).optional(),
   options: z.array(
     z.object({
       optionText: z.string().min(1, "Option text is required"),
