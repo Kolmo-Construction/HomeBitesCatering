@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db"; // For direct database access
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -2664,7 +2664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         validatedData = questionnaireQuestionUpdateSchema.parse(req.body);
       } catch (validationError) {
-        if (validationError instanceof ZodError) {
+        if (validationError instanceof z.ZodError) {
           return res.status(400).json({ 
             message: 'Validation error', 
             errors: validationError.errors,
@@ -2992,7 +2992,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = optionUpdateSchema.parse(req.body);
       
       // Map to the correct field names for updating
-      const updateData: Partial<QuestionnaireQuestionOption> = {};
+      const updateData: Partial<{
+        order: number;
+        optionText: string;
+        optionValue: string;
+      }> = {};
       if (validatedData.order !== undefined) updateData.order = validatedData.order;
       if (validatedData.label !== undefined) updateData.optionText = validatedData.label;
       if (validatedData.value !== undefined) updateData.optionValue = validatedData.value;
