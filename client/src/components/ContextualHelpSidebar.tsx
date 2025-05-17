@@ -68,7 +68,11 @@ const ContextualHelpSidebar: React.FC<ContextualHelpSidebarProps> = ({
       }
       
       const data = await response.json();
-      setSuggestions(data);
+      if (data.success && data.suggestion) {
+        setSuggestions(data.suggestion);
+      } else {
+        setError('Invalid response format from suggestion service');
+      }
     } catch (err) {
       setError('Unable to load suggestions at this time. Please try again later.');
       console.error('Error fetching suggestions:', err);
