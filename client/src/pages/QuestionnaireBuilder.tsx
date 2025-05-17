@@ -757,6 +757,24 @@ const QuestionnaireBuilder = () => {
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       // Add options to the data if they exist
       const formData = { ...data };
+      
+      // Properly handle validation rules for checkbox questions
+      if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
+        // Ensure validation rules are properly processed
+        if (formData.validationRules) {
+          // Convert any validation rule fields to numbers
+          const rules = formData.validationRules;
+          formData.validationRules = {
+            ...(rules.min !== undefined ? { min: Number(rules.min) } : {}),
+            ...(rules.max !== undefined ? { max: Number(rules.max) } : {}),
+            ...(rules.step !== undefined ? { step: Number(rules.step) } : {}),
+            ...(rules.minCount !== undefined ? { minCount: Number(rules.minCount) } : {}),
+            ...(rules.maxCount !== undefined ? { maxCount: Number(rules.maxCount) } : {}),
+            ...(rules.exactCount !== undefined ? { exactCount: Number(rules.exactCount) } : {})
+          };
+        }
+      }
+      
       if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
         formData.options = questionOptions;
       }

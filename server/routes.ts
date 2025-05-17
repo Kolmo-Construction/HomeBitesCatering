@@ -4042,6 +4042,53 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
             });
           }
           
+          // Process validation rules if it's a checkbox question
+          let processedValidationRules = {};
+          
+          console.log('Original validation rules:', data.validationRules, 'Type:', typeof data.validationRules);
+          
+          if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
+            try {
+              // Ensure validation rules are properly formatted
+              if (data.validationRules) {
+                // If it's a string, try to parse it
+                if (typeof data.validationRules === 'string') {
+                  try {
+                    const parsed = JSON.parse(data.validationRules);
+                    // Only extract the specific fields we need and ensure they're numbers
+                    if (parsed.minCount !== undefined) processedValidationRules.minCount = Number(parsed.minCount);
+                    if (parsed.maxCount !== undefined) processedValidationRules.maxCount = Number(parsed.maxCount);
+                    if (parsed.exactCount !== undefined) processedValidationRules.exactCount = Number(parsed.exactCount);
+                    if (parsed.min !== undefined) processedValidationRules.min = Number(parsed.min);
+                    if (parsed.max !== undefined) processedValidationRules.max = Number(parsed.max);
+                    if (parsed.step !== undefined) processedValidationRules.step = Number(parsed.step);
+                  } catch (parseError) {
+                    console.error("Error parsing validation rules string:", parseError);
+                  }
+                } 
+                // If it's already an object
+                else if (typeof data.validationRules === 'object' && data.validationRules !== null) {
+                  // Convert numeric fields to numbers, only including fields with values
+                  const rules = data.validationRules;
+                  
+                  if (rules.minCount !== undefined && rules.minCount !== '') processedValidationRules.minCount = Number(rules.minCount);
+                  if (rules.maxCount !== undefined && rules.maxCount !== '') processedValidationRules.maxCount = Number(rules.maxCount);
+                  if (rules.exactCount !== undefined && rules.exactCount !== '') processedValidationRules.exactCount = Number(rules.exactCount);
+                  if (rules.min !== undefined && rules.min !== '') processedValidationRules.min = Number(rules.min);
+                  if (rules.max !== undefined && rules.max !== '') processedValidationRules.max = Number(rules.max);
+                  if (rules.step !== undefined && rules.step !== '') processedValidationRules.step = Number(rules.step);
+                }
+              }
+              
+              console.log('Processed validation rules:', processedValidationRules);
+            } catch (e) {
+              console.error("Error processing validation rules:", e);
+            }
+          } else {
+            // For non-checkbox questions, pass validation rules through
+            processedValidationRules = data.validationRules;
+          }
+          
           // Update the question
           const updatedQuestion = await storage.updateQuestionnaireQuestion(data.questionId, {
             questionText: data.questionText,
@@ -4051,7 +4098,7 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
             isRequired: data.isRequired,
             placeholderText: data.placeholderText,
             helpText: data.helpText,
-            validationRules: data.validationRules
+            validationRules: processedValidationRules
           });
           
           // Handle options if provided
