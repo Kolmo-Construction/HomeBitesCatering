@@ -1,0 +1,38 @@
+Missing Rendering Logic:
+
+The components PublicQuestionnaireView.tsx and QuestionnairePreview.tsx iterate through the fields defined in the JSON structure and render them based on their type (e.g., 'switch', 'text').
+
+When these components encounter a field with type: 'switch', they render a switch/toggle element.
+When they encounter a field with type: 'text', they render a text input element.
+However, the current implementation in both PublicQuestionnaireView.tsx and QuestionnairePreview.tsx does not check for or act upon the dependsOn and showIf properties associated with the fields. Consequently, the "Promo Code" text input field is likely being rendered (or not rendered) unconditionally, irrespective of the toggle's state, or it's simply not being rendered if the primary loop only considers the 'switch' type question and doesn't have logic to then look for dependent fields.
+
+Required Modification:
+
+To implement the desired behavior, the rendering logic in PublicQuestionnaireView.tsx and QuestionnairePreview.tsx must be updated to:
+
+Check for Dependencies: Before rendering any field, the components should check if the field object contains a dependsOn property.
+Evaluate Dependency State: If dependsOn exists, the component needs to:
+Identify the ID of the field it depends on (e.g., has_promo_code).
+Retrieve the current value of this parent field from the form's state (e.g., using form.watch('answers.has_promo_code') in PublicQuestionnaireView or the equivalent state management in QuestionnairePreview).
+Conditional Rendering: Compare the parent field's current value with the showIf condition of the dependent field. The dependent field (the promo code text input) should only be rendered if this condition is met.
+For example, in PublicQuestionnaireView.tsx, within the field rendering loop, logic similar to this would be needed (conceptual):
+
+TypeScript
+
+// Inside the map function that renders fields
+const field = /* current field object */;
+let shouldRender = true;
+
+if (field.dependsOn) {
+  const dependentFieldId = field.dependsOn;
+  // Assuming answers are stored like form.watch('answers.FIELD_ID')
+  const dependentFieldValue = form.watch(`answers.${dependentFieldId}`);
+  if (dependentFieldValue !== field.showIf) {
+    shouldRender = false;
+  }
+}
+
+if (shouldRender) {
+  // ... proceed with rendering the field based on its type
+}
+Without this conditional rendering logic based on dependsOn and showIf, the promo code input field will not dynamically appear or disappear based on the state of the toggle. The UI components for the switch (Switch from ui/switch.txt) and input (Input from ui/input.txt) are functioning as expected; the issue is the orchestration logic in the higher-level questionnaire rendering components.

@@ -15,7 +15,7 @@ const helpContentMap: Record<string, HelpContent> = {
   // Text inputs
   text: {
     suggestion: "Please provide the requested information in the text field. Be as specific and accurate as possible.",
-    examples: ["If asked for a name, enter your full name (e.g., 'John Smith')"],
+    examples: ["If asked for a name, enter your full name (e.g., 'John Smith')", "For a company, enter the full company name"],
     tips: ["Keep your answer concise and to the point", "Double-check for typos before submitting"]
   },
   
@@ -36,7 +36,7 @@ const helpContentMap: Record<string, HelpContent> = {
   // Number input
   number: {
     suggestion: "Please enter the requested numeric value.",
-    examples: ["For guest count, enter the total number of expected guests (e.g., 75)"],
+    examples: ["For guest count, enter the total number of expected guests (e.g., 75)", "For budgets, enter a whole number without symbols"],
     tips: ["Use only digits, no spaces or special characters", "Make sure to be as accurate as possible"]
   },
   
@@ -44,14 +44,14 @@ const helpContentMap: Record<string, HelpContent> = {
   date: {
     suggestion: "Please select the appropriate date for your event.",
     examples: ["MM/DD/YYYY format", "Use the calendar picker for easy selection"],
-    tips: ["Book early for popular dates", "Weekend dates often fill up quickly"]
+    tips: ["Book early for popular dates", "Weekend dates often fill up quickly", "Some dates may have different pricing or availability"]
   },
   
   // Time input
   time: {
     suggestion: "Please select the appropriate time for your event.",
     examples: ["For start time, choose when you want guests to arrive", "For end time, consider setup and cleanup needs"],
-    tips: ["Consider peak dining hours if relevant", "Allow buffer time for setup and cleanup"]
+    tips: ["Consider peak dining hours if relevant", "Allow buffer time for setup and cleanup", "Some venues have specific time constraints"]
   },
   
   // Multiline text
@@ -100,14 +100,28 @@ const helpContentMap: Record<string, HelpContent> = {
   toggle: {
     suggestion: "Use the toggle switch to turn this option on or off.",
     examples: ["Toggle 'Yes' if you need this service, 'No' if you don't"],
-    tips: ["The switch turns blue when enabled", "Click or tap to change the setting"]
+    tips: ["The switch turns blue when enabled", "Toggling may reveal additional related fields", "Click or tap to change the setting"]
   },
   
   // Slider
   slider: {
     suggestion: "Drag the slider to select a value within the given range.",
-    examples: ["Slide to indicate your preference on the scale"],
-    tips: ["The value updates as you move the slider", "You can also click directly on the slider track to set a value"]
+    examples: ["Slide to indicate your preference from 1-10", "For budget questions, slide to your approximate budget"],
+    tips: ["The value updates as you move the slider", "You can also click directly on the slider track to set a value", "Pay attention to the minimum and maximum values"]
+  },
+  
+  // Incrementer (Step functions)
+  incrementer: {
+    suggestion: "Use the plus and minus buttons to adjust the value to your preference.",
+    examples: ["Click + to increase the count, - to decrease it", "For guest count, adjust to your exact number"],
+    tips: ["You can click multiple times to reach your desired value", "Some fields may have minimum or maximum limits"]
+  },
+  
+  // Time picker
+  time_picker: {
+    suggestion: "Select the appropriate time using the dedicated time picker.",
+    examples: ["For event start time, select when guests should arrive", "For meal service, choose your preferred dining time"],
+    tips: ["Consider buffer time for setup and transitions", "Some time slots may be more popular than others"]
   },
   
   // Default for any other question types
@@ -121,7 +135,7 @@ const helpContentMap: Record<string, HelpContent> = {
 // Get help content based on question type and key
 const getHelpContent = (questionType: string, questionKey: string): HelpContent => {
   // Special handling for specific questions based on questionKey if needed
-  if (questionKey === 'discount_code') {
+  if (questionKey === 'discount_code' || questionKey === 'promo_code') {
     return {
       suggestion: "If you have a promo code or discount code, please toggle this option to enter it.",
       examples: ["Select 'Yes' if you have a code to enter, 'No' if you don't"],
@@ -129,11 +143,27 @@ const getHelpContent = (questionType: string, questionKey: string): HelpContent 
     };
   }
   
-  if (questionKey === 'guest_count') {
+  if (questionKey === 'guest_count' || questionKey === 'attendees' || questionKey === 'number_of_guests') {
     return {
       suggestion: "Please indicate the total number of guests expected to attend your event.",
       examples: ["For a party of 50 people, enter '50'"],
       tips: ["Include all attendees in your count", "Be as accurate as possible to ensure proper preparation"]
+    };
+  }
+  
+  if (questionKey === 'has_promo_code') {
+    return {
+      suggestion: "Please indicate whether you have a promotional code to apply to your order.",
+      examples: ["Toggle to 'Yes' if you have a code, 'No' if you don't"],
+      tips: ["If you select 'Yes', you'll be prompted to enter your code", "You can always change this selection later"]
+    };
+  }
+  
+  if (questionKey === 'budget' || questionKey === 'budget_range') {
+    return {
+      suggestion: "Please indicate your approximate budget for this event.",
+      examples: ["Use the slider to select a value that matches your budget expectations"],
+      tips: ["This helps us tailor recommendations to your needs", "Remember this is an estimate and can be adjusted later"]
     };
   }
   
