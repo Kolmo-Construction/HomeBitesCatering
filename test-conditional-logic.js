@@ -143,7 +143,7 @@ async function linkSectionToPage(pageId, sectionId, authCookie) {
   return true;
 }
 
-async function addConditionalQuestions(sectionId, authCookie) {
+async function addConditionalQuestions(sectionId, questionnaireId, authCookie) {
   console.log('\n--- Adding Conditional Questions ---');
   
   // First, add the trigger question (Yes/No question)
@@ -289,6 +289,7 @@ async function addConditionalQuestions(sectionId, authCookie) {
   console.log('Added options to checkbox question');
   
   return {
+    questionnaireId,
     triggerQuestion,
     conditionalQuestions
   };
@@ -305,7 +306,7 @@ async function addConditionalLogic(questions, authCookie) {
     return makeRequest('POST', '/api/questionnaires/builder', {
       action: 'addConditionalLogic',
       data: {
-        definitionId: questionnaire.id,
+        definitionId: questions.questionnaireId, // Pass the questionnaire ID from the questions object
         triggerQuestionKey: triggerQuestion.questionKey,
         targetQuestionKey: question.questionKey,
         triggerCondition: 'equals',
