@@ -404,6 +404,10 @@ const PublicQuestionnaireView: React.FC = () => {
       // Log the current form data for this question
       console.log(`Question ${question.questionKey} (${question.questionType}), value:`, formData[question.questionKey], "required:", question.isRequired);
       
+      // Get validation rules for the question (if any)
+      const validationRules = question.validationRules || {};
+      
+      // First check if the question is required
       if (question.isRequired) {
         const value = formData[question.questionKey];
         
@@ -425,6 +429,29 @@ const PublicQuestionnaireView: React.FC = () => {
         if (isEmpty) {
           console.log(`Validation error for ${question.questionKey}: This field is required`);
           newErrors[question.questionKey] = 'This field is required';
+        }
+      }
+      
+      // Check specific validations based on question type
+      if (question.questionType === 'checkbox' || question.questionType === 'checkbox_group') {
+        const values = formData[question.questionKey] || [];
+        
+        // Check if there's an exact count requirement
+        if (validationRules.exactCount !== undefined && values.length !== validationRules.exactCount) {
+          console.log(`Validation error for ${question.questionKey}: You must select exactly ${validationRules.exactCount} options`);
+          newErrors[question.questionKey] = `Please select exactly ${validationRules.exactCount} options`;
+        }
+        
+        // Check minimum count
+        if (validationRules.minCount !== undefined && values.length < validationRules.minCount) {
+          console.log(`Validation error for ${question.questionKey}: You must select at least ${validationRules.minCount} options`);
+          newErrors[question.questionKey] = `Please select at least ${validationRules.minCount} options`;
+        }
+        
+        // Check maximum count
+        if (validationRules.maxCount !== undefined && values.length > validationRules.maxCount) {
+          console.log(`Validation error for ${question.questionKey}: You can select at most ${validationRules.maxCount} options`);
+          newErrors[question.questionKey] = `Please select no more than ${validationRules.maxCount} options`;
         }
       }
     });

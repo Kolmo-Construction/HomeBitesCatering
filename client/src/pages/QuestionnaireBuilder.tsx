@@ -930,6 +930,7 @@ const QuestionnaireBuilder = () => {
   const showOptions = questionType === 'select' || questionType === 'radio' || questionType === 'checkbox';
   const showMatrix = questionType === 'matrix';
   const showSliderConfig = questionType === 'slider';
+  const showCheckboxConfig = questionType === 'checkbox' || questionType === 'checkbox_group';
 
   // Effect to set the initial order for new questions
   useEffect(() => {
@@ -1814,6 +1815,89 @@ const QuestionnaireBuilder = () => {
                                     </FormControl>
                                     <FormDescription>
                                       The increment between values on the slider
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </>
+                          )}
+                          
+                          {/* Checkbox Configuration Fields - Only show when type is checkbox or checkbox_group */}
+                          {showCheckboxConfig && (
+                            <>
+                              <FormField
+                                control={questionForm.control}
+                                name="validationRules.exactCount"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Exact Selection Count</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="e.g., 4" 
+                                        {...field}
+                                        onChange={(e) => {
+                                          const value = e.target.value ? parseInt(e.target.value) : undefined;
+                                          field.onChange(value);
+                                        }}
+                                        value={field.value || ''}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Require users to select exactly this many options (leave empty for no restriction)
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={questionForm.control}
+                                name="validationRules.minCount"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Minimum Selection Count</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="e.g., 2" 
+                                        {...field}
+                                        onChange={(e) => {
+                                          const value = e.target.value ? parseInt(e.target.value) : undefined;
+                                          field.onChange(value);
+                                        }}
+                                        value={field.value || ''}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Minimum number of options users must select (leave empty for no minimum)
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={questionForm.control}
+                                name="validationRules.maxCount"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Maximum Selection Count</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="e.g., 6" 
+                                        {...field}
+                                        onChange={(e) => {
+                                          const value = e.target.value ? parseInt(e.target.value) : undefined;
+                                          field.onChange(value);
+                                        }}
+                                        value={field.value || ''}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Maximum number of options users can select (leave empty for no maximum)
                                     </FormDescription>
                                     <FormMessage />
                                   </FormItem>
