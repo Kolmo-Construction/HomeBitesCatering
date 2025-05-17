@@ -66,13 +66,20 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
     // Get the value of the field this question depends on
     const dependentValue = formData[question.dependsOn];
     
+    // Log dependency information for debugging
+    console.log(`Checking visibility for question: ${question.questionText}`);
+    console.log(`  Depends on: ${question.dependsOn} with value: ${dependentValue} (${typeof dependentValue})`);
+    console.log(`  Should show if: ${question.showIf} (${typeof question.showIf})`);
+    
     // Handle undefined values - if the dependent field has no value yet, 
     // hide dependent questions
     if (dependentValue === undefined || dependentValue === null) {
+      console.log(`  Result: Hidden (dependent value is undefined/null)`);
       return false;
     }
     
     const stringShowIf = String(question.showIf);
+    let result = false;
     
     // Handle boolean values and toggle switches
     if (stringShowIf === 'true' || stringShowIf === 'false') {
@@ -81,9 +88,13 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
       
       // Check if dependent value is boolean or string representation of boolean
       if (typeof dependentValue === 'boolean') {
-        return dependentValue === boolShowIf;
+        result = dependentValue === boolShowIf;
+        console.log(`  Result: ${result} (boolean comparison)`);
+        return result;
       } else if (dependentValue === 'true' || dependentValue === 'false') {
-        return (dependentValue === 'true') === boolShowIf;
+        result = (dependentValue === 'true') === boolShowIf;
+        console.log(`  Result: ${result} (string boolean comparison)`);
+        return result;
       }
     }
     
@@ -92,14 +103,20 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
       const numShowIf = Number(stringShowIf);
       
       if (typeof dependentValue === 'number') {
-        return dependentValue === numShowIf;
+        result = dependentValue === numShowIf;
+        console.log(`  Result: ${result} (number comparison)`);
+        return result;
       } else if (!isNaN(Number(dependentValue))) {
-        return Number(dependentValue) === numShowIf;
+        result = Number(dependentValue) === numShowIf;
+        console.log(`  Result: ${result} (string number comparison)`);
+        return result;
       }
     }
     
     // Default string comparison
-    return String(dependentValue) === stringShowIf;
+    result = String(dependentValue) === stringShowIf;
+    console.log(`  Result: ${result} (string comparison)`);
+    return result;
   };
 
   const sortedPages = [...pages].sort((a, b) => a.order - b.order);
