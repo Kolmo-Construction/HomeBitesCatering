@@ -305,18 +305,13 @@ async function addConditionalLogic(questions, authCookie) {
     return makeRequest('POST', '/api/questionnaires/builder', {
       action: 'addConditionalLogic',
       data: {
-        name: `Show Question ${index + 1} when dietary needs is Yes`,
-        description: `Shows the ${index === 0 ? 'dietary requirements list' : 'dietary details'} question when user selects Yes for special dietary needs`,
-        targetType: 'question',
-        targetId: question.id,
-        conditionType: 'equals',
-        sourceType: 'question',
-        sourceId: triggerQuestion.id,
-        conditionValue: 'yes',
+        definitionId: questionnaire.id,
+        triggerQuestionKey: triggerQuestion.questionKey,
+        targetQuestionKey: question.questionKey,
+        triggerCondition: 'equals',
+        triggerValue: 'yes',
         actionType: 'show',
-        actionValue: null,
-        priority: 1,
-        isActive: true
+        targetOptionValue: null
       }
     }, authCookie);
   });

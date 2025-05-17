@@ -105,22 +105,18 @@ const addQuestionOptionsSchema = z.object({
 });
 
 const addConditionalLogicSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  targetType: z.string(),
-  targetId: z.number(),
-  conditionType: z.enum([
+  definitionId: z.number().optional(),
+  triggerQuestionKey: z.string(),
+  targetQuestionKey: z.string(),
+  triggerCondition: z.enum([
     'equals', 'not_equals', 'contains', 'greater_than', 
     'less_than', 'in_list', 'not_in_list', 'is_empty', 
     'is_not_empty', 'custom'
   ]),
-  sourceType: z.string(),
-  sourceId: z.string(),
-  conditionValue: z.any(),
+  triggerValue: z.string().optional(),
   actionType: z.enum(['show', 'hide', 'require', 'skip_to', 'set_value', 'custom']),
-  actionValue: z.any(),
-  priority: z.number().optional(),
-  isActive: z.boolean().optional()
+  targetOptionValue: z.string().optional(),
+  targetPageId: z.number().optional()
 });
 
 // Main request handler
@@ -620,18 +616,14 @@ async function handleAddConditionalLogic(res: Response, data: any) {
   // Create conditional logic
   const [newLogic] = await db.insert(conditionalLogic)
     .values({
-      name: logicData.name,
-      description: logicData.description,
-      targetType: logicData.targetType,
-      targetId: logicData.targetId,
-      conditionType: logicData.conditionType,
-      sourceType: logicData.sourceType,
-      sourceId: logicData.sourceId,
-      conditionValue: logicData.conditionValue,
+      definitionId: logicData.definitionId,
+      triggerQuestionKey: logicData.triggerQuestionKey,
+      targetQuestionKey: logicData.targetQuestionKey,
+      triggerCondition: logicData.triggerCondition,
+      triggerValue: logicData.triggerValue,
       actionType: logicData.actionType,
-      actionValue: logicData.actionValue,
-      priority: logicData.priority,
-      isActive: logicData.isActive
+      targetOptionValue: logicData.targetOptionValue,
+      targetPageId: logicData.targetPageId
     })
     .returning();
   

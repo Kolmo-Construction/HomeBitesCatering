@@ -238,18 +238,14 @@ export const actionTypeEnum = pgEnum('action_type', [
 
 export const conditionalLogic = pgTable('questionnaire_conditional_logic', {
   id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  targetType: text('target_type').notNull(), // 'question', 'section', 'page'
-  targetId: integer('target_id').notNull(),
-  conditionType: conditionTypeEnum('condition_type').notNull(),
-  sourceType: text('source_type').notNull(), // 'question', 'user', 'data'
-  sourceId: text('source_id'), // Can be question ID or other identifier
-  conditionValue: json('condition_value'),
+  definitionId: integer('definition_id'),
+  triggerQuestionKey: text('trigger_question_key').notNull(),
+  targetQuestionKey: text('target_question_key').notNull(),
+  triggerCondition: conditionTypeEnum('trigger_condition').notNull(),
+  triggerValue: text('trigger_value'),
   actionType: actionTypeEnum('action_type').notNull(),
-  actionValue: json('action_value'),
-  priority: integer('priority').default(0),
-  isActive: boolean('is_active').default(true),
+  targetOptionValue: text('target_option_value'),
+  targetPageId: integer('target_page_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
