@@ -88,7 +88,19 @@ const questionnaireQuestionCreateSchema = insertQuestionnaireQuestionSchema.exte
   isRequired: z.boolean().default(false),
   placeholderText: z.string().optional(),
   helpText: z.string().optional(),
-  validationRules: z.any().optional(),
+  validationRules: z.union([
+    z.object({
+      minCount: z.number().int().optional(),
+      maxCount: z.number().int().optional(),
+      exactCount: z.number().int().optional(),
+      min: z.number().optional(),
+      max: z.number().optional(),
+      step: z.number().optional()
+    }).optional(),
+    z.record(z.any()).optional(),
+    z.string().optional(),
+    z.any().optional()
+  ]),
   options: z.array(questionOptionCreateSchema).optional(),
   matrixColumns: z.array(matrixColumnCreateSchema).optional()
 }).omit({
@@ -103,9 +115,22 @@ const questionnaireQuestionUpdateSchema = z.object({
   isRequired: z.boolean().optional(),
   placeholderText: z.string().optional(),
   helpText: z.string().optional(),
-  validationRules: z.any().optional(),
+  validationRules: z.union([
+    z.object({
+      minCount: z.number().int().optional(),
+      maxCount: z.number().int().optional(),
+      exactCount: z.number().int().optional(),
+      min: z.number().optional(),
+      max: z.number().optional(),
+      step: z.number().optional()
+    }).optional(),
+    z.record(z.any()).optional(),
+    z.string().optional(),
+    z.any().optional()
+  ]),
   options: z.array(questionOptionCreateSchema).optional(),
-  matrixColumns: z.array(matrixColumnCreateSchema).optional()
+  matrixColumns: z.array(matrixColumnCreateSchema).optional(),
+  replaceOptions: z.boolean().optional()
 });
 
 const questionnaireQuestionsReorderSchema = z.object({
