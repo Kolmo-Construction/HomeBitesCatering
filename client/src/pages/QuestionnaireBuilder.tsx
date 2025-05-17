@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import JSONRequestTester from '@/components/JSONRequestTester';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, MoreHorizontal, Copy } from 'lucide-react';
 
 import {
   Card,
@@ -45,6 +45,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -948,64 +955,141 @@ const QuestionnaireBuilder = () => {
                         <TableCell>
                           {new Date(def.createdAt).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            variant={def.isActive ? "destructive" : "default"}
-                            size="sm"
-                            onClick={() => toggleDefinitionStatusMutation.mutate({ 
-                              definitionId: def.id, 
-                              isActive: !def.isActive 
-                            })}
-                            disabled={toggleDefinitionStatusMutation.isPending}
-                          >
-                            {def.isActive ? (
-                              <>
-                                <X className="h-4 w-4 mr-1" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <Check className="h-4 w-4 mr-1" />
-                                Activate
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              setSelectedDefinition(def.id);
-                              setActiveTab("pages");
-                            }}
-                          >
-                            <List className="h-4 w-4 mr-1" />
-                            Pages
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Questionnaire Definition</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this questionnaire definition? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => deleteDefinitionMutation.mutate(def.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant={def.isActive ? "destructive" : "default"}
+                              size="sm"
+                              onClick={() => toggleDefinitionStatusMutation.mutate({ 
+                                definitionId: def.id, 
+                                isActive: !def.isActive 
+                              })}
+                              disabled={toggleDefinitionStatusMutation.isPending}
+                            >
+                              {def.isActive ? (
+                                <>
+                                  <X className="h-4 w-4 mr-1" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Activate
+                                </>
+                              )}
+                            </Button>
+                            
+                            <Button
+                              variant="default" 
+                              size="sm" 
+                              onClick={() => {
+                                setSelectedDefinition(def.id);
+                                setActiveTab("pages");
+                              }}
+                            >
+                              <List className="h-4 w-4 mr-1" />
+                              Pages
+                            </Button>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <MoreHorizontal className="h-4 w-4 mr-1" />
+                                  Actions
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    // Clone the current definition
+                                    const newVersion = {
+                                      versionName: `${def.versionName} (Copy)`,
+                                      description: def.description,
+                                      isActive: false
+                                    };
+                                    
+                                    createDefinitionMutation.mutate(newVersion, {
+                                      onSuccess: (data) => {
+                                        toast({
+                                          title: "Questionnaire Cloned",
+                                          description: "Created a new copy of the questionnaire definition",
+                                        });
+                                        
+                                        // Select the new definition and navigate to its pages
+                                        setSelectedDefinition(data.id);
+                                        setActiveTab("pages");
+                                      }
+                                    });
+                                  }}
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Clone Questionnaire
+                                </DropdownMenuItem>
+                                
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    // Fill form with current values for editing
+                                    definitionForm.reset({
+                                      versionName: def.versionName,
+                                      description: def.description || "",
+                                      isActive: def.isActive
+                                    });
+                                    setEditingDefinitionId(def.id);
+                                    setDefinitionDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Details
+                                </DropdownMenuItem>
+                                
+                                <DropdownMenuSeparator />
+                                
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Questionnaire Definition</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        <p className="mb-2">Are you sure you want to delete this questionnaire definition? This action cannot be undone.</p>
+                                        <p className="font-medium">To confirm deletion, type the questionnaire name below:</p>
+                                        <Input 
+                                          className="mt-2 mb-2"
+                                          placeholder={def.versionName}
+                                          onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                        />
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={() => {
+                                          if (deleteConfirmation === def.versionName) {
+                                            deleteDefinitionMutation.mutate(def.id);
+                                            setDeleteConfirmation("");
+                                          } else {
+                                            toast({
+                                              title: "Confirmation Failed",
+                                              description: "The name you entered doesn't match. Deletion cancelled.",
+                                              variant: "destructive"
+                                            });
+                                          }
+                                        }}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        disabled={deleteConfirmation !== def.versionName}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
