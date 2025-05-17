@@ -88,12 +88,30 @@ function AppContent() {
   );
 }
 
+// We need to create a separation between authenticated and public routes
+function PublicRoutes() {
+  return (
+    <div className="min-h-screen">
+      <Toaster />
+      <Switch>
+        <Route path="/questionnaire/:id" component={PublicQuestionnaire} />
+        <Route path="/questionnaire" component={PublicQuestionnaire} />
+        <Route path="/thank-you" component={ThankYou} />
+        <Route>
+          {/* Fallback to the auth-protected app */}
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </Route>
+      </Switch>
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <PublicRoutes />
     </QueryClientProvider>
   );
 }

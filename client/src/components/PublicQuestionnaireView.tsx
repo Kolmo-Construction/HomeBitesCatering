@@ -15,9 +15,9 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import NutritionChart from './nutrition/NutritionChart';
-import NutritionSummary from './nutrition/NutritionSummary';
-import MenuItemCard from './nutrition/MenuItemCard';
+import NutritionChart from '@/components/nutrition/NutritionChart';
+import NutritionSummary from '@/components/nutrition/NutritionSummary';
+import MenuItemCard from '@/components/nutrition/MenuItemCard';
 
 // Types for the nutritional data
 interface NutritionalInfo {
