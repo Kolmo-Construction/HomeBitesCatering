@@ -793,7 +793,7 @@ const QuestionnaireBuilder = () => {
         }
       }
       
-      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox')) {
+      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox_group')) {
         formData.options = questionOptions;
       }
       
@@ -1719,7 +1719,8 @@ const QuestionnaireBuilder = () => {
                                     <SelectItem value="name">Full Name (First/Last)</SelectItem>
                                     <SelectItem value="address">Address</SelectItem>
                                     <SelectItem value="radio">Radio Buttons</SelectItem>
-                                    <SelectItem value="checkbox">Checkboxes</SelectItem>
+                                    <SelectItem value="checkbox">Single Checkbox (Yes/No)</SelectItem>
+                                    <SelectItem value="checkbox_group">Checkbox Group (Multiple Selection)</SelectItem>
                                     <SelectItem value="toggle">Toggle Switch (Yes/No)</SelectItem>
                                     <SelectItem value="slider">Slider</SelectItem>
                                     <SelectItem value="incrementer">Step Counter</SelectItem>
