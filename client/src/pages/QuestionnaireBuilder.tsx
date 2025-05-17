@@ -170,38 +170,87 @@ const QuestionnaireBuilder = () => {
   // State for questionnaire preview
   const [questionsMap, setQuestionsMap] = useState<Record<number, any[]>>({});
   
-  // Search functionality
+  // Enhanced search functionality for all tabs
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<Array<{
-    questionId: number;
-    questionText: string;
-    questionKey: string;
-    pageId: number;
-    pageTitle: string;
+    type: 'question' | 'page' | 'definition' | 'rule';
+    id: number;
+    title: string;
+    subtitle: string;
+    pageId?: number;
+    definitionId?: number;
   }>>([]);
   
-  // Function to load all questions for preview
-  // Search for questions across all pages
-  const searchQuestions = (query: string) => {
-    if (!query.trim() || !selectedDefinition || !pages || pages.length === 0) {
+  // Function to search across all content in the questionnaire builder
+  const searchAllContent = (query: string) => {
+    if (!query.trim()) {
       setSearchResults([]);
       return;
     }
     
     const lowerQuery = query.toLowerCase().trim();
     const results: Array<{
-      questionId: number;
-      questionText: string;
-      questionKey: string;
-      pageId: number;
-      pageTitle: string;
+      type: 'question' | 'page' | 'definition' | 'rule';
+      id: number;
+      title: string;
+      subtitle: string;
+      pageId?: number;
+      definitionId?: number;
     }> = [];
+    
+    // Search through questionnaire definitions
+    if (definitions && definitions.length > 0) {
+      definitions.forEach((def: any) => {
+        if (def.versionName.toLowerCase().includes(lowerQuery) || 
+            (def.description && def.description.toLowerCase().includes(lowerQuery))) {
+          results.push({
+            type: 'definition',
+            id: def.id,
+            title: def.versionName,
+            subtitle: def.description || 'Questionnaire Definition',
+            definitionId: def.id
+          });
+        }
+      });
+    }
+    
+    // Search through pages
+    if (pages && pages.length > 0) {
+      pages.forEach((page: any) => {
+        if (page.title.toLowerCase().includes(lowerQuery)) {
+          results.push({
+            type: 'page',
+            id: page.id,
+            title: page.title,
+            subtitle: `Page (Order: ${page.order})`,
+            definitionId: page.definitionId
+          });
+        }
+      });
+    }
+    
+    // Search through conditional logic rules
+    if (conditionalLogic && conditionalLogic.length > 0) {
+      conditionalLogic.forEach((rule: any) => {
+        const ruleTitle = `Rule: ${rule.triggerQuestionKey} ${rule.triggerCondition} ${rule.triggerValue || ''}`;
+        if (ruleTitle.toLowerCase().includes(lowerQuery) || 
+            rule.triggerQuestionKey.toLowerCase().includes(lowerQuery)) {
+          results.push({
+            type: 'rule',
+            id: rule.id,
+            title: ruleTitle,
+            subtitle: `Logic rule that affects ${rule.targetAction}`,
+            definitionId: selectedDefinition || undefined
+          });
+        }
+      });
+    }
     
     // Search through all loaded questions
     Object.entries(questionsMap).forEach(([pageId, questions]) => {
       if (!Array.isArray(questions)) return;
       
-      const page = pages.find((p: any) => p.id === parseInt(pageId));
+      const page = pages?.find((p: any) => p.id === parseInt(pageId));
       if (!page) return;
       
       questions.forEach(question => {
@@ -211,11 +260,12 @@ const QuestionnaireBuilder = () => {
         
         if (matchesText || matchesKey) {
           results.push({
-            questionId: question.id,
-            questionText: question.questionText,
-            questionKey: question.questionKey,
+            type: 'question',
+            id: question.id,
+            title: question.questionText,
+            subtitle: `Key: ${question.questionKey} | Page: ${page.title}`,
             pageId: parseInt(pageId),
-            pageTitle: page.title
+            definitionId: page.definitionId
           });
         }
       });
@@ -224,26 +274,70 @@ const QuestionnaireBuilder = () => {
     setSearchResults(results);
   };
   
-  // Handle navigation to a question from search results
-  const navigateToQuestion = (pageId: number, questionId: number) => {
-    setActiveTab('questions');
-    setSelectedPage(pageId);
+  // Handle navigation to any item from search results
+  const navigateToItem = (item: {
+    type: 'question' | 'page' | 'definition' | 'rule';
+    id: number;
+    pageId?: number;
+    definitionId?: number;
+  }) => {
+    // Set the appropriate tab and selection based on item type
+    switch (item.type) {
+      case 'definition':
+        setActiveTab('definitions');
+        setSelectedDefinition(item.id);
+        break;
+        
+      case 'page':
+        if (item.definitionId) {
+          setSelectedDefinition(item.definitionId);
+          setActiveTab('pages');
+          setTimeout(() => {
+            const pageElement = document.getElementById(`page-${item.id}`);
+            if (pageElement) {
+              pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              pageElement.classList.add('highlight-element');
+              setTimeout(() => pageElement.classList.remove('highlight-element'), 2000);
+            }
+          }, 300);
+        }
+        break;
+        
+      case 'question':
+        if (item.pageId && item.definitionId) {
+          setSelectedDefinition(item.definitionId);
+          setSelectedPage(item.pageId);
+          setActiveTab('questions');
+          setTimeout(() => {
+            const questionElement = document.getElementById(`question-${item.id}`);
+            if (questionElement) {
+              questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              questionElement.classList.add('highlight-element');
+              setTimeout(() => questionElement.classList.remove('highlight-element'), 2000);
+            }
+          }, 300);
+        }
+        break;
+        
+      case 'rule':
+        if (item.definitionId) {
+          setSelectedDefinition(item.definitionId);
+          setActiveTab('conditionalLogic');
+          setTimeout(() => {
+            const ruleElement = document.getElementById(`rule-${item.id}`);
+            if (ruleElement) {
+              ruleElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              ruleElement.classList.add('highlight-element');
+              setTimeout(() => ruleElement.classList.remove('highlight-element'), 2000);
+            }
+          }, 300);
+        }
+        break;
+    }
     
-    // Clear search results
+    // Clear search
     setSearchQuery('');
     setSearchResults([]);
-    
-    // Scroll to the question after a short delay to allow rendering
-    setTimeout(() => {
-      const questionElement = document.getElementById(`question-${questionId}`);
-      if (questionElement) {
-        questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        questionElement.classList.add('highlight-element');
-        setTimeout(() => {
-          questionElement.classList.remove('highlight-element');
-        }, 2000);
-      }
-    }, 300);
   };
 
   const loadAllQuestionsForPreview = async () => {
@@ -867,21 +961,24 @@ const QuestionnaireBuilder = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Questionnaire Builder</h1>
         
-        {/* Search bar with auto-complete */}
+        {/* Enhanced search bar with auto-complete across all tabs */}
         <div className="w-1/3">
           <form onSubmit={(e) => {
             e.preventDefault();
             if (searchResults.length > 0) {
               // Navigate to the first result when Enter is pressed
-              navigateToQuestion(searchResults[0].pageId, searchResults[0].questionId);
+              navigateToItem(searchResults[0]);
             }
           }}>
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Search questions... (press Enter to navigate)"
+                placeholder="Search all tabs... (press Enter to navigate)"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  searchAllContent(e.target.value);
+                }}
                 className="pr-10"
                 autoComplete="off"
               />
@@ -889,7 +986,10 @@ const QuestionnaireBuilder = () => {
                 <button 
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
                 >
                   ×
                 </button>
@@ -897,19 +997,27 @@ const QuestionnaireBuilder = () => {
             </div>
           </form>
           
-          {/* Search results dropdown with auto-complete */}
+          {/* Enhanced search results dropdown with visual indicators for different item types */}
           {searchResults.length > 0 && searchQuery && (
             <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
               {searchResults.map((result, index) => (
                 <div
-                  key={`${result.pageId}-${result.questionId}`}
+                  key={`${result.type}-${result.id}`}
                   className={`cursor-pointer hover:bg-gray-100 p-3 ${index === 0 ? 'bg-gray-50' : ''}`}
-                  onClick={() => navigateToQuestion(result.pageId, result.questionId)}
+                  onClick={() => navigateToItem(result)}
                 >
-                  <div className="font-medium truncate">{result.questionText}</div>
-                  <div className="text-xs text-gray-500 flex justify-between">
-                    <span>Key: {result.questionKey}</span>
-                    <span>Page: {result.pageTitle}</span>
+                  <div className="font-medium truncate flex items-center">
+                    {/* Icon based on item type */}
+                    <span className="mr-2">
+                      {result.type === 'definition' && '📋'}
+                      {result.type === 'page' && '📄'}
+                      {result.type === 'question' && '❓'}
+                      {result.type === 'rule' && '⚙️'}
+                    </span>
+                    {result.title}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <span>{result.subtitle}</span>
                   </div>
                 </div>
               ))}
