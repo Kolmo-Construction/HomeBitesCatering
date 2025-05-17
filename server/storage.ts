@@ -136,6 +136,7 @@ export interface IStorage {
   // Questionnaire Definitions
   createQuestionnaireDefinition(definition: z.infer<typeof insertQuestionnaireDefinitionSchema>): Promise<QuestionnaireDefinition>;
   getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined>;
+  updateQuestionnaireDefinition(definitionId: number, definition: Partial<QuestionnaireDefinition>): Promise<QuestionnaireDefinition | undefined>;
   
   // Questionnaire Pages
   getQuestionnairePage(pageId: number): Promise<QuestionnairePage | undefined>;
@@ -923,6 +924,33 @@ export class DatabaseStorage implements IStorage {
       return definition;
     } catch (error) {
       console.error(`Error fetching questionnaire definition ${definitionId}:`, error);
+      return undefined;
+    }
+  }
+  
+  async updateQuestionnaireDefinition(definitionId: number, definition: Partial<QuestionnaireDefinition>): Promise<QuestionnaireDefinition | undefined> {
+    try {
+      console.log(`Updating questionnaire definition ${definitionId} with data:`, definition);
+      
+      // If setting as active, deactivate other definitions first
+      if (definition.isActive) {
+        console.log('Setting as active definition, deactivating others');
+        await db
+          .update(questionnaireDefinitions)
+          .set({ isActive: false })
+          .where(eq(questionnaireDefinitions.isActive, true));
+      }
+      
+      // Update the definition with updatedAt timestamp
+      const [updatedDefinition] = await db
+        .update(questionnaireDefinitions)
+        .set({ ...definition, updatedAt: new Date() })
+        .where(eq(questionnaireDefinitions.id, definitionId))
+        .returning();
+      
+      return updatedDefinition;
+    } catch (error) {
+      console.error(`Error updating questionnaire definition ${definitionId}:`, error);
       return undefined;
     }
   }

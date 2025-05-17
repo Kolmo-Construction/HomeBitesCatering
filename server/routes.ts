@@ -1700,6 +1700,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // to determine which operation to perform.
   
   // Questionnaire Definitions (Legacy APIs - use unified builder API for new code)
+  
+  // Update questionnaire status (activate/deactivate)
+  app.patch('/api/admin/questionnaires/definitions/:definitionId/status', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const definitionId = Number(req.params.definitionId);
+      if (isNaN(definitionId) || definitionId <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid definition ID' 
+        });
+      }
+      
+      // Validate request body
+      const { isActive } = req.body;
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'isActive must be a boolean value' 
+        });
+      }
+      
+      // Check if the definition exists
+      const definition = await storage.getQuestionnaireDefinition(definitionId);
+      if (!definition) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Questionnaire definition not found' 
+        });
+      }
+      
+      // Update the definition status
+      const updatedDefinition = await storage.updateQuestionnaireDefinition(definitionId, { 
+        isActive 
+      });
+      
+      if (!updatedDefinition) {
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to update questionnaire status' 
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: `Questionnaire ${isActive ? 'activated' : 'deactivated'} successfully`,
+        definition: updatedDefinition
+      });
+    } catch (error) {
+      console.error('Error updating questionnaire status:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server error updating questionnaire status' 
+      });
+    }
+  });
 
   // Get all questionnaire definitions
   app.get('/api/admin/questionnaires/definitions', isAdmin, async (req: Request, res: Response) => {
