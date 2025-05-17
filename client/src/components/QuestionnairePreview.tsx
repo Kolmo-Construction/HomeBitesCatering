@@ -26,6 +26,8 @@ type Question = {
     optionValue: string;
     order: number;
   }[];
+  dependsOn?: string;
+  showIf?: string;
 };
 
 type Page = {
@@ -51,6 +53,39 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Function to check if a question should be visible based on dependencies
+  const isQuestionVisible = (question: Question): boolean => {
+    // If the question has no dependency, it's always visible
+    if (!question.dependsOn || !question.showIf) {
+      return true;
+    }
+    
+    // Get the value of the field this question depends on
+    const dependentValue = formData[question.dependsOn];
+    
+    // Convert values to strings for comparison
+    const stringDependentValue = String(dependentValue);
+    const stringShowIf = String(question.showIf);
+    
+    // For boolean-like values (toggles, switches)
+    if (stringShowIf === 'true' || stringShowIf === 'false') {
+      // Handle case where the dependent field is a toggle/switch
+      if (stringDependentValue === 'true' || stringDependentValue === true || dependentValue === true) {
+        return stringShowIf === 'true';
+      } else if (stringDependentValue === 'false' || stringDependentValue === false || dependentValue === false) {
+        return stringShowIf === 'false';
+      }
+    }
+    
+    // For numeric values (sliders, incrementers, etc.)
+    if (!isNaN(Number(stringShowIf)) && !isNaN(Number(stringDependentValue))) {
+      return Number(stringDependentValue) === Number(stringShowIf);
+    }
+    
+    // Default string comparison
+    return stringDependentValue === stringShowIf;
+  };
 
   const sortedPages = [...pages].sort((a, b) => a.order - b.order);
   const currentPage = sortedPages[currentPageIndex];
