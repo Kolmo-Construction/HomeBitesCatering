@@ -2542,6 +2542,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Questionnaire page not found' });
       }
       
+      // Check if a specific definition ID is provided in query params
+      const definitionIdParam = req.query.definitionId ? Number(req.query.definitionId) : null;
+      
+      // If definitionId is provided, verify the page belongs to that definition
+      if (definitionIdParam && page.definitionId !== definitionIdParam) {
+        console.log(`Page ${pageId} belongs to definition ${page.definitionId}, not the requested ${definitionIdParam}`);
+        return res.status(404).json({ 
+          message: 'Questionnaire page not found for the specified definition',
+          details: 'Page belongs to a different questionnaire definition'
+        });
+      }
+      
       // Get questions for the page
       const questions = await db
         .select()
@@ -2699,18 +2711,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // For toggle to select specifically, provide more helpful error message
+        // For toggle to select conversion, automatically generate Yes/No options if not provided
         if (existingQuestion.questionType === 'toggle' && validatedData.questionType === 'select') {
           if (!validatedData.options || validatedData.options.length < 2) {
-            return res.status(400).json({ 
-              message: 'Validation error', 
-              details: 'Toggle to Select conversion requires Yes/No options',
-              errors: [{ 
-                path: ['options'], 
-                message: `When changing from 'toggle' to 'select', you must provide at least two options for "Yes" and "No"`,
-                code: 'custom' 
-              }]
-            });
+            // Auto-generate Yes/No options
+            console.log('Auto-generating Yes/No options for toggle-to-select conversion');
+            validatedData.options = [
+              { 
+                optionText: 'Yes', 
+                optionValue: 'true', 
+                order: 0 
+              },
+              { 
+                optionText: 'No', 
+                optionValue: 'false', 
+                order: 1 
+              }
+            ];
           }
         }
       }

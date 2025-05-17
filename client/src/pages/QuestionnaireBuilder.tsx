@@ -495,7 +495,8 @@ const QuestionnaireBuilder = () => {
       
       const allQuestions = [];
       for (const page of pages) {
-        const response = await apiRequest('GET', `/api/admin/questionnaires/pages/${page.id}/questions`);
+        // Pass the definitionId as a query parameter to ensure we only get questions for this definition
+        const response = await apiRequest('GET', `/api/admin/questionnaires/pages/${page.id}/questions?definitionId=${selectedDefinition}`);
         const pageQuestions = await response.json();
         if (pageQuestions) {
           allQuestions.push(...pageQuestions);
