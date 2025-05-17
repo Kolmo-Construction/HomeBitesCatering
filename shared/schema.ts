@@ -467,7 +467,7 @@ export const questionnaireQuestions = pgTable('questionnaire_questions', {
   id: serial('id').primaryKey(),
   pageId: integer('page_id').references(() => questionnairePages.id, { onDelete: 'cascade' }).notNull(),
   questionText: text('question_text').notNull(),
-  questionKey: text('question_key').unique().notNull(), // Unique key for this question, e.g., `event_type`, `guest_count`
+  questionKey: text('question_key').notNull(), // Key for this question, e.g., `event_type`, `guest_count` (removed unique constraint)
   questionType: questionTypeEnum('question_type').notNull(),
   order: integer('order').notNull(),
   isRequired: boolean('is_required').default(false).notNull(),
