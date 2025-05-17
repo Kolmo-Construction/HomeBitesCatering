@@ -1021,48 +1021,69 @@ const PublicQuestionnaireView: React.FC = () => {
                         isSelected={isChecked}
                         isCheckbox={true}
                         onClick={() => {
-                          const currentValues = [...(formData[questionKey] || [])];
-                          const valueIndex = currentValues.indexOf(option.optionValue);
-                          
-                          // If we're adding a new value (not currently selected)
-                          if (valueIndex === -1) {
-                            // Check if this is a question with selection limits
-                            const hasSelectionLimit = questionText.includes('exactly') || 
-                                questionText.includes('Choose');
+                          // Create a handler for the menu item click that properly enforces selection limits
+                          const handleMenuItemCheck = () => {
+                            const currentValues = [...(formData[questionKey] || [])];
+                            const valueIndex = currentValues.indexOf(option.optionValue);
                             
-                            // Extract the max selections from the question text
-                            const chooseNMatch = questionText.match(/Choose (\d+)/i);
-                            const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/i);
-                            const textLimitMatch = chooseNMatch || exactSelectionsMatch;
-                            const textLimit = textLimitMatch ? parseInt(textLimitMatch[1]) : null;
+                            // If already selected, always allow unselecting
+                            if (valueIndex !== -1) {
+                              currentValues.splice(valueIndex, 1);
+                              handleInputChange(questionKey, currentValues);
+                              // Need to update the UI state
+                              const menuItemsCopy = [...selectedMenuItems];
+                              const itemIndex = menuItemsCopy.findIndex(item => item.id === menuItem.id);
+                              if (itemIndex !== -1) {
+                                menuItemsCopy.splice(itemIndex, 1);
+                                setSelectedMenuItems(menuItemsCopy);
+                              }
+                              return;
+                            }
                             
-                            // Check for validation rules in the question data
+                            // If not already selected, check for limits before selecting
+                            
+                            // Check if this question is asking for a specific number of selections
+                            const hasMatchPattern = questionText.toLowerCase().includes('choose') || 
+                                                   questionText.toLowerCase().includes('select exactly');
+                            
+                            // Parse exact selection limits from text patterns
+                            const chooseMatch = questionText.match(/Choose (\d+)/i);
+                            const selectExactlyMatch = questionText.match(/Select exactly (\d+)/i);
+                            const textLimit = chooseMatch ? parseInt(chooseMatch[1]) : 
+                                          selectExactlyMatch ? parseInt(selectExactlyMatch[1]) : null;
+                            
+                            // Check validation rules in the question data
                             const validationRules = question.validationRules || {};
                             const exactCount = validationRules.exactCount;
                             const maxCount = validationRules.maxCount;
                             
-                            // Determine the effective limit
-                            const effectiveLimit = exactCount || textLimit || maxCount;
+                            // Get the effective selection limit
+                            const limit = exactCount || textLimit || maxCount;
                             
-                            // Check if adding would exceed the maximum selections
-                            if (effectiveLimit && currentValues.length >= effectiveLimit) {
-                              // Show toast notification for limit reached
+                            // If there's a limit and we've reached it, show error and block selection
+                            if (limit && currentValues.length >= limit) {
                               toast({
                                 title: "Selection limit reached",
-                                description: `You can only select ${effectiveLimit} options for this question.`,
-                                variant: "destructive"
+                                description: `You can only select ${limit} options for this question.`,
+                                variant: "destructive",
+                                duration: 3000
                               });
-                              return; // Don't update selection
+                              return;
                             }
-                            // If within limits, add the value
+                            
+                            // Otherwise, add the selection
                             currentValues.push(option.optionValue);
-                          } else {
-                            // Always allow removing a selection
-                            currentValues.splice(valueIndex, 1);
-                          }
+                            handleInputChange(questionKey, currentValues);
+                            
+                            // Need to update the UI state for menu items
+                            const existingItem = selectedMenuItems.find(item => item.id === menuItem.id);
+                            if (!existingItem) {
+                              setSelectedMenuItems([...selectedMenuItems, menuItem]);
+                            }
+                          };
                           
-                          handleInputChange(questionKey, currentValues);
-                          toggleMenuItemSelection(menuItem.id);
+                          // Call the handler
+                          handleMenuItemCheck();
                         }}
                       />
                     );
