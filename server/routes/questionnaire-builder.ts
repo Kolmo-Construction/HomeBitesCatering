@@ -114,7 +114,7 @@ const addConditionalLogicSchema = z.object({
     'is_not_empty', 'custom'
   ]),
   triggerValue: z.string().optional(),
-  actionType: z.enum(['show', 'hide', 'require', 'skip_to', 'set_value', 'custom']),
+  actionType: z.enum(['show_question', 'hide_question', 'require_question', 'unrequire_question', 'skip_to_page', 'enable_option', 'disable_option']),
   targetOptionValue: z.string().optional(),
   targetPageId: z.number().optional()
 });
