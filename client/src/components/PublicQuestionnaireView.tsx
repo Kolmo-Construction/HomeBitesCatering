@@ -446,19 +446,36 @@ const PublicQuestionnaireView: React.FC = () => {
   
   // Helper function to evaluate conditional logic
   const evaluateCondition = (value: any, condition: string, compareValue: string): boolean => {
+    // Handle boolean values from toggle switches
+    if (typeof value === 'boolean') {
+      // Convert boolean to string for comparison
+      value = String(value);
+    }
+    
+    // Handle string representations of booleans
+    if (compareValue === 'true' && (value === true || value === 'true')) {
+      value = 'true';
+    } else if (compareValue === 'false' && (value === false || value === 'false')) {
+      value = 'false';
+    }
+    
     switch (condition) {
       case 'equals':
-        return value === compareValue;
+        return String(value) === String(compareValue);
       case 'not_equals':
-        return value !== compareValue;
+        return String(value) !== String(compareValue);
       case 'contains':
         return Array.isArray(value) ? value.includes(compareValue) : String(value).includes(compareValue);
       case 'not_contains':
         return Array.isArray(value) ? !value.includes(compareValue) : !String(value).includes(compareValue);
       case 'is_empty':
-        return value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+        return value === undefined || value === '' || value === false || (Array.isArray(value) && value.length === 0);
       case 'is_not_empty':
-        return value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
+        return value !== undefined && value !== '' && value !== false && !(Array.isArray(value) && value.length === 0);
+      case 'greater_than':
+        return Number(value) > Number(compareValue);
+      case 'less_than':
+        return Number(value) < Number(compareValue);
       default:
         return false;
     }
