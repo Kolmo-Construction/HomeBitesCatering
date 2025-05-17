@@ -1011,56 +1011,47 @@ const PublicQuestionnaireView: React.FC = () => {
                     : undefined;
                     
                   if (menuItem) {
-                    const values = formData[questionKey] || [];
-                    const isChecked = values.includes(option.optionValue);
+                    // Get current values and calculate selection limit
+                    const currentValues = formData[questionKey] || [];
+                    
+                    // Check validation rules in the question data
+                    const validationRules = question.validationRules || {};
+                    const exactCount = validationRules.exactCount;
+                    const maxCount = validationRules.maxCount;
+                    
+                    // Check text patterns for limits
+                    const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/i);
+                    const chooseNMatch = questionText.match(/Choose (\d+)/i);
+                    const textLimit = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : 
+                                    chooseNMatch ? parseInt(chooseNMatch[1]) : null;
+                    
+                    // Calculate the effective limit
+                    const limit = exactCount || textLimit || maxCount;
+                    
+                    // Check if we've reached the limit
+                    const limitReached = limit ? currentValues.length >= limit : false;
+                    
+                    const isChecked = currentValues.includes(option.optionValue);
+                    
+                    // Import our special CheckboxMenuItemCard component
+                    const CheckboxMenuItemCard = require('@/components/nutrition/CheckboxMenuItemCard').default;
                     
                     return (
-                      <MenuItemCard
+                      <CheckboxMenuItemCard
                         key={option.id}
                         menuItem={menuItem}
                         isSelected={isChecked}
-                        isCheckbox={true}
+                        // Disable only if limit reached AND this item is not already selected
+                        isDisabled={limitReached && !isChecked}
                         onClick={() => {
-                          // Create a handler for the menu item click that properly enforces selection limits
-                          const handleMenuItemCheck = () => {
-                            const currentValues = [...(formData[questionKey] || [])];
-                            const valueIndex = currentValues.indexOf(option.optionValue);
-                            
-                            // If already selected, always allow unselecting
-                            if (valueIndex !== -1) {
-                              currentValues.splice(valueIndex, 1);
-                              handleInputChange(questionKey, currentValues);
-                              // Need to update the UI state
-                              const menuItemsCopy = [...selectedMenuItems];
-                              const itemIndex = menuItemsCopy.findIndex(item => item.id === menuItem.id);
-                              if (itemIndex !== -1) {
-                                menuItemsCopy.splice(itemIndex, 1);
-                                setSelectedMenuItems(menuItemsCopy);
-                              }
-                              return;
-                            }
-                            
-                            // If not already selected, check for limits before selecting
-                            
-                            // Check if this question is asking for a specific number of selections
-                            const hasMatchPattern = questionText.toLowerCase().includes('choose') || 
-                                                   questionText.toLowerCase().includes('select exactly');
-                            
-                            // Parse exact selection limits from text patterns
-                            const chooseMatch = questionText.match(/Choose (\d+)/i);
-                            const selectExactlyMatch = questionText.match(/Select exactly (\d+)/i);
-                            const textLimit = chooseMatch ? parseInt(chooseMatch[1]) : 
-                                          selectExactlyMatch ? parseInt(selectExactlyMatch[1]) : null;
-                            
-                            // Check validation rules in the question data
-                            const validationRules = question.validationRules || {};
-                            const exactCount = validationRules.exactCount;
-                            const maxCount = validationRules.maxCount;
-                            
-                            // Get the effective selection limit
-                            const limit = exactCount || textLimit || maxCount;
-                            
-                            // If there's a limit and we've reached it, show error and block selection
+                          const updatedValues = [...currentValues];
+                          const valueIndex = updatedValues.indexOf(option.optionValue);
+                          
+                          if (valueIndex !== -1) {
+                            // If already selected, remove it (always allowed)
+                            updatedValues.splice(valueIndex, 1);
+                          } else {
+                            // If not selected and we're at the limit, show warning and don't select
                             if (limit && currentValues.length >= limit) {
                               toast({
                                 title: "Selection limit reached",
@@ -1071,19 +1062,12 @@ const PublicQuestionnaireView: React.FC = () => {
                               return;
                             }
                             
-                            // Otherwise, add the selection
-                            currentValues.push(option.optionValue);
-                            handleInputChange(questionKey, currentValues);
-                            
-                            // Need to update the UI state for menu items
-                            const existingItem = selectedMenuItems.find(item => item.id === menuItem.id);
-                            if (!existingItem) {
-                              setSelectedMenuItems([...selectedMenuItems, menuItem]);
-                            }
-                          };
+                            // Otherwise add the selection
+                            updatedValues.push(option.optionValue);
+                          }
                           
-                          // Call the handler
-                          handleMenuItemCheck();
+                          // Update form data
+                          handleInputChange(questionKey, updatedValues);
                         }}
                       />
                     );
