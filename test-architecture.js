@@ -136,7 +136,7 @@ async function testQuestionnaireDefinition(authCookie) {
       isActive: true,
       isPublished: false
     }
-  });
+  }, authCookie);
   
   console.log(`Questionnaire definition creation: ${response.status === 201 ? 'SUCCESS' : 'FAILED'}`);
   if (response.status !== 201) {
@@ -150,7 +150,7 @@ async function testQuestionnaireDefinition(authCookie) {
 }
 
 // Test creating sections
-async function testSections() {
+async function testSections(authCookie) {
   console.log('\n--- Testing Sections ---');
   
   // Create a contact information section
@@ -161,7 +161,7 @@ async function testSections() {
       description: 'Basic contact details for the event organizer',
       templateKey: 'contact_info_section_' + Date.now() // Add timestamp to avoid conflicts
     }
-  });
+  }, authCookie);
   
   console.log(`Section creation: ${response.status === 201 ? 'SUCCESS' : 'FAILED'}`);
   if (response.status !== 201) {
@@ -175,7 +175,7 @@ async function testSections() {
 }
 
 // Test adding questions to a section
-async function testSectionQuestions(sectionId) {
+async function testSectionQuestions(sectionId, authCookie) {
   if (!sectionId) {
     console.log('Cannot test section questions without a section ID');
     return;
@@ -205,7 +205,7 @@ async function testSectionQuestions(sectionId) {
         }
       ]
     }
-  });
+  }, authCookie);
   
   console.log(`Adding questions to section: ${response.status === 201 ? 'SUCCESS' : 'FAILED'}`);
   if (response.status !== 201) {
@@ -216,7 +216,7 @@ async function testSectionQuestions(sectionId) {
 }
 
 // Test adding pages to a questionnaire
-async function testPages(definitionId) {
+async function testPages(definitionId, authCookie) {
   if (!definitionId) {
     console.log('Cannot test pages without a definition ID');
     return;
@@ -233,7 +233,7 @@ async function testPages(definitionId) {
       description: 'Information about the event',
       order: 1
     }
-  });
+  }, authCookie);
   
   console.log(`Page creation: ${response.status === 201 ? 'SUCCESS' : 'FAILED'}`);
   if (response.status !== 201) {
@@ -247,7 +247,7 @@ async function testPages(definitionId) {
 }
 
 // Test adding a section to a page
-async function testPageSections(pageId, sectionId) {
+async function testPageSections(pageId, sectionId, authCookie) {
   if (!pageId || !sectionId) {
     console.log('Cannot test page sections without page and section IDs');
     return;
@@ -263,7 +263,7 @@ async function testPageSections(pageId, sectionId) {
       sectionId,
       sectionOrder: 1
     }
-  });
+  }, authCookie);
   
   console.log(`Adding section to page: ${response.status === 201 ? 'SUCCESS' : 'FAILED'}`);
   if (response.status !== 201) {
