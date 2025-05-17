@@ -160,6 +160,8 @@ const QuestionnaireBuilder = () => {
   // State for tracking which items are being edited
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
   const [editingPageId, setEditingPageId] = useState<number | null>(null);
+  const [editingDefinitionId, setEditingDefinitionId] = useState<number | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<string>("");
   
   // State for questionnaire preview
   const [questionsMap, setQuestionsMap] = useState<Record<number, any[]>>({});
