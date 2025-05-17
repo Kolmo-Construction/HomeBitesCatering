@@ -130,6 +130,7 @@ const QuestionType = ({ value }: { value: string }) => {
     'select': 'Dropdown',
     'radio': 'Radio Buttons',
     'checkbox': 'Checkboxes',
+    'toggle': 'Toggle Switch (Yes/No)',
     'matrix': 'Matrix',
     'file': 'File Upload',
     'slider': 'Slider',
@@ -1666,6 +1667,7 @@ const QuestionnaireBuilder = () => {
                                     <SelectItem value="address">Address</SelectItem>
                                     <SelectItem value="radio">Radio Buttons</SelectItem>
                                     <SelectItem value="checkbox">Checkboxes</SelectItem>
+                                    <SelectItem value="toggle">Toggle Switch (Yes/No)</SelectItem>
                                     <SelectItem value="slider">Slider</SelectItem>
                                     <SelectItem value="incrementer">Step Counter</SelectItem>
                                     <SelectItem value="matrix">Matrix</SelectItem>
