@@ -1030,46 +1030,6 @@ const PublicQuestionnaireView: React.FC = () => {
           </div>
         );
         
-      case 'slider':
-        return (
-          <div className="space-y-2">
-            <Label 
-              htmlFor={questionKey} 
-              className={cn(
-                "text-base font-medium",
-                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
-              )}
-            >
-              {questionText}
-            </Label>
-            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Min: 0</span>
-                <span className="text-sm font-medium">{formData[questionKey] || 0}</span>
-                <span className="text-sm text-gray-500">Max: 100</span>
-              </div>
-              
-              <Slider
-                id={questionKey}
-                defaultValue={[formData[questionKey] || 0]}
-                min={0}
-                max={100}
-                step={1}
-                onValueChange={(values) => {
-                  handleInputChange(questionKey, values[0]);
-                }}
-                className={cn(
-                  errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
-                )}
-              />
-            </div>
-            
-            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
-          </div>
-        );
-        
       case 'incrementer':
         return (
           <div className="space-y-2">
