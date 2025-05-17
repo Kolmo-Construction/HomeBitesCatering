@@ -128,6 +128,7 @@ const PublicQuestionnaireView: React.FC = () => {
     'time_picker',      // Show help for time picker
     'address',          // Show help for address fields
     'select',           // Show help for dropdown selections
+    'toggle',           // Show help for toggle switch (Yes/No) fields
     'radio',            // Show help for radio options
     'checkbox_group',   // Show help for checkbox groups
     'name',             // Show help for name fields
