@@ -938,15 +938,409 @@ const PublicQuestionnaireView: React.FC = () => {
     );
   }
 
-  // No questionnaire found
+  // No questionnaire found - Show a demo questionnaire instead
   if (!questionnaire) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
-        <h2 className="text-2xl font-bold mb-2">Questionnaire Not Found</h2>
-        <p className="text-gray-600 mb-4">The requested questionnaire could not be found.</p>
-        <Button onClick={() => setLocation('/')}>Return to Home</Button>
-      </div>
-    );
+    // For demo purposes, create a sample questionnaire structure
+    const demoQuestionnaire: Questionnaire = {
+      definition: {
+        id: 9999,
+        versionName: "Demo Version",
+        description: "This is a demo questionnaire to showcase the nutritional features.",
+        isActive: true
+      },
+      pages: [
+        {
+          id: 1,
+          title: "Event Information",
+          description: "Tell us about your upcoming event",
+          order: 1,
+          questions: [
+            {
+              id: 1,
+              questionText: "What type of event are you planning?",
+              questionKey: "event_type",
+              questionType: "select",
+              isRequired: true,
+              order: 1,
+              options: [
+                { id: 1, optionText: "Wedding", optionValue: "wedding", order: 1 },
+                { id: 2, optionText: "Corporate Event", optionValue: "corporate", order: 2 },
+                { id: 3, optionText: "Birthday Party", optionValue: "birthday", order: 3 },
+                { id: 4, optionText: "Other", optionValue: "other", order: 4 }
+              ]
+            },
+            {
+              id: 2,
+              questionText: "Approximately how many guests will attend?",
+              questionKey: "guest_count",
+              questionType: "number",
+              isRequired: true,
+              helpText: "This helps us calculate per-person nutrition values",
+              order: 2
+            },
+            {
+              id: 3,
+              questionText: "When is your event date?",
+              questionKey: "event_date",
+              questionType: "date",
+              isRequired: true,
+              order: 3
+            }
+          ]
+        },
+        {
+          id: 2,
+          title: "Menu Selection",
+          description: "Select items for your catering menu",
+          order: 2,
+          questions: [
+            {
+              id: 4,
+              questionText: "Select your appetizers (select all that apply)",
+              questionKey: "appetizers",
+              questionType: "checkbox_group",
+              isRequired: true,
+              order: 1,
+              options: [
+                { 
+                  id: 5, 
+                  optionText: "Bruschetta", 
+                  optionValue: "bruschetta", 
+                  order: 1,
+                  relatedMenuItemId: 101
+                },
+                { 
+                  id: 6, 
+                  optionText: "Stuffed Mushrooms", 
+                  optionValue: "stuffed_mushrooms", 
+                  order: 2,
+                  relatedMenuItemId: 102
+                },
+                { 
+                  id: 7, 
+                  optionText: "Spinach Artichoke Dip", 
+                  optionValue: "spinach_dip", 
+                  order: 3,
+                  relatedMenuItemId: 103
+                },
+                { 
+                  id: 8, 
+                  optionText: "Shrimp Cocktail", 
+                  optionValue: "shrimp_cocktail", 
+                  order: 4,
+                  relatedMenuItemId: 104
+                }
+              ]
+            },
+            {
+              id: 5,
+              questionText: "Select your main course",
+              questionKey: "main_course",
+              questionType: "radio",
+              isRequired: true,
+              order: 2,
+              options: [
+                { 
+                  id: 9, 
+                  optionText: "Grilled Salmon", 
+                  optionValue: "salmon", 
+                  order: 1,
+                  relatedMenuItemId: 201
+                },
+                { 
+                  id: 10, 
+                  optionText: "Chicken Marsala", 
+                  optionValue: "chicken_marsala", 
+                  order: 2,
+                  relatedMenuItemId: 202
+                },
+                { 
+                  id: 11, 
+                  optionText: "Beef Tenderloin", 
+                  optionValue: "beef_tenderloin", 
+                  order: 3,
+                  relatedMenuItemId: 203
+                },
+                { 
+                  id: 12, 
+                  optionText: "Vegetarian Pasta", 
+                  optionValue: "vegetarian_pasta", 
+                  order: 4,
+                  relatedMenuItemId: 204
+                }
+              ]
+            },
+            {
+              id: 6,
+              questionText: "Select your side dishes (select all that apply)",
+              questionKey: "sides",
+              questionType: "checkbox_group",
+              isRequired: true,
+              order: 3,
+              options: [
+                { 
+                  id: 13, 
+                  optionText: "Roasted Vegetables", 
+                  optionValue: "roasted_vegetables", 
+                  order: 1,
+                  relatedMenuItemId: 301
+                },
+                { 
+                  id: 14, 
+                  optionText: "Garlic Mashed Potatoes", 
+                  optionValue: "mashed_potatoes", 
+                  order: 2,
+                  relatedMenuItemId: 302
+                },
+                { 
+                  id: 15, 
+                  optionText: "Wild Rice Pilaf", 
+                  optionValue: "rice_pilaf", 
+                  order: 3,
+                  relatedMenuItemId: 303
+                },
+                { 
+                  id: 16, 
+                  optionText: "Garden Salad", 
+                  optionValue: "garden_salad", 
+                  order: 4,
+                  relatedMenuItemId: 304
+                }
+              ]
+            }
+          ]
+        },
+        {
+          id: 3,
+          title: "Dietary Restrictions",
+          description: "Help us accommodate any special dietary needs",
+          order: 3,
+          questions: [
+            {
+              id: 7,
+              questionText: "Do you need any of the following dietary options? (select all that apply)",
+              questionKey: "dietary_restrictions",
+              questionType: "checkbox_group",
+              isRequired: false,
+              order: 1,
+              options: [
+                { id: 17, optionText: "Vegetarian", optionValue: "vegetarian", order: 1 },
+                { id: 18, optionText: "Vegan", optionValue: "vegan", order: 2 },
+                { id: 19, optionText: "Gluten-Free", optionValue: "gluten_free", order: 3 },
+                { id: 20, optionText: "Dairy-Free", optionValue: "dairy_free", order: 4 },
+                { id: 21, optionText: "Nut-Free", optionValue: "nut_free", order: 5 }
+              ]
+            },
+            {
+              id: 8,
+              questionText: "Additional dietary information or allergies we should be aware of",
+              questionKey: "dietary_notes",
+              questionType: "textarea",
+              isRequired: false,
+              order: 2
+            }
+          ]
+        },
+        {
+          id: 4,
+          title: "Contact Information",
+          description: "How can we reach you with your custom quote?",
+          order: 4,
+          questions: [
+            {
+              id: 9,
+              questionText: "Your Name",
+              questionKey: "name",
+              questionType: "text",
+              isRequired: true,
+              order: 1
+            },
+            {
+              id: 10,
+              questionText: "Email Address",
+              questionKey: "email",
+              questionType: "email",
+              isRequired: true,
+              order: 2
+            },
+            {
+              id: 11,
+              questionText: "Phone Number",
+              questionKey: "phone",
+              questionType: "phone",
+              isRequired: true,
+              order: 3
+            },
+            {
+              id: 12,
+              questionText: "Additional Information or Special Requests",
+              questionKey: "additional_info",
+              questionType: "textarea",
+              isRequired: false,
+              order: 4
+            }
+          ]
+        }
+      ],
+      conditionalLogic: []
+    };
+    
+    setQuestionnaire(demoQuestionnaire);
+    
+    // Initialize demo menu items
+    const demoMenuItems: MenuItemNutrition[] = [
+      {
+        id: 101,
+        name: "Bruschetta",
+        nutrition: {
+          calories: 120,
+          protein: 3,
+          carbs: 15,
+          fat: 6,
+          fiber: 2
+        },
+        isSelected: false
+      },
+      {
+        id: 102,
+        name: "Stuffed Mushrooms",
+        nutrition: {
+          calories: 180,
+          protein: 5,
+          carbs: 12,
+          fat: 12,
+          fiber: 3
+        },
+        isSelected: false
+      },
+      {
+        id: 103,
+        name: "Spinach Artichoke Dip",
+        nutrition: {
+          calories: 210,
+          protein: 7,
+          carbs: 18,
+          fat: 14,
+          fiber: 4
+        },
+        isSelected: false
+      },
+      {
+        id: 104,
+        name: "Shrimp Cocktail",
+        nutrition: {
+          calories: 90,
+          protein: 18,
+          carbs: 4,
+          fat: 1,
+          fiber: 0
+        },
+        isSelected: false
+      },
+      {
+        id: 201,
+        name: "Grilled Salmon",
+        nutrition: {
+          calories: 367,
+          protein: 34,
+          carbs: 0,
+          fat: 25,
+          fiber: 0
+        },
+        isSelected: false
+      },
+      {
+        id: 202,
+        name: "Chicken Marsala",
+        nutrition: {
+          calories: 320,
+          protein: 28,
+          carbs: 16,
+          fat: 18,
+          fiber: 1
+        },
+        isSelected: false
+      },
+      {
+        id: 203,
+        name: "Beef Tenderloin",
+        nutrition: {
+          calories: 420,
+          protein: 42,
+          carbs: 2,
+          fat: 28,
+          fiber: 0
+        },
+        isSelected: false
+      },
+      {
+        id: 204,
+        name: "Vegetarian Pasta",
+        nutrition: {
+          calories: 350,
+          protein: 12,
+          carbs: 62,
+          fat: 8,
+          fiber: 6
+        },
+        isSelected: false
+      },
+      {
+        id: 301,
+        name: "Roasted Vegetables",
+        nutrition: {
+          calories: 120,
+          protein: 3,
+          carbs: 22,
+          fat: 3,
+          fiber: 7
+        },
+        isSelected: false
+      },
+      {
+        id: 302,
+        name: "Garlic Mashed Potatoes",
+        nutrition: {
+          calories: 210,
+          protein: 4,
+          carbs: 35,
+          fat: 8,
+          fiber: 3
+        },
+        isSelected: false
+      },
+      {
+        id: 303,
+        name: "Wild Rice Pilaf",
+        nutrition: {
+          calories: 180,
+          protein: 5,
+          carbs: 37,
+          fat: 2,
+          fiber: 4
+        },
+        isSelected: false
+      },
+      {
+        id: 304,
+        name: "Garden Salad",
+        nutrition: {
+          calories: 80,
+          protein: 2,
+          carbs: 12,
+          fat: 3,
+          fiber: 6
+        },
+        isSelected: false
+      }
+    ];
+    
+    setSelectedMenuItems(demoMenuItems);
+    
+    // Clear loading state for demo
+    setLoading(false);
+    
+    return null; // The render logic will continue after the state updates
   }
 
   // Success state (after submission)
