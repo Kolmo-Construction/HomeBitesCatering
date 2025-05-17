@@ -263,7 +263,7 @@ async function basicConditionalLogicTest() {
         targetQuestionKey: dependentQuestion.questionKey,
         triggerCondition: 'equals',
         triggerValue: 'yes',
-        actionType: 'show_question'
+        actionType: 'show'
       }
     }, authCookie);
     
