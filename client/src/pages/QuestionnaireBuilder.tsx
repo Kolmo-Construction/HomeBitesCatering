@@ -170,7 +170,82 @@ const QuestionnaireBuilder = () => {
   // State for questionnaire preview
   const [questionsMap, setQuestionsMap] = useState<Record<number, any[]>>({});
   
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<Array<{
+    questionId: number;
+    questionText: string;
+    questionKey: string;
+    pageId: number;
+    pageTitle: string;
+  }>>([]);
+  
   // Function to load all questions for preview
+  // Search for questions across all pages
+  const searchQuestions = (query: string) => {
+    if (!query.trim() || !selectedDefinition || !pages || pages.length === 0) {
+      setSearchResults([]);
+      return;
+    }
+    
+    const lowerQuery = query.toLowerCase().trim();
+    const results: Array<{
+      questionId: number;
+      questionText: string;
+      questionKey: string;
+      pageId: number;
+      pageTitle: string;
+    }> = [];
+    
+    // Search through all loaded questions
+    Object.entries(questionsMap).forEach(([pageId, questions]) => {
+      if (!Array.isArray(questions)) return;
+      
+      const page = pages.find((p: any) => p.id === parseInt(pageId));
+      if (!page) return;
+      
+      questions.forEach(question => {
+        // Check if question text or key matches the search query
+        const matchesText = question.questionText.toLowerCase().includes(lowerQuery);
+        const matchesKey = question.questionKey.toLowerCase().includes(lowerQuery);
+        
+        if (matchesText || matchesKey) {
+          results.push({
+            questionId: question.id,
+            questionText: question.questionText,
+            questionKey: question.questionKey,
+            pageId: parseInt(pageId),
+            pageTitle: page.title
+          });
+        }
+      });
+    });
+    
+    setSearchResults(results);
+  };
+  
+  // Handle navigation to a question from search results
+  const navigateToQuestion = (pageId: number, questionId: number) => {
+    setActiveTab('questions');
+    setSelectedPage(pageId);
+    
+    // Clear search results
+    setSearchQuery('');
+    setSearchResults([]);
+    
+    // Scroll to the question after a short delay to allow rendering
+    setTimeout(() => {
+      const questionElement = document.getElementById(`question-${questionId}`);
+      if (questionElement) {
+        questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        questionElement.classList.add('highlight-element');
+        setTimeout(() => {
+          questionElement.classList.remove('highlight-element');
+        }, 2000);
+      }
+    }, 300);
+  };
+
   const loadAllQuestionsForPreview = async () => {
     if (!selectedDefinition || !pages || pages.length === 0) {
       toast({
@@ -773,9 +848,78 @@ const QuestionnaireBuilder = () => {
     }
   }, [pages, pageForm]);
 
+  // Effect to load all questions when a questionnaire is selected (for search functionality)
+  useEffect(() => {
+    if (selectedDefinition && pages && pages.length > 0 && Object.keys(questionsMap).length === 0) {
+      loadAllQuestionsForPreview();
+    }
+  }, [selectedDefinition, pages]);
+  
+  // Search for questions whenever the search query changes
+  useEffect(() => {
+    if (selectedDefinition && pages && pages.length > 0) {
+      searchQuestions(searchQuery);
+    }
+  }, [searchQuery, questionsMap]);
+
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Questionnaire Builder</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Questionnaire Builder</h1>
+        
+        {/* Search bar */}
+        <div className="w-1/3">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search questions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10"
+            />
+            {searchQuery && (
+              <button 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={() => setSearchQuery('')}
+              >
+                ×
+              </button>
+            )}
+          </div>
+          
+          {/* Search results dropdown */}
+          {searchResults.length > 0 && searchQuery && (
+            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
+              {searchResults.map((result) => (
+                <div
+                  key={`${result.pageId}-${result.questionId}`}
+                  className="cursor-pointer hover:bg-gray-100 p-3"
+                  onClick={() => navigateToQuestion(result.pageId, result.questionId)}
+                >
+                  <div className="font-medium truncate">{result.questionText}</div>
+                  <div className="text-xs text-gray-500 flex justify-between">
+                    <span>Key: {result.questionKey}</span>
+                    <span>Page: {result.pageTitle}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Add styles for search highlight effect */}
+      <style jsx global>{`
+        .highlight-element {
+          animation: highlight-pulse 2s;
+        }
+        
+        @keyframes highlight-pulse {
+          0% { background-color: rgba(59, 130, 246, 0.2); }
+          50% { background-color: rgba(59, 130, 246, 0.3); }
+          100% { background-color: transparent; }
+        }
+      `}</style>
+      
       <div className="space-y-6">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
