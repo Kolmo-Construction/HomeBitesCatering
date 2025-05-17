@@ -2161,8 +2161,24 @@ const QuestionnaireBuilder = () => {
                             size="sm" 
                             onClick={() => {
                               // Set up form values for the selected question
-                              // Parse validation rules to use in the form
-                              const validationRules = question.validationRules ? JSON.parse(question.validationRules) : {};
+                              // Process validation rules to use in the form
+                              // Handle both cases: when it's already an object or when it's a JSON string
+                              let validationRules = {};
+                              
+                              if (question.validationRules) {
+                                try {
+                                  // If it's a string, parse it as JSON
+                                  if (typeof question.validationRules === 'string') {
+                                    validationRules = JSON.parse(question.validationRules);
+                                  } 
+                                  // If it's already an object, use it directly
+                                  else if (typeof question.validationRules === 'object') {
+                                    validationRules = question.validationRules;
+                                  }
+                                } catch (e) {
+                                  console.error("Error parsing validation rules:", e);
+                                }
+                              }
                               
                               questionForm.reset({
                                 questionText: question.questionText,
