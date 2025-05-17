@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Minus, HelpCircle, Lightbulb } from 'lucide-react';
+import HelpButton from './HelpButton';
 import ContextualHelpSidebar from './ContextualHelpSidebar';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -567,6 +568,12 @@ const PublicQuestionnaireView: React.FC = () => {
       options 
     } = question;
     
+    // Function to open the help sidebar for this question
+    const openHelpForQuestion = () => {
+      setCurrentQuestion(question);
+      setHelpSidebarOpen(true);
+    };
+    
     const errorMessage = validationErrors[questionKey];
     const hasMenuItems = options?.some(option => option.relatedMenuItemId);
     
@@ -586,15 +593,18 @@ const PublicQuestionnaireView: React.FC = () => {
       case 'email':
         return (
           <div className="space-y-2">
-            <Label 
-              htmlFor={questionKey} 
-              className={cn(
-                "text-base font-medium",
-                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
-              )}
-            >
-              {questionText}
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label 
+                htmlFor={questionKey} 
+                className={cn(
+                  "text-base font-medium",
+                  isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+                )}
+              >
+                {questionText}
+              </Label>
+              <HelpButton question={question} onOpenHelp={openHelpForQuestion} />
+            </div>
             {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
             <Input 
               id={questionKey}
@@ -2008,6 +2018,16 @@ const PublicQuestionnaireView: React.FC = () => {
   // Main questionnaire view
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {currentQuestion && (
+        <ContextualHelpSidebar
+          question={currentQuestion}
+          currentValue={formData[currentQuestion.questionKey]}
+          formValues={formData}
+          isOpen={helpSidebarOpen}
+          onClose={() => setHelpSidebarOpen(false)}
+        />
+      )}
+      
       <motion.div
         key={`page-${currentPageIndex}`}
         initial={{ opacity: 0, x: 20 }}
