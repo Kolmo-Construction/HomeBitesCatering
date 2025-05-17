@@ -317,6 +317,28 @@ const QuestionnaireBuilder = () => {
   });
 
   // Mutations
+  const toggleDefinitionStatusMutation = useMutation({
+    mutationFn: async ({ definitionId, isActive }: { definitionId: number, isActive: boolean }) => {
+      const response = await apiRequest('PATCH', `/api/admin/questionnaires/definitions/${definitionId}/status`, { isActive });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
+      
+      toast({
+        title: "Success",
+        description: `Questionnaire ${data.definition.isActive ? 'activated' : 'deactivated'} successfully`
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update questionnaire status",
+        variant: "destructive"
+      });
+    }
+  });
+  
   const createDefinitionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof definitionFormSchema>) => {
       const response = await apiRequest('POST', '/api/admin/questionnaires/definitions', data);
@@ -925,6 +947,27 @@ const QuestionnaireBuilder = () => {
                           {new Date(def.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
+                          <Button
+                            variant={def.isActive ? "destructive" : "default"}
+                            size="sm"
+                            onClick={() => toggleDefinitionStatusMutation.mutate({ 
+                              definitionId: def.id, 
+                              isActive: !def.isActive 
+                            })}
+                            disabled={toggleDefinitionStatusMutation.isPending}
+                          >
+                            {def.isActive ? (
+                              <>
+                                <X className="h-4 w-4 mr-1" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 mr-1" />
+                                Activate
+                              </>
+                            )}
+                          </Button>
                           <Button
                             variant="outline" 
                             size="sm" 
