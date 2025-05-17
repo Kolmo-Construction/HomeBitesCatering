@@ -323,7 +323,7 @@ async function handleAddSectionQuestions(res: Response, data: any) {
         isRequired: question.isRequired,
         validationRules: question.validationRules,
         defaultValue: question.defaultValue,
-        questionType: 'custom', // Default to custom when using component type
+        questionType: 'text', // Default to text type when using component type
         order: question.questionOrder // Use the question order here
       })
       .returning();
@@ -419,11 +419,7 @@ async function handleAddPage(res: Response, data: any) {
     .values({
       definitionId: pageData.definitionId,
       title: pageData.title,
-      description: pageData.description,
-      order: pageData.order,
-      isConditional: pageData.isConditional,
-      conditionLogic: pageData.conditionLogic,
-      metadata: pageData.metadata
+      order: pageData.order
     })
     .returning();
   
@@ -500,9 +496,7 @@ async function handleAddSectionToPage(res: Response, data: any) {
     .values({
       pageId,
       sectionId,
-      sectionOrder,
-      isConditional,
-      conditionLogic
+      sectionOrder
     })
     .returning();
   

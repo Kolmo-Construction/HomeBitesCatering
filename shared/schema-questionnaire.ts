@@ -102,8 +102,6 @@ export const pageSections = pgTable('questionnaire_page_sections', {
   pageId: integer('page_id').notNull().references(() => questionnairePages.id),
   sectionId: integer('section_id').notNull().references(() => questionnaireSections.id),
   sectionOrder: integer('section_order').notNull(),
-  isConditional: boolean('is_conditional').default(false),
-  conditionLogic: json('condition_logic'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
@@ -122,20 +120,24 @@ export const insertPageSectionSchema = createInsertSchema(pageSections).omit({
 export const questionTypeEnum = pgEnum('question_type', [
   'text',
   'textarea',
-  'email',
-  'phone',
   'select',
-  'multiselect',
-  'checkbox',
   'radio',
+  'checkbox',
+  'checkbox_group',
   'date',
   'time',
-  'file',
-  'matrix',
-  'rating',
-  'signature',
+  'number',
+  'matrix_single',
+  'matrix_multi',
+  'info_text',
+  'name',
   'address',
-  'custom'
+  'phone',
+  'email',
+  'toggle',
+  'slider',
+  'time_picker',
+  'incrementer'
 ]);
 
 export const questionnaireQuestions = pgTable('questionnaire_questions', {
