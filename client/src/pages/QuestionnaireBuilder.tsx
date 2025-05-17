@@ -1842,7 +1842,7 @@ const QuestionnaireBuilder = () => {
                                           const value = e.target.value ? parseInt(e.target.value) : undefined;
                                           field.onChange(value);
                                         }}
-                                        value={field.value || ''}
+                                        value={field.value === undefined || field.value === null ? '' : field.value}
                                       />
                                     </FormControl>
                                     <FormDescription>
@@ -1868,7 +1868,7 @@ const QuestionnaireBuilder = () => {
                                           const value = e.target.value ? parseInt(e.target.value) : undefined;
                                           field.onChange(value);
                                         }}
-                                        value={field.value || ''}
+                                        value={field.value === undefined || field.value === null ? '' : field.value}
                                       />
                                     </FormControl>
                                     <FormDescription>
@@ -1894,7 +1894,7 @@ const QuestionnaireBuilder = () => {
                                           const value = e.target.value ? parseInt(e.target.value) : undefined;
                                           field.onChange(value);
                                         }}
-                                        value={field.value || ''}
+                                        value={field.value === undefined || field.value === null ? '' : field.value}
                                       />
                                     </FormControl>
                                     <FormDescription>
