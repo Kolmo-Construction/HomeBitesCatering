@@ -189,7 +189,53 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
     alert('Preview complete! In production, this form would be submitted with the collected data.');
   };
 
+  // Helper function to check if a question should be displayed based on its dependencies
+  const shouldQuestionBeVisible = (question: Question): boolean => {
+    // If question has no dependency, always show it
+    if (!question.dependsOn || !question.showIf) {
+      return true;
+    }
+    
+    // Get the value of the field this question depends on
+    const dependentFieldValue = formData[question.dependsOn];
+    
+    // If the dependent field has no value yet, don't show dependent questions
+    if (dependentFieldValue === undefined || dependentFieldValue === null) {
+      return false;
+    }
+    
+    // For boolean toggles (true/false)
+    if (question.showIf === 'true' || question.showIf === 'false') {
+      const expectedValue = question.showIf === 'true';
+      
+      // Compare based on the type of the dependent field's value
+      if (typeof dependentFieldValue === 'boolean') {
+        return dependentFieldValue === expectedValue;
+      } else if (dependentFieldValue === 'true' || dependentFieldValue === 'false') {
+        return (dependentFieldValue === 'true') === expectedValue;
+      }
+    }
+    
+    // For numeric fields (sliders, incrementers)
+    if (!isNaN(Number(question.showIf))) {
+      const expectedValue = Number(question.showIf);
+      const actualValue = typeof dependentFieldValue === 'number' 
+        ? dependentFieldValue 
+        : Number(dependentFieldValue);
+        
+      return actualValue === expectedValue;
+    }
+    
+    // For other value types, do a string comparison
+    return String(dependentFieldValue) === question.showIf;
+  };
+
   const renderQuestion = (question: Question) => {
+    // Skip rendering if this question shouldn't be visible based on dependencies
+    if (!shouldQuestionBeVisible(question)) {
+      return null;
+    }
+    
     const { questionType, questionText, questionKey, helpText, isRequired, placeholderText, options } = question;
     
     const errorMessage = errors[questionKey];
@@ -582,43 +628,11 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
         <div className="space-y-6">
           {(questionsMap[currentPage.id] || [])
             .sort((a, b) => a.order - b.order)
-            .map((question) => {
-              // Check if the question has a dependency
-              if (question.dependsOn && question.showIf) {
-                // Get the value of the field this question depends on
-                const dependentFieldValue = formData[question.dependsOn];
-                
-                // Compare with the condition
-                let shouldShow = false;
-                
-                // Convert the showIf value to the appropriate type based on the field type
-                if (typeof dependentFieldValue === 'boolean') {
-                  // For toggle/boolean fields
-                  shouldShow = dependentFieldValue === (question.showIf === 'true');
-                } else if (typeof dependentFieldValue === 'number') {
-                  // For numeric fields like sliders and incrementers
-                  shouldShow = dependentFieldValue === Number(question.showIf);
-                } else if (dependentFieldValue === 'true' || dependentFieldValue === 'false') {
-                  // For string boolean values
-                  shouldShow = (dependentFieldValue === 'true') === (question.showIf === 'true');
-                } else {
-                  // For string values
-                  shouldShow = String(dependentFieldValue) === question.showIf;
-                }
-                
-                // Only render if the condition is met
-                if (!shouldShow) {
-                  return null;
-                }
-              }
-              
-              // If we get here, the question should be displayed
-              return (
-                <div key={question.id} className="pb-4">
-                  {renderQuestion(question)}
-                </div>
-              );
-            })}
+            .map((question) => (
+              <div key={question.id} className="pb-4">
+                {renderQuestion(question)}
+              </div>
+            ))}
         </div>
       </CardContent>
       
