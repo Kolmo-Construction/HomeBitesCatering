@@ -17,7 +17,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize, RefreshCw } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, RefreshCw, ChevronDown, ChevronRight, FolderClosed, FolderOpen } from 'lucide-react';
 
 // Custom node types could be added here
 // import QuestionNode from './QuestionNode';
@@ -41,6 +41,7 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const flowWrapper = useRef<HTMLDivElement>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [selectedFilters, setSelectedFilters] = useState({
     showQuestions: true,
     showPages: true,
@@ -55,7 +56,27 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
     maxZoom: 1.5
   };
 
-  // Function to apply automatic layout to nodes
+  // Toggle collapsible state for a group
+  const toggleGroupCollapse = useCallback((pageId: string) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [pageId]: !prev[pageId]
+    }));
+  }, []);
+  
+  // Function to collapse/expand all groups
+  const toggleAllGroups = useCallback((collapse: boolean) => {
+    const groupIds = pages.map(page => `page-${page.id}`);
+    const newState: Record<string, boolean> = {};
+    
+    groupIds.forEach(id => {
+      newState[id] = collapse;
+    });
+    
+    setCollapsedGroups(newState);
+  }, [pages]);
+  
+  // Function to apply automatic layout to nodes and handle collapsed groups
   const applyAutoLayout = useCallback(() => {
     if (!nodes.length) return;
     
@@ -70,7 +91,12 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
     // Position page nodes in first column
     const updatedPageNodes = pageNodes.map((node, index) => ({
       ...node,
-      position: { x: 50, y: index * verticalSpacing + 50 }
+      position: { x: 50, y: index * verticalSpacing + 50 },
+      data: {
+        ...node.data,
+        isCollapsed: collapsedGroups[node.id] || false,
+        onToggleCollapse: () => toggleGroupCollapse(node.id)
+      }
     }));
     
     // Build a map of page IDs to their vertical positions
@@ -90,29 +116,75 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
       questionsByPage[pageId].push(node);
     });
     
-    // Position questions based on their page grouping
+    // Position questions based on their page grouping, respecting collapsed state
     let questionY = 50;
     const updatedQuestionNodes: Node[] = [];
+    let visibleNodeCount = 0;
     
     Object.entries(questionsByPage).forEach(([pageId, groupNodes]) => {
+      const pageNodeId = `page-${pageId}`;
+      const isCollapsed = collapsedGroups[pageNodeId] || false;
+      
       // Try to align with the page node if it exists
       if (pageId !== 'unknown' && pagePositions[parseInt(pageId)]) {
         questionY = pagePositions[parseInt(pageId)];
       }
       
-      groupNodes.forEach((node) => {
-        updatedQuestionNodes.push({
-          ...node,
-          position: { x: horizontalSpacing, y: questionY }
+      // Only add questions to the visible nodes if their page group is not collapsed
+      if (!isCollapsed) {
+        groupNodes.forEach((node) => {
+          updatedQuestionNodes.push({
+            ...node,
+            position: { x: horizontalSpacing, y: questionY }
+          });
+          questionY += verticalSpacing / 2;
+          visibleNodeCount++;
         });
-        questionY += verticalSpacing / 2;
-      });
-      
-      // Add extra spacing between page groups
-      questionY += 30;
+        
+        // Add extra spacing between page groups
+        questionY += 30;
+      }
     });
     
-    setNodes([...updatedPageNodes, ...updatedQuestionNodes]);
+    // Set nodes and update edges visibility based on collapsed state
+    const updatedNodes = [...updatedPageNodes, ...updatedQuestionNodes];
+    setNodes(updatedNodes);
+    
+    // Update edges to hide them for collapsed groups
+    const updatedEdges = edges.map(edge => {
+      // Check if source or target is in a collapsed group
+      const sourceNodeId = edge.source;
+      const targetNodeId = edge.target;
+      
+      // Get the page ID of the source and target nodes
+      let sourcePageId = '';
+      let targetPageId = '';
+      
+      if (sourceNodeId.startsWith('question-')) {
+        const sourceQuestion = questionNodes.find(n => n.id === sourceNodeId);
+        if (sourceQuestion) {
+          sourcePageId = `page-${sourceQuestion.data.questionData?.pageId}`;
+        }
+      }
+      
+      if (targetNodeId.startsWith('question-')) {
+        const targetQuestion = questionNodes.find(n => n.id === targetNodeId);
+        if (targetQuestion) {
+          targetPageId = `page-${targetQuestion.data.questionData?.pageId}`;
+        }
+      }
+      
+      // Hide edge if either source or target group is collapsed
+      const isSourceCollapsed = sourcePageId && collapsedGroups[sourcePageId];
+      const isTargetCollapsed = targetPageId && collapsedGroups[targetPageId];
+      
+      return {
+        ...edge,
+        hidden: isSourceCollapsed || isTargetCollapsed ? true : undefined
+      };
+    });
+    
+    setEdges(updatedEdges);
     
     // Fit the view to ensure everything is visible
     if (reactFlowInstance) {
@@ -120,7 +192,7 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
         reactFlowInstance.fitView(fitViewOptions);
       }, 100);
     }
-  }, [nodes, reactFlowInstance, fitViewOptions]);
+  }, [nodes, edges, reactFlowInstance, fitViewOptions, collapsedGroups, toggleGroupCollapse]);
   
   // Handle zoom controls
   const zoomIn = useCallback(() => {
@@ -306,7 +378,8 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
         maxZoom={1.5}
         minZoom={0.1}
         zoomOnScroll={true}
-        defaultZoom={0.5}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.5 }}
+        nodesDraggable={true}
       >
         <Controls showInteractive={false} />
         <MiniMap />
@@ -381,6 +454,57 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
             <Button onClick={applyAutoLayout} size="sm" variant="default">
               <RefreshCw className="h-4 w-4 mr-1" /> Auto Layout
             </Button>
+          </div>
+        </Panel>
+        
+        {/* Collapsible Groups Panel */}
+        <Panel position="bottom-left">
+          <div className="groups-panel" style={{ 
+            background: 'white', 
+            padding: '10px', 
+            borderRadius: '5px',
+            boxShadow: '0 0 10px rgba(0,0,0,0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            maxHeight: '300px',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0' }}>Page Groups</h3>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <Button onClick={() => toggleAllGroups(false)} size="sm" variant="outline">
+                <FolderOpen className="h-4 w-4 mr-1" /> Expand All
+              </Button>
+              <Button onClick={() => toggleAllGroups(true)} size="sm" variant="outline">
+                <FolderClosed className="h-4 w-4 mr-1" /> Collapse All
+              </Button>
+            </div>
+            {pages && pages.length > 0 ? (
+              <div className="page-list" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {pages.map(page => (
+                  <div key={`page-${page.id}-group`} className="page-group" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '5px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(97, 205, 187, 0.2)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => toggleGroupCollapse(`page-${page.id}`)}>
+                    {collapsedGroups[`page-${page.id}`] ? (
+                      <ChevronRight className="h-4 w-4 mr-2" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                    )}
+                    <span style={{ fontWeight: '500' }}>
+                      Page {page.id}: {page.title || 'Untitled'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No pages available</p>
+            )}
           </div>
         </Panel>
       </ReactFlow>
