@@ -416,6 +416,7 @@ export const questionTypeEnum = pgEnum('question_type_enum', [
   'address', // Compound field for address (could be multiple 'text' fields)
   'phone',
   'email',
+  'toggle', // Toggle switch for Yes/No questions
 ]);
 
 export const conditionTriggerOperatorEnum = pgEnum('condition_trigger_operator_enum', [
