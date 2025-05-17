@@ -1045,11 +1045,40 @@ const PublicQuestionnaireView: React.FC = () => {
                         checked={(formData[questionKey] || []).includes(option.optionValue)}
                         onCheckedChange={(checked) => {
                           const currentValues = [...(formData[questionKey] || [])];
+                          
+                          // Check if this is a question with selection limits
+                          const hasSelectionLimit = questionText.includes('exactly') && 
+                              (questionText.includes('Choose 3') || questionText.includes('Choose 2'));
+                          
+                          // Extract the max selections from the question text
+                          const maxSelectionsMatch = questionText.match(/Choose (\d+)/);
+                          const maxSelections = maxSelectionsMatch ? parseInt(maxSelectionsMatch[1]) : null;
+                          
                           if (checked) {
+                            // If trying to add a new selection
                             if (!currentValues.includes(option.optionValue)) {
+                              // Parse exact selection requirements from the help text
+                              const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/);
+                              const exactSelections = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : null;
+                              
+                              // Check if adding would exceed the maximum selections needed
+                              if ((hasSelectionLimit && maxSelections && currentValues.length >= maxSelections) ||
+                                  (exactSelections && currentValues.length >= exactSelections)) {
+                                // Determine the limit based on which rule matched
+                                const limit = exactSelections || maxSelections;
+                                // If max selections reached, show toast notification
+                                toast({
+                                  title: "Selection limit reached",
+                                  description: `You can only select ${limit} options for this question.`,
+                                  variant: "destructive"
+                                });
+                                return; // Don't update the form data
+                              }
+                              // If within limit, add the selection
                               currentValues.push(option.optionValue);
                             }
                           } else {
+                            // If unchecking, always allow removing selections
                             const index = currentValues.indexOf(option.optionValue);
                             if (index > -1) {
                               currentValues.splice(index, 1);
