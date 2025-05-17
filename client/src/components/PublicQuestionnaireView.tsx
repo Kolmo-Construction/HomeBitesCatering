@@ -1024,9 +1024,40 @@ const PublicQuestionnaireView: React.FC = () => {
                           const currentValues = [...(formData[questionKey] || [])];
                           const valueIndex = currentValues.indexOf(option.optionValue);
                           
+                          // If we're adding a new value (not currently selected)
                           if (valueIndex === -1) {
+                            // Check if this is a question with selection limits
+                            const hasSelectionLimit = questionText.includes('exactly') || 
+                                questionText.includes('Choose');
+                            
+                            // Extract the max selections from the question text
+                            const chooseNMatch = questionText.match(/Choose (\d+)/i);
+                            const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/i);
+                            const textLimitMatch = chooseNMatch || exactSelectionsMatch;
+                            const textLimit = textLimitMatch ? parseInt(textLimitMatch[1]) : null;
+                            
+                            // Check for validation rules in the question data
+                            const validationRules = question.validationRules || {};
+                            const exactCount = validationRules.exactCount;
+                            const maxCount = validationRules.maxCount;
+                            
+                            // Determine the effective limit
+                            const effectiveLimit = exactCount || textLimit || maxCount;
+                            
+                            // Check if adding would exceed the maximum selections
+                            if (effectiveLimit && currentValues.length >= effectiveLimit) {
+                              // Show toast notification for limit reached
+                              toast({
+                                title: "Selection limit reached",
+                                description: `You can only select ${effectiveLimit} options for this question.`,
+                                variant: "destructive"
+                              });
+                              return; // Don't update selection
+                            }
+                            // If within limits, add the value
                             currentValues.push(option.optionValue);
                           } else {
+                            // Always allow removing a selection
                             currentValues.splice(valueIndex, 1);
                           }
                           
