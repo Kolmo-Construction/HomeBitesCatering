@@ -61,11 +61,7 @@ export const questionnairePages = pgTable('questionnaire_pages', {
   id: serial('id').primaryKey(),
   definitionId: integer('definition_id').notNull().references(() => questionnaireDefinitions.id),
   title: text('title').notNull(),
-  description: text('description'),
   order: integer('order').notNull(),
-  isConditional: boolean('is_conditional').default(false),
-  conditionLogic: json('condition_logic'),
-  metadata: json('metadata'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
@@ -86,7 +82,6 @@ export const questionnaireSections = pgTable('questionnaire_sections', {
   title: text('title').notNull(),
   description: text('description'),
   templateKey: text('template_key').notNull().unique(),
-  metadata: json('metadata'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 });

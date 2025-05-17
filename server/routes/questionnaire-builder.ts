@@ -262,8 +262,7 @@ async function handleCreateSection(res: Response, data: any) {
     .values({
       title: sectionData.title,
       description: sectionData.description,
-      templateKey: sectionData.templateKey,
-      metadata: sectionData.metadata
+      templateKey: sectionData.templateKey
     })
     .returning();
   
