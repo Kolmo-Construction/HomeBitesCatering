@@ -485,6 +485,18 @@ const PublicQuestionnaireView: React.FC = () => {
   const goToNextPage = () => {
     if (!questionnaire) return;
     
+    // Get the current page for debugging
+    const currentPage = questionnaire.pages[currentPageIndex];
+    console.log(`Attempting to navigate from page ${currentPageIndex} (${currentPage.title})`);
+    
+    // Check if this is the last page
+    const isLastPage = currentPageIndex >= questionnaire.pages.length - 1;
+    if (isLastPage) {
+      console.log("This is the last page, submitting form instead of navigating");
+      handleSubmit();
+      return;
+    }
+    
     if (validateCurrentPage()) {
       // Check if there's a skip rule that should be applied
       const skipToPageId = getSkipToPageId();
@@ -493,6 +505,7 @@ const PublicQuestionnaireView: React.FC = () => {
         // Find the index of the page to skip to
         const pageIndex = questionnaire.pages.findIndex(page => page.id === skipToPageId);
         if (pageIndex !== -1) {
+          console.log(`Skipping to page ${pageIndex} (${questionnaire.pages[pageIndex].title})`);
           setCurrentPageIndex(pageIndex);
           window.scrollTo(0, 0);
           return;
@@ -500,8 +513,12 @@ const PublicQuestionnaireView: React.FC = () => {
       }
       
       // Otherwise, go to the next page
-      setCurrentPageIndex(prevIndex => prevIndex + 1);
+      const nextPageIndex = currentPageIndex + 1;
+      console.log(`Moving to next page ${nextPageIndex} (${questionnaire.pages[nextPageIndex].title})`);
+      setCurrentPageIndex(nextPageIndex);
       window.scrollTo(0, 0);
+    } else {
+      console.log("Page validation failed, not navigating");
     }
   };
   
