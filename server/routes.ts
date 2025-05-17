@@ -4990,6 +4990,86 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
     console.log("Email sync service available but NOT automatically started - must be enabled via toggle");
   }
 
+  // ===== AI Suggestions API Endpoints =====
+  
+  // Generate contextual suggestions for the current question
+  app.post('/api/suggestions/generate', async (req: Request, res: Response) => {
+    try {
+      const { questionType, questionText, currentValue, formValues, previousResponses } = req.body;
+      
+      if (!questionType || !questionText) {
+        return res.status(400).json({
+          success: false,
+          message: 'Question type and text are required'
+        });
+      }
+      
+      const suggestion = await generateSuggestion({
+        questionType,
+        questionText,
+        currentValue,
+        formValues,
+        previousResponses
+      });
+      
+      return res.json({
+        success: true,
+        suggestion
+      });
+    } catch (error) {
+      console.error('Error generating suggestion:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate suggestion'
+      });
+    }
+  });
+
+  // Get help information for a specific question type
+  app.get('/api/suggestions/help/:questionType', (req: Request, res: Response) => {
+    try {
+      const { questionType } = req.params;
+      const helpText = getQuestionTypeHelp(questionType);
+      
+      return res.json({
+        success: true,
+        helpText
+      });
+    } catch (error) {
+      console.error('Error getting question type help:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get help information'
+      });
+    }
+  });
+
+  // Analyze form data and provide improvement suggestions
+  app.post('/api/suggestions/analyze', async (req: Request, res: Response) => {
+    try {
+      const { formData, questions } = req.body;
+      
+      if (!formData || !questions || !Array.isArray(questions)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Form data and questions array are required'
+        });
+      }
+      
+      const analysis = await analyzeFormData(formData, questions);
+      
+      return res.json({
+        success: true,
+        analysis
+      });
+    } catch (error) {
+      console.error('Error analyzing form data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to analyze form data'
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
