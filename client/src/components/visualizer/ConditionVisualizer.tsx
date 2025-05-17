@@ -56,26 +56,17 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
     maxZoom: 1.5
   };
 
-  // Toggle collapsible state for a group
+  // Toggle collapsible state for a group - simplified to prevent performance issues
   const toggleGroupCollapse = useCallback((pageId: string) => {
     setCollapsedGroups(prev => {
-      const newState = {
+      return {
         ...prev,
         [pageId]: !prev[pageId]
       };
-      return newState;
     });
-    
-    // Schedule a re-render after state update
-    setTimeout(() => {
-      if (nodes.length) {
-        const updatedNodes = [...nodes];
-        setNodes(updatedNodes);
-      }
-    }, 50);
-  }, [nodes]);
+  }, []);
   
-  // Function to collapse/expand all groups
+  // Function to collapse/expand all groups - simplified to reduce performance issues
   const toggleAllGroups = useCallback((collapse: boolean) => {
     const groupIds = pages.map(page => `page-${page.id}`);
     const newState: Record<string, boolean> = {};
@@ -85,177 +76,133 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
     });
     
     setCollapsedGroups(newState);
-    
-    // Schedule layout update after state change
-    setTimeout(() => {
-      // Use a direct approach to update the layout without causing loops
-      // Apply layout based on current collapsed state
-      if (nodes.length) {
-        const questionNodes = nodes.filter(node => node.id.startsWith('question-'));
-        const pageNodes = nodes.filter(node => node.id.startsWith('page-'));
-        
-        // Update visibility of nodes and edges based on collapsed state
-        const updatedNodes = [...pageNodes, ...questionNodes].map(node => {
-          // Hide questions from collapsed page groups
-          if (node.id.startsWith('question-')) {
-            const pageId = node.data.questionData?.pageId;
-            const isHidden = pageId && newState[`page-${pageId}`];
-            return {
-              ...node,
-              hidden: isHidden
-            };
-          }
-          return node;
-        });
-        
-        setNodes(updatedNodes);
-        
-        // Update edges
-        const updatedEdges = edges.map(edge => {
-          // Get source and target nodes
-          const sourceNodeId = edge.source;
-          const targetNodeId = edge.target;
-          
-          // Check if either node is hidden (part of collapsed group)
-          const sourceNode = updatedNodes.find(n => n.id === sourceNodeId);
-          const targetNode = updatedNodes.find(n => n.id === targetNodeId);
-          
-          const isSourceHidden = sourceNode?.hidden;
-          const isTargetHidden = targetNode?.hidden;
-          
-          return {
-            ...edge,
-            hidden: isSourceHidden || isTargetHidden ? true : undefined
-          };
-        });
-        
-        setEdges(updatedEdges);
-        
-        // Fit view
-        if (reactFlowInstance) {
-          reactFlowInstance.fitView();
-        }
-      }
-    }, 100);
-  }, [pages, nodes, edges, reactFlowInstance]);
+  }, [pages]);
   
   // Function to apply automatic layout to nodes and handle collapsed groups
+  // Completely rewritten for better performance
   const applyAutoLayout = useCallback(() => {
     if (!nodes.length) return;
     
-    // Group nodes by type
-    const questionNodes = nodes.filter(node => node.id.startsWith('question-'));
-    const pageNodes = nodes.filter(node => node.id.startsWith('page-'));
-    
-    // Layout constants
-    const horizontalSpacing = 350;
-    const verticalSpacing = 120;
-    
-    // Position page nodes in first column
-    const updatedPageNodes = pageNodes.map((node, index) => ({
-      ...node,
-      position: { x: 50, y: index * verticalSpacing + 50 },
-      data: {
-        ...node.data,
-        isCollapsed: collapsedGroups[node.id] || false,
-        onToggleCollapse: () => toggleGroupCollapse(node.id)
-      }
-    }));
-    
-    // Build a map of page IDs to their vertical positions
-    const pagePositions: Record<number, number> = {};
-    pageNodes.forEach((node, index) => {
-      const pageId = parseInt(node.id.replace('page-', ''));
-      pagePositions[pageId] = index * verticalSpacing + 50;
-    });
-    
-    // Group questions by page
-    const questionsByPage: Record<string, Node[]> = {};
-    questionNodes.forEach(node => {
-      const pageId = node.data.questionData?.pageId?.toString() || 'unknown';
-      if (!questionsByPage[pageId]) {
-        questionsByPage[pageId] = [];
-      }
-      questionsByPage[pageId].push(node);
-    });
-    
-    // Position questions based on their page grouping, respecting collapsed state
-    let questionY = 50;
-    const updatedQuestionNodes: Node[] = [];
-    let visibleNodeCount = 0;
-    
-    Object.entries(questionsByPage).forEach(([pageId, groupNodes]) => {
-      const pageNodeId = `page-${pageId}`;
-      const isCollapsed = collapsedGroups[pageNodeId] || false;
+    // Throttle to prevent excessive CPU usage
+    const layoutNodes = () => {
+      // Layout constants
+      const horizontalSpacing = 350;
+      const verticalSpacing = 120;
       
-      // Try to align with the page node if it exists
-      if (pageId !== 'unknown' && pagePositions[parseInt(pageId)]) {
-        questionY = pagePositions[parseInt(pageId)];
-      }
+      // Process nodes only once
+      const questionNodes = [];
+      const pageNodes = [];
+      const pageIdMap = new Map();
       
-      // Only add questions to the visible nodes if their page group is not collapsed
-      if (!isCollapsed) {
-        groupNodes.forEach((node) => {
-          updatedQuestionNodes.push({
-            ...node,
-            position: { x: horizontalSpacing, y: questionY }
-          });
-          questionY += verticalSpacing / 2;
-          visibleNodeCount++;
-        });
+      // Separate nodes by type in a single pass
+      nodes.forEach(node => {
+        if (node.id.startsWith('page-')) {
+          pageNodes.push(node);
+          const pageId = parseInt(node.id.replace('page-', ''));
+          pageIdMap.set(pageId, node);
+        } else if (node.id.startsWith('question-')) {
+          questionNodes.push(node);
+        }
+      });
+      
+      // Position page nodes in first column
+      const updatedPageNodes = pageNodes.map((node, index) => ({
+        ...node,
+        position: { x: 50, y: index * verticalSpacing + 50 },
+        data: {
+          ...node.data,
+          isCollapsed: collapsedGroups[node.id] || false
+        }
+      }));
+      
+      // Create position map for pages
+      const pagePositions = {};
+      pageNodes.forEach((node, index) => {
+        const pageId = parseInt(node.id.replace('page-', ''));
+        pagePositions[pageId] = index * verticalSpacing + 50;
+      });
+      
+      // Create a map of questions by page for efficient grouping
+      const questionsByPage = {};
+      
+      // Process questions in a single, efficient pass
+      questionNodes.forEach(node => {
+        const pageId = node.data.questionData?.pageId?.toString() || 'unknown';
+        if (!questionsByPage[pageId]) {
+          questionsByPage[pageId] = [];
+        }
+        questionsByPage[pageId].push(node);
+      });
+      
+      // Position questions efficiently
+      let questionY = 50;
+      const updatedQuestionNodes = [];
+      
+      Object.entries(questionsByPage).forEach(([pageId, groupNodes]) => {
+        const pageNodeId = `page-${pageId}`;
+        const isCollapsed = collapsedGroups[pageNodeId] || false;
         
-        // Add extra spacing between page groups
-        questionY += 30;
-      }
-    });
-    
-    // Set nodes and update edges visibility based on collapsed state
-    const updatedNodes = [...updatedPageNodes, ...updatedQuestionNodes];
-    setNodes(updatedNodes);
-    
-    // Update edges to hide them for collapsed groups
-    const updatedEdges = edges.map(edge => {
-      // Check if source or target is in a collapsed group
-      const sourceNodeId = edge.source;
-      const targetNodeId = edge.target;
-      
-      // Get the page ID of the source and target nodes
-      let sourcePageId = '';
-      let targetPageId = '';
-      
-      if (sourceNodeId.startsWith('question-')) {
-        const sourceQuestion = questionNodes.find(n => n.id === sourceNodeId);
-        if (sourceQuestion) {
-          sourcePageId = `page-${sourceQuestion.data.questionData?.pageId}`;
+        // Align with page if possible
+        if (pageId !== 'unknown' && pagePositions[parseInt(pageId)]) {
+          questionY = pagePositions[parseInt(pageId)];
         }
-      }
-      
-      if (targetNodeId.startsWith('question-')) {
-        const targetQuestion = questionNodes.find(n => n.id === targetNodeId);
-        if (targetQuestion) {
-          targetPageId = `page-${targetQuestion.data.questionData?.pageId}`;
+        
+        // Only add visible questions
+        if (!isCollapsed) {
+          groupNodes.forEach(node => {
+            updatedQuestionNodes.push({
+              ...node,
+              position: { x: horizontalSpacing, y: questionY },
+              hidden: false
+            });
+            questionY += verticalSpacing / 2;
+          });
+          questionY += 30;
+        } else {
+          // Add hidden questions
+          groupNodes.forEach(node => {
+            updatedQuestionNodes.push({
+              ...node,
+              position: { x: horizontalSpacing, y: questionY },
+              hidden: true
+            });
+          });
         }
-      }
+      });
       
-      // Hide edge if either source or target group is collapsed
-      const isSourceCollapsed = sourcePageId && collapsedGroups[sourcePageId];
-      const isTargetCollapsed = targetPageId && collapsedGroups[targetPageId];
+      // Batch update all nodes at once
+      const allUpdatedNodes = [...updatedPageNodes, ...updatedQuestionNodes];
+      setNodes(allUpdatedNodes);
       
-      return {
-        ...edge,
-        hidden: isSourceCollapsed || isTargetCollapsed ? true : undefined
-      };
-    });
-    
-    setEdges(updatedEdges);
-    
-    // Fit the view to ensure everything is visible
-    if (reactFlowInstance) {
-      setTimeout(() => {
+      // Build a quick lookup for node visibility
+      const nodeVisibility = {};
+      allUpdatedNodes.forEach(node => {
+        nodeVisibility[node.id] = node.hidden || false;
+      });
+      
+      // Update all edges at once based on node visibility
+      const updatedEdges = edges.map(edge => {
+        const isSourceHidden = nodeVisibility[edge.source];
+        const isTargetHidden = nodeVisibility[edge.target];
+        
+        return {
+          ...edge,
+          hidden: isSourceHidden || isTargetHidden || false
+        };
+      });
+      
+      setEdges(updatedEdges);
+      
+      // Fit view after updates
+      if (reactFlowInstance) {
         reactFlowInstance.fitView(fitViewOptions);
-      }, 100);
-    }
-  }, [nodes, edges, reactFlowInstance, fitViewOptions, collapsedGroups, toggleGroupCollapse]);
+      }
+    };
+    
+    // Debounce execution to prevent CPU spikes
+    layoutNodes();
+    
+  }, [nodes, edges, reactFlowInstance, fitViewOptions, collapsedGroups]);
   
   // Handle zoom controls
   const zoomIn = useCallback(() => {
