@@ -4042,51 +4042,74 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
             });
           }
           
-          // Process validation rules if it's a checkbox question
-          let processedValidationRules = {};
+          // Process validation rules for all question types, with special handling for checkboxes
+          let processedValidationRules = null;
           
           console.log('Original validation rules:', data.validationRules, 'Type:', typeof data.validationRules);
           
-          if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
-            try {
-              // Ensure validation rules are properly formatted
-              if (data.validationRules) {
-                // If it's a string, try to parse it
-                if (typeof data.validationRules === 'string') {
-                  try {
-                    const parsed = JSON.parse(data.validationRules);
-                    // Only extract the specific fields we need and ensure they're numbers
-                    if (parsed.minCount !== undefined) processedValidationRules.minCount = Number(parsed.minCount);
-                    if (parsed.maxCount !== undefined) processedValidationRules.maxCount = Number(parsed.maxCount);
-                    if (parsed.exactCount !== undefined) processedValidationRules.exactCount = Number(parsed.exactCount);
-                    if (parsed.min !== undefined) processedValidationRules.min = Number(parsed.min);
-                    if (parsed.max !== undefined) processedValidationRules.max = Number(parsed.max);
-                    if (parsed.step !== undefined) processedValidationRules.step = Number(parsed.step);
-                  } catch (parseError) {
-                    console.error("Error parsing validation rules string:", parseError);
-                  }
-                } 
-                // If it's already an object
-                else if (typeof data.validationRules === 'object' && data.validationRules !== null) {
-                  // Convert numeric fields to numbers, only including fields with values
+          try {
+            if (data.validationRules) {
+              // If validation rules are provided as a string (JSON), parse them
+              if (typeof data.validationRules === 'string') {
+                try {
+                  processedValidationRules = JSON.parse(data.validationRules);
+                } catch (parseError) {
+                  console.error("Error parsing validation rules string:", parseError);
+                  // If we can't parse, create an empty object
+                  processedValidationRules = {};
+                }
+              } 
+              // If validation rules are already an object
+              else if (typeof data.validationRules === 'object' && data.validationRules !== null) {
+                // Start with an empty object
+                processedValidationRules = {};
+                
+                // For checkbox questions, we need special processing
+                if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
                   const rules = data.validationRules;
                   
-                  if (rules.minCount !== undefined && rules.minCount !== '') processedValidationRules.minCount = Number(rules.minCount);
-                  if (rules.maxCount !== undefined && rules.maxCount !== '') processedValidationRules.maxCount = Number(rules.maxCount);
-                  if (rules.exactCount !== undefined && rules.exactCount !== '') processedValidationRules.exactCount = Number(rules.exactCount);
-                  if (rules.min !== undefined && rules.min !== '') processedValidationRules.min = Number(rules.min);
-                  if (rules.max !== undefined && rules.max !== '') processedValidationRules.max = Number(rules.max);
-                  if (rules.step !== undefined && rules.step !== '') processedValidationRules.step = Number(rules.step);
+                  // Only copy non-empty values that should be numbers
+                  if (rules.exactCount !== undefined && rules.exactCount !== '' && !isNaN(Number(rules.exactCount))) {
+                    processedValidationRules.exactCount = Number(rules.exactCount);
+                  }
+                  
+                  if (rules.minCount !== undefined && rules.minCount !== '' && !isNaN(Number(rules.minCount))) {
+                    processedValidationRules.minCount = Number(rules.minCount);
+                  }
+                  
+                  if (rules.maxCount !== undefined && rules.maxCount !== '' && !isNaN(Number(rules.maxCount))) {
+                    processedValidationRules.maxCount = Number(rules.maxCount);
+                  }
+                  
+                  // For other numeric fields (min, max, step)
+                  if (!processedValidationRules.exactCount) {
+                    if (rules.min !== undefined && rules.min !== '' && !isNaN(Number(rules.min))) {
+                      processedValidationRules.min = Number(rules.min);
+                    }
+                    
+                    if (rules.max !== undefined && rules.max !== '' && !isNaN(Number(rules.max))) {
+                      processedValidationRules.max = Number(rules.max);
+                    }
+                  }
+                  
+                  if (rules.step !== undefined && rules.step !== '' && !isNaN(Number(rules.step))) {
+                    processedValidationRules.step = Number(rules.step);
+                  }
+                } else {
+                  // For other question types, just copy the validation rules
+                  processedValidationRules = {...data.validationRules};
                 }
               }
-              
-              console.log('Processed validation rules:', processedValidationRules);
-            } catch (e) {
-              console.error("Error processing validation rules:", e);
+            } else {
+              // If no validation rules are provided, create an empty object
+              processedValidationRules = {};
             }
-          } else {
-            // For non-checkbox questions, pass validation rules through
-            processedValidationRules = data.validationRules;
+            
+            console.log('Processed validation rules:', processedValidationRules);
+          } catch (e) {
+            console.error("Error processing validation rules:", e);
+            // In case of any error, use an empty object
+            processedValidationRules = {};
           }
           
           // Update the question

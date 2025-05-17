@@ -762,16 +762,34 @@ const QuestionnaireBuilder = () => {
       if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
         // Ensure validation rules are properly processed
         if (formData.validationRules) {
-          // Convert any validation rule fields to numbers
+          // Convert any validation rule fields to numbers, filtering out empty strings
           const rules = formData.validationRules;
-          formData.validationRules = {
-            ...(rules.min !== undefined ? { min: Number(rules.min) } : {}),
-            ...(rules.max !== undefined ? { max: Number(rules.max) } : {}),
-            ...(rules.step !== undefined ? { step: Number(rules.step) } : {}),
-            ...(rules.minCount !== undefined ? { minCount: Number(rules.minCount) } : {}),
-            ...(rules.maxCount !== undefined ? { maxCount: Number(rules.maxCount) } : {}),
-            ...(rules.exactCount !== undefined ? { exactCount: Number(rules.exactCount) } : {})
-          };
+          const processedRules = {};
+          
+          // Only include non-empty values and convert to numbers
+          if (rules.minCount !== undefined && rules.minCount !== '') 
+            processedRules.minCount = Number(rules.minCount);
+          
+          if (rules.maxCount !== undefined && rules.maxCount !== '') 
+            processedRules.maxCount = Number(rules.maxCount);
+          
+          if (rules.exactCount !== undefined && rules.exactCount !== '') 
+            processedRules.exactCount = Number(rules.exactCount);
+          
+          // Only one of exactCount or min/max should be used
+          if (!processedRules.exactCount) {
+            if (rules.min !== undefined && rules.min !== '') 
+              processedRules.min = Number(rules.min);
+            
+            if (rules.max !== undefined && rules.max !== '') 
+              processedRules.max = Number(rules.max);
+          }
+          
+          if (rules.step !== undefined && rules.step !== '') 
+            processedRules.step = Number(rules.step);
+          
+          // Replace the original validation rules with our processed ones
+          formData.validationRules = processedRules;
         }
       }
       
