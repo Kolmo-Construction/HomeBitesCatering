@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom search highlight effect */
+.highlight-element {
+  animation: highlight-pulse 2s;
+}
+
+@keyframes highlight-pulse {
+  0% { background-color: rgba(59, 130, 246, 0.2); }
+  50% { background-color: rgba(59, 130, 246, 0.3); }
+  100% { background-color: transparent; }
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;

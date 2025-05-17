@@ -949,12 +949,10 @@ const QuestionnaireBuilder = () => {
     }
   }, [selectedDefinition, pages]);
   
-  // Search for questions whenever the search query changes
+  // Search across all tabs whenever the search query changes
   useEffect(() => {
-    if (selectedDefinition && pages && pages.length > 0) {
-      searchQuestions(searchQuery);
-    }
-  }, [searchQuery, questionsMap]);
+    searchAllContent(searchQuery);
+  }, [searchQuery, questionsMap, definitions, pages, conditionalLogic]);
 
   return (
     <div className="container mx-auto py-10">
