@@ -1748,6 +1748,80 @@ const QuestionnaireBuilder = () => {
                             )}
                           />
                           
+                          {/* Slider Configuration Fields - Only show when type is slider */}
+                          {showSliderConfig && (
+                            <>
+                              <FormField
+                                control={questionForm.control}
+                                name="validationRules.min"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Minimum Value</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="0" 
+                                        {...field}
+                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                        value={field.value || 0}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      The minimum value for the slider
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={questionForm.control}
+                                name="validationRules.max"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Maximum Value</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="100" 
+                                        {...field}
+                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 100)}
+                                        value={field.value || 100}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      The maximum value for the slider
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={questionForm.control}
+                                name="validationRules.step"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Step Size</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="1" 
+                                        {...field}
+                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                        value={field.value || 1}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      The increment between values on the slider
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </>
+                          )}
+                          
                           <FormField
                             control={questionForm.control}
                             name="helpText"

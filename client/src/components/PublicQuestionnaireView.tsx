@@ -390,26 +390,50 @@ const PublicQuestionnaireView: React.FC = () => {
     if (!questionnaire) return false;
     
     const currentPage = questionnaire.pages[currentPageIndex];
+    console.log(`Validating page ${currentPageIndex} (${currentPage.title})`);
+    
     const newErrors: Record<string, string> = {};
     
     currentPage.questions.forEach(question => {
       // Skip validation if question is not visible due to conditional logic
       if (!isQuestionVisible(question.questionKey)) {
+        console.log(`Skipping validation for hidden question: ${question.questionKey}`);
         return;
       }
+      
+      // Log the current form data for this question
+      console.log(`Question ${question.questionKey} (${question.questionType}), value:`, formData[question.questionKey], "required:", question.isRequired);
       
       if (question.isRequired) {
         const value = formData[question.questionKey];
         
-        if (value === undefined || value === '' || 
-          (Array.isArray(value) && value.length === 0)) {
+        // Special handling for different question types
+        let isEmpty = false;
+        
+        if (question.questionType === 'toggle') {
+          // For toggle type, false is a valid value and should not trigger required error
+          isEmpty = value === undefined || value === null;
+        } else if (question.questionType === 'slider') {
+          // For slider type, 0 is a valid value
+          isEmpty = value === undefined || value === null;
+        } else {
+          // Standard check for other types
+          isEmpty = value === undefined || value === '' || value === null || 
+            (Array.isArray(value) && value.length === 0);
+        }
+        
+        if (isEmpty) {
+          console.log(`Validation error for ${question.questionKey}: This field is required`);
           newErrors[question.questionKey] = 'This field is required';
         }
       }
     });
     
+    console.log("Validation errors:", newErrors);
     setValidationErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    console.log(`Page validation result: ${isValid ? 'PASSED' : 'FAILED'}`);
+    return isValid;
   };
   
   // Check if a question should be visible based on conditional logic
