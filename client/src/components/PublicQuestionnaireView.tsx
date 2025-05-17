@@ -1115,6 +1115,44 @@ const PublicQuestionnaireView: React.FC = () => {
           </div>
         );
         
+      case 'toggle':
+        // Toggle switch for Yes/No questions
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label 
+                htmlFor={questionKey} 
+                className={cn(
+                  "text-base font-medium",
+                  isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+                )}
+              >
+                {questionText}
+              </Label>
+              {questionsWithHelp.includes(questionType) && (
+                <HelpButton question={question} onOpenHelp={openHelpForQuestion} />
+              )}
+            </div>
+            {helpText && <p className="text-sm text-muted-foreground mb-2">{helpText}</p>}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id={questionKey}
+                checked={formData[questionKey] === 'true' || formData[questionKey] === true}
+                onCheckedChange={(checked) => {
+                  handleInputChange(questionKey, checked);
+                }}
+              />
+              <Label
+                htmlFor={questionKey}
+                className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {placeholderText || (formData[questionKey] === 'true' || formData[questionKey] === true ? 'Yes' : 'No')}
+              </Label>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500 mt-1">{errorMessage}</p>}
+          </div>
+        );
+        
       case 'incrementer':
         return (
           <div className="space-y-2">
