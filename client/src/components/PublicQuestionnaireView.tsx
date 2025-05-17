@@ -1259,7 +1259,8 @@ const PublicQuestionnaireView: React.FC = () => {
               >
                 {questionText}
               </Label>
-              {questionsWithHelp.includes(questionType) && (
+              {questionsWithHelp.includes(questionType) && 
+               (!showHelpOnlyWhenHelpTextExists || (question.helpText && question.helpText.trim() !== '')) && (
                 <HelpButton question={question} onOpenHelp={openHelpForQuestion} />
               )}
             </div>
