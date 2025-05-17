@@ -2184,25 +2184,25 @@ const QuestionnaireBuilder = () => {
                                     if (question.validationRules !== "[object Object]") {
                                       const parsed = JSON.parse(question.validationRules);
                                       if (parsed) {
-                                        // Extract only the properties we need
-                                        if (parsed.exactCount !== undefined) parsedValidationRules.exactCount = parsed.exactCount;
-                                        if (parsed.minCount !== undefined) parsedValidationRules.minCount = parsed.minCount;
-                                        if (parsed.maxCount !== undefined) parsedValidationRules.maxCount = parsed.maxCount;
-                                        if (parsed.min !== undefined) parsedValidationRules.min = parsed.min;
-                                        if (parsed.max !== undefined) parsedValidationRules.max = parsed.max;
-                                        if (parsed.step !== undefined) parsedValidationRules.step = parsed.step;
+                                        // Extract only the properties we need and ensure they're numbers
+                                        if (parsed.exactCount !== undefined) parsedValidationRules.exactCount = Number(parsed.exactCount);
+                                        if (parsed.minCount !== undefined) parsedValidationRules.minCount = Number(parsed.minCount);
+                                        if (parsed.maxCount !== undefined) parsedValidationRules.maxCount = Number(parsed.maxCount);
+                                        if (parsed.min !== undefined) parsedValidationRules.min = Number(parsed.min);
+                                        if (parsed.max !== undefined) parsedValidationRules.max = Number(parsed.max);
+                                        if (parsed.step !== undefined) parsedValidationRules.step = Number(parsed.step);
                                       }
                                     }
                                   } 
                                   // If it's already an object, extract the properties we need
                                   else if (typeof question.validationRules === 'object' && question.validationRules !== null) {
                                     const rules = question.validationRules;
-                                    if (rules.exactCount !== undefined) parsedValidationRules.exactCount = rules.exactCount;
-                                    if (rules.minCount !== undefined) parsedValidationRules.minCount = rules.minCount;
-                                    if (rules.maxCount !== undefined) parsedValidationRules.maxCount = rules.maxCount;
-                                    if (rules.min !== undefined) parsedValidationRules.min = rules.min;
-                                    if (rules.max !== undefined) parsedValidationRules.max = rules.max;
-                                    if (rules.step !== undefined) parsedValidationRules.step = rules.step;
+                                    if (rules.exactCount !== undefined) parsedValidationRules.exactCount = Number(rules.exactCount);
+                                    if (rules.minCount !== undefined) parsedValidationRules.minCount = Number(rules.minCount);
+                                    if (rules.maxCount !== undefined) parsedValidationRules.maxCount = Number(rules.maxCount);
+                                    if (rules.min !== undefined) parsedValidationRules.min = Number(rules.min);
+                                    if (rules.max !== undefined) parsedValidationRules.max = Number(rules.max);
+                                    if (rules.step !== undefined) parsedValidationRules.step = Number(rules.step);
                                   }
                                 }
                               } catch (e) {
