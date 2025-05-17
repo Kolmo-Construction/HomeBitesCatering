@@ -2643,8 +2643,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Questionnaire question not found' });
       }
       
+      // Log the request for debugging
+      console.log('Question update request:', req.body);
+      console.log('Existing question type:', existingQuestion.questionType);
+      
       // Validate the request body
-      const validatedData = questionnaireQuestionUpdateSchema.parse(req.body);
+      let validatedData;
+      try {
+        validatedData = questionnaireQuestionUpdateSchema.parse(req.body);
+      } catch (validationError) {
+        if (validationError instanceof ZodError) {
+          return res.status(400).json({ 
+            message: 'Validation error', 
+            errors: validationError.errors,
+            details: 'Schema validation failed'
+          });
+        }
+        throw validationError;
+      }
       
       // Check questionKey uniqueness if it's being updated
       if (validatedData.questionKey && validatedData.questionKey !== existingQuestion.questionKey) {
@@ -2662,6 +2678,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               code: 'custom' 
             }]
           });
+        }
+      }
+      
+      // Special validation for question type changes
+      if (validatedData.questionType && validatedData.questionType !== existingQuestion.questionType) {
+        console.log(`Changing question type from ${existingQuestion.questionType} to ${validatedData.questionType}`);
+        
+        // Check if changing to a type that requires options
+        const requiresOptions = ['select', 'radio', 'checkbox_group'].includes(validatedData.questionType);
+        if (requiresOptions && (!validatedData.options || validatedData.options.length === 0)) {
+          return res.status(400).json({ 
+            message: 'Validation error', 
+            details: `Changing from '${existingQuestion.questionType}' to '${validatedData.questionType}' requires options`,
+            errors: [{ 
+              path: ['options'], 
+              message: `When changing to type '${validatedData.questionType}', you must provide at least one option`,
+              code: 'custom' 
+            }]
+          });
+        }
+        
+        // For toggle to select specifically, provide more helpful error message
+        if (existingQuestion.questionType === 'toggle' && validatedData.questionType === 'select') {
+          if (!validatedData.options || validatedData.options.length < 2) {
+            return res.status(400).json({ 
+              message: 'Validation error', 
+              details: 'Toggle to Select conversion requires Yes/No options',
+              errors: [{ 
+                path: ['options'], 
+                message: `When changing from 'toggle' to 'select', you must provide at least two options for "Yes" and "No"`,
+                code: 'custom' 
+              }]
+            });
+          }
         }
       }
       
