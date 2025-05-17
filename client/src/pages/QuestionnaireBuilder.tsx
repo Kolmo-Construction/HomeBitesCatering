@@ -1765,31 +1765,30 @@ const QuestionnaireBuilder = () => {
                             Edit
                           </Button>
                           
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Question</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this question? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => deleteQuestionMutation.mutate(question.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => {
+                              const confirmDelete = window.confirm(
+                                `Are you sure you want to delete the question "${question.questionText}"? This action cannot be undone.`
+                              );
+                              
+                              if (confirmDelete) {
+                                deleteQuestionMutation.mutate(question.id, {
+                                  onSuccess: () => {
+                                    toast({
+                                      title: "Question Deleted",
+                                      description: "The question has been successfully deleted."
+                                    });
+                                  }
+                                });
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
