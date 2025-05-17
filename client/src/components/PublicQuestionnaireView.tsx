@@ -64,6 +64,15 @@ type Question = {
     columnKey: string;
     order: number;
   }[];
+  validationRules?: {
+    min?: number;
+    max?: number;
+    step?: number;
+    exactCount?: number;
+    minCount?: number;
+    maxCount?: number;
+    [key: string]: any;
+  };
 };
 
 type Page = {
@@ -497,39 +506,70 @@ const PublicQuestionnaireView: React.FC = () => {
   
   // Helper function to evaluate conditional logic
   const evaluateCondition = (value: any, condition: string, compareValue: string): boolean => {
-    // Handle boolean values from toggle switches
-    if (typeof value === 'boolean') {
-      // Convert boolean to string for comparison
-      value = String(value);
+    console.log(`Evaluating condition: [${value}] (${typeof value}) ${condition} [${compareValue}] (${typeof compareValue})`);
+    
+    // Normalize booleans and boolean-like strings for toggle switches
+    let normalizedValue = value;
+    let normalizedCompareValue = compareValue;
+    
+    // First, convert any boolean values to strings
+    if (typeof normalizedValue === 'boolean') {
+      normalizedValue = String(normalizedValue);
     }
     
-    // Handle string representations of booleans
-    if (compareValue === 'true' && (value === true || value === 'true')) {
-      value = 'true';
-    } else if (compareValue === 'false' && (value === false || value === 'false')) {
-      value = 'false';
+    // Handle special case for toggle switches (stored as 'true'/'false' strings)
+    if (normalizedCompareValue === 'true' || normalizedCompareValue === 'false') {
+      // If comparing with 'true'/'false', normalize all boolean-like values
+      if (normalizedValue === true || normalizedValue === 'true') {
+        normalizedValue = 'true';
+      } else if (normalizedValue === false || normalizedValue === 'false') {
+        normalizedValue = 'false';
+      }
     }
+    
+    console.log(`Normalized values for comparison: [${normalizedValue}] ${condition} [${normalizedCompareValue}]`);
+    
+    let result = false;
     
     switch (condition) {
       case 'equals':
-        return String(value) === String(compareValue);
+        result = String(normalizedValue) === String(normalizedCompareValue);
+        break;
       case 'not_equals':
-        return String(value) !== String(compareValue);
+        result = String(normalizedValue) !== String(normalizedCompareValue);
+        break;
       case 'contains':
-        return Array.isArray(value) ? value.includes(compareValue) : String(value).includes(compareValue);
+        result = Array.isArray(normalizedValue) 
+          ? normalizedValue.includes(normalizedCompareValue) 
+          : String(normalizedValue).includes(String(normalizedCompareValue));
+        break;
       case 'not_contains':
-        return Array.isArray(value) ? !value.includes(compareValue) : !String(value).includes(compareValue);
+        result = Array.isArray(normalizedValue) 
+          ? !normalizedValue.includes(normalizedCompareValue) 
+          : !String(normalizedValue).includes(String(normalizedCompareValue));
+        break;
       case 'is_empty':
-        return value === undefined || value === '' || value === false || (Array.isArray(value) && value.length === 0);
+        result = normalizedValue === undefined || normalizedValue === '' || 
+          normalizedValue === false || normalizedValue === 'false' || 
+          (Array.isArray(normalizedValue) && normalizedValue.length === 0);
+        break;
       case 'is_not_empty':
-        return value !== undefined && value !== '' && value !== false && !(Array.isArray(value) && value.length === 0);
+        result = normalizedValue !== undefined && normalizedValue !== '' && 
+          normalizedValue !== false && normalizedValue !== 'false' && 
+          !(Array.isArray(normalizedValue) && normalizedValue.length === 0);
+        break;
       case 'greater_than':
-        return Number(value) > Number(compareValue);
+        result = Number(normalizedValue) > Number(normalizedCompareValue);
+        break;
       case 'less_than':
-        return Number(value) < Number(compareValue);
+        result = Number(normalizedValue) < Number(normalizedCompareValue);
+        break;
       default:
-        return false;
+        result = false;
     }
+    
+    console.log(`Condition result: ${result}`);
+    return result;
   };
   
   // Navigate to the next page
