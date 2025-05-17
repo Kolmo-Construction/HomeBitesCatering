@@ -4157,9 +4157,34 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
           
           // Handle options if provided
           if (data.options && Array.isArray(data.options)) {
-            // Delete existing options if needed
-            if (data.replaceOptions) {
-              await storage.deleteQuestionnaireQuestionOptions(data.questionId);
+            // Always delete existing options for select, radio and checkbox_group questions when updating
+            // This ensures clean state and prevents orphaned options
+            if (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox_group') {
+              // Get all existing options for this question
+              const existingOptions = await db
+                .select()
+                .from(questionnaireQuestionOptions)
+                .where(eq(questionnaireQuestionOptions.questionId, data.questionId));
+                
+              console.log(`Deleting ${existingOptions.length} existing options for question ${data.questionId}`);
+              
+              // Delete all existing options
+              if (existingOptions.length > 0) {
+                await db
+                  .delete(questionnaireQuestionOptions)
+                  .where(eq(questionnaireQuestionOptions.questionId, data.questionId));
+              }
+            }
+            // For other question types, only delete if explicitly requested
+            else if (data.replaceOptions) {
+              // Use the storage method if it exists, otherwise use direct DB query
+              if (typeof storage.deleteQuestionnaireQuestionOptions === 'function') {
+                await storage.deleteQuestionnaireQuestionOptions(data.questionId);
+              } else {
+                await db
+                  .delete(questionnaireQuestionOptions)
+                  .where(eq(questionnaireQuestionOptions.questionId, data.questionId));
+              }
             }
             
             // Add new options
