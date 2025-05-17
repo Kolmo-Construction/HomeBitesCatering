@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import { generateQuestionnaireContent } from "./services/anthropic";
 import { generateSuggestion, getQuestionTypeHelp, analyzeFormData } from "./services/ai-suggestions";
-import { handleBuilderApiRequest } from './routes/questionnaire-builder';
+import { handleBuilderApi } from './routes/questionnaire-builder';
 import {
   insertUserSchema, 
   insertOpportunitySchema, 
@@ -3842,7 +3842,7 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
   // Enhanced Questionnaire Builder - Flexible Architecture API
   app.post('/api/questionnaires/builder', isAdmin, async (req: Request, res: Response) => {
     // Call our enhanced handler that supports sections, component types, and other new features
-    return handleBuilderApiRequest(req, res);
+    return handleBuilderApi(req, res);
   });
   
   // Legacy Questionnaire Builder API - Maintained for backward compatibility

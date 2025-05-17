@@ -1,315 +1,307 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { db } from '../db';
-import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
+import { and, eq, sql } from 'drizzle-orm';
 import {
+  componentTypes,
   questionnaireDefinitions,
   questionnairePages,
+  questionnaireSections,
   questionnaireQuestions,
   questionnaireQuestionOptions,
-  questionnaireConditionalLogic
-} from '../../shared/schema';
-import { 
-  questionnaireComponentTypes,
-  insertQuestionnaireComponentType
-} from '../../shared/schema-component-types';
-import {
-  questionnaireSections,
-  questionnairePageSections,
-  questionnaireSectionQuestions,
-  insertQuestionnaireSection,
-  insertQuestionnairePageSection,
-  insertQuestionnaireSectionQuestion
-} from '../../shared/schema-sections';
+  pageSections,
+  sectionQuestions,
+  conditionalLogic,
+  insertComponentTypeSchema,
+  insertQuestionnaireDefinitionSchema,
+  insertQuestionnairePageSchema,
+  insertQuestionnaireSectionSchema,
+  insertQuestionnaireQuestionSchema,
+  insertSectionQuestionSchema,
+  insertPageSectionSchema,
+  insertConditionalLogicSchema
+} from '../../shared/schema-questionnaire';
 
-// Validation schema for the builder API
-export const formBuilderSchema = z.object({
-  action: z.enum([
-    'createDefinition',
-    'addPage',
-    'addQuestions',
-    'updatePage',
-    'updateQuestion',
-    'deletePage',
-    'deleteQuestion',
-    'addConditionalLogic',
-    'updateConditionalLogic',
-    'deleteConditionalLogic',
-    'getFullQuestionnaire',
-    'createSection',
-    'addSectionQuestions',
-    'updateSection',
-    'deleteSection',
-    'addSectionToPage',
-    'removeSectionFromPage',
-    'registerComponentType',
-    'listComponentTypes',
-    'addQuestionOptions',
-    'deleteQuestionOption'
-  ]),
-  data: z.record(z.any())
+// Action schemas
+const registerComponentTypeSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  validationSchema: z.any().optional(),
+  uiSchema: z.any().optional(),
+  dataSchema: z.any().optional(),
+  isCustom: z.boolean().default(false)
 });
 
-// Main handler function for the builder API
-export async function handleBuilderApiRequest(req: Request, res: Response) {
+const createSectionSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  templateKey: z.string(),
+  metadata: z.any().optional()
+});
+
+const addSectionQuestionsSchema = z.object({
+  sectionId: z.number(),
+  questions: z.array(z.object({
+    componentTypeId: z.number().optional(),
+    text: z.string(),
+    helpText: z.string().optional(),
+    placeholderText: z.string().optional(),
+    isRequired: z.boolean().optional(),
+    validationRules: z.any().optional(),
+    defaultValue: z.any().optional(),
+    questionOrder: z.number()
+  }))
+});
+
+const createDefinitionSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  versionName: z.string(),
+  eventType: z.enum(['corporate', 'wedding', 'engagement', 'birthday', 'private_party', 'food_truck']),
+  isActive: z.boolean().optional(),
+  isPublished: z.boolean().optional(),
+  metadata: z.any().optional()
+});
+
+const addPageSchema = z.object({
+  definitionId: z.number(),
+  title: z.string(),
+  description: z.string().optional(),
+  order: z.number(),
+  isConditional: z.boolean().optional(),
+  conditionLogic: z.any().optional(),
+  metadata: z.any().optional()
+});
+
+const addSectionToPageSchema = z.object({
+  pageId: z.number(),
+  sectionId: z.number(),
+  sectionOrder: z.number(),
+  isConditional: z.boolean().optional(),
+  conditionLogic: z.any().optional()
+});
+
+const addQuestionSchema = z.object({
+  componentTypeId: z.number().optional(),
+  text: z.string(),
+  helpText: z.string().optional(),
+  placeholderText: z.string().optional(),
+  isRequired: z.boolean().optional(),
+  validationRules: z.any().optional(),
+  defaultValue: z.any().optional(),
+  metadata: z.any().optional()
+});
+
+const addQuestionOptionsSchema = z.object({
+  questionId: z.number(),
+  options: z.array(z.object({
+    optionText: z.string(),
+    optionValue: z.string().optional(),
+    order: z.number(),
+    isDefault: z.boolean().optional(),
+    metadata: z.any().optional()
+  }))
+});
+
+const addConditionalLogicSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  targetType: z.string(),
+  targetId: z.number(),
+  conditionType: z.enum([
+    'equals', 'not_equals', 'contains', 'greater_than', 
+    'less_than', 'in_list', 'not_in_list', 'is_empty', 
+    'is_not_empty', 'custom'
+  ]),
+  sourceType: z.string(),
+  sourceId: z.string(),
+  conditionValue: z.any(),
+  actionType: z.enum(['show', 'hide', 'require', 'skip_to', 'set_value', 'custom']),
+  actionValue: z.any(),
+  priority: z.number().optional(),
+  isActive: z.boolean().optional()
+});
+
+// Main request handler
+export const handleBuilderApi = async (req: Request, res: Response) => {
+  const { action, data } = req.body;
+
+  console.log(`Form Builder API received request with action: ${action}`);
+
   try {
-    console.log('Form Builder API received request with action:', req.body.action);
-    
-    // Validate the request structure
-    const { action, data } = formBuilderSchema.parse(req.body);
-    
-    // Process based on the action parameter
     switch (action) {
-      case 'createDefinition': {
-        return await handleCreateDefinition(data, res);
-      }
-      
-      case 'addPage': {
-        return await handleAddPage(data, res);
-      }
-      
-      case 'addQuestions': {
-        return await handleAddQuestions(data, res);
-      }
-      
-      case 'createSection': {
-        return await handleCreateSection(data, res);
-      }
-      
-      case 'addSectionQuestions': {
-        return await handleAddSectionQuestions(data, res);
-      }
-      
-      case 'addSectionToPage': {
-        return await handleAddSectionToPage(data, res);
-      }
-      
-      case 'registerComponentType': {
-        return await handleRegisterComponentType(data, res);
-      }
-      
-      case 'listComponentTypes': {
-        return await handleListComponentTypes(data, res);
-      }
-      
-      case 'getFullQuestionnaire': {
-        return await handleGetFullQuestionnaire(data, res);
-      }
-      
+      case 'registerComponentType':
+        return await handleRegisterComponentType(res, data);
+      case 'listComponentTypes':
+        return await handleListComponentTypes(res);
+      case 'createSection':
+        return await handleCreateSection(res, data);
+      case 'listSections':
+        return await handleListSections(res);
+      case 'addSectionQuestions':
+        return await handleAddSectionQuestions(res, data);
+      case 'createDefinition':
+        return await handleCreateDefinition(res, data);
+      case 'listDefinitions':
+        return await handleListDefinitions(res);
+      case 'addPage':
+        return await handleAddPage(res, data);
+      case 'addSectionToPage':
+        return await handleAddSectionToPage(res, data);
+      case 'addQuestion':
+        return await handleAddQuestion(res, data);
+      case 'listQuestions':
+        return await handleListQuestions(res);
+      case 'addQuestionOptions':
+        return await handleAddQuestionOptions(res, data);
+      case 'addConditionalLogic':
+        return await handleAddConditionalLogic(res, data);
+      case 'getFullQuestionnaire':
+        return await handleGetFullQuestionnaire(res, data);
       default:
         return res.status(400).json({
           success: false,
-          message: `Unknown action: ${action}. Please check the documentation for supported actions.`
+          message: `Unknown action: ${action}`
         });
     }
   } catch (error) {
     console.error('Error in form builder API:', error);
-    
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors
-      });
-    }
-    
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Server error processing form builder request',
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
+};
 
 // Handler functions for each action
-
-async function handleCreateDefinition(data, res) {
-  // Create a new questionnaire definition
-  const definitionData = {
-    versionName: data.versionName,
-    description: data.description || null,
-    isActive: data.isActive !== undefined ? data.isActive : false
-  };
+async function handleRegisterComponentType(res: Response, data: any) {
+  const validationResult = registerComponentTypeSchema.safeParse(data);
   
-  const [definition] = await db.insert(questionnaireDefinitions)
-    .values(definitionData)
+  if (!validationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid component type data',
+      errors: validationResult.error.errors
+    });
+  }
+  
+  const componentTypeData = validationResult.data;
+  
+  // Check if component type already exists
+  const existingComponent = await db.select()
+    .from(componentTypes)
+    .where(eq(componentTypes.name, componentTypeData.name));
+  
+  if (existingComponent.length > 0) {
+    return res.status(409).json({
+      success: false,
+      message: 'Component type already exists',
+      componentType: existingComponent[0]
+    });
+  }
+  
+  // Create new component type
+  const [newComponentType] = await db.insert(componentTypes)
+    .values({
+      name: componentTypeData.name,
+      description: componentTypeData.description,
+      validationSchema: componentTypeData.validationSchema,
+      uiSchema: componentTypeData.uiSchema,
+      dataSchema: componentTypeData.dataSchema,
+      isCustom: componentTypeData.isCustom
+    })
     .returning();
   
   return res.status(201).json({
     success: true,
-    message: 'Questionnaire definition created successfully',
-    definition
+    message: 'Component type created successfully',
+    componentType: newComponentType
   });
 }
 
-async function handleAddPage(data, res) {
-  // Validate required fields
-  if (!data.definitionId) {
-    return res.status(400).json({
-      success: false,
-      message: 'definitionId is required'
-    });
-  }
+async function handleListComponentTypes(res: Response) {
+  const allComponentTypes = await db.select()
+    .from(componentTypes)
+    .orderBy(componentTypes.id);
   
-  // Check if definition exists
-  const [definition] = await db.select()
-    .from(questionnaireDefinitions)
-    .where(eq(questionnaireDefinitions.id, data.definitionId));
-  
-  if (!definition) {
-    return res.status(404).json({
-      success: false,
-      message: 'Questionnaire definition not found'
-    });
-  }
-  
-  // Create a new page
-  const pageData = {
-    definitionId: data.definitionId,
-    title: data.title,
-    order: data.order || 1
-  };
-  
-  const [page] = await db.insert(questionnairePages)
-    .values(pageData)
-    .returning();
-  
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
-    message: 'Page added successfully',
-    page
+    componentTypes: allComponentTypes
   });
 }
 
-async function handleAddQuestions(data, res) {
-  // Validate required fields
-  if (!data.pageId) {
+async function handleCreateSection(res: Response, data: any) {
+  const validationResult = createSectionSchema.safeParse(data);
+  
+  if (!validationResult.success) {
     return res.status(400).json({
       success: false,
-      message: 'pageId is required'
+      message: 'Invalid section data',
+      errors: validationResult.error.errors
     });
   }
   
-  if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
-    return res.status(400).json({
+  const sectionData = validationResult.data;
+  
+  // Check if section with template key already exists
+  const existingSection = await db.select()
+    .from(questionnaireSections)
+    .where(eq(questionnaireSections.templateKey, sectionData.templateKey));
+  
+  if (existingSection.length > 0) {
+    return res.status(409).json({
       success: false,
-      message: 'questions array is required and must not be empty'
+      message: 'Section with this template key already exists',
+      section: existingSection[0]
     });
   }
   
-  // Check if page exists
-  const [page] = await db.select()
-    .from(questionnairePages)
-    .where(eq(questionnairePages.id, data.pageId));
-  
-  if (!page) {
-    return res.status(404).json({
-      success: false,
-      message: 'Page not found'
-    });
-  }
-  
-  // Add questions
-  const questionPromises = data.questions.map(async (question) => {
-    const questionData = {
-      pageId: data.pageId,
-      questionText: question.questionText,
-      questionKey: question.questionKey,
-      questionType: question.questionType,
-      order: question.order || 1,
-      isRequired: question.isRequired !== undefined ? question.isRequired : false,
-      placeholderText: question.placeholderText || null,
-      helpText: question.helpText || null,
-      validationRules: question.validationRules || null
-    };
-    
-    const [insertedQuestion] = await db.insert(questionnaireQuestions)
-      .values(questionData)
-      .returning();
-    
-    // If the question has options, add them
-    if (question.options && Array.isArray(question.options) && question.options.length > 0) {
-      const optionPromises = question.options.map(async (option, index) => {
-        const optionData = {
-          questionId: insertedQuestion.id,
-          optionText: option.optionText,
-          optionValue: option.optionValue || option.optionText.toLowerCase().replace(/\s+/g, '_'),
-          order: option.order || index + 1,
-          defaultSelectionIndicator: option.defaultSelectionIndicator || null,
-          relatedMenuItemId: option.relatedMenuItemId || null
-        };
-        
-        const [insertedOption] = await db.insert(questionnaireQuestionOptions)
-          .values(optionData)
-          .returning();
-        
-        return insertedOption;
-      });
-      
-      const options = await Promise.all(optionPromises);
-      return { ...insertedQuestion, options };
-    }
-    
-    return insertedQuestion;
-  });
-  
-  const questions = await Promise.all(questionPromises);
-  
-  return res.status(201).json({
-    success: true,
-    message: 'Questions added successfully',
-    questions
-  });
-}
-
-async function handleCreateSection(data, res) {
-  // Validate required fields
-  if (!data.title || !data.templateKey) {
-    return res.status(400).json({
-      success: false,
-      message: 'title and templateKey are required'
-    });
-  }
-  
-  // Create a new section
-  const sectionData = insertQuestionnaireSection.parse({
-    title: data.title,
-    description: data.description || null,
-    templateKey: data.templateKey
-  });
-  
-  const [section] = await db.insert(questionnaireSections)
-    .values(sectionData)
+  // Create new section
+  const [newSection] = await db.insert(questionnaireSections)
+    .values({
+      title: sectionData.title,
+      description: sectionData.description,
+      templateKey: sectionData.templateKey,
+      metadata: sectionData.metadata
+    })
     .returning();
   
   return res.status(201).json({
     success: true,
     message: 'Section created successfully',
-    section
+    section: newSection
   });
 }
 
-async function handleAddSectionQuestions(data, res) {
-  // Validate required fields
-  if (!data.sectionId) {
+async function handleListSections(res: Response) {
+  const allSections = await db.select()
+    .from(questionnaireSections)
+    .orderBy(questionnaireSections.id);
+  
+  return res.status(200).json({
+    success: true,
+    sections: allSections
+  });
+}
+
+async function handleAddSectionQuestions(res: Response, data: any) {
+  const validationResult = addSectionQuestionsSchema.safeParse(data);
+  
+  if (!validationResult.success) {
     return res.status(400).json({
       success: false,
-      message: 'sectionId is required'
+      message: 'Invalid section questions data',
+      errors: validationResult.error.errors
     });
   }
   
-  if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
-    return res.status(400).json({
-      success: false,
-      message: 'questions array is required and must not be empty'
-    });
-  }
+  const { sectionId, questions } = validationResult.data;
   
   // Check if section exists
   const [section] = await db.select()
     .from(questionnaireSections)
-    .where(eq(questionnaireSections.id, data.sectionId));
+    .where(eq(questionnaireSections.id, sectionId));
   
   if (!section) {
     return res.status(404).json({
@@ -318,73 +310,144 @@ async function handleAddSectionQuestions(data, res) {
     });
   }
   
-  // Create questions for the section template
-  // These are standalone questions not tied to a specific page yet
-  const questionPromises = data.questions.map(async (question) => {
-    const questionData = {
-      pageId: null, // These questions aren't tied to a page yet
-      questionText: question.questionText,
-      questionKey: question.questionKey,
-      questionType: question.questionType,
-      order: question.order || 1,
-      isRequired: question.isRequired !== undefined ? question.isRequired : false,
-      placeholderText: question.placeholderText || null,
-      helpText: question.helpText || null,
-      validationRules: question.validationRules || null
-    };
-    
-    const [insertedQuestion] = await db.insert(questionnaireQuestions)
-      .values(questionData)
+  // Insert each question and link to section
+  const createdQuestions = [];
+  
+  for (const question of questions) {
+    // Create the question
+    const [newQuestion] = await db.insert(questionnaireQuestions)
+      .values({
+        componentTypeId: question.componentTypeId,
+        text: question.text,
+        helpText: question.helpText,
+        placeholderText: question.placeholderText,
+        isRequired: question.isRequired,
+        validationRules: question.validationRules,
+        defaultValue: question.defaultValue
+      })
       .returning();
     
-    // Add association between question and section
-    const sectionQuestionData = insertQuestionnaireSectionQuestion.parse({
-      sectionId: data.sectionId,
-      questionId: insertedQuestion.id,
-      questionOrder: question.order || 1
-    });
-    
-    await db.insert(questionnaireSectionQuestions)
-      .values(sectionQuestionData);
-    
-    // If the question has options, add them
-    if (question.options && Array.isArray(question.options) && question.options.length > 0) {
-      const optionPromises = question.options.map(async (option, index) => {
-        const optionData = {
-          questionId: insertedQuestion.id,
-          optionText: option.optionText,
-          optionValue: option.optionValue || option.optionText.toLowerCase().replace(/\s+/g, '_'),
-          order: option.order || index + 1,
-          defaultSelectionIndicator: option.defaultSelectionIndicator || null,
-          relatedMenuItemId: option.relatedMenuItemId || null
-        };
-        
-        const [insertedOption] = await db.insert(questionnaireQuestionOptions)
-          .values(optionData)
-          .returning();
-        
-        return insertedOption;
+    // Link question to section
+    await db.insert(sectionQuestions)
+      .values({
+        sectionId,
+        questionId: newQuestion.id,
+        questionOrder: question.questionOrder
       });
-      
-      const options = await Promise.all(optionPromises);
-      return { ...insertedQuestion, options };
-    }
     
-    return insertedQuestion;
-  });
-  
-  const questions = await Promise.all(questionPromises);
+    createdQuestions.push(newQuestion);
+  }
   
   return res.status(201).json({
     success: true,
     message: 'Section questions added successfully',
-    questions
+    questions: createdQuestions
   });
 }
 
-async function handleAddSectionToPage(data, res) {
-  // Validate required fields
-  if (!data.pageId || !data.sectionId) {
+async function handleCreateDefinition(res: Response, data: any) {
+  const validationResult = createDefinitionSchema.safeParse(data);
+  
+  if (!validationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid questionnaire definition data',
+      errors: validationResult.error.errors
+    });
+  }
+  
+  const definitionData = validationResult.data;
+  
+  // Create new definition
+  const [newDefinition] = await db.insert(questionnaireDefinitions)
+    .values({
+      name: definitionData.name,
+      description: definitionData.description,
+      versionName: definitionData.versionName,
+      eventType: definitionData.eventType,
+      isActive: definitionData.isActive,
+      isPublished: definitionData.isPublished,
+      metadata: definitionData.metadata
+    })
+    .returning();
+  
+  return res.status(201).json({
+    success: true,
+    message: 'Questionnaire definition created successfully',
+    definition: newDefinition
+  });
+}
+
+async function handleListDefinitions(res: Response) {
+  const allDefinitions = await db.select()
+    .from(questionnaireDefinitions)
+    .orderBy(questionnaireDefinitions.id);
+  
+  return res.status(200).json({
+    success: true,
+    definitions: allDefinitions
+  });
+}
+
+async function handleAddPage(res: Response, data: any) {
+  const validationResult = addPageSchema.safeParse(data);
+  
+  if (!validationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid page data',
+      errors: validationResult.error.errors
+    });
+  }
+  
+  const pageData = validationResult.data;
+  
+  // Check if definition exists
+  const [definition] = await db.select()
+    .from(questionnaireDefinitions)
+    .where(eq(questionnaireDefinitions.id, pageData.definitionId));
+  
+  if (!definition) {
+    return res.status(404).json({
+      success: false,
+      message: 'Questionnaire definition not found'
+    });
+  }
+  
+  // Create new page
+  const [newPage] = await db.insert(questionnairePages)
+    .values({
+      definitionId: pageData.definitionId,
+      title: pageData.title,
+      description: pageData.description,
+      order: pageData.order,
+      isConditional: pageData.isConditional,
+      conditionLogic: pageData.conditionLogic,
+      metadata: pageData.metadata
+    })
+    .returning();
+  
+  return res.status(201).json({
+    success: true,
+    message: 'Page added successfully',
+    page: newPage
+  });
+}
+
+async function handleAddSectionToPage(res: Response, data: any) {
+  const validationResult = addSectionToPageSchema.safeParse(data);
+  
+  if (!validationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid page-section data',
+      errors: validationResult.error.errors
+    });
+  }
+  
+  const { pageId, sectionId, sectionOrder, isConditional, conditionLogic } = validationResult.data;
+  
+  if (!pageId || !sectionId) {
     return res.status(400).json({
       success: false,
       message: 'pageId and sectionId are required'
@@ -394,7 +457,7 @@ async function handleAddSectionToPage(data, res) {
   // Check if page and section exist
   const [page] = await db.select()
     .from(questionnairePages)
-    .where(eq(questionnairePages.id, data.pageId));
+    .where(eq(questionnairePages.id, pageId));
   
   if (!page) {
     return res.status(404).json({
@@ -405,7 +468,7 @@ async function handleAddSectionToPage(data, res) {
   
   const [section] = await db.select()
     .from(questionnaireSections)
-    .where(eq(questionnaireSections.id, data.sectionId));
+    .where(eq(questionnaireSections.id, sectionId));
   
   if (!section) {
     return res.status(404).json({
@@ -414,153 +477,189 @@ async function handleAddSectionToPage(data, res) {
     });
   }
   
-  // Add section to page
-  const pageSectionData = insertQuestionnairePageSection.parse({
-    pageId: data.pageId,
-    sectionId: data.sectionId,
-    sectionOrder: data.sectionOrder || 1
-  });
+  // Check if relationship already exists
+  const existingRelation = await db.select()
+    .from(pageSections)
+    .where(
+      and(
+        eq(pageSections.pageId, pageId),
+        eq(pageSections.sectionId, sectionId)
+      )
+    );
   
-  const [pageSection] = await db.insert(questionnairePageSections)
-    .values(pageSectionData)
-    .returning();
-  
-  // Get questions for this section
-  const sectionQuestions = await db.select()
-    .from(questionnaireSectionQuestions)
-    .where(eq(questionnaireSectionQuestions.sectionId, data.sectionId))
-    .orderBy(questionnaireSectionQuestions.questionOrder);
-  
-  // For each section question, create a page-specific copy
-  for (const sectionQuestion of sectionQuestions) {
-    // Get the template question details
-    const [templateQuestion] = await db.select()
-      .from(questionnaireQuestions)
-      .where(eq(questionnaireQuestions.id, sectionQuestion.questionId));
-    
-    if (templateQuestion) {
-      // Create a copy of the question for this page
-      const pageQuestionData = {
-        pageId: data.pageId,
-        questionText: templateQuestion.questionText,
-        questionKey: templateQuestion.questionKey,
-        questionType: templateQuestion.questionType,
-        order: templateQuestion.order,
-        isRequired: templateQuestion.isRequired,
-        placeholderText: templateQuestion.placeholderText,
-        helpText: templateQuestion.helpText,
-        validationRules: templateQuestion.validationRules
-      };
-      
-      const [pageQuestion] = await db.insert(questionnaireQuestions)
-        .values(pageQuestionData)
-        .returning();
-      
-      // Copy any options if the question has them
-      const templateOptions = await db.select()
-        .from(questionnaireQuestionOptions)
-        .where(eq(questionnaireQuestionOptions.questionId, templateQuestion.id))
-        .orderBy(questionnaireQuestionOptions.order);
-      
-      if (templateOptions.length > 0) {
-        for (const option of templateOptions) {
-          await db.insert(questionnaireQuestionOptions)
-            .values({
-              questionId: pageQuestion.id,
-              optionText: option.optionText,
-              optionValue: option.optionValue,
-              order: option.order,
-              defaultSelectionIndicator: option.defaultSelectionIndicator,
-              relatedMenuItemId: option.relatedMenuItemId
-            });
-        }
-      }
-    }
+  if (existingRelation.length > 0) {
+    return res.status(409).json({
+      success: false,
+      message: 'This section is already added to this page',
+      pageSection: existingRelation[0]
+    });
   }
+  
+  // Create page-section relationship
+  const [newPageSection] = await db.insert(pageSections)
+    .values({
+      pageId,
+      sectionId,
+      sectionOrder,
+      isConditional,
+      conditionLogic
+    })
+    .returning();
   
   return res.status(201).json({
     success: true,
     message: 'Section added to page successfully',
-    pageSection
+    pageSection: newPageSection
   });
 }
 
-async function handleRegisterComponentType(data, res) {
-  // Validate required fields
-  if (!data.typeKey || !data.componentCategory || !data.displayName) {
+async function handleAddQuestion(res: Response, data: any) {
+  const validationResult = addQuestionSchema.safeParse(data);
+  
+  if (!validationResult.success) {
     return res.status(400).json({
       success: false,
-      message: 'typeKey, componentCategory, and displayName are required'
+      message: 'Invalid question data',
+      errors: validationResult.error.errors
     });
   }
   
-  // Check if component type already exists
-  const [existingType] = await db.select()
-    .from(questionnaireComponentTypes)
-    .where(eq(questionnaireComponentTypes.typeKey, data.typeKey));
+  const questionData = validationResult.data;
   
-  if (existingType) {
-    return res.status(409).json({
-      success: false,
-      message: `Component type with key '${data.typeKey}' already exists`
-    });
-  }
-  
-  // Create a new component type
-  const componentTypeData = insertQuestionnaireComponentType.parse({
-    typeKey: data.typeKey,
-    componentCategory: data.componentCategory,
-    displayName: data.displayName,
-    description: data.description || null,
-    configSchema: data.configSchema || null,
-    isActive: data.isActive !== undefined ? data.isActive : true
-  });
-  
-  const [componentType] = await db.insert(questionnaireComponentTypes)
-    .values(componentTypeData)
+  // Create new question
+  const [newQuestion] = await db.insert(questionnaireQuestions)
+    .values({
+      componentTypeId: questionData.componentTypeId,
+      text: questionData.text,
+      helpText: questionData.helpText,
+      placeholderText: questionData.placeholderText,
+      isRequired: questionData.isRequired,
+      validationRules: questionData.validationRules,
+      defaultValue: questionData.defaultValue,
+      metadata: questionData.metadata
+    })
     .returning();
   
   return res.status(201).json({
     success: true,
-    message: 'Component type registered successfully',
-    componentType
+    message: 'Question created successfully',
+    question: newQuestion
   });
 }
 
-async function handleListComponentTypes(data, res) {
-  // Filter by category if provided
-  let query = db.select().from(questionnaireComponentTypes);
-  
-  if (data.category) {
-    query = query.where(eq(questionnaireComponentTypes.componentCategory, data.category));
-  }
-  
-  // Only return active types by default
-  if (data.includeInactive !== true) {
-    query = query.where(eq(questionnaireComponentTypes.isActive, true));
-  }
-  
-  const componentTypes = await query.orderBy(questionnaireComponentTypes.displayName);
+async function handleListQuestions(res: Response) {
+  const allQuestions = await db.select()
+    .from(questionnaireQuestions)
+    .orderBy(questionnaireQuestions.id);
   
   return res.status(200).json({
     success: true,
-    componentTypes
+    questions: allQuestions
   });
 }
 
-async function handleGetFullQuestionnaire(data, res) {
-  // Validate required fields
-  if (!data.definitionId) {
+async function handleAddQuestionOptions(res: Response, data: any) {
+  const validationResult = addQuestionOptionsSchema.safeParse(data);
+  
+  if (!validationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid question options data',
+      errors: validationResult.error.errors
+    });
+  }
+  
+  const { questionId, options } = validationResult.data;
+  
+  // Check if question exists
+  const [question] = await db.select()
+    .from(questionnaireQuestions)
+    .where(eq(questionnaireQuestions.id, questionId));
+  
+  if (!question) {
+    return res.status(404).json({
+      success: false,
+      message: 'Question not found'
+    });
+  }
+  
+  // Insert options
+  const createdOptions = [];
+  
+  for (const option of options) {
+    const [newOption] = await db.insert(questionnaireQuestionOptions)
+      .values({
+        questionId,
+        optionText: option.optionText,
+        optionValue: option.optionValue,
+        order: option.order,
+        isDefault: option.isDefault,
+        metadata: option.metadata
+      })
+      .returning();
+    
+    createdOptions.push(newOption);
+  }
+  
+  return res.status(201).json({
+    success: true,
+    message: 'Question options added successfully',
+    options: createdOptions
+  });
+}
+
+async function handleAddConditionalLogic(res: Response, data: any) {
+  const validationResult = addConditionalLogicSchema.safeParse(data);
+  
+  if (!validationResult.success) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid conditional logic data',
+      errors: validationResult.error.errors
+    });
+  }
+  
+  const logicData = validationResult.data;
+  
+  // Create conditional logic
+  const [newLogic] = await db.insert(conditionalLogic)
+    .values({
+      name: logicData.name,
+      description: logicData.description,
+      targetType: logicData.targetType,
+      targetId: logicData.targetId,
+      conditionType: logicData.conditionType,
+      sourceType: logicData.sourceType,
+      sourceId: logicData.sourceId,
+      conditionValue: logicData.conditionValue,
+      actionType: logicData.actionType,
+      actionValue: logicData.actionValue,
+      priority: logicData.priority,
+      isActive: logicData.isActive
+    })
+    .returning();
+  
+  return res.status(201).json({
+    success: true,
+    message: 'Conditional logic added successfully',
+    conditionalLogic: newLogic
+  });
+}
+
+async function handleGetFullQuestionnaire(res: Response, data: any) {
+  const { definitionId } = data;
+  
+  if (!definitionId) {
     return res.status(400).json({
       success: false,
       message: 'definitionId is required'
     });
   }
   
-  // Get questionnaire definition
+  // Get the questionnaire definition
   const [definition] = await db.select()
     .from(questionnaireDefinitions)
-    .where(eq(questionnaireDefinitions.id, data.definitionId));
+    .where(eq(questionnaireDefinitions.id, definitionId));
   
   if (!definition) {
     return res.status(404).json({
@@ -569,90 +668,117 @@ async function handleGetFullQuestionnaire(data, res) {
     });
   }
   
-  // Get pages for this definition
+  // Get all pages for this definition
   const pages = await db.select()
     .from(questionnairePages)
-    .where(eq(questionnairePages.definitionId, data.definitionId))
+    .where(eq(questionnairePages.definitionId, definitionId))
     .orderBy(questionnairePages.order);
   
-  // For each page, get its sections and questions
-  const pagesWithSectionsAndQuestions = [];
+  // For each page, get all sections
+  const pagesWithSections = [];
   
   for (const page of pages) {
-    // Get sections for this page
-    const pageSections = await db.select()
-      .from(questionnairePageSections)
-      .where(eq(questionnairePageSections.pageId, page.id))
-      .orderBy(questionnairePageSections.sectionOrder);
+    // Get page-section relationships
+    const pageSectionRelations = await db.select()
+      .from(pageSections)
+      .where(eq(pageSections.pageId, page.id))
+      .orderBy(pageSections.sectionOrder);
     
-    const sectionsWithDetails = [];
+    const sectionsWithQuestions = [];
     
-    for (const pageSection of pageSections) {
-      // Get section details
+    // For each relationship, get the section and its questions
+    for (const relation of pageSectionRelations) {
+      // Get section
       const [section] = await db.select()
         .from(questionnaireSections)
-        .where(eq(questionnaireSections.id, pageSection.sectionId));
+        .where(eq(questionnaireSections.id, relation.sectionId));
       
       if (section) {
-        sectionsWithDetails.push({
-          ...section,
-          sectionOrder: pageSection.sectionOrder
-        });
-      }
-    }
-    
-    // Get direct questions for this page (not part of a section)
-    const questions = await db.select()
-      .from(questionnaireQuestions)
-      .where(eq(questionnaireQuestions.pageId, page.id))
-      .orderBy(questionnaireQuestions.order);
-    
-    // For each question, get its options if applicable
-    const questionsWithOptions = [];
-    
-    for (const question of questions) {
-      if (
-        question.questionType === 'select' || 
-        question.questionType === 'radio' || 
-        question.questionType === 'checkbox_group' ||
-        question.questionType === 'checkbox'
-      ) {
-        const options = await db.select()
-          .from(questionnaireQuestionOptions)
-          .where(eq(questionnaireQuestionOptions.questionId, question.id))
-          .orderBy(questionnaireQuestionOptions.order);
+        // Get section-question relationships
+        const sectionQuestionRelations = await db.select()
+          .from(sectionQuestions)
+          .where(eq(sectionQuestions.sectionId, section.id))
+          .orderBy(sectionQuestions.questionOrder);
         
-        questionsWithOptions.push({
-          ...question,
-          options
-        });
-      } else {
-        questionsWithOptions.push({
-          ...question,
-          options: []
+        const questionsWithOptions = [];
+        
+        // For each relationship, get the question and its options
+        for (const sqRelation of sectionQuestionRelations) {
+          // Get question
+          const [question] = await db.select()
+            .from(questionnaireQuestions)
+            .where(eq(questionnaireQuestions.id, sqRelation.questionId));
+          
+          if (question) {
+            // Get question options
+            const options = await db.select()
+              .from(questionnaireQuestionOptions)
+              .where(eq(questionnaireQuestionOptions.questionId, question.id))
+              .orderBy(questionnaireQuestionOptions.order);
+            
+            // Get conditional logic for this question
+            const logic = await db.select()
+              .from(conditionalLogic)
+              .where(
+                and(
+                  eq(conditionalLogic.targetType, 'question'),
+                  eq(conditionalLogic.targetId, question.id)
+                )
+              );
+            
+            questionsWithOptions.push({
+              ...question,
+              options,
+              conditionalLogic: logic
+            });
+          }
+        }
+        
+        // Get conditional logic for this section
+        const sectionLogic = await db.select()
+          .from(conditionalLogic)
+          .where(
+            and(
+              eq(conditionalLogic.targetType, 'section'),
+              eq(conditionalLogic.targetId, section.id)
+            )
+          );
+        
+        sectionsWithQuestions.push({
+          ...section,
+          relationDetails: relation,
+          questions: questionsWithOptions,
+          conditionalLogic: sectionLogic
         });
       }
     }
     
-    pagesWithSectionsAndQuestions.push({
+    // Get conditional logic for this page
+    const pageLogic = await db.select()
+      .from(conditionalLogic)
+      .where(
+        and(
+          eq(conditionalLogic.targetType, 'page'),
+          eq(conditionalLogic.targetId, page.id)
+        )
+      );
+    
+    pagesWithSections.push({
       ...page,
-      sections: sectionsWithDetails,
-      questions: questionsWithOptions
+      sections: sectionsWithQuestions,
+      conditionalLogic: pageLogic
     });
   }
   
-  // Get conditional logic rules
-  const conditionalLogic = await db.select()
-    .from(questionnaireConditionalLogic)
-    .where(eq(questionnaireConditionalLogic.definitionId, data.definitionId));
+  // Build full questionnaire object
+  const fullQuestionnaire = {
+    ...definition,
+    pages: pagesWithSections
+  };
   
   return res.status(200).json({
     success: true,
     message: 'Full questionnaire retrieved successfully',
-    questionnaire: {
-      definition,
-      pages: pagesWithSectionsAndQuestions,
-      conditionalLogic
-    }
+    questionnaire: fullQuestionnaire
   });
 }
