@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -10,9 +10,14 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   Connection,
-  MarkerType
+  MarkerType,
+  ReactFlowInstance,
+  useReactFlow,
+  FitViewOptions
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { Button } from "@/components/ui/button";
+import { ZoomIn, ZoomOut, Maximize, RefreshCw } from 'lucide-react';
 
 // Custom node types could be added here
 // import QuestionNode from './QuestionNode';
@@ -34,14 +39,112 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const flowWrapper = useRef<HTMLDivElement>(null);
   const [selectedFilters, setSelectedFilters] = useState({
     showQuestions: true,
     showPages: true,
     showConditions: true
   });
+  
+  // Fit view options
+  const fitViewOptions: FitViewOptions = {
+    padding: 0.2,
+    includeHiddenNodes: false,
+    minZoom: 0.1,
+    maxZoom: 1.5
+  };
 
+  // Function to apply automatic layout to nodes
+  const applyAutoLayout = useCallback(() => {
+    if (!nodes.length) return;
+    
+    // Group nodes by type
+    const questionNodes = nodes.filter(node => node.id.startsWith('question-'));
+    const pageNodes = nodes.filter(node => node.id.startsWith('page-'));
+    
+    // Layout constants
+    const horizontalSpacing = 350;
+    const verticalSpacing = 120;
+    
+    // Position page nodes in first column
+    const updatedPageNodes = pageNodes.map((node, index) => ({
+      ...node,
+      position: { x: 50, y: index * verticalSpacing + 50 }
+    }));
+    
+    // Build a map of page IDs to their vertical positions
+    const pagePositions: Record<number, number> = {};
+    pageNodes.forEach((node, index) => {
+      const pageId = parseInt(node.id.replace('page-', ''));
+      pagePositions[pageId] = index * verticalSpacing + 50;
+    });
+    
+    // Group questions by page
+    const questionsByPage: Record<string, Node[]> = {};
+    questionNodes.forEach(node => {
+      const pageId = node.data.questionData?.pageId?.toString() || 'unknown';
+      if (!questionsByPage[pageId]) {
+        questionsByPage[pageId] = [];
+      }
+      questionsByPage[pageId].push(node);
+    });
+    
+    // Position questions based on their page grouping
+    let questionY = 50;
+    const updatedQuestionNodes: Node[] = [];
+    
+    Object.entries(questionsByPage).forEach(([pageId, groupNodes]) => {
+      // Try to align with the page node if it exists
+      if (pageId !== 'unknown' && pagePositions[parseInt(pageId)]) {
+        questionY = pagePositions[parseInt(pageId)];
+      }
+      
+      groupNodes.forEach((node) => {
+        updatedQuestionNodes.push({
+          ...node,
+          position: { x: horizontalSpacing, y: questionY }
+        });
+        questionY += verticalSpacing / 2;
+      });
+      
+      // Add extra spacing between page groups
+      questionY += 30;
+    });
+    
+    setNodes([...updatedPageNodes, ...updatedQuestionNodes]);
+    
+    // Fit the view to ensure everything is visible
+    if (reactFlowInstance) {
+      setTimeout(() => {
+        reactFlowInstance.fitView(fitViewOptions);
+      }, 100);
+    }
+  }, [nodes, reactFlowInstance, fitViewOptions]);
+  
+  // Handle zoom controls
+  const zoomIn = useCallback(() => {
+    if (reactFlowInstance) {
+      reactFlowInstance.zoomIn();
+    }
+  }, [reactFlowInstance]);
+  
+  const zoomOut = useCallback(() => {
+    if (reactFlowInstance) {
+      reactFlowInstance.zoomOut();
+    }
+  }, [reactFlowInstance]);
+  
+  const fitView = useCallback(() => {
+    if (reactFlowInstance) {
+      reactFlowInstance.fitView(fitViewOptions);
+    }
+  }, [reactFlowInstance, fitViewOptions]);
+  
   // Build graph nodes and edges from questions, pages, and conditional logic
   useEffect(() => {
+    if (!questions?.length && !pages?.length) return;
+    
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     const nodeMap: Record<string, boolean> = {};
@@ -166,7 +269,12 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [questions, pages, conditionalLogic, selectedFilters]);
+    
+    // Auto-layout the graph on initial load (or filter change)
+    setTimeout(() => {
+      applyAutoLayout();
+    }, 200);
+  }, [questions, pages, conditionalLogic, selectedFilters, applyAutoLayout]);
 
   // Handle node click
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -185,24 +293,33 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
   };
 
   return (
-    <div style={{ height: '80vh', width: '100%' }}>
+    <div ref={flowWrapper} style={{ height: '80vh', width: '100%' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onInit={setReactFlowInstance}
         fitView
+        fitViewOptions={fitViewOptions}
+        maxZoom={1.5}
+        minZoom={0.1}
+        zoomOnScroll={true}
+        defaultZoom={0.5}
       >
-        <Controls />
+        <Controls showInteractive={false} />
         <MiniMap />
         <Background color="#f0f0f0" gap={12} size={1} />
+        
+        {/* Filter panel */}
         <Panel position="top-left">
           <div className="filter-panel" style={{ 
             background: 'white', 
             padding: '10px', 
             borderRadius: '5px',
-            boxShadow: '0 0 10px rgba(0,0,0,0.2)'
+            boxShadow: '0 0 10px rgba(0,0,0,0.2)',
+            marginBottom: '10px'
           }}>
             <h3>Filters</h3>
             <div>
@@ -240,7 +357,65 @@ const ConditionVisualizer: React.FC<ConditionVisualizerProps> = ({
             </div>
           </div>
         </Panel>
+        
+        {/* Zoom and layout controls */}
+        <Panel position="top-right">
+          <div className="control-panel" style={{ 
+            background: 'white', 
+            padding: '10px', 
+            borderRadius: '5px',
+            boxShadow: '0 0 10px rgba(0,0,0,0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <Button onClick={zoomIn} size="sm" variant="outline">
+              <ZoomIn className="h-4 w-4 mr-1" /> Zoom In
+            </Button>
+            <Button onClick={zoomOut} size="sm" variant="outline">
+              <ZoomOut className="h-4 w-4 mr-1" /> Zoom Out
+            </Button>
+            <Button onClick={fitView} size="sm" variant="outline">
+              <Maximize className="h-4 w-4 mr-1" /> Fit View
+            </Button>
+            <Button onClick={applyAutoLayout} size="sm" variant="default">
+              <RefreshCw className="h-4 w-4 mr-1" /> Auto Layout
+            </Button>
+          </div>
+        </Panel>
       </ReactFlow>
+      
+      <div className="visualization-legend" style={{
+        position: 'absolute',
+        bottom: '20px',
+        right: '20px',
+        background: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        boxShadow: '0 0 10px rgba(0,0,0,0.2)'
+      }}>
+        <h4 style={{ margin: '0 0 8px 0' }}>Legend</h4>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ width: '16px', height: '16px', background: 'rgba(97, 205, 187, 0.8)', borderRadius: '3px', marginRight: '8px' }}></div>
+          <span>Page</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ width: '16px', height: '16px', background: 'rgba(144, 175, 255, 0.8)', borderRadius: '3px', marginRight: '8px' }}></div>
+          <span>Question</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ width: '16px', height: '3px', background: 'green', marginRight: '8px' }}></div>
+          <span>Shows Relationship</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ width: '16px', height: '3px', background: 'red', marginRight: '8px' }}></div>
+          <span>Hides Relationship</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: '16px', height: '3px', background: 'orange', marginRight: '8px' }}></div>
+          <span>Skips To Relationship</span>
+        </div>
+      </div>
     </div>
   );
 };
