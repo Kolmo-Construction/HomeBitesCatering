@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -64,27 +66,40 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
     // Get the value of the field this question depends on
     const dependentValue = formData[question.dependsOn];
     
-    // Convert values to strings for comparison
-    const stringDependentValue = String(dependentValue);
+    // Handle undefined values - if the dependent field has no value yet, 
+    // hide dependent questions
+    if (dependentValue === undefined || dependentValue === null) {
+      return false;
+    }
+    
     const stringShowIf = String(question.showIf);
     
-    // For boolean-like values (toggles, switches)
+    // Handle boolean values and toggle switches
     if (stringShowIf === 'true' || stringShowIf === 'false') {
-      // Handle case where the dependent field is a toggle/switch
-      if (stringDependentValue === 'true' || stringDependentValue === true || dependentValue === true) {
-        return stringShowIf === 'true';
-      } else if (stringDependentValue === 'false' || stringDependentValue === false || dependentValue === false) {
-        return stringShowIf === 'false';
+      // Convert to proper boolean for comparison
+      const boolShowIf = stringShowIf === 'true';
+      
+      // Check if dependent value is boolean or string representation of boolean
+      if (typeof dependentValue === 'boolean') {
+        return dependentValue === boolShowIf;
+      } else if (dependentValue === 'true' || dependentValue === 'false') {
+        return (dependentValue === 'true') === boolShowIf;
       }
     }
     
     // For numeric values (sliders, incrementers, etc.)
-    if (!isNaN(Number(stringShowIf)) && !isNaN(Number(stringDependentValue))) {
-      return Number(stringDependentValue) === Number(stringShowIf);
+    if (!isNaN(Number(stringShowIf))) {
+      const numShowIf = Number(stringShowIf);
+      
+      if (typeof dependentValue === 'number') {
+        return dependentValue === numShowIf;
+      } else if (!isNaN(Number(dependentValue))) {
+        return Number(dependentValue) === numShowIf;
+      }
     }
     
     // Default string comparison
-    return stringDependentValue === stringShowIf;
+    return String(dependentValue) === stringShowIf;
   };
 
   const sortedPages = [...pages].sort((a, b) => a.order - b.order);
@@ -329,6 +344,87 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
             {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
           </div>
         );
+
+      case 'slider':
+        // Get slider metadata from question (if available)
+        const sliderMin = question.options?.find(opt => opt.optionValue === 'min')?.optionText || '0';
+        const sliderMax = question.options?.find(opt => opt.optionValue === 'max')?.optionText || '100';
+        const sliderStep = question.options?.find(opt => opt.optionValue === 'step')?.optionText || '1';
+        
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor={questionKey} className={cn(isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500')}>
+                {questionText}
+              </Label>
+              <span className="font-medium text-sm">
+                {formData[questionKey] || sliderMin}
+              </span>
+            </div>
+            {helpText && <p className="text-sm text-gray-500">{helpText}</p>}
+            <Slider
+              id={questionKey}
+              min={Number(sliderMin)}
+              max={Number(sliderMax)}
+              step={Number(sliderStep)}
+              value={[formData[questionKey] !== undefined ? Number(formData[questionKey]) : Number(sliderMin)]}
+              onValueChange={(value) => {
+                handleInputChange(questionKey, value[0]);
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{sliderMin}</span>
+              <span>{sliderMax}</span>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'incrementer':
+        return (
+          <div className="space-y-2">
+            <Label htmlFor={questionKey} className={cn(isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500')}>
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-gray-500">{helpText}</p>}
+            <div className="flex items-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 rounded-r-none"
+                onClick={() => {
+                  const currentValue = Number(formData[questionKey] || 0);
+                  if (currentValue > 0) {
+                    handleInputChange(questionKey, currentValue - 1);
+                  }
+                }}
+              >
+                -
+              </Button>
+              <Input
+                id={questionKey}
+                type="number"
+                className={cn("h-8 rounded-none text-center w-16", errorMessage ? 'border-red-500' : '')}
+                value={formData[questionKey] !== undefined ? formData[questionKey] : 0}
+                onChange={(e) => handleInputChange(questionKey, Number(e.target.value))}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 rounded-l-none"
+                onClick={() => {
+                  const currentValue = Number(formData[questionKey] || 0);
+                  handleInputChange(questionKey, currentValue + 1);
+                }}
+              >
+                +
+              </Button>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
         
       case 'info_text':
         return (
@@ -383,6 +479,27 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
                 <small className="text-blue-500">You can still proceed with the form preview.</small>
               </p>
             </div>
+          </div>
+        );
+        
+      case 'toggle':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor={questionKey} className={cn(isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500')}>
+                {questionText}
+              </Label>
+              <Switch
+                id={questionKey}
+                checked={formData[questionKey] === true || formData[questionKey] === 'true'}
+                onCheckedChange={(checked) => {
+                  // Store as boolean for consistent conditional logic evaluation
+                  handleInputChange(questionKey, checked);
+                }}
+              />
+            </div>
+            {helpText && <p className="text-sm text-gray-500">{helpText}</p>}
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
           </div>
         );
         
@@ -450,9 +567,12 @@ const QuestionnairePreview: React.FC<PreviewProps> = ({
           {(questionsMap[currentPage.id] || [])
             .sort((a, b) => a.order - b.order)
             .map((question) => (
-              <div key={question.id} className="pb-4">
-                {renderQuestion(question)}
-              </div>
+              // Only render the question if it should be visible based on dependencies
+              isQuestionVisible(question) && (
+                <div key={question.id} className="pb-4">
+                  {renderQuestion(question)}
+                </div>
+              )
             ))}
         </div>
       </CardContent>
