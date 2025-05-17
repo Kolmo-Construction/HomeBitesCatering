@@ -1003,165 +1003,143 @@ const PublicQuestionnaireView: React.FC = () => {
             {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
             
             {hasMenuItems ? (
-              // Special rendering for menu item checkbox options
+              // Special rendering for menu item checkbox options with nutritional info
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {options?.sort((a, b) => a.order - b.order).map((option) => {
                   const menuItem = option.relatedMenuItemId 
                     ? selectedMenuItems.find(item => item.id === option.relatedMenuItemId)
                     : undefined;
                     
-                  if (menuItem) {
-                    // Get current values and calculate selection limit
-                    const currentValues = formData[questionKey] || [];
-                    
-                    // Check validation rules in the question data
-                    const validationRules = question.validationRules || {};
-                    const exactCount = validationRules.exactCount;
-                    const maxCount = validationRules.maxCount;
-                    
-                    // Check text patterns for limits
-                    const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/i);
-                    const chooseNMatch = questionText.match(/Choose (\d+)/i);
-                    const textLimit = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : 
-                                    chooseNMatch ? parseInt(chooseNMatch[1]) : null;
-                    
-                    // Calculate the effective limit
-                    const limit = exactCount || textLimit || maxCount;
-                    
-                    // Check if we've reached the limit
-                    const limitReached = limit ? currentValues.length >= limit : false;
-                    
-                    const isChecked = currentValues.includes(option.optionValue);
-                    
-                    // Import our special CheckboxMenuItemCard component
-                    const CheckboxMenuItemCard = require('@/components/nutrition/CheckboxMenuItemCard').default;
-                    
-                    return (
-                      <CheckboxMenuItemCard
-                        key={option.id}
-                        menuItem={menuItem}
-                        isSelected={isChecked}
-                        // Disable only if limit reached AND this item is not already selected
-                        isDisabled={limitReached && !isChecked}
-                        onClick={() => {
-                          const updatedValues = [...currentValues];
-                          const valueIndex = updatedValues.indexOf(option.optionValue);
-                          
-                          if (valueIndex !== -1) {
-                            // If already selected, remove it (always allowed)
-                            updatedValues.splice(valueIndex, 1);
-                          } else {
-                            // If not selected and we're at the limit, show warning and don't select
-                            if (limit && currentValues.length >= limit) {
-                              toast({
-                                title: "Selection limit reached",
-                                description: `You can only select ${limit} options for this question.`,
-                                variant: "destructive",
-                                duration: 3000
-                              });
-                              return;
-                            }
-                            
-                            // Otherwise add the selection
-                            updatedValues.push(option.optionValue);
+                  if (!menuItem) return null;
+                  
+                  // Get current values and calculate selection limit
+                  const currentValues = formData[questionKey] || [];
+                  
+                  // Check validation rules in the question data
+                  const validationRules = question.validationRules || {};
+                  const exactCount = validationRules.exactCount;
+                  const maxCount = validationRules.maxCount;
+                  
+                  // Check text patterns for limits
+                  const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/i);
+                  const chooseNMatch = questionText.match(/Choose (\d+)/i);
+                  const textLimit = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : 
+                                  chooseNMatch ? parseInt(chooseNMatch[1]) : null;
+                  
+                  // Calculate the effective limit
+                  const limit = exactCount || textLimit || maxCount;
+                  
+                  // Check if we've reached the limit
+                  const limitReached = limit ? currentValues.length >= limit : false;
+                  
+                  const isChecked = currentValues.includes(option.optionValue);
+                  
+                  // Import specialized component for menu item cards with checkbox behavior
+                  const CheckboxMenuItemCard = require('@/components/nutrition/CheckboxMenuItemCard').default;
+                  
+                  return (
+                    <CheckboxMenuItemCard
+                      key={option.id}
+                      menuItem={menuItem}
+                      isSelected={isChecked}
+                      // Disable only if limit reached AND this item is not already selected
+                      isDisabled={limitReached && !isChecked}
+                      onClick={() => {
+                        const updatedValues = [...currentValues];
+                        const valueIndex = updatedValues.indexOf(option.optionValue);
+                        
+                        if (valueIndex !== -1) {
+                          // If already selected, remove it (always allowed)
+                          updatedValues.splice(valueIndex, 1);
+                        } else {
+                          // If not selected and we're at the limit, show warning and don't select
+                          if (limit && currentValues.length >= limit) {
+                            toast({
+                              title: "Selection limit reached",
+                              description: `You can only select ${limit} options for this question.`,
+                              variant: "destructive",
+                              duration: 3000
+                            });
+                            return;
                           }
                           
-                          // Update form data
-                          handleInputChange(questionKey, updatedValues);
-                        }}
-                      />
-                    );
-                  }
+                          // Otherwise add the selection
+                          updatedValues.push(option.optionValue);
+                        }
+                        
+                        // Update form data
+                        handleInputChange(questionKey, updatedValues);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              // Standard checkbox options for non-menu items
+              <div className="space-y-2">
+                {options?.sort((a, b) => a.order - b.order).map((option) => {
+                  // Calculate selection limits for regular checkboxes
+                  const currentValues = formData[questionKey] || [];
                   
-                  // Fallback for non-menu item options
+                  // Check validation rules in the question data
+                  const validationRules = question.validationRules || {};
+                  const exactCount = validationRules.exactCount;
+                  const maxCount = validationRules.maxCount;
+                  
+                  // Check text patterns for limits
+                  const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/i);
+                  const chooseNMatch = questionText.match(/Choose (\d+)/i);
+                  const textLimit = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : 
+                                  chooseNMatch ? parseInt(chooseNMatch[1]) : null;
+                  
+                  // Calculate the effective limit
+                  const limit = exactCount || textLimit || maxCount;
+                  
+                  // Check if we've reached the limit
+                  const limitReached = limit ? currentValues.length >= limit : false;
+                  const isChecked = currentValues.includes(option.optionValue);
+                  
                   return (
                     <div key={option.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={`${questionKey}-${option.id}`}
-                        checked={(formData[questionKey] || []).includes(option.optionValue)}
+                        checked={isChecked}
+                        disabled={limitReached && !isChecked}
                         onCheckedChange={(checked) => {
-                          const currentValues = [...(formData[questionKey] || [])];
-                          
-                          // Check if this is a question with selection limits
-                          const hasSelectionLimit = questionText.includes('exactly') && 
-                              (questionText.includes('Choose 3') || questionText.includes('Choose 2'));
-                          
-                          // Extract the max selections from the question text
-                          const maxSelectionsMatch = questionText.match(/Choose (\d+)/);
-                          const maxSelections = maxSelectionsMatch ? parseInt(maxSelectionsMatch[1]) : null;
-                          
+                          const updatedValues = [...currentValues];
                           if (checked) {
-                            // If trying to add a new selection
-                            if (!currentValues.includes(option.optionValue)) {
-                              // Check for validation rules in the question data
-                              const validationRules = question.validationRules || {};
-                              const exactCount = validationRules.exactCount;
-                              const minCount = validationRules.minCount;
-                              const maxCount = validationRules.maxCount;
-                              
-                              // Parse exact selection requirements from the help text as fallback
-                              const exactSelectionsMatch = questionText.match(/Select exactly (\d+)/);
-                              const exactSelections = exactSelectionsMatch ? parseInt(exactSelectionsMatch[1]) : null;
-                              
-                              // Check if adding would exceed the maximum selections needed
-                              if ((hasSelectionLimit && maxSelections && currentValues.length >= maxSelections) ||
-                                  (exactSelections && currentValues.length >= exactSelections) ||
-                                  (exactCount && currentValues.length >= exactCount) ||
-                                  (maxCount && currentValues.length >= maxCount)) {
-                                // Determine the limit based on which rule matched
-                                const limit = exactCount || exactSelections || maxCount || maxSelections;
-                                // If max selections reached, show toast notification
+                            // If trying to check a box, verify we haven't reached the limit
+                            if (!updatedValues.includes(option.optionValue)) {
+                              // Check if adding would exceed the limit
+                              if (limit && updatedValues.length >= limit) {
                                 toast({
                                   title: "Selection limit reached",
                                   description: `You can only select ${limit} options for this question.`,
-                                  variant: "destructive"
+                                  variant: "destructive",
+                                  duration: 3000
                                 });
                                 return; // Don't update the form data
                               }
+                              
                               // If within limit, add the selection
-                              currentValues.push(option.optionValue);
+                              updatedValues.push(option.optionValue);
                             }
                           } else {
                             // If unchecking, always allow removing selections
-                            const index = currentValues.indexOf(option.optionValue);
+                            const index = updatedValues.indexOf(option.optionValue);
                             if (index > -1) {
-                              currentValues.splice(index, 1);
+                              updatedValues.splice(index, 1);
                             }
                           }
-                          handleInputChange(questionKey, currentValues);
+                          
+                          // Update the form data with the modified values
+                          handleInputChange(questionKey, updatedValues);
                         }}
                       />
                       <Label htmlFor={`${questionKey}-${option.id}`}>{option.optionText}</Label>
                     </div>
                   );
                 })}
-              </div>
-            ) : (
-              // Standard checkbox options
-              <div className="space-y-2">
-                {options?.sort((a, b) => a.order - b.order).map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`${questionKey}-${option.id}`}
-                      checked={(formData[questionKey] || []).includes(option.optionValue)}
-                      onCheckedChange={(checked) => {
-                        const currentValues = [...(formData[questionKey] || [])];
-                        if (checked) {
-                          if (!currentValues.includes(option.optionValue)) {
-                            currentValues.push(option.optionValue);
-                          }
-                        } else {
-                          const index = currentValues.indexOf(option.optionValue);
-                          if (index > -1) {
-                            currentValues.splice(index, 1);
-                          }
-                        }
-                        handleInputChange(questionKey, currentValues);
-                      }}
-                    />
-                    <Label htmlFor={`${questionKey}-${option.id}`}>{option.optionText}</Label>
-                  </div>
-                ))}
               </div>
             )}
             
