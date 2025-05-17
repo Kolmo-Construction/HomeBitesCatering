@@ -1110,6 +1110,186 @@ const PublicQuestionnaireView: React.FC = () => {
           </div>
         );
         
+      case 'address':
+        // Address input field
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor={`${questionKey}-street`} className="text-sm">Street Address</Label>
+                <Input 
+                  id={`${questionKey}-street`}
+                  type="text"
+                  placeholder="123 Main St" 
+                  value={formData[`${questionKey}-street`] || ''}
+                  onChange={(e) => {
+                    // Update the individual field
+                    handleInputChange(`${questionKey}-street`, e.target.value);
+                    
+                    // Combine all address fields into one object for the main field
+                    const addressData = {
+                      street: e.target.value,
+                      city: formData[`${questionKey}-city`] || '',
+                      state: formData[`${questionKey}-state`] || '',
+                      zip: formData[`${questionKey}-zip`] || '',
+                    };
+                    
+                    // Update the main field with the combined address
+                    handleInputChange(questionKey, addressData);
+                  }}
+                  className={cn(
+                    errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor={`${questionKey}-city`} className="text-sm">City</Label>
+                  <Input 
+                    id={`${questionKey}-city`}
+                    type="text"
+                    placeholder="Cityville" 
+                    value={formData[`${questionKey}-city`] || ''}
+                    onChange={(e) => {
+                      handleInputChange(`${questionKey}-city`, e.target.value);
+                      
+                      const addressData = {
+                        street: formData[`${questionKey}-street`] || '',
+                        city: e.target.value,
+                        state: formData[`${questionKey}-state`] || '',
+                        zip: formData[`${questionKey}-zip`] || '',
+                      };
+                      
+                      handleInputChange(questionKey, addressData);
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`${questionKey}-state`} className="text-sm">State</Label>
+                  <Input 
+                    id={`${questionKey}-state`}
+                    type="text"
+                    placeholder="CA" 
+                    value={formData[`${questionKey}-state`] || ''}
+                    onChange={(e) => {
+                      handleInputChange(`${questionKey}-state`, e.target.value);
+                      
+                      const addressData = {
+                        street: formData[`${questionKey}-street`] || '',
+                        city: formData[`${questionKey}-city`] || '',
+                        state: e.target.value,
+                        zip: formData[`${questionKey}-zip`] || '',
+                      };
+                      
+                      handleInputChange(questionKey, addressData);
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor={`${questionKey}-zip`} className="text-sm">ZIP Code</Label>
+                <Input 
+                  id={`${questionKey}-zip`}
+                  type="text"
+                  placeholder="90210" 
+                  value={formData[`${questionKey}-zip`] || ''}
+                  onChange={(e) => {
+                    handleInputChange(`${questionKey}-zip`, e.target.value);
+                    
+                    const addressData = {
+                      street: formData[`${questionKey}-street`] || '',
+                      city: formData[`${questionKey}-city`] || '',
+                      state: formData[`${questionKey}-state`] || '',
+                      zip: e.target.value,
+                    };
+                    
+                    handleInputChange(questionKey, addressData);
+                  }}
+                  className="w-full md:w-1/3"
+                />
+              </div>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
+      case 'name':
+        // Name input with first and last name
+        return (
+          <div className="space-y-2">
+            <Label 
+              htmlFor={questionKey} 
+              className={cn(
+                "text-base font-medium",
+                isRequired && 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              )}
+            >
+              {questionText}
+            </Label>
+            {helpText && <p className="text-sm text-muted-foreground">{helpText}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor={`${questionKey}-first`} className="text-sm">First Name</Label>
+                <Input 
+                  id={`${questionKey}-first`}
+                  type="text"
+                  placeholder="John" 
+                  value={formData[`${questionKey}-first`] || ''}
+                  onChange={(e) => {
+                    // Update the individual field
+                    handleInputChange(`${questionKey}-first`, e.target.value);
+                    
+                    // Combine first and last name for the main field
+                    const fullName = {
+                      first: e.target.value,
+                      last: formData[`${questionKey}-last`] || ''
+                    };
+                    
+                    // Update the main field with the combined name
+                    handleInputChange(questionKey, fullName);
+                  }}
+                  className={cn(
+                    errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
+                  )}
+                />
+              </div>
+              <div>
+                <Label htmlFor={`${questionKey}-last`} className="text-sm">Last Name</Label>
+                <Input 
+                  id={`${questionKey}-last`}
+                  type="text"
+                  placeholder="Smith" 
+                  value={formData[`${questionKey}-last`] || ''}
+                  onChange={(e) => {
+                    handleInputChange(`${questionKey}-last`, e.target.value);
+                    
+                    const fullName = {
+                      first: formData[`${questionKey}-first`] || '',
+                      last: e.target.value
+                    };
+                    
+                    handleInputChange(questionKey, fullName);
+                  }}
+                  className={cn(
+                    errorMessage ? 'border-red-500 focus-visible:ring-red-500' : ''
+                  )}
+                />
+              </div>
+            </div>
+            {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+          </div>
+        );
+        
       default:
         return (
           <div className="space-y-2">
