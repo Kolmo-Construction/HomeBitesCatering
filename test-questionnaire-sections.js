@@ -1,5 +1,5 @@
-const axios = require('axios');
-const assert = require('assert');
+import axios from 'axios';
+import assert from 'assert';
 
 // Configuration
 const BASE_URL = 'http://localhost:5000';
@@ -194,16 +194,14 @@ async function runSectionTests() {
 }
 
 // Main execution
-if (require.main === module) {
-  runSectionTests()
-    .then(() => {
-      console.log('All tests completed successfully.');
-      process.exit(0);
-    })
-    .catch(err => {
-      console.error('Tests failed:', err);
-      process.exit(1);
-    });
-}
+runSectionTests()
+  .then(() => {
+    console.log('All tests completed successfully.');
+    process.exit(0);
+  })
+  .catch(err => {
+    console.error('Tests failed:', err);
+    process.exit(1);
+  });
 
-module.exports = { runSectionTests };
+export { runSectionTests };
