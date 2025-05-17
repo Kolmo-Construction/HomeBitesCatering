@@ -641,7 +641,14 @@ export const insertQuestionnairePageSchema = createInsertSchema(questionnairePag
 });
 
 export const insertQuestionnaireQuestionSchema = createInsertSchema(questionnaireQuestions, {
-  validationRules: z.any().optional(),
+  validationRules: z.object({
+    min: z.number().optional(),
+    max: z.number().optional(),
+    step: z.number().optional(),
+    minCount: z.number().optional(),
+    maxCount: z.number().optional(),
+    exactCount: z.number().optional()
+  }).optional(),
 }).omit({
   id: true,
   createdAt: true,
