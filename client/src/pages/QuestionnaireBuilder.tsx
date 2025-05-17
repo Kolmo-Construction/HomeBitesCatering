@@ -102,7 +102,10 @@ const questionFormSchema = z.object({
   validationRules: z.object({
     min: z.number().optional(),
     max: z.number().optional(),
-    step: z.number().optional()
+    step: z.number().optional(),
+    minCount: z.number().optional(),
+    maxCount: z.number().optional(),
+    exactCount: z.number().optional()
   }).optional(),
   options: z.array(
     z.object({
