@@ -63,6 +63,7 @@ function AppContent() {
             <Route path="/estimates/:id/edit" component={Estimates} />
             <Route path="/questionnaire-builder" component={QuestionnaireBuilder} />
             <Route path="/questionnaire-docs" component={QuestionnaireDocumentation} />
+            <Route path="/questionnaire-visualizer" component={ConditionVisualizerPage} />
             <Route path="/form-builder-tester" component={FormBuilderTester} />
             <Route path="/form-builder-docs" component={UnifiedFormBuilderDocs} />
             <Route path="/form-examples/home-bites" component={FormBuilderTester} />
