@@ -37,15 +37,18 @@ const matrixColumnSchema = z.object({
 
 // Helper to handle errors consistently
 const handleError = (err: any, res: Response) => {
-  console.error("Error in question library routes:", err);
-  
   if (err instanceof ZodError) {
+    // Log detailed validation errors for debugging
+    console.error("Validation error in question library routes:");
+    console.error("Error details:", JSON.stringify(err.errors, null, 2));
+    
     return res.status(400).json({ 
       message: "Validation error", 
       errors: err.errors 
     });
   }
   
+  console.error("Error in question library routes:", err);
   return res.status(500).json({ 
     message: "Internal server error", 
     error: err.message 

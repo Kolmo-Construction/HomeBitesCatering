@@ -135,13 +135,13 @@ export default function QuestionLibraryEdit() {
   // Mutation for saving question
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Prepare submission data
+      // Prepare submission data - using the exact field names expected by the server
       const submission = {
-        library_question_key: data.questionKey,
-        default_text: data.defaultText,
-        question_type: data.questionType,
+        libraryQuestionKey: data.questionKey,
+        defaultText: data.defaultText,
+        questionType: data.questionType,
         category: data.category || null,
-        default_metadata: {
+        defaultMetadata: {
           // Include validation rules if they exist
           ...(Object.keys(validationRules).length > 0 && { validation: validationRules }),
           
@@ -151,8 +151,8 @@ export default function QuestionLibraryEdit() {
           placeholder: data.placeholder || null,
         },
         
-        // `default_options` for choice types (outside of default_metadata)
-        default_options: (['checkbox_group', 'radio_group', 'dropdown'].includes(data.questionType))
+        // `defaultOptions` for choice types (outside of defaultMetadata)
+        defaultOptions: (['checkbox_group', 'radio_group', 'dropdown'].includes(data.questionType))
           ? options.map(opt => ({
               label: opt.label,
               value: opt.value || opt.label.toLowerCase().replace(/\s+/g, '_')
@@ -164,7 +164,7 @@ export default function QuestionLibraryEdit() {
       if (data.questionType === 'matrix') {
         Object.assign(submission, {
           matrixRows: rows.map(row => ({
-            rowKey: row.id.replace('row-', 'row_'), // Generate rowKey from id if not set
+            rowKey: row.rowKey || row.id.replace('row-', 'row_'), // Use existing rowKey or generate from id
             label: row.label,
             price: null,
             defaultMetadata: {},
@@ -172,15 +172,18 @@ export default function QuestionLibraryEdit() {
           })),
           
           matrixColumns: columns.map(col => ({
-            columnKey: col.id.replace('col-', 'col_'), // Generate columnKey from id if not set
+            columnKey: col.value || col.id.replace('col-', 'col_'), // Use existing value as columnKey or generate from id
             header: col.label,
-            cellInputType: 'radio', // Default to radio input type
+            cellInputType: col.cellInputType || 'radio', // Use existing cellInputType or default to radio
             defaultMetadata: {},
             columnOrder: parseInt(col.id.split('-')[1], 10) // Use id number as order
           }))
         });
       }
 
+      // Debug: Log the submission payload
+      console.log('Submitting question data:', submission);
+      
       if (isEditing) {
         // Update existing question
         const response = await fetch(`/api/form-builder/library-questions/${id}`, {
