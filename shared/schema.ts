@@ -298,9 +298,9 @@ export const rawLeads = pgTable("raw_leads", {
   id: serial("id").primaryKey(),
   source: text("source").notNull(), // e.g., 'weddingwire', 'website_form', 'gmail_sync', 'manual_entry'
   rawData: jsonb("raw_data"), // Store the original request payload/email body etc.
-  extractedName: text("extracted_name"),
-  extractedEmail: text("extracted_email"),
-  extractedPhone: text("extracted_phone"),
+  extractedProspectName: text("extracted_prospect_name"),
+  extractedProspectEmail: text("extracted_prospect_email"),
+  extractedProspectPhone: text("extracted_prospect_phone"),
   eventSummary: text("event_summary"), // Brief summary/keywords from raw_data
   receivedAt: timestamp("received_at").notNull(), // Removed defaultNow() so we can set this to the email's original date
   status: rawLeadStatusEnum("status").default('new').notNull(),
@@ -330,6 +330,7 @@ export const rawLeads = pgTable("raw_leads", {
   aiSuggestedNextStep: text("ai_suggested_next_step"),
   aiSentiment: sentimentEnum("ai_sentiment"),
   aiConfidenceScore: doublePrecision("ai_confidence_score"),
+  aiCalendarConflictAssessment: text("ai_calendar_conflict_assessment"), // New field for calendar conflict assessment
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -342,6 +343,7 @@ export const insertRawLeadSchema = createInsertSchema(rawLeads, {
   // New AI fields as optional
   aiKeyRequirements: z.any().optional(),
   aiPotentialRedFlags: z.any().optional(),
+  aiCalendarConflictAssessment: z.string().nullable().optional(), // Added new field for calendar conflicts
 }).omit({
   id: true,
   createdAt: true,
