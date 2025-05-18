@@ -5,10 +5,10 @@ import { db } from "./db"; // For direct database access
 import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import session from "express-session";
-import MemoryStore from "memorystore";
 import { eq } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import { generateSuggestion, getQuestionTypeHelp, analyzeFormData } from "./services/ai-suggestions";
+import pgSession from 'connect-pg-simple';
 import {
   insertUserSchema, 
   insertOpportunitySchema, 
@@ -26,17 +26,20 @@ import { GmailSyncService } from './services/emailSyncService'; // Import the se
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
 
-const MemorySessionStore = MemoryStore(session);
-
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure PostgreSQL session store
+  const PgStore = pgSession(session);
+  
   // Configure session middleware
   app.use(session({
+    store: new PgStore({
+      conString: process.env.DATABASE_URL,
+      tableName: 'sessions',
+      createTableIfMissing: true,
+    }),
     secret: process.env.SESSION_SECRET || 'super-secret-key',
     resave: false,
     saveUninitialized: false,
-    store: new MemorySessionStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
     cookie: { 
       secure: process.env.NODE_ENV === 'production',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
@@ -56,16 +59,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize email sync service, but don't start it yet
   // It's started manually by the admin via the /api/admin/email-sync/start endpoint
-  const gmailSyncService = new GmailSyncService(storage, db);
+  const gmailSyncService = new GmailSyncService();
   
   // Initialize lead generation service
-  const leadGenService = new LeadGenerationService(storage);
+  const leadGenService = new LeadGenerationService();
   
   // Initialize communication sync service
-  const communicationSyncService = new CommunicationSyncService(storage);
+  const communicationSyncService = new CommunicationSyncService();
 
   // Middleware to check if user is authenticated
-  const isAuthenticated = (req: Request, res: Response, next: Function) => {
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (req.session.userId) {
       return next();
     }
@@ -73,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Middleware to check if user is an admin
-  const isAdmin = async (req: Request, res: Response, next: Function) => {
+  const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.session.userId) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
@@ -100,21 +103,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash the password
       const hashedPassword = await bcrypt.hash(userData.password, 10);
       
-      // Create the user
-      const user = await storage.createUser({
+      const newUser = await storage.createUser({
         ...userData,
         password: hashedPassword
       });
       
       // Don't return the password
-      const { password, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = newUser;
       
       res.status(201).json(userWithoutPassword);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error registering user:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -187,11 +191,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: 'Logged out successfully' });
     });
   });
-
+  
   // ===== User Routes =====
   
-  // Get all users
-  app.get('/api/users', isAuthenticated, async (req: Request, res: Response) => {
+  // Get all users (admin only)
+  app.get('/api/users', isAdmin, async (req: Request, res: Response) => {
     try {
       const users = await storage.listUsers();
       
@@ -208,16 +212,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get a specific user
-  app.get('/api/users/:id', isAuthenticated, async (req: Request, res: Response) => {
+  // Get a specific user (admin only)
+  app.get('/api/users/:id', isAdmin, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const userId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
       }
       
-      const user = await storage.getUser(id);
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -233,31 +237,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update a user
-  app.put('/api/users/:id', isAuthenticated, async (req: Request, res: Response) => {
+  // Update a user (admin or self)
+  app.patch('/api/users/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const userId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
       }
       
-      // Only the user themselves or an admin can update the user
-      if (req.session.userId !== id) {
-        const currentUser = await storage.getUser(req.session.userId!);
-        if (currentUser?.role !== 'admin') {
+      // Only admins can update other users
+      if (userId !== req.session.userId) {
+        const currentUser = await storage.getUser(req.session.userId);
+        
+        if (!currentUser || currentUser.role !== 'admin') {
           return res.status(403).json({ message: 'Insufficient permissions' });
         }
       }
       
-      const userData = req.body;
+      const updateData = req.body;
       
-      // If password is provided, hash it
-      if (userData.password) {
-        userData.password = await bcrypt.hash(userData.password, 10);
+      // If password is being updated, hash it
+      if (updateData.password) {
+        updateData.password = await bcrypt.hash(updateData.password, 10);
       }
       
-      const updatedUser = await storage.updateUser(id, userData);
+      const updatedUser = await storage.updateUser(userId, updateData);
       
       if (!updatedUser) {
         return res.status(404).json({ message: 'User not found' });
@@ -268,47 +273,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(userWithoutPassword);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating user:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
-  // Delete a user
-  app.delete('/api/users/:id', isAdmin, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
-      }
-      
-      const result = await storage.deleteUser(id);
-      
-      if (!result) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      res.status(200).json({ message: 'User deleted' });
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // ===== Opportunity Routes =====
+
+  // ===== Opportunities Routes =====
   
   // Get all opportunities
   app.get('/api/opportunities', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Handle query params for filtering
-      const status = req.query.status as string | undefined;
-      const source = req.query.source as string | undefined;
-      const priority = req.query.priority as typeof opportunityPriorityEnum.enumValues[number] | undefined;
+      const status = req.query.status as string;
+      const source = req.query.source as string;
+      const priority = req.query.priority as typeof opportunityPriorityEnum.enumValues[number];
       
       let opportunities;
+      
       if (status) {
         opportunities = await storage.listOpportunitiesByStatus(status);
       } else if (source) {
@@ -329,13 +314,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific opportunity
   app.get('/api/opportunities/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const opportunityId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(opportunityId)) {
+        return res.status(400).json({ message: 'Invalid opportunity ID' });
       }
       
-      const opportunity = await storage.getOpportunity(id);
+      const opportunity = await storage.getOpportunity(opportunityId);
       
       if (!opportunity) {
         return res.status(404).json({ message: 'Opportunity not found' });
@@ -353,30 +338,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const opportunityData = insertOpportunitySchema.parse(req.body);
       
-      const opportunity = await storage.createOpportunity(opportunityData);
+      const newOpportunity = await storage.createOpportunity(opportunityData);
       
-      res.status(201).json(opportunity);
+      res.status(201).json(newOpportunity);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating opportunity:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Update an opportunity
-  app.put('/api/opportunities/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/opportunities/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const opportunityId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(opportunityId)) {
+        return res.status(400).json({ message: 'Invalid opportunity ID' });
       }
       
-      const opportunityData = req.body;
+      const updateData = req.body;
       
-      const updatedOpportunity = await storage.updateOpportunity(id, opportunityData);
+      const updatedOpportunity = await storage.updateOpportunity(opportunityId, updateData);
       
       if (!updatedOpportunity) {
         return res.status(404).json({ message: 'Opportunity not found' });
@@ -384,10 +371,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(updatedOpportunity);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating opportunity:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -395,31 +384,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete an opportunity
   app.delete('/api/opportunities/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const opportunityId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(opportunityId)) {
+        return res.status(400).json({ message: 'Invalid opportunity ID' });
       }
       
-      const result = await storage.deleteOpportunity(id);
+      const success = await storage.deleteOpportunity(opportunityId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Opportunity not found' });
       }
       
-      res.status(200).json({ message: 'Opportunity deleted' });
+      res.status(200).json({ message: 'Opportunity deleted successfully' });
     } catch (error) {
       console.error('Error deleting opportunity:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Menu Item Routes =====
+  
+  // ===== Menu Items Routes =====
   
   // Get all menu items
-  app.get('/api/menu-items', async (req: Request, res: Response) => {
+  app.get('/api/menu-items', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const menuItems = await storage.listMenuItems();
+      
       res.status(200).json(menuItems);
     } catch (error) {
       console.error('Error getting menu items:', error);
@@ -428,15 +418,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get a specific menu item
-  app.get('/api/menu-items/:id', async (req: Request, res: Response) => {
+  app.get('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const menuItemId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(menuItemId)) {
+        return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       
-      const menuItem = await storage.getMenuItem(id);
+      const menuItem = await storage.getMenuItem(menuItemId);
       
       if (!menuItem) {
         return res.status(404).json({ message: 'Menu item not found' });
@@ -454,30 +444,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const menuItemData = insertMenuItemSchema.parse(req.body);
       
-      const menuItem = await storage.createMenuItem(menuItemData);
+      const newMenuItem = await storage.createMenuItem(menuItemData);
       
-      res.status(201).json(menuItem);
+      res.status(201).json(newMenuItem);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating menu item:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Update a menu item
-  app.put('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const menuItemId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(menuItemId)) {
+        return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       
-      const menuItemData = req.body;
+      const updateData = req.body;
       
-      const updatedMenuItem = await storage.updateMenuItem(id, menuItemData);
+      const updatedMenuItem = await storage.updateMenuItem(menuItemId, updateData);
       
       if (!updatedMenuItem) {
         return res.status(404).json({ message: 'Menu item not found' });
@@ -485,10 +477,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(updatedMenuItem);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating menu item:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -496,31 +490,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a menu item
   app.delete('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const menuItemId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(menuItemId)) {
+        return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       
-      const result = await storage.deleteMenuItem(id);
+      const success = await storage.deleteMenuItem(menuItemId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Menu item not found' });
       }
       
-      res.status(200).json({ message: 'Menu item deleted' });
+      res.status(200).json({ message: 'Menu item deleted successfully' });
     } catch (error) {
       console.error('Error deleting menu item:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Menu Routes =====
+  
+  // ===== Menus Routes =====
   
   // Get all menus
-  app.get('/api/menus', async (req: Request, res: Response) => {
+  app.get('/api/menus', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const menus = await storage.listMenus();
+      
       res.status(200).json(menus);
     } catch (error) {
       console.error('Error getting menus:', error);
@@ -529,15 +524,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get a specific menu
-  app.get('/api/menus/:id', async (req: Request, res: Response) => {
+  app.get('/api/menus/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const menuId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(menuId)) {
+        return res.status(400).json({ message: 'Invalid menu ID' });
       }
       
-      const menu = await storage.getMenu(id);
+      const menu = await storage.getMenu(menuId);
       
       if (!menu) {
         return res.status(404).json({ message: 'Menu not found' });
@@ -555,30 +550,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const menuData = insertMenuSchema.parse(req.body);
       
-      const menu = await storage.createMenu(menuData);
+      const newMenu = await storage.createMenu(menuData);
       
-      res.status(201).json(menu);
+      res.status(201).json(newMenu);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating menu:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Update a menu
-  app.put('/api/menus/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/menus/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const menuId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(menuId)) {
+        return res.status(400).json({ message: 'Invalid menu ID' });
       }
       
-      const menuData = req.body;
+      const updateData = req.body;
       
-      const updatedMenu = await storage.updateMenu(id, menuData);
+      const updatedMenu = await storage.updateMenu(menuId, updateData);
       
       if (!updatedMenu) {
         return res.status(404).json({ message: 'Menu not found' });
@@ -586,10 +583,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(updatedMenu);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating menu:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -597,35 +596,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a menu
   app.delete('/api/menus/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const menuId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(menuId)) {
+        return res.status(400).json({ message: 'Invalid menu ID' });
       }
       
-      const result = await storage.deleteMenu(id);
+      const success = await storage.deleteMenu(menuId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Menu not found' });
       }
       
-      res.status(200).json({ message: 'Menu deleted' });
+      res.status(200).json({ message: 'Menu deleted successfully' });
     } catch (error) {
       console.error('Error deleting menu:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Client Routes =====
+  
+  // ===== Clients Routes =====
   
   // Get all clients
   app.get('/api/clients', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      console.log('Attempting to list all clients');
-      console.log('Executing listClients database query');
       const clients = await storage.listClients();
-      console.log(`Retrieved ${clients.length} clients from database`);
-      console.log('Successfully retrieved', clients.length, 'clients');
+      
       res.status(200).json(clients);
     } catch (error) {
       console.error('Error getting clients:', error);
@@ -636,13 +632,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific client
   app.get('/api/clients/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const clientId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID' });
       }
       
-      const client = await storage.getClient(id);
+      const client = await storage.getClient(clientId);
       
       if (!client) {
         return res.status(404).json({ message: 'Client not found' });
@@ -660,30 +656,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const clientData = insertClientSchema.parse(req.body);
       
-      const client = await storage.createClient(clientData);
+      const newClient = await storage.createClient(clientData);
       
-      res.status(201).json(client);
+      res.status(201).json(newClient);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating client:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Update a client
-  app.put('/api/clients/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/clients/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const clientId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID' });
       }
       
-      const clientData = req.body;
+      const updateData = req.body;
       
-      const updatedClient = await storage.updateClient(id, clientData);
+      const updatedClient = await storage.updateClient(clientId, updateData);
       
       if (!updatedClient) {
         return res.status(404).json({ message: 'Client not found' });
@@ -691,10 +689,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(updatedClient);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating client:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -702,31 +702,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a client
   app.delete('/api/clients/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const clientId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID' });
       }
       
-      const result = await storage.deleteClient(id);
+      const success = await storage.deleteClient(clientId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Client not found' });
       }
       
-      res.status(200).json({ message: 'Client deleted' });
+      res.status(200).json({ message: 'Client deleted successfully' });
     } catch (error) {
       console.error('Error deleting client:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Estimate Routes =====
+  
+  // ===== Estimates Routes =====
   
   // Get all estimates
   app.get('/api/estimates', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const estimates = await storage.listEstimates();
+      
       res.status(200).json(estimates);
     } catch (error) {
       console.error('Error getting estimates:', error);
@@ -737,13 +738,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific estimate
   app.get('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const estimateId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
       }
       
-      const estimate = await storage.getEstimate(id);
+      const estimate = await storage.getEstimate(estimateId);
       
       if (!estimate) {
         return res.status(404).json({ message: 'Estimate not found' });
@@ -761,56 +762,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const estimateData = insertEstimateSchema.parse(req.body);
       
-      // Calculate tax and total if not provided
-      if (!estimateData.tax && estimateData.subtotal && estimateData.taxRate) {
-        estimateData.tax = Math.round(estimateData.subtotal * estimateData.taxRate);
-      }
+      const newEstimate = await storage.createEstimate(estimateData);
       
-      if (!estimateData.total && estimateData.subtotal && estimateData.tax) {
-        estimateData.total = estimateData.subtotal + estimateData.tax;
-      }
-      
-      const estimate = await storage.createEstimate({
-        ...estimateData,
-        createdBy: req.session.userId!
-      });
-      
-      res.status(201).json(estimate);
+      res.status(201).json(newEstimate);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating estimate:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Update an estimate
-  app.put('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const estimateId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
       }
       
-      const estimateData = req.body;
+      const updateData = req.body;
       
-      // Calculate tax and total if they've changed
-      if (estimateData.subtotal && estimateData.taxRate && !estimateData.tax) {
-        estimateData.tax = Math.round(estimateData.subtotal * estimateData.taxRate);
-      }
-      
-      if ((estimateData.subtotal || estimateData.tax) && !estimateData.total) {
-        const currentEstimate = await storage.getEstimate(id);
-        if (currentEstimate) {
-          const subtotal = estimateData.subtotal || currentEstimate.subtotal;
-          const tax = estimateData.tax || currentEstimate.tax;
-          estimateData.total = subtotal + tax;
-        }
-      }
-      
-      const updatedEstimate = await storage.updateEstimate(id, estimateData);
+      const updatedEstimate = await storage.updateEstimate(estimateId, updateData);
       
       if (!updatedEstimate) {
         return res.status(404).json({ message: 'Estimate not found' });
@@ -818,10 +795,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(updatedEstimate);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating estimate:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -829,31 +808,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete an estimate
   app.delete('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const estimateId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
       }
       
-      const result = await storage.deleteEstimate(id);
+      const success = await storage.deleteEstimate(estimateId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Estimate not found' });
       }
       
-      res.status(200).json({ message: 'Estimate deleted' });
+      res.status(200).json({ message: 'Estimate deleted successfully' });
     } catch (error) {
       console.error('Error deleting estimate:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Event Routes =====
+  
+  // ===== Events Routes =====
   
   // Get all events
   app.get('/api/events', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const events = await storage.listEvents();
+      const upcoming = req.query.upcoming === 'true';
+      
+      const events = upcoming 
+        ? await storage.listUpcomingEvents()
+        : await storage.listEvents();
+      
       res.status(200).json(events);
     } catch (error) {
       console.error('Error getting events:', error);
@@ -861,27 +845,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get upcoming events
-  app.get('/api/events/upcoming', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const events = await storage.listUpcomingEvents();
-      res.status(200).json(events);
-    } catch (error) {
-      console.error('Error getting upcoming events:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
   // Get a specific event
   app.get('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const eventId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: 'Invalid event ID' });
       }
       
-      const event = await storage.getEvent(id);
+      const event = await storage.getEvent(eventId);
       
       if (!event) {
         return res.status(404).json({ message: 'Event not found' });
@@ -899,30 +872,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const eventData = insertEventSchema.parse(req.body);
       
-      const event = await storage.createEvent(eventData);
+      const newEvent = await storage.createEvent(eventData);
       
-      res.status(201).json(event);
+      res.status(201).json(newEvent);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating event:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Update an event
-  app.put('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const eventId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: 'Invalid event ID' });
       }
       
-      const eventData = req.body;
+      const updateData = req.body;
       
-      const updatedEvent = await storage.updateEvent(id, eventData);
+      const updatedEvent = await storage.updateEvent(eventId, updateData);
       
       if (!updatedEvent) {
         return res.status(404).json({ message: 'Event not found' });
@@ -930,10 +905,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json(updatedEvent);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating event:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -941,82 +918,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete an event
   app.delete('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const eventId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: 'Invalid event ID' });
       }
       
-      const result = await storage.deleteEvent(id);
+      const success = await storage.deleteEvent(eventId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Event not found' });
       }
       
-      res.status(200).json({ message: 'Event deleted' });
+      res.status(200).json({ message: 'Event deleted successfully' });
     } catch (error) {
       console.error('Error deleting event:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
 
-  // ===== Contact Identifier Routes =====
+  // ===== Contact Identifiers Routes =====
   
   // Create a new contact identifier
   app.post('/api/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const data = insertContactIdentifierSchema.parse(req.body);
       
-      if (!data.opportunityId && !data.clientId) {
-        return res.status(400).json({ 
-          message: 'Either opportunityId or clientId must be provided' 
-        });
-      }
+      const result = await storage.createContactIdentifier(data);
       
-      const contactIdentifier = await storage.createContactIdentifier(data);
-      
-      res.status(201).json(contactIdentifier);
+      res.status(201).json(result);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error creating contact identifier:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+  // Get a specific contact identifier
+  app.get('/api/contact-identifiers/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid contact identifier ID' });
+      }
+      
+      const result = await storage.getContactIdentifier(id);
+      
+      if (!result) {
+        return res.status(404).json({ message: 'Contact identifier not found' });
+      }
+      
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error getting contact identifier:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Get contact identifiers for an opportunity
-  app.get('/api/opportunities/:opportunityId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/opportunities/:id/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const opportunityId = parseInt(req.params.opportunityId);
+      const opportunityId = parseInt(req.params.id);
       
       if (isNaN(opportunityId)) {
         return res.status(400).json({ message: 'Invalid opportunity ID' });
       }
       
-      const contactIdentifiers = await storage.listContactIdentifiersForOpportunity(opportunityId);
+      const result = await storage.getContactIdentifiersForOpportunity(opportunityId);
       
-      res.status(200).json(contactIdentifiers);
+      res.status(200).json(result);
     } catch (error) {
-      console.error('Error getting contact identifiers:', error);
+      console.error('Error getting contact identifiers for opportunity:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Get contact identifiers for a client
-  app.get('/api/clients/:clientId/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/clients/:id/contact-identifiers', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const clientId = parseInt(req.params.clientId);
+      const clientId = parseInt(req.params.id);
       
       if (isNaN(clientId)) {
         return res.status(400).json({ message: 'Invalid client ID' });
       }
       
-      const contactIdentifiers = await storage.listContactIdentifiersForClient(clientId);
+      const result = await storage.getContactIdentifiersForClient(clientId);
       
-      res.status(200).json(contactIdentifiers);
+      res.status(200).json(result);
     } catch (error) {
-      console.error('Error getting contact identifiers:', error);
+      console.error('Error getting contact identifiers for client:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -1027,137 +1022,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+        return res.status(400).json({ message: 'Invalid contact identifier ID' });
       }
       
-      const result = await storage.deleteContactIdentifier(id);
+      const success = await storage.deleteContactIdentifier(id);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Contact identifier not found' });
       }
       
-      res.status(200).json({ message: 'Contact identifier deleted' });
+      res.status(200).json({ message: 'Contact identifier deleted successfully' });
     } catch (error) {
       console.error('Error deleting contact identifier:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Communication Routes =====
   
-  // Create a new communication record
+  // ===== Communications Routes =====
+  
+  // Create a new communication
   app.post('/api/communications', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const data = insertCommunicationSchema.parse(req.body);
       
-      if (!data.opportunityId && !data.clientId) {
-        return res.status(400).json({ 
-          message: 'Either opportunityId or clientId must be provided' 
-        });
-      }
+      // Set the user ID for tracking who created it
+      const userId = req.session.userId;
       
-      // Set the current user as the user associated with this communication if not specified
-      if (!data.userId) {
-        data.userId = req.session.userId!;
-      }
+      const result = await storage.createCommunication({
+        ...data,
+        userId
+      });
       
-      const communication = await storage.createCommunication(data);
-      
-      res.status(201).json(communication);
+      res.status(201).json(result);
     } catch (error) {
+      console.error('Error creating communication:', error);
+      
       if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
-      console.error('Error creating communication record:', error);
+      
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+  // Get a specific communication
+  app.get('/api/communications/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid communication ID' });
+      }
+      
+      const result = await storage.getCommunication(id);
+      
+      if (!result) {
+        return res.status(404).json({ message: 'Communication not found' });
+      }
+      
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error getting communication:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Get communications for an opportunity
-  app.get('/api/opportunities/:opportunityId/communications', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/opportunities/:id/communications', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const opportunityId = parseInt(req.params.opportunityId);
+      const opportunityId = parseInt(req.params.id);
       
       if (isNaN(opportunityId)) {
         return res.status(400).json({ message: 'Invalid opportunity ID' });
       }
       
-      const communications = await storage.listCommunicationsForOpportunity(opportunityId);
+      const result = await storage.getCommunicationsForOpportunity(opportunityId);
       
-      res.status(200).json(communications);
+      res.status(200).json(result);
     } catch (error) {
-      console.error('Error getting communications:', error);
+      console.error('Error getting communications for opportunity:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Get communications for a client
-  app.get('/api/clients/:clientId/communications', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/clients/:id/communications', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const clientId = parseInt(req.params.clientId);
+      const clientId = parseInt(req.params.id);
       
       if (isNaN(clientId)) {
         return res.status(400).json({ message: 'Invalid client ID' });
       }
       
-      const communications = await storage.listCommunicationsForClient(clientId);
+      const result = await storage.getCommunicationsForClient(clientId);
       
-      res.status(200).json(communications);
+      res.status(200).json(result);
     } catch (error) {
-      console.error('Error getting communications:', error);
+      console.error('Error getting communications for client:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Contact Search API =====
   
-  // Find contacts (clients or opportunities) by email or phone
-  app.post('/api/contacts/find', isAuthenticated, async (req: Request, res: Response) => {
+  // Search contacts
+  app.get('/api/contacts/search', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { identifier, type } = req.body;
+      const { identifier, type } = req.query;
       
       if (!identifier) {
         return res.status(400).json({ message: 'Identifier is required' });
       }
       
-      if (type && !['email', 'phone'].includes(type)) {
-        return res.status(400).json({ message: 'Type must be either "email" or "phone"' });
-      }
+      const result = await storage.findContactsByIdentifier(identifier.toString(), type?.toString());
       
-      const results = await storage.findContactsByIdentifier(identifier, type);
-      
-      res.status(200).json(results);
+      res.status(200).json(result);
     } catch (error) {
       console.error('Error searching contacts:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Raw Lead Management Routes =====
   
-  // Create a new raw lead
-  app.post('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
+  // ===== Raw Leads Management =====
+  
+  // Process a raw lead into an opportunity
+  app.post('/api/raw-leads/:id/process', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const leadData = insertRawLeadSchema.parse(req.body);
+      const leadId = parseInt(req.params.id);
       
-      const rawLead = await storage.createRawLead(leadData);
-      
-      // Attempt to parse it with AI if this is enabled
-      if (process.env.OPENAI_API_KEY) {
-        try {
-          await leadGenService.processRawLead(rawLead.id);
-        } catch (aiError) {
-          console.error('Error processing raw lead with AI:', aiError);
-          // Continue, as this should not block lead creation
-        }
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID' });
       }
       
-      res.status(201).json(rawLead);
+      // Get the raw lead data
+      const lead = await storage.getRawLead(leadId);
+      
+      if (!lead) {
+        return res.status(404).json({ message: 'Raw lead not found' });
+      }
+      
+      // Create an opportunity from the lead
+      // Depending on the lead data structure, you'll need to map fields accordingly
+      const opportunityData = {
+        firstName: lead.firstName || '',
+        lastName: lead.lastName || '',
+        email: lead.email || '',
+        phone: lead.phone || null,
+        eventType: lead.eventType || '',
+        eventDate: lead.eventDate || null,
+        guestCount: lead.guestCount || null,
+        venue: lead.venue || null,
+        opportunitySource: 'raw_lead',
+        status: 'new',
+        notes: lead.notes || null,
+        budget: lead.budget || null
+      };
+      
+      const opportunity = await storage.createOpportunity(opportunityData);
+      
+      // Update the raw lead status to indicate it's been processed
+      await storage.updateRawLead(leadId, { 
+        status: 'qualified',
+        processed: true,
+        processedAt: new Date(),
+        relatedOpportunityId: opportunity.id
+      });
+      
+      // Return the created opportunity
+      res.status(200).json({ 
+        message: 'Raw lead processed successfully',
+        opportunity 
+      });
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error('Error creating raw lead:', error);
+      console.error('Error processing raw lead:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -1165,12 +1200,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all raw leads
   app.get('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const status = req.query.status as string | undefined;
-      const rawLeads = status 
-        ? await storage.listRawLeadsByStatus(status)
-        : await storage.listRawLeads();
+      const status = req.query.status as string;
       
-      res.status(200).json(rawLeads);
+      let leads;
+      
+      if (status) {
+        leads = await storage.listRawLeadsByStatus(status);
+      } else {
+        leads = await storage.listRawLeads();
+      }
+      
+      res.status(200).json(leads);
     } catch (error) {
       console.error('Error getting raw leads:', error);
       res.status(500).json({ message: 'Server error' });
@@ -1180,48 +1220,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific raw lead
   app.get('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const leadId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID' });
       }
       
-      const rawLead = await storage.getRawLead(id);
+      const lead = await storage.getRawLead(leadId);
       
-      if (!rawLead) {
+      if (!lead) {
         return res.status(404).json({ message: 'Raw lead not found' });
       }
       
-      res.status(200).json(rawLead);
+      res.status(200).json(lead);
     } catch (error) {
       console.error('Error getting raw lead:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Update a raw lead
-  app.put('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+  // Create a new raw lead
+  app.post('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const leadData = insertRawLeadSchema.parse(req.body);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      const newLead = await storage.createRawLead(leadData);
+      
+      res.status(201).json(newLead);
+    } catch (error) {
+      console.error('Error creating raw lead:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
       
-      const rawLeadData = req.body;
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+  // Update a raw lead
+  app.patch('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = parseInt(req.params.id);
       
-      const updatedRawLead = await storage.updateRawLead(id, rawLeadData);
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID' });
+      }
       
-      if (!updatedRawLead) {
+      const updateData = req.body;
+      
+      const updatedLead = await storage.updateRawLead(leadId, updateData);
+      
+      if (!updatedLead) {
         return res.status(404).json({ message: 'Raw lead not found' });
       }
       
-      res.status(200).json(updatedRawLead);
+      res.status(200).json(updatedLead);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
       console.error('Error updating raw lead:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -1229,77 +1290,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a raw lead
   app.delete('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const leadId = parseInt(req.params.id);
       
-      if (isNaN(id)) {
-        return res.status(400).json({ message: 'Invalid ID' });
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID' });
       }
       
-      const result = await storage.deleteRawLead(id);
+      const success = await storage.deleteRawLead(leadId);
       
-      if (!result) {
+      if (!success) {
         return res.status(404).json({ message: 'Raw lead not found' });
       }
       
-      res.status(200).json({ message: 'Raw lead deleted' });
+      res.status(200).json({ message: 'Raw lead deleted successfully' });
     } catch (error) {
       console.error('Error deleting raw lead:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Bulk delete raw leads
-  app.post('/api/raw-leads/bulk-delete', isAuthenticated, async (req: Request, res: Response) => {
+  // Delete multiple raw leads
+  app.post('/api/raw-leads/delete-many', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { ids } = req.body;
       
-      if (!Array.isArray(ids) || !ids.every(id => typeof id === 'number')) {
-        return res.status(400).json({ message: 'Invalid IDs format' });
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'IDs must be a non-empty array' });
       }
       
-      const results = await Promise.all(ids.map(id => storage.deleteRawLead(id)));
-      
-      const deleted = results.filter(Boolean).length;
-      const failed = ids.length - deleted;
+      const result = await storage.deleteManyRawLeads(ids);
       
       res.status(200).json({ 
-        message: `Deleted ${deleted} raw leads, ${failed} failed` 
+        message: `Deleted ${result.deleted} raw leads, failed to delete ${result.failed} raw leads`,
+        ...result
       });
     } catch (error) {
-      console.error('Error bulk deleting raw leads:', error);
+      console.error('Error deleting multiple raw leads:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== Lead Generation System Settings =====
   
-  app.get('/api/leads', isAuthenticated, async (req: Request, res: Response) => {
+  // Get lead system settings
+  app.get('/api/lead-system/settings', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const leads = await storage.getLeadSystemSettings();
-      res.status(200).json(leads);
+      const settings = await storage.getLeadSystemSettings();
+      
+      res.status(200).json(settings);
     } catch (error) {
-      console.error('Error getting lead settings:', error);
+      console.error('Error getting lead system settings:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
 
   // ===== Email Sync Service Routes =====
   
-  // Start the email sync service
+  // Start email sync service
   app.post('/api/admin/email-sync/start', isAdmin, async (req: Request, res: Response) => {
     try {
-      const { intervalMinutes } = req.body;
-      let interval = 5; // Default to 5 minutes
+      const { interval } = req.body;
       
-      if (intervalMinutes && typeof intervalMinutes === 'number' && intervalMinutes > 0) {
-        interval = intervalMinutes;
-      }
+      // Start the service with an optional custom interval
+      const result = gmailSyncService.startSyncService(interval);
       
-      // Start the sync service with the specified interval
-      gmailSyncService.startSyncService(interval);
-      
-      res.status(200).json({ 
-        message: `Email sync service started with ${interval} minute interval` 
+      res.status(200).json({
+        message: 'Email sync service started successfully',
+        status: result
       });
     } catch (error) {
       console.error('Error starting email sync service:', error);
@@ -1307,66 +1362,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Stop the email sync service
+  // Stop email sync service
   app.post('/api/admin/email-sync/stop', isAdmin, async (req: Request, res: Response) => {
     try {
-      gmailSyncService.stopSyncService();
+      // Stop the service
+      const result = gmailSyncService.stopSyncService();
       
-      res.status(200).json({ message: 'Email sync service stopped' });
+      res.status(200).json({
+        message: 'Email sync service stopped successfully',
+        status: result
+      });
     } catch (error) {
       console.error('Error stopping email sync service:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Trigger a manual email sync
-  app.post('/api/admin/email-sync/trigger', isAdmin, async (req: Request, res: Response) => {
+  // Manually trigger sync
+  app.post('/api/admin/email-sync/manual', isAdmin, async (req: Request, res: Response) => {
     try {
-      const { count } = req.body;
-      let processCount = 10; // Default to 10 emails
+      // Trigger manual sync
+      const result = await gmailSyncService.manualSync();
       
-      if (count && typeof count === 'number' && count > 0) {
-        processCount = count;
-      }
-      
-      const result = await gmailSyncService.manualSync(processCount);
-      
-      res.status(200).json(result);
+      res.status(200).json({
+        message: 'Manual sync executed successfully',
+        result
+      });
     } catch (error) {
-      console.error('Error triggering manual email sync:', error);
+      console.error('Error executing manual sync:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Get email sync status
+  // Get sync status
   app.get('/api/admin/email-sync/status', isAdmin, async (req: Request, res: Response) => {
     try {
+      // Get service status
       const status = gmailSyncService.getSyncStatus();
       
       res.status(200).json(status);
     } catch (error) {
-      console.error('Error getting email sync status:', error);
+      console.error('Error getting sync status:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-
+  
   // ===== Communication Sync Service Routes =====
   
-  // Start the communication sync service
-  app.post('/api/admin/communication-sync/start', isAdmin, async (req: Request, res: Response) => {
+  // Start communication sync service
+  app.post('/api/admin/comm-sync/start', isAdmin, async (req: Request, res: Response) => {
     try {
-      const { intervalMinutes } = req.body;
-      let interval = 5; // Default to 5 minutes
+      const { interval } = req.body;
       
-      if (intervalMinutes && typeof intervalMinutes === 'number' && intervalMinutes > 0) {
-        interval = intervalMinutes;
-      }
+      // Start the service with an optional custom interval
+      const result = communicationSyncService.startSyncService(interval);
       
-      // Start the sync service with the specified interval
-      communicationSyncService.startSyncService(interval);
-      
-      res.status(200).json({ 
-        message: `Communication sync service started with ${interval} minute interval` 
+      res.status(200).json({
+        message: 'Communication sync service started successfully',
+        status: result
       });
     } catch (error) {
       console.error('Error starting communication sync service:', error);
@@ -1374,12 +1427,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Stop the communication sync service
-  app.post('/api/admin/communication-sync/stop', isAdmin, async (req: Request, res: Response) => {
+  // Stop communication sync service
+  app.post('/api/admin/comm-sync/stop', isAdmin, async (req: Request, res: Response) => {
     try {
-      communicationSyncService.stopSyncService();
+      // Stop the service
+      const result = communicationSyncService.stopSyncService();
       
-      res.status(200).json({ message: 'Communication sync service stopped' });
+      res.status(200).json({
+        message: 'Communication sync service stopped successfully',
+        status: result
+      });
     } catch (error) {
       console.error('Error stopping communication sync service:', error);
       res.status(500).json({ message: 'Server error' });
@@ -1387,8 +1444,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get communication sync status
-  app.get('/api/admin/communication-sync/status', isAdmin, async (req: Request, res: Response) => {
+  app.get('/api/admin/comm-sync/status', isAdmin, async (req: Request, res: Response) => {
     try {
+      // Get service status
       const status = communicationSyncService.getSyncStatus();
       
       res.status(200).json(status);
@@ -1397,100 +1455,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Server error' });
     }
   });
-
-  // ===== AI Suggestion API Endpoints =====
   
-  app.post('/api/suggestions/generate', async (req: Request, res: Response) => {
+  // ===== AI Suggestions =====
+  
+  // Get suggestions for form fields
+  app.post('/api/ai/suggestions', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { questionText, questionType } = req.body;
+      const context = req.body;
       
-      if (!questionText || !questionType) {
-        return res.status(400).json({
-          success: false,
-          message: 'Question text and type are required'
-        });
+      if (!context.questionType || !context.questionText) {
+        return res.status(400).json({ message: 'Missing required fields' });
       }
       
-      const suggestion = await generateSuggestion(questionText, questionType);
+      const suggestion = await generateSuggestion(context);
       
-      return res.status(200).json({
-        success: true,
-        suggestion
-      });
+      res.status(200).json(suggestion);
     } catch (error) {
-      console.error('Error generating suggestion:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to generate suggestion'
+      console.error('Error generating suggestions:', error);
+      res.status(500).json({ 
+        message: 'Unable to generate suggestions',
+        suggestion: 'Consider providing a clear, concise response.'
       });
     }
   });
   
-  app.get('/api/suggestions/help/:questionType', (req: Request, res: Response) => {
+  // Get help text for question types
+  app.get('/api/ai/help/:questionType', isAuthenticated, (req: Request, res: Response) => {
     try {
       const { questionType } = req.params;
       
-      if (!questionType) {
-        return res.status(400).json({
-          success: false,
-          message: 'Question type is required'
-        });
-      }
+      const helpText = getQuestionTypeHelp(questionType);
       
-      const help = getQuestionTypeHelp(questionType);
-      
-      return res.status(200).json({
-        success: true,
-        help
-      });
+      res.status(200).json({ helpText });
     } catch (error) {
-      console.error('Error getting help for question type:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to get help for question type'
-      });
+      console.error('Error getting help text:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
   
-  app.post('/api/suggestions/analyze', async (req: Request, res: Response) => {
+  // Analyze form data
+  app.post('/api/ai/analyze-form', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { formData } = req.body;
+      const { formData, questions } = req.body;
       
-      if (!formData) {
-        return res.status(400).json({
-          success: false,
-          message: 'Form data is required'
-        });
+      if (!formData || !questions) {
+        return res.status(400).json({ message: 'Missing required fields' });
       }
       
-      const analysis = await analyzeFormData(formData);
+      const analysis = await analyzeFormData(formData, questions);
       
-      return res.status(200).json({
-        success: true,
-        analysis
-      });
+      res.status(200).json(analysis);
     } catch (error) {
       console.error('Error analyzing form data:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to analyze form data'
+      res.status(500).json({ 
+        message: 'Unable to analyze form data',
+        completeness: 0,
+        suggestions: ['Please complete all required fields.']
       });
-    }
-  });
-
-  // ===== System Info Endpoint =====
-  
-  app.get('/api/system-info', async (req: Request, res: Response) => {
-    try {
-      res.status(200).json({
-        version: '1.0.0',
-        dbStatus: 'connected',
-        emailSyncEnabled: !!process.env.GMAIL_API_KEY,
-        aiEnabled: process.env.OPENAI_API_KEY ? true : false
-      });
-    } catch (error) {
-      console.error('Error getting system info:', error);
-      res.status(500).json({ message: 'Server error' });
     }
   });
 
