@@ -141,11 +141,45 @@ export default function QuestionLibraryEdit() {
         default_text: data.defaultText,
         question_type: data.questionType,
         category: data.category || null,
-        default_required: data.defaultRequired,
-        helper_text: data.helperText || null,
-        placeholder: data.placeholder || null,
-        default_metadata: prepareMetadataForSubmission(),
+        default_metadata: {
+          // Include validation rules if they exist
+          ...(Object.keys(validationRules).length > 0 && { validation: validationRules }),
+          
+          // Add other general metadata properties
+          defaultRequired: data.defaultRequired,
+          helperText: data.helperText || null,
+          placeholder: data.placeholder || null,
+        },
+        
+        // `default_options` for choice types (outside of default_metadata)
+        default_options: (['checkbox_group', 'radio_group', 'dropdown'].includes(data.questionType))
+          ? options.map(opt => ({
+              label: opt.label,
+              value: opt.value || opt.label.toLowerCase().replace(/\s+/g, '_')
+            }))
+          : null,
       };
+      
+      // Add matrix rows and columns as separate top-level properties for matrix questions
+      if (data.questionType === 'matrix') {
+        Object.assign(submission, {
+          matrixRows: rows.map(row => ({
+            rowKey: row.id.replace('row-', 'row_'), // Generate rowKey from id if not set
+            label: row.label,
+            price: null,
+            defaultMetadata: {},
+            rowOrder: parseInt(row.id.split('-')[1], 10) // Use id number as order
+          })),
+          
+          matrixColumns: columns.map(col => ({
+            columnKey: col.id.replace('col-', 'col_'), // Generate columnKey from id if not set
+            header: col.label,
+            cellInputType: 'radio', // Default to radio input type
+            defaultMetadata: {},
+            columnOrder: parseInt(col.id.split('-')[1], 10) // Use id number as order
+          }))
+        });
+      }
 
       if (isEditing) {
         // Update existing question
