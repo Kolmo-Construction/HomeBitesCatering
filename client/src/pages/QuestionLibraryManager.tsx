@@ -39,24 +39,29 @@ export default function QuestionLibraryManager() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['/api/form-builder/library-questions', page, pageSize, searchQuery, categoryFilter],
     queryFn: async () => {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('pageSize', pageSize.toString());
-      
-      if (searchQuery) {
-        params.append('search', searchQuery);
+      try {
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        params.append('pageSize', pageSize.toString());
+        
+        if (searchQuery) {
+          params.append('search', searchQuery);
+        }
+        
+        if (categoryFilter) {
+          params.append('category', categoryFilter);
+        }
+        
+        const response = await fetch(`/api/form-builder/library-questions?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch questions');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching questions:", error);
+        return { data: [], pagination: { page: 1, pageSize, total: 0, totalPages: 0 } };
       }
-      
-      if (categoryFilter) {
-        params.append('category', categoryFilter);
-      }
-      
-      const response = await fetch(`/api/form-builder/library-questions?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch questions');
-      }
-      return await response.json();
     }
   });
 
