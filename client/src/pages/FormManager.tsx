@@ -243,7 +243,7 @@ export default function FormManager() {
           queryStr += `&search=${encodeURIComponent(searchQuery)}`;
         }
         
-        if (statusFilter) {
+        if (statusFilter && statusFilter !== 'all') {
           queryStr += `&status=${encodeURIComponent(statusFilter)}`;
         }
         

@@ -70,14 +70,14 @@ const formPageSchema = z.object({
 });
 
 // Page Component for the sortable page list
-const SortablePage = ({ page, isSelected, onSelect, provided }) => {
+const SortablePage = ({ page, isSelected, onSelect }) => {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: page.id });
+  } = useSortable({ id: page.id || 'temp-id' });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -107,14 +107,14 @@ const SortablePage = ({ page, isSelected, onSelect, provided }) => {
 };
 
 // Question Component for the sortable question list
-const SortableQuestion = ({ question, isSelected, onSelect, provided }) => {
+const SortableQuestion = ({ question, isSelected, onSelect }) => {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: question.id });
+  } = useSortable({ id: question.id || 'temp-question-id' });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1109,10 +1109,10 @@ export default function FormEditor() {
                   </div>
                 </div>
               ) : (
-                <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={questions.map(q => q.id || `temp-${Math.random()}`)} strategy={verticalListSortingStrategy}>
                   {questions.map(question => (
                     <SortableQuestion
-                      key={question.id}
+                      key={question.id || `temp-${Math.random()}`}
                       question={question}
                       isSelected={selectedQuestion?.id === question.id}
                       onSelect={() => setSelectedQuestion(question)}
