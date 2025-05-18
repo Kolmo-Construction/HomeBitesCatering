@@ -340,23 +340,43 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       const libraryOptions = libraryQuestion.defaultOptions || libraryQuestion.default_options || [];
       const existingOverrides = question?.optionsOverrides || question?.options_overrides || [];
       
-      // Merge library options with any existing overrides
-      const mergedOptions = libraryOptions.map(option => {
-        const override = existingOverrides.find(o => o.value === option.value);
-        return override || option;
-      });
+      // If the question has overrides set, use them; otherwise use library options
+      const hasOverrides = existingOverrides && existingOverrides.length > 0;
       
-      setOptions(mergedOptions);
-      form.setValue('optionsOverrides', mergedOptions);
+      if (hasOverrides) {
+        // When we have overrides, we need to ensure all library options are represented
+        // First, include all existing overrides
+        let mergedOptions = [...existingOverrides];
+        
+        // Then add any library options that don't have an override
+        libraryOptions.forEach(libOption => {
+          if (!mergedOptions.some(override => override.value === libOption.value)) {
+            mergedOptions.push(libOption);
+          }
+        });
+        
+        setOptions(mergedOptions);
+        form.setValue('optionsOverrides', mergedOptions);
+      } else {
+        // No overrides, use library options directly
+        setOptions(libraryOptions);
+        form.setValue('optionsOverrides', []); // Empty array means no overrides
+      }
     }
   }, [libraryQuestion, questionType, form]);
 
   // Handle form submission with all overrides
   const handleSubmit = async (data) => {
     try {
-      // If this is a choice-based question, add the options to the data
+      // Handle options overrides for choice-based questions
       if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
-        data.optionsOverrides = options;
+        // Only include options as overrides if they have been explicitly overridden
+        // An empty array means "no overrides", whereas undefined means "not applicable"
+        if (form.getValues("optionsOverrides")?.length > 0) {
+          data.optionsOverrides = options; // Use current options state
+        } else {
+          data.optionsOverrides = []; // Empty array to clear any existing overrides
+        }
       }
       
       await onSave(data);
@@ -717,9 +737,11 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                           setOptions([...libraryOptions]); // Create a new array to trigger state update
                           form.setValue("optionsOverrides", []);
                         } else {
-                          // Clone the current options to make them overridable
-                          const currentOptions = [...options];
-                          form.setValue("optionsOverrides", currentOptions);
+                          // When enabling overrides, use current options as a starting point
+                          // This preserves the order and any existing customizations
+                          const libraryOptions = libraryQuestion?.defaultOptions || 
+                                               libraryQuestion?.default_options || [];
+                          form.setValue("optionsOverrides", [...libraryOptions]);
                         }
                       }}
                     />
