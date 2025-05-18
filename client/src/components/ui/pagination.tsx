@@ -8,7 +8,14 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+export function Pagination({ 
+  currentPage = 1, 
+  totalPages = 1, 
+  onPageChange 
+}: PaginationProps) {
+  // Ensure valid values and prevent errors
+  const safeTotalPages = Math.max(1, totalPages);
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), safeTotalPages);
   const renderPageButtons = () => {
     const buttons = [];
     
@@ -16,18 +23,18 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
     buttons.push(
       <Button
         key="page-1"
-        variant={currentPage === 1 ? "default" : "outline"}
+        variant={safeCurrentPage === 1 ? "default" : "outline"}
         size="sm"
         onClick={() => onPageChange(1)}
-        className={`h-8 w-8 ${currentPage === 1 ? 'bg-primary text-primary-foreground' : ''}`}
+        className={`h-8 w-8 ${safeCurrentPage === 1 ? 'bg-primary text-primary-foreground' : ''}`}
       >
         1
       </Button>
     );
 
     // If there are many pages, use ellipsis
-    if (totalPages > 5) {
-      if (currentPage > 3) {
+    if (safeTotalPages > 5) {
+      if (safeCurrentPage > 3) {
         buttons.push(
           <span key="ellipsis-start" className="flex items-center justify-center h-8 w-8">
             ...
@@ -36,24 +43,24 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       }
 
       // Show current page and surrounding pages
-      const startPage = Math.max(2, currentPage - 1);
-      const endPage = Math.min(totalPages - 1, currentPage + 1);
+      const startPage = Math.max(2, safeCurrentPage - 1);
+      const endPage = Math.min(safeTotalPages - 1, safeCurrentPage + 1);
 
       for (let i = startPage; i <= endPage; i++) {
         buttons.push(
           <Button
             key={`page-${i}`}
-            variant={currentPage === i ? "default" : "outline"}
+            variant={safeCurrentPage === i ? "default" : "outline"}
             size="sm"
             onClick={() => onPageChange(i)}
-            className={`h-8 w-8 ${currentPage === i ? 'bg-primary text-primary-foreground' : ''}`}
+            className={`h-8 w-8 ${safeCurrentPage === i ? 'bg-primary text-primary-foreground' : ''}`}
           >
             {i}
           </Button>
         );
       }
 
-      if (currentPage < totalPages - 2) {
+      if (safeCurrentPage < safeTotalPages - 2) {
         buttons.push(
           <span key="ellipsis-end" className="flex items-center justify-center h-8 w-8">
             ...
@@ -62,14 +69,14 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       }
     } else {
       // For fewer pages, show all page buttons
-      for (let i = 2; i < totalPages; i++) {
+      for (let i = 2; i < safeTotalPages; i++) {
         buttons.push(
           <Button
             key={`page-${i}`}
-            variant={currentPage === i ? "default" : "outline"}
+            variant={safeCurrentPage === i ? "default" : "outline"}
             size="sm"
             onClick={() => onPageChange(i)}
-            className={`h-8 w-8 ${currentPage === i ? 'bg-primary text-primary-foreground' : ''}`}
+            className={`h-8 w-8 ${safeCurrentPage === i ? 'bg-primary text-primary-foreground' : ''}`}
           >
             {i}
           </Button>
@@ -78,16 +85,16 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
     }
 
     // Always show last page if there's more than one page
-    if (totalPages > 1) {
+    if (safeTotalPages > 1) {
       buttons.push(
         <Button
-          key={`page-${totalPages}`}
-          variant={currentPage === totalPages ? "default" : "outline"}
+          key={`page-${safeTotalPages}`}
+          variant={safeCurrentPage === safeTotalPages ? "default" : "outline"}
           size="sm"
-          onClick={() => onPageChange(totalPages)}
-          className={`h-8 w-8 ${currentPage === totalPages ? 'bg-primary text-primary-foreground' : ''}`}
+          onClick={() => onPageChange(safeTotalPages)}
+          className={`h-8 w-8 ${safeCurrentPage === safeTotalPages ? 'bg-primary text-primary-foreground' : ''}`}
         >
-          {totalPages}
+          {safeTotalPages}
         </Button>
       );
     }

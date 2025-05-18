@@ -30,58 +30,78 @@ import { useLocation } from "wouter";
 
 export default function QuestionLibraryManager() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategory] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  
+  // Simple fetch function that returns a safe default in case of error
+  const fetchQuestions = async () => {
+    try {
+      // Create query string manually to avoid URLSearchParams
+      let queryStr = `page=${page}&pageSize=${pageSize}`;
+      
+      if (searchQuery) {
+        queryStr += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+      
+      if (categoryFilter) {
+        queryStr += `&category=${encodeURIComponent(categoryFilter)}`;
+      }
+      
+      const response = await fetch(`/api/form-builder/library-questions?${queryStr}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch questions");
+      }
+      
+      const result = await response.json();
+      
+      // Ensure we always have the expected structure
+      return {
+        data: result.data || [],
+        pagination: result.pagination || {
+          page: 1,
+          pageSize,
+          total: (result.data || []).length,
+          totalPages: 1
+        }
+      };
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      return {
+        data: [],
+        pagination: {
+          page: 1,
+          pageSize,
+          total: 0,
+          totalPages: 1
+        }
+      };
+    }
+  };
 
   // Fetch library questions with search, category filter and pagination
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['/api/form-builder/library-questions', page, pageSize, searchQuery, categoryFilter],
-    queryFn: async () => {
-      try {
-        // Build query parameters
-        const params = new URLSearchParams();
-        params.append('page', page.toString());
-        params.append('pageSize', pageSize.toString());
-        
-        if (searchQuery) {
-          params.append('search', searchQuery);
-        }
-        
-        if (categoryFilter) {
-          params.append('category', categoryFilter);
-        }
-        
-        const response = await fetch(`/api/form-builder/library-questions?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch questions');
-        }
-        return await response.json();
-      } catch (error) {
-        console.error("Error fetching questions:", error);
-        return { data: [], pagination: { page: 1, pageSize, total: 0, totalPages: 0 } };
-      }
-    }
+    queryFn: fetchQuestions
   });
 
   const handleCreateNew = () => {
     navigate("/admin/form-builder/question-library/new");
   };
 
-  const handleEdit = (questionId: number) => {
+  const handleEdit = (questionId) => {
     navigate(`/admin/form-builder/question-library/${questionId}/edit`);
   };
 
-  const handleDelete = async (questionId: number) => {
+  const handleDelete = async (questionId) => {
     try {
       const response = await fetch(`/api/form-builder/library-questions/${questionId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete question');
+        throw new Error("Failed to delete question");
       }
 
       toast({
@@ -90,7 +110,7 @@ export default function QuestionLibraryManager() {
       });
 
       // Refetch the questions list
-      window.location.reload();
+      refetch();
     } catch (error) {
       toast({
         variant: "destructive",
@@ -101,8 +121,10 @@ export default function QuestionLibraryManager() {
   };
 
   // Get the question type display label
-  const getQuestionTypeLabel = (type: string) => {
-    const typeMap: Record<string, string> = {
+  const getQuestionTypeLabel = (type) => {
+    if (!type) return 'Unknown';
+    
+    const typeMap = {
       'textbox': 'Text Field',
       'textarea': 'Text Area',
       'number': 'Number',
@@ -136,12 +158,16 @@ export default function QuestionLibraryManager() {
           <div className="text-center py-10">
             <h3 className="text-lg font-medium text-gray-900">Error</h3>
             <p className="mt-1 text-sm text-gray-500">Failed to load question library. Please try again.</p>
-            <Button className="mt-4" onClick={() => window.location.reload()}>Retry</Button>
+            <Button className="mt-4" onClick={() => refetch()}>Retry</Button>
           </div>
         </CardContent>
       </Card>
     );
   }
+
+  // Safe access to ensure we avoid undefined errors
+  const questions = data?.data || [];
+  const pagination = data?.pagination || { page: 1, pageSize, total: 0, totalPages: 1 };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -179,7 +205,7 @@ export default function QuestionLibraryManager() {
                 placeholder="Filter by category"
                 value={categoryFilter}
                 onChange={(e) => {
-                  setCategoryFilter(e.target.value);
+                  setCategory(e.target.value);
                   setPage(1); // Reset to first page on new filter
                 }}
               />
@@ -204,21 +230,21 @@ export default function QuestionLibraryManager() {
                       Loading...
                     </TableCell>
                   </TableRow>
-                ) : !data || !data.data || data.data.length === 0 ? (
+                ) : questions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                       No questions found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.data.map((question: any) => (
+                  questions.map((question) => (
                     <TableRow key={question.id}>
                       <TableCell className="font-medium">
-                        {question.library_question_key}
+                        {question.libraryQuestionKey || question.library_question_key || '—'}
                       </TableCell>
-                      <TableCell>{question.default_text}</TableCell>
-                      <TableCell>{getQuestionTypeLabel(question.question_type)}</TableCell>
-                      <TableCell>{question.category || '-'}</TableCell>
+                      <TableCell>{question.defaultText || question.default_text || '—'}</TableCell>
+                      <TableCell>{getQuestionTypeLabel(question.questionType || question.question_type)}</TableCell>
+                      <TableCell>{question.category || '—'}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -253,18 +279,24 @@ export default function QuestionLibraryManager() {
             </Table>
           </div>
           
-          {data && data.pagination && (
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, data.pagination.total)} of {data.pagination.total} entries
-              </div>
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <div className="flex-1 text-sm text-muted-foreground">
+              {pagination.total > 0 ? (
+                <>
+                  Showing {Math.min((page - 1) * pageSize + 1, pagination.total)} to {Math.min(page * pageSize, pagination.total)} of {pagination.total} entries
+                </>
+              ) : (
+                <>No entries found</>
+              )}
+            </div>
+            {pagination.total > 0 && pagination.totalPages > 1 && (
               <Pagination
                 currentPage={page}
-                totalPages={data.pagination.totalPages}
+                totalPages={pagination.totalPages}
                 onPageChange={setPage}
               />
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
