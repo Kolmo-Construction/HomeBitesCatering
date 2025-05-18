@@ -59,6 +59,21 @@ export const conditionalLogicConditionTypeEnum = pgEnum("conditional_logic_condi
   'is_not_selected_option_value',
 ]);
 
+export const formStatusEnum = pgEnum("form_status", [
+  'draft', 'published', 'archived', 'testing'
+]);
+
+// Existing forms and formPages are already defined below, 
+// do not duplicate the definitions
+
+// Types for reordering pages
+export const reorderFormPagesSchema = z.array(z.object({
+  pageId: z.number(),
+  newPageOrder: z.number().int().min(0)
+}));
+
+export type ReorderFormPages = z.infer<typeof reorderFormPagesSchema>;
+
 export const formRuleTargetTypeEnum = pgEnum("form_rule_target_type", [
   'question',
   'page',
