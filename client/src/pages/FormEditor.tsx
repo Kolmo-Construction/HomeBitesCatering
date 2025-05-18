@@ -534,13 +534,34 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
                         <FormLabel>Required</FormLabel>
+                        <FormDescription className="text-xs">
+                          Original: {libraryQuestion?.isRequired || libraryQuestion?.is_required ? "Yes" : "No"}
+                        </FormDescription>
                       </div>
-                      <FormControl>
+                      <div className="flex items-center gap-2">
+                        <FormLabel htmlFor="override-required" className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
                         <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                          id="override-required"
+                          checked={(field.value !== libraryQuestion?.isRequired && field.value !== libraryQuestion?.is_required) || false}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Reset to library value
+                              form.setValue("isRequiredOverride", libraryQuestion?.isRequired || libraryQuestion?.is_required || false);
+                            }
+                          }}
+                          className="mr-2"
                         />
-                      </FormControl>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={(field.value === libraryQuestion?.isRequired || field.value === libraryQuestion?.is_required) && 
+                              !(field.value !== libraryQuestion?.isRequired && field.value !== libraryQuestion?.is_required)}
+                          />
+                        </FormControl>
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -552,13 +573,33 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
                         <FormLabel>Hidden</FormLabel>
+                        <FormDescription className="text-xs">
+                          Original: {libraryQuestion?.isHidden || libraryQuestion?.is_hidden ? "Yes" : "No"}
+                        </FormDescription>
                       </div>
-                      <FormControl>
+                      <div className="flex items-center gap-2">
+                        <FormLabel htmlFor="override-hidden" className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
                         <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                          checked={(field.value !== libraryQuestion?.isHidden && field.value !== libraryQuestion?.is_hidden) || false}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Reset to library value
+                              form.setValue("isHiddenOverride", libraryQuestion?.isHidden || libraryQuestion?.is_hidden || false);
+                            }
+                          }}
+                          className="mr-2"
                         />
-                      </FormControl>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={(field.value === libraryQuestion?.isHidden || field.value === libraryQuestion?.is_hidden) && 
+                              !(field.value !== libraryQuestion?.isHidden && field.value !== libraryQuestion?.is_hidden)}
+                          />
+                        </FormControl>
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -569,12 +610,32 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                 name="helperTextOverride"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Helper Text Override</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Helper Text Override</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
+                        <Switch 
+                          checked={field.value !== (libraryQuestion?.helperText || libraryQuestion?.helper_text)}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Reset to library value
+                              form.setValue("helperTextOverride", libraryQuestion?.helperText || libraryQuestion?.helper_text || "");
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
                     <FormControl>
-                      <Input {...field} />
+                      <Input 
+                        {...field} 
+                        disabled={!field.value && !field.value !== (libraryQuestion?.helperText || libraryQuestion?.helper_text)}
+                      />
                     </FormControl>
-                    <FormDescription>
-                      Additional information to help users answer the question
+                    <FormDescription className="flex items-center">
+                      <span className="text-xs text-muted-foreground mr-1">Original:</span> 
+                      <span className="text-xs font-medium">{libraryQuestion?.helperText || libraryQuestion?.helper_text || "None"}</span>
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -586,12 +647,32 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                 name="placeholderOverride"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Placeholder Override</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Placeholder Override</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
+                        <Switch 
+                          checked={field.value !== libraryQuestion?.placeholder}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Reset to library value
+                              form.setValue("placeholderOverride", libraryQuestion?.placeholder || "");
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
                     <FormControl>
-                      <Input {...field} />
+                      <Input 
+                        {...field}
+                        disabled={!field.value && field.value === libraryQuestion?.placeholder}
+                      />
                     </FormControl>
-                    <FormDescription>
-                      Text that appears in the field before the user enters a value
+                    <FormDescription className="flex items-center">
+                      <span className="text-xs text-muted-foreground mr-1">Original:</span> 
+                      <span className="text-xs font-medium">{libraryQuestion?.placeholder || "None"}</span>
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -602,17 +683,58 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
             {/* Options Tab for choice-based questions */}
             <TabsContent value="options" className="space-y-4">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-sm font-medium">Question Options</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-medium">Question Options</h3>
+                  <div className="flex items-center space-x-2">
+                    <FormLabel className="text-xs text-muted-foreground">
+                      Override Options
+                    </FormLabel>
+                    <Switch 
+                      checked={form.getValues("optionsOverrides")?.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (!checked) {
+                          // Reset to library options
+                          const libraryOptions = libraryQuestion?.defaultOptions || 
+                                               libraryQuestion?.default_options || [];
+                          setOptions([...libraryOptions]); // Create a new array to trigger state update
+                          form.setValue("optionsOverrides", []);
+                        } else {
+                          // Clone the current options to make them overridable
+                          const currentOptions = [...options];
+                          form.setValue("optionsOverrides", currentOptions);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
                 <Button 
                   type="button" 
                   variant="outline" 
                   size="sm" 
                   onClick={handleAddOption}
+                  disabled={!form.getValues("optionsOverrides")?.length > 0}
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Add Option
                 </Button>
               </div>
+              
+              {/* Original library options for reference */}
+              {libraryQuestion && (libraryQuestion?.defaultOptions || libraryQuestion?.default_options)?.length > 0 && (
+                <div className="mb-4 p-3 bg-gray-50 border rounded-md">
+                  <p className="text-sm font-medium mb-2">Original Library Options</p>
+                  <div className="space-y-1">
+                    {(libraryQuestion?.defaultOptions || libraryQuestion?.default_options || []).map((option, i) => (
+                      <div key={i} className="flex text-xs">
+                        <span className="font-medium mr-2">{i + 1}.</span>
+                        <span className="font-medium">{option.label}</span>
+                        <span className="mx-2 text-muted-foreground">→</span>
+                        <span className="text-muted-foreground">{option.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-3">
                 {options.map((option, index) => (
@@ -626,9 +748,15 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                           const newOptions = [...options];
                           newOptions[index].label = e.target.value;
                           setOptions(newOptions);
+                          
+                          // Update form value if options overrides are active
+                          if (form.getValues("optionsOverrides")?.length > 0) {
+                            form.setValue("optionsOverrides", newOptions);
+                          }
                         }}
                         className="mb-1"
                         placeholder="Option Text"
+                        disabled={!form.getValues("optionsOverrides")?.length > 0}
                       />
                     </div>
                     <div className="flex-1">
