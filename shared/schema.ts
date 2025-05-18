@@ -473,3 +473,23 @@ export const insertGmailSyncStateSchema = createInsertSchema(gmailSyncState, {
 
 export type GmailSyncState = typeof gmailSyncState.$inferSelect;
 export type InsertGmailSyncState = z.infer<typeof insertGmailSyncStateSchema>;
+
+// Processed Emails table to track which emails have been processed
+export const processedEmails = pgTable("processed_emails", {
+  id: serial("id").primaryKey(),
+  messageId: text("message_id").notNull().unique(),
+  gmailId: text("gmail_id").notNull(),
+  service: text("service").notNull(), // Which service processed this email (e.g., 'lead_gen', 'email_sync')
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+  email: text("email").notNull(), // The email address this message was processed for
+  subject: text("subject"),
+  labelApplied: boolean("label_applied").default(false),
+});
+
+export const insertProcessedEmailSchema = createInsertSchema(processedEmails).omit({
+  id: true,
+  processedAt: true,
+});
+
+export type ProcessedEmail = typeof processedEmails.$inferSelect;
+export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
