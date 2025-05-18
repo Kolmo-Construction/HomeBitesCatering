@@ -1,553 +1,294 @@
 import React, { useState, useEffect } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { apiRequest } from '@/lib/queryClient';
-import JSONRequestTester from '@/components/JSONRequestTester';
-import { ArrowLeft, RefreshCw, MoreHorizontal, Copy } from 'lucide-react';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusCircle, Edit, Trash2, Eye, ChevronRight, ChevronDown, Save, CheckCircle2, XCircle, Copy } from 'lucide-react';
 
-import { PlusCircle, Trash2, Edit, Eye, Save, List, Plus, ArrowUp, ArrowDown, Check, X, Sparkles } from 'lucide-react';
-
-// Import components
-import AIQuestionGenerator from "@/components/AIQuestionGenerator";
-import QuestionnairePreview from "@/components/QuestionnairePreview";
-
-// Define schemas for the forms
+// Schema Validations
 const definitionFormSchema = z.object({
-  versionName: z.string().min(1, "Version name is required"),
+  name: z.string().min(3, { message: "Name must be at least 3 characters" }),
   description: z.string().optional(),
-  isActive: z.boolean().default(false)
+  versionName: z.string().min(1, { message: "Version name is required" }),
+  eventType: z.enum(["corporate", "wedding", "engagement", "birthday", "private_party", "food_truck"]),
+  isActive: z.boolean().default(true),
+  isPublished: z.boolean().default(false)
+});
+
+const sectionFormSchema = z.object({
+  title: z.string().min(1, { message: "Title is required" }),
+  description: z.string().optional(),
+  templateKey: z.string().min(1, { message: "Template key is required" })
 });
 
 const pageFormSchema = z.object({
-  title: z.string().min(1, "Page title is required"),
-  order: z.number().int().nonnegative()
+  title: z.string().min(1, { message: "Title is required" }),
+  description: z.string().optional(),
+  order: z.number().int().positive()
 });
 
 const questionFormSchema = z.object({
-  questionText: z.string().min(1, "Question text is required"),
-  questionKey: z.string().min(1, "Question key is required"),
-  questionType: z.string().min(1, "Question type is required"),
-  order: z.number().int().nonnegative(),
-  isRequired: z.boolean().default(false),
-  placeholderText: z.string().optional(),
+  componentTypeId: z.number().int().positive(),
+  text: z.string().min(1, { message: "Question text is required" }),
   helpText: z.string().optional(),
-  validationRules: z.object({
-    min: z.number().optional(),
-    max: z.number().optional(),
-    step: z.number().optional(),
-    minCount: z.number().optional(),
-    maxCount: z.number().optional(),
-    exactCount: z.number().optional()
-  }).optional(),
-  options: z.array(
-    z.object({
-      optionText: z.string().min(1, "Option text is required"),
-      optionValue: z.string().min(1, "Option value is required"),
-      order: z.number().int().nonnegative()
-    })
-  ).optional(),
+  placeholderText: z.string().optional(),
+  isRequired: z.boolean().default(false),
+  questionKey: z.string().min(1, { message: "Question key is required" }).regex(/^[a-z0-9_]+$/, { message: "Question key can only contain lowercase letters, numbers, and underscores" }),
+  questionOrder: z.number().int().min(1)
+});
+
+const optionFormSchema = z.object({
+  options: z.array(z.object({
+    optionText: z.string().min(1, { message: "Option text is required" }),
+    optionValue: z.string().min(1, { message: "Option value is required" }),
+    order: z.number().int().positive()
+  })).min(1, { message: "At least one option is required" })
 });
 
 const conditionalLogicFormSchema = z.object({
-  triggerQuestionKey: z.string().min(1, "Trigger question is required"),
-  triggerCondition: z.string().min(1, "Condition is required"),
+  triggerQuestionKey: z.string().min(1, { message: "Trigger question key is required" }),
+  targetQuestionKey: z.string().min(1, { message: "Target question key is required" }),
+  triggerCondition: z.enum(["equals", "not_equals", "contains", "greater_than", "less_than", "in_list", "not_in_list", "is_empty", "is_not_empty"]),
   triggerValue: z.string().optional(),
-  actionType: z.string().min(1, "Action type is required"),
-  targetQuestionKey: z.string().min(1, "Target question is required")
+  actionType: z.enum(["show_question", "hide_question", "require_question", "unrequire_question", "skip_to_page"])
 });
 
-// QuestionType component
-const QuestionType = ({ value }: { value: string }) => {
-  const types: Record<string, string> = {
-    'text': 'Text Input',
-    'email': 'Email',
-    'phone': 'Phone Number',
-    'number': 'Number',
-    'date': 'Date',
-    'time': 'Time',
-    'time_picker': 'Time Picker (Hours/Minutes/AM-PM)',
-    'textarea': 'Multiline Text',
-    'select': 'Dropdown',
-    'radio': 'Radio Buttons',
-    'checkbox': 'Checkboxes',
-    'toggle': 'Toggle Switch (Yes/No)',
-    'matrix': 'Matrix',
-    'file': 'File Upload',
-    'slider': 'Slider',
-    'incrementer': 'Step Counter',
-    'name': 'Full Name (First/Last)',
-    'address': 'Address'
-  };
-  
-  return <span>{types[value] || value}</span>;
-};
-
-// Main builder component
-const QuestionnaireBuilder = () => {
+export default function QuestionnaireBuilder() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State Management
   const [activeTab, setActiveTab] = useState("definitions");
   const [selectedDefinition, setSelectedDefinition] = useState<number | null>(null);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [selectedSection, setSelectedSection] = useState<number | null>(null);
   
-  // Dialogs state
   const [definitionDialogOpen, setDefinitionDialogOpen] = useState(false);
+  const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
+  const [optionsDialogOpen, setOptionsDialogOpen] = useState(false);
   const [conditionalLogicDialogOpen, setConditionalLogicDialogOpen] = useState(false);
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   
-  // Additional state for options and matrix columns/rows
-  const [questionOptions, setQuestionOptions] = useState<{ optionText: string; optionValue: string; order: number }[]>([]);
-  const [matrixColumns, setMatrixColumns] = useState<{ columnText: string; columnKey: string; order: number }[]>([]);
-  const [matrixRows, setMatrixRows] = useState<{ rowText: string; rowKey: string; order: number }[]>([]);
-  
-  // State for tracking which items are being edited
-  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
-  const [editingPageId, setEditingPageId] = useState<number | null>(null);
   const [editingDefinitionId, setEditingDefinitionId] = useState<number | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<string>("");
-  
-  // State for questionnaire preview
-  const [questionsMap, setQuestionsMap] = useState<Record<number, any[]>>({});
-  
-  // Enhanced search functionality for all tabs
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<Array<{
-    type: 'question' | 'page' | 'definition' | 'rule';
-    id: number;
-    title: string;
-    subtitle: string;
-    pageId?: number;
-    definitionId?: number;
-  }>>([]);
-  
-  // Function to search across all content in the questionnaire builder
-  const searchAllContent = (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    
-    const lowerQuery = query.toLowerCase().trim();
-    const results: Array<{
-      type: 'question' | 'page' | 'definition' | 'rule';
-      id: number;
-      title: string;
-      subtitle: string;
-      pageId?: number;
-      definitionId?: number;
-    }> = [];
-    
-    // Search through questionnaire definitions
-    if (definitions && definitions.length > 0) {
-      definitions.forEach((def: any) => {
-        if (def.versionName.toLowerCase().includes(lowerQuery) || 
-            (def.description && def.description.toLowerCase().includes(lowerQuery))) {
-          results.push({
-            type: 'definition',
-            id: def.id,
-            title: def.versionName,
-            subtitle: def.description || 'Questionnaire Definition',
-            definitionId: def.id
-          });
-        }
-      });
-    }
-    
-    // Search through pages
-    if (pages && pages.length > 0) {
-      pages.forEach((page: any) => {
-        if (page.title.toLowerCase().includes(lowerQuery)) {
-          results.push({
-            type: 'page',
-            id: page.id,
-            title: page.title,
-            subtitle: `Page (Order: ${page.order})`,
-            definitionId: page.definitionId
-          });
-        }
-      });
-    }
-    
-    // Search through conditional logic rules
-    if (conditionalLogic && conditionalLogic.length > 0) {
-      conditionalLogic.forEach((rule: any) => {
-        const ruleTitle = `Rule: ${rule.triggerQuestionKey} ${rule.triggerCondition} ${rule.triggerValue || ''}`;
-        if (ruleTitle.toLowerCase().includes(lowerQuery) || 
-            rule.triggerQuestionKey.toLowerCase().includes(lowerQuery)) {
-          results.push({
-            type: 'rule',
-            id: rule.id,
-            title: ruleTitle,
-            subtitle: `Logic rule that affects ${rule.targetAction}`,
-            definitionId: selectedDefinition || undefined
-          });
-        }
-      });
-    }
-    
-    // Search through all loaded questions
-    Object.entries(questionsMap).forEach(([pageId, questions]) => {
-      if (!Array.isArray(questions)) return;
-      
-      const page = pages?.find((p: any) => p.id === parseInt(pageId));
-      if (!page) return;
-      
-      questions.forEach(question => {
-        // Check if question text or key matches the search query
-        const matchesText = question.questionText.toLowerCase().includes(lowerQuery);
-        const matchesKey = question.questionKey.toLowerCase().includes(lowerQuery);
-        
-        if (matchesText || matchesKey) {
-          results.push({
-            type: 'question',
-            id: question.id,
-            title: question.questionText,
-            subtitle: `Key: ${question.questionKey} | Page: ${page.title}`,
-            pageId: parseInt(pageId),
-            definitionId: page.definitionId
-          });
-        }
-      });
-    });
-    
-    setSearchResults(results);
-  };
-  
-  // Handle navigation to any item from search results
-  const navigateToItem = (item: {
-    type: 'question' | 'page' | 'definition' | 'rule';
-    id: number;
-    pageId?: number;
-    definitionId?: number;
-  }) => {
-    // Set the appropriate tab and selection based on item type
-    switch (item.type) {
-      case 'definition':
-        setActiveTab('definitions');
-        setSelectedDefinition(item.id);
-        break;
-        
-      case 'page':
-        if (item.definitionId) {
-          setSelectedDefinition(item.definitionId);
-          setActiveTab('pages');
-          setTimeout(() => {
-            const pageElement = document.getElementById(`page-${item.id}`);
-            if (pageElement) {
-              pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              pageElement.classList.add('highlight-element');
-              setTimeout(() => pageElement.classList.remove('highlight-element'), 2000);
-            }
-          }, 300);
-        }
-        break;
-        
-      case 'question':
-        if (item.pageId && item.definitionId) {
-          setSelectedDefinition(item.definitionId);
-          setSelectedPage(item.pageId);
-          setActiveTab('questions');
-          setTimeout(() => {
-            const questionElement = document.getElementById(`question-${item.id}`);
-            if (questionElement) {
-              questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              questionElement.classList.add('highlight-element');
-              setTimeout(() => questionElement.classList.remove('highlight-element'), 2000);
-            }
-          }, 300);
-        }
-        break;
-        
-      case 'rule':
-        if (item.definitionId) {
-          setSelectedDefinition(item.definitionId);
-          setActiveTab('conditionalLogic');
-          setTimeout(() => {
-            const ruleElement = document.getElementById(`rule-${item.id}`);
-            if (ruleElement) {
-              ruleElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              ruleElement.classList.add('highlight-element');
-              setTimeout(() => ruleElement.classList.remove('highlight-element'), 2000);
-            }
-          }, 300);
-        }
-        break;
-    }
-    
-    // Clear search
-    setSearchQuery('');
-    setSearchResults([]);
-  };
-
-  const loadAllQuestionsForPreview = async () => {
-    if (!selectedDefinition || !pages || pages.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please select a questionnaire with pages first."
-      });
-      return false;
-    }
-    
-    try {
-      const questionsForAllPages: Record<number, any[]> = {};
-      
-      // For each page, load its questions
-      for (const page of pages) {
-        const response = await fetch(`/api/admin/questionnaires/pages/${page.id}/questions`);
-        
-        if (response.ok) {
-          const pageQuestions = await response.json();
-          if (Array.isArray(pageQuestions)) {
-            // Also load options for each question that needs them
-            for (let i = 0; i < pageQuestions.length; i++) {
-              const question = pageQuestions[i];
-              if (['select', 'radio', 'checkbox'].includes(question.questionType)) {
-                const optionsResponse = await fetch(`/api/admin/questionnaires/questions/${question.id}/options`);
-                if (optionsResponse.ok) {
-                  const options = await optionsResponse.json();
-                  pageQuestions[i].options = options;
-                }
-              }
-            }
-            questionsForAllPages[page.id] = pageQuestions;
-          }
-        }
-      }
-      
-      setQuestionsMap(questionsForAllPages);
-      return true;
-    } catch (error) {
-      console.error("Error loading questions for preview:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load all questions for preview."
-      });
-      return false;
-    }
-  }
-  
-  // Handle opening the preview dialog
-  const handleOpenPreview = async () => {
-    const success = await loadAllQuestionsForPreview();
-    if (success) {
-      setPreviewDialogOpen(true);
-    }
-  };
+  const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
+  const [editingPageId, setEditingPageId] = useState<number | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [editingConditionalLogicId, setEditingConditionalLogicId] = useState<number | null>(null);
   
   // Forms
   const definitionForm = useForm<z.infer<typeof definitionFormSchema>>({
     resolver: zodResolver(definitionFormSchema),
     defaultValues: {
-      versionName: "",
+      name: "",
       description: "",
-      isActive: false
+      versionName: "v1.0",
+      eventType: "corporate",
+      isActive: true,
+      isPublished: false
     }
   });
-
+  
+  const sectionForm = useForm<z.infer<typeof sectionFormSchema>>({
+    resolver: zodResolver(sectionFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      templateKey: ""
+    }
+  });
+  
   const pageForm = useForm<z.infer<typeof pageFormSchema>>({
     resolver: zodResolver(pageFormSchema),
     defaultValues: {
       title: "",
-      order: 0
+      description: "",
+      order: 1
     }
   });
-
+  
   const questionForm = useForm<z.infer<typeof questionFormSchema>>({
     resolver: zodResolver(questionFormSchema),
     defaultValues: {
-      questionText: "",
-      questionKey: "",
-      questionType: "text",
-      order: 0,
-      isRequired: false,
+      componentTypeId: 1,
+      text: "",
+      helpText: "",
       placeholderText: "",
-      helpText: ""
+      isRequired: false,
+      questionKey: "",
+      questionOrder: 1
     }
   });
-
+  
+  const optionsForm = useForm({
+    resolver: zodResolver(optionFormSchema),
+    defaultValues: {
+      options: [{ optionText: "", optionValue: "", order: 1 }]
+    }
+  });
+  
   const conditionalLogicForm = useForm<z.infer<typeof conditionalLogicFormSchema>>({
     resolver: zodResolver(conditionalLogicFormSchema),
     defaultValues: {
       triggerQuestionKey: "",
+      targetQuestionKey: "",
       triggerCondition: "equals",
       triggerValue: "",
-      actionType: "show_question",
-      targetQuestionKey: ""
-    }
-  });
-
-  // Queries
-  const { data: definitions, isLoading: isLoadingDefinitions } = useQuery({
-    queryKey: ['/api/admin/questionnaires/definitions'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/questionnaires/definitions');
-      const data = await response.json();
-      console.log('Fetched questionnaire definitions:', data);
-      return data;
-    }
-  });
-
-  const { data: pages, isLoading: isLoadingPages } = useQuery({
-    queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'],
-    queryFn: async () => {
-      if (!selectedDefinition) return null;
-      const response = await apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`);
-      return await response.json();
-    },
-    enabled: !!selectedDefinition
-  });
-
-  const { data: questions, isLoading: isLoadingQuestions } = useQuery({
-    queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'],
-    queryFn: async () => {
-      if (!selectedPage) return null;
-      const response = await apiRequest('GET', `/api/admin/questionnaires/pages/${selectedPage}/questions`);
-      return await response.json();
-    },
-    enabled: !!selectedPage
-  });
-
-  const { data: conditionalLogic, isLoading: isLoadingConditionalLogic } = useQuery({
-    queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'],
-    queryFn: async () => {
-      if (!selectedDefinition) return null;
-      const response = await apiRequest('GET', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`);
-      return await response.json();
-    },
-    enabled: !!selectedDefinition
-  });
-
-  // Get all questions for the selected definition (for conditional logic dropdown)
-  const { data: allDefinitionQuestions, isLoading: isLoadingAllQuestions } = useQuery({
-    queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'],
-    queryFn: async () => {
-      if (!selectedDefinition || !pages) return [];
-      
-      const allQuestions = [];
-      for (const page of pages) {
-        // Pass the definitionId as a query parameter to ensure we only get questions for this definition
-        const response = await apiRequest('GET', `/api/admin/questionnaires/pages/${page.id}/questions?definitionId=${selectedDefinition}`);
-        const pageQuestions = await response.json();
-        if (pageQuestions) {
-          allQuestions.push(...pageQuestions);
-        }
-      }
-      return allQuestions;
-    },
-    enabled: !!selectedDefinition && Array.isArray(pages) && pages.length > 0
-  });
-
-  // Mutations
-  const toggleDefinitionStatusMutation = useMutation({
-    mutationFn: async ({ definitionId, isActive }: { definitionId: number, isActive: boolean }) => {
-      const response = await apiRequest('PATCH', `/api/admin/questionnaires/definitions/${definitionId}/status`, { isActive });
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
-      
-      toast({
-        title: "Success",
-        description: `Questionnaire ${data.definition.isActive ? 'activated' : 'deactivated'} successfully`
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update questionnaire status",
-        variant: "destructive"
-      });
+      actionType: "show_question"
     }
   });
   
-  const createDefinitionMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof definitionFormSchema>) => {
-      const response = await apiRequest('POST', '/api/admin/questionnaires/definitions', data);
+  // Queries
+  const { data: componentTypes, isLoading: isLoadingComponentTypes } = useQuery({
+    queryKey: ['/api/questionnaires/component-types'],
+    queryFn: async () => {
+      const response = await fetch('/api/questionnaires/component-types');
       return await response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
+    enabled: activeTab === "questions" || questionDialogOpen
+  });
+  
+  const { data: definitions, isLoading: isLoadingDefinitions } = useQuery({
+    queryKey: ['/api/questionnaires/definitions'],
+    queryFn: async () => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'listDefinitions'
+      });
+      return await response.json();
+    }
+  });
+  
+  const { data: sections, isLoading: isLoadingSections } = useQuery({
+    queryKey: ['/api/questionnaires/sections'],
+    queryFn: async () => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'listSections'
+      });
+      return await response.json();
+    },
+    enabled: activeTab === "sections" || pageDialogOpen
+  });
+  
+  const { data: pages, isLoading: isLoadingPages } = useQuery({
+    queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'pages'],
+    queryFn: async () => {
+      if (!selectedDefinition) return { pages: [] };
+      
+      // For this demo, we'll retrieve the full questionnaire to get pages
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'getFullQuestionnaire',
+        data: {
+          definitionId: selectedDefinition
+        }
+      });
+      const data = await response.json();
+      return { pages: data.questionnaire?.pages || [] };
+    },
+    enabled: !!selectedDefinition && (activeTab === "pages" || activeTab === "preview")
+  });
+  
+  const { data: allSectionQuestions, isLoading: isLoadingAllSectionQuestions } = useQuery({
+    queryKey: ['/api/questionnaires/sections', selectedSection, 'questions'],
+    queryFn: async () => {
+      if (!selectedSection) return { questions: [] };
+      
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'listQuestions',
+        data: {
+          sectionId: selectedSection
+        }
+      });
+      return await response.json();
+    },
+    enabled: !!selectedSection && (activeTab === "questions" || questionDialogOpen)
+  });
+  
+  const { data: allDefinitionQuestions, isLoading: isLoadingAllDefinitionQuestions } = useQuery({
+    queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'all-questions'],
+    queryFn: async () => {
+      if (!selectedDefinition) return [];
+      
+      // For this demo, we'll collect all questions from all pages and sections
+      const fullQuestionnaireResponse = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'getFullQuestionnaire',
+        data: { definitionId: selectedDefinition }
+      });
+      
+      const fullQuestionnaire = await fullQuestionnaireResponse.json();
+      
+      if (!fullQuestionnaire.success) {
+        return [];
+      }
+      
+      const questionnaire = fullQuestionnaire.questionnaire;
+      const allQuestions: any[] = [];
+      
+      questionnaire.pages.forEach((page: any) => {
+        page.sections.forEach((section: any) => {
+          section.questions.forEach((question: any) => {
+            allQuestions.push({
+              id: question.id,
+              questionKey: question.questionKey,
+              questionText: question.text,
+              componentTypeId: question.componentTypeId
+            });
+          });
+        });
+      });
+      
+      return allQuestions;
+    },
+    enabled: !!selectedDefinition && (activeTab === "conditional-logic" || conditionalLogicDialogOpen)
+  });
+  
+  const { data: conditionalLogic, isLoading: isLoadingConditionalLogic } = useQuery({
+    queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'conditional-logic'],
+    queryFn: async () => {
+      if (!selectedDefinition) return [];
+      
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'listConditionalLogic',
+        data: { 
+          definitionId: selectedDefinition 
+        }
+      });
+      
+      const data = await response.json();
+      return data.conditionalLogic || [];
+    },
+    enabled: !!selectedDefinition && activeTab === "conditional-logic"
+  });
+  
+  // Mutations
+  const createDefinitionMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof definitionFormSchema>) => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'createDefinition',
+        data
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/definitions'] });
       setDefinitionDialogOpen(false);
       definitionForm.reset();
-      
-      // Auto-select the newly created definition
-      if (data && data.id) {
-        setSelectedDefinition(data.id);
-        setActiveTab("pages");
-      }
       
       toast({
         title: "Success",
@@ -562,26 +303,53 @@ const QuestionnaireBuilder = () => {
       });
     }
   });
-
-  const createPageMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof pageFormSchema>) => {
-      const response = await apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages`, data);
+  
+  const createSectionMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof sectionFormSchema>) => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'createSection',
+        data
+      });
       return await response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
-      setPageDialogOpen(false);
-      pageForm.reset();
-      
-      // Auto-select the newly created page
-      if (data && data.id) {
-        setSelectedPage(data.id);
-        setActiveTab("questions");
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/sections'] });
+      setSectionDialogOpen(false);
+      sectionForm.reset();
       
       toast({
         title: "Success",
-        description: "Page created successfully. You can now add questions to this page."
+        description: "Section created successfully"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create section",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const createPageMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof pageFormSchema>) => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'addPage',
+        data: {
+          ...data,
+          definitionId: selectedDefinition
+        }
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'pages'] });
+      setPageDialogOpen(false);
+      pageForm.reset();
+      
+      toast({
+        title: "Success",
+        description: "Page created successfully"
       });
     },
     onError: (error: any) => {
@@ -593,78 +361,114 @@ const QuestionnaireBuilder = () => {
     }
   });
   
-  const updatePageMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof pageFormSchema> }) => {
-      const response = await apiRequest('PUT', `/api/admin/questionnaires/definitions/${selectedDefinition}/pages/${id}`, data);
+  const addSectionToPageMutation = useMutation({
+    mutationFn: async (data: { pageId: number, sectionId: number, sectionOrder: number }) => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'addSectionToPage',
+        data
+      });
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
-      setEditingPageId(null);
-      setPageDialogOpen(false);
-      pageForm.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'pages'] });
       
       toast({
         title: "Success",
-        description: "Page updated successfully."
+        description: "Section added to page successfully"
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update page",
+        description: error.message || "Failed to add section to page",
         variant: "destructive"
       });
     }
   });
-
+  
   const createQuestionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof questionFormSchema>) => {
-      // Add options to the data if they exist
-      const formData = { ...data };
-      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox_group')) {
-        formData.options = questionOptions;
-      }
-      
-      // Include matrix columns and rows if it's a matrix question
-      if (data.questionType === 'matrix') {
-        // We'll add matrixColumns and matrixRows to the payload
-        // The backend will handle storing these in the appropriate tables
-        formData.matrixColumns = matrixColumns;
-        formData.matrixRows = matrixRows;
-      }
-      
-      const response = await apiRequest('POST', `/api/admin/questionnaires/pages/${selectedPage}/questions`, formData);
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'addSectionQuestions',
+        data: {
+          sectionId: selectedSection,
+          questions: [data]
+        }
+      });
       return await response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
-      setQuestionOptions([]);
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/sections', selectedSection, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'all-questions'] });
       setQuestionDialogOpen(false);
       questionForm.reset();
       
+      // If the question needs options, open the options dialog automatically
+      const questionType = componentTypes?.componentTypes.find(
+        (ct: any) => ct.id === questionForm.getValues().componentTypeId
+      );
+      
+      if (questionType && ["radio", "checkbox", "select", "multi_select"].includes(questionType.typeKey)) {
+        setEditingQuestion(data.questions[0]);
+        setOptionsDialogOpen(true);
+      } else {
+        toast({
+          title: "Success",
+          description: "Question added successfully"
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add question",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const addQuestionOptionsMutation = useMutation({
+    mutationFn: async (data: { questionId: number, options: any[] }) => {
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'addQuestionOptions',
+        data
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/sections', selectedSection, 'questions'] });
+      setOptionsDialogOpen(false);
+      optionsForm.reset({
+        options: [{ optionText: "", optionValue: "", order: 1 }]
+      });
+      
       toast({
         title: "Success",
-        description: "Question created successfully"
+        description: "Question options added successfully"
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create question",
+        description: error.message || "Failed to add question options",
         variant: "destructive"
       });
     }
   });
-
+  
   const createConditionalLogicMutation = useMutation({
     mutationFn: async (data: z.infer<typeof conditionalLogicFormSchema>) => {
-      const response = await apiRequest('POST', `/api/admin/questionnaires/definitions/${selectedDefinition}/conditional-logic`, data);
+      const response = await apiRequest('POST', '/api/questionnaires/builder', {
+        action: 'addConditionalLogic',
+        data: {
+          ...data,
+          definitionId: selectedDefinition
+        }
+      });
       return await response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
       setConditionalLogicDialogOpen(false);
       conditionalLogicForm.reset();
       
@@ -682,1875 +486,1397 @@ const QuestionnaireBuilder = () => {
     }
   });
   
-  const updateConditionalLogicMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof conditionalLogicFormSchema> }) => {
-      const response = await apiRequest('PUT', `/api/admin/questionnaires/conditional-logic/${id}`, data);
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
-      setEditingConditionalLogicId(null);
-      setConditionalLogicDialogOpen(false);
-      conditionalLogicForm.reset();
-      
-      toast({
-        title: "Success",
-        description: "Conditional logic rule updated successfully"
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update conditional logic rule",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const deleteDefinitionMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/admin/questionnaires/definitions/${id}`);
-    },
-    onSuccess: () => {
-      // Clear all related states
-      setSelectedDefinition(null);
-      setSelectedPage(null);
-      setEditingPageId(null);
-      setEditingQuestionId(null);
-      setEditingConditionalLogicId(null);
-      
-      // Set active tab back to definitions
-      setActiveTab("definitions");
-      
-      // Invalidate all related queries to ensure proper cache updates
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions'] });
-      
-      toast({
-        title: "Success",
-        description: "Questionnaire definition deleted successfully"
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete questionnaire definition",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const deletePageMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/admin/questionnaires/pages/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'pages'] });
-      setSelectedPage(null);
-      toast({
-        title: "Success",
-        description: "Page deleted successfully"
-      });
-    }
-  });
-
-  const updateQuestionMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      // Add options to the data if they exist
-      const formData = { ...data };
-      
-      // Properly handle validation rules for checkbox questions
-      if (data.questionType === 'checkbox' || data.questionType === 'checkbox_group') {
-        // Ensure validation rules are properly processed
-        if (formData.validationRules) {
-          // Convert any validation rule fields to numbers, filtering out empty strings
-          const rules = formData.validationRules;
-          const processedRules = {};
-          
-          // Only include non-empty values and convert to numbers
-          if (rules.minCount !== undefined && rules.minCount !== '') 
-            processedRules.minCount = Number(rules.minCount);
-          
-          if (rules.maxCount !== undefined && rules.maxCount !== '') 
-            processedRules.maxCount = Number(rules.maxCount);
-          
-          if (rules.exactCount !== undefined && rules.exactCount !== '') 
-            processedRules.exactCount = Number(rules.exactCount);
-          
-          // Only one of exactCount or min/max should be used
-          if (!processedRules.exactCount) {
-            if (rules.min !== undefined && rules.min !== '') 
-              processedRules.min = Number(rules.min);
-            
-            if (rules.max !== undefined && rules.max !== '') 
-              processedRules.max = Number(rules.max);
-          }
-          
-          if (rules.step !== undefined && rules.step !== '') 
-            processedRules.step = Number(rules.step);
-          
-          // Replace the original validation rules with our processed ones
-          formData.validationRules = processedRules;
-        }
-      }
-      
-      if (questionOptions.length > 0 && (data.questionType === 'select' || data.questionType === 'radio' || data.questionType === 'checkbox_group')) {
-        formData.options = questionOptions;
-      }
-      
-      // Include matrix columns and rows if it's a matrix question
-      if (data.questionType === 'matrix') {
-        formData.matrixColumns = matrixColumns;
-        formData.matrixRows = matrixRows;
-      }
-      
-      const response = await apiRequest('PUT', `/api/admin/questionnaires/questions/${id}`, formData);
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
-      setQuestionOptions([]);
-      setEditingQuestionId(null);
-      setQuestionDialogOpen(false);
-      questionForm.reset();
-      
-      toast({
-        title: "Success",
-        description: "Question updated successfully"
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update question",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const deleteQuestionMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/admin/questionnaires/questions/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'all-questions'] });
-      toast({
-        title: "Success",
-        description: "Question deleted successfully"
-      });
-    }
-  });
-
-  const deleteConditionalLogicMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/admin/questionnaires/conditional-logic/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/definitions', selectedDefinition, 'conditional-logic'] });
-      toast({
-        title: "Success",
-        description: "Conditional logic rule deleted successfully"
-      });
-    }
-  });
-
-  // Form submission handlers
+  // Form Submissions
   const onSubmitDefinition = (data: z.infer<typeof definitionFormSchema>) => {
-    createDefinitionMutation.mutate(data);
+    if (editingDefinitionId) {
+      // Handle update (not implemented in this demo)
+      toast({
+        title: "Update not implemented",
+        description: "This demo doesn't support updating definitions yet"
+      });
+    } else {
+      createDefinitionMutation.mutate(data);
+    }
   };
-
+  
+  const onSubmitSection = (data: z.infer<typeof sectionFormSchema>) => {
+    if (editingSectionId) {
+      // Handle update (not implemented in this demo)
+      toast({
+        title: "Update not implemented",
+        description: "This demo doesn't support updating sections yet"
+      });
+    } else {
+      createSectionMutation.mutate(data);
+    }
+  };
+  
   const onSubmitPage = (data: z.infer<typeof pageFormSchema>) => {
     if (editingPageId) {
-      // If we're editing an existing page
-      updatePageMutation.mutate({ id: editingPageId, data });
+      // Handle update (not implemented in this demo)
+      toast({
+        title: "Update not implemented",
+        description: "This demo doesn't support updating pages yet"
+      });
     } else {
-      // If we're creating a new page
       createPageMutation.mutate(data);
     }
   };
-
+  
   const onSubmitQuestion = (data: z.infer<typeof questionFormSchema>) => {
     if (editingQuestionId) {
-      // Update existing question
-      updateQuestionMutation.mutate({ id: editingQuestionId, data });
+      // Handle update (not implemented in this demo)
+      toast({
+        title: "Update not implemented",
+        description: "This demo doesn't support updating questions yet"
+      });
     } else {
-      // Create new question
       createQuestionMutation.mutate(data);
     }
-    
-    // Reset matrix rows and columns on submission
-    if (data.questionType === 'matrix') {
-      setMatrixRows([]);
-      setMatrixColumns([]);
-    }
   };
-
+  
+  const onSubmitOptions = (data: any) => {
+    if (!editingQuestion) return;
+    
+    addQuestionOptionsMutation.mutate({
+      questionId: editingQuestion.id,
+      options: data.options
+    });
+  };
+  
   const onSubmitConditionalLogic = (data: z.infer<typeof conditionalLogicFormSchema>) => {
     if (editingConditionalLogicId) {
-      // Update existing conditional logic rule
-      updateConditionalLogicMutation.mutate({ id: editingConditionalLogicId, data });
+      // Handle update (not implemented in this demo)
+      toast({
+        title: "Update not implemented",
+        description: "This demo doesn't support updating conditional logic yet"
+      });
     } else {
-      // Create new conditional logic rule
       createConditionalLogicMutation.mutate(data);
     }
   };
-
-  // Option management helpers
-  const addOption = () => {
-    setQuestionOptions([...questionOptions, {
-      optionText: "",
-      optionValue: "",
-      order: questionOptions.length
-    }]);
-  };
-
-  const updateOption = (index: number, field: 'optionText' | 'optionValue', value: string) => {
-    const newOptions = [...questionOptions];
-    newOptions[index][field] = value;
-    setQuestionOptions(newOptions);
-  };
-
-  const removeOption = (index: number) => {
-    const newOptions = [...questionOptions];
-    newOptions.splice(index, 1);
-    // Update the order property
-    newOptions.forEach((opt, idx) => opt.order = idx);
-    setQuestionOptions(newOptions);
-  };
-
-  // Matrix column management helpers
-  const addMatrixColumn = () => {
-    setMatrixColumns([...matrixColumns, {
-      columnText: "",
-      columnKey: "",
-      order: matrixColumns.length
-    }]);
-  };
-
-  const updateMatrixColumn = (index: number, field: 'columnText' | 'columnKey', value: string) => {
-    const newColumns = [...matrixColumns];
-    newColumns[index][field] = value;
-    setMatrixColumns(newColumns);
-  };
-
-  const removeMatrixColumn = (index: number) => {
-    const newColumns = [...matrixColumns];
-    newColumns.splice(index, 1);
-    // Update the order property
-    newColumns.forEach((col, idx) => col.order = idx);
-    setMatrixColumns(newColumns);
-  };
-
-  // Matrix row management helpers
-  const addMatrixRow = () => {
-    setMatrixRows([...matrixRows, {
-      rowText: "",
-      rowKey: "",
-      order: matrixRows.length
-    }]);
-  };
-
-  const updateMatrixRow = (index: number, field: 'rowText' | 'rowKey', value: string) => {
-    const newRows = [...matrixRows];
-    newRows[index][field] = value;
-    setMatrixRows(newRows);
-  };
-
-  const removeMatrixRow = (index: number) => {
-    const newRows = [...matrixRows];
-    newRows.splice(index, 1);
-    // Update the order property
-    newRows.forEach((row, idx) => row.order = idx);
-    setMatrixRows(newRows);
-  };
-
-  // Watch for question type changes to show/hide options and configurations
-  const questionType = questionForm.watch("questionType");
-  const showOptions = questionType === 'select' || questionType === 'radio' || questionType === 'checkbox_group';
-  const showMatrix = questionType === 'matrix';
-  const showSliderConfig = questionType === 'slider';
-  const showCheckboxConfig = questionType === 'checkbox_group';
-
-  // Effect to set the initial order for new questions
-  useEffect(() => {
-    if (questions && Array.isArray(questions) && questions.length > 0) {
-      questionForm.setValue('order', questions.length);
-    } else {
-      questionForm.setValue('order', 0);
-    }
-  }, [questions, questionForm]);
-
-  // Effect to set the initial order for new pages
-  useEffect(() => {
-    if (pages && Array.isArray(pages) && pages.length > 0) {
-      pageForm.setValue('order', pages.length);
-    } else {
-      pageForm.setValue('order', 0);
-    }
-  }, [pages, pageForm]);
-
-  // Effect to load all questions when a questionnaire is selected (for search functionality)
-  useEffect(() => {
-    if (selectedDefinition && pages && pages.length > 0 && Object.keys(questionsMap).length === 0) {
-      loadAllQuestionsForPreview();
-    }
-  }, [selectedDefinition, pages]);
   
-  // Search across all tabs whenever the search query changes
+  // UI Helpers
+  const addOptionField = () => {
+    const currentOptions = optionsForm.getValues().options;
+    const newOrder = currentOptions.length + 1;
+    
+    optionsForm.setValue('options', [
+      ...currentOptions,
+      { optionText: "", optionValue: "", order: newOrder }
+    ]);
+  };
+  
+  const removeOptionField = (index: number) => {
+    const currentOptions = optionsForm.getValues().options;
+    if (currentOptions.length <= 1) return;
+    
+    const newOptions = currentOptions.filter((_, i) => i !== index);
+    
+    // Update order of remaining options
+    newOptions.forEach((option, idx) => {
+      option.order = idx + 1;
+    });
+    
+    optionsForm.setValue('options', newOptions);
+  };
+  
+  const handleAddSectionToPage = (pageId: number, pageTitle: string) => {
+    if (!sections?.sections?.length) {
+      toast({
+        title: "No sections available",
+        description: "Please create a section first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // For simplicity, use a prompt to select section
+    // In a real app, you'd use a proper UI component
+    const sectionId = prompt(`Select a section ID to add to page "${pageTitle}":\n${
+      sections.sections.map((s: any) => `ID ${s.id}: ${s.title}`).join('\n')
+    }`);
+    
+    if (!sectionId) return;
+    
+    const parsedSectionId = parseInt(sectionId);
+    
+    if (isNaN(parsedSectionId)) {
+      toast({
+        title: "Invalid section ID",
+        description: "Please enter a valid section ID",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get current sections on this page to determine order
+    const page = pages?.pages.find((p: any) => p.id === pageId);
+    const currentSections = page?.sections || [];
+    const newOrder = currentSections.length + 1;
+    
+    addSectionToPageMutation.mutate({
+      pageId,
+      sectionId: parsedSectionId,
+      sectionOrder: newOrder
+    });
+  };
+  
+  const handlePreviewQuestionnaire = () => {
+    if (!selectedDefinition) {
+      toast({
+        title: "No questionnaire selected",
+        description: "Please select a questionnaire to preview",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setActiveTab("preview");
+  };
+  
+  // Reset forms when dialogs close
   useEffect(() => {
-    searchAllContent(searchQuery);
-  }, [searchQuery, questionsMap, definitions, pages, conditionalLogic]);
-
+    if (!definitionDialogOpen) {
+      setEditingDefinitionId(null);
+      definitionForm.reset();
+    }
+  }, [definitionDialogOpen]);
+  
+  useEffect(() => {
+    if (!sectionDialogOpen) {
+      setEditingSectionId(null);
+      sectionForm.reset();
+    }
+  }, [sectionDialogOpen]);
+  
+  useEffect(() => {
+    if (!pageDialogOpen) {
+      setEditingPageId(null);
+      pageForm.reset();
+    }
+  }, [pageDialogOpen]);
+  
+  useEffect(() => {
+    if (!questionDialogOpen) {
+      setEditingQuestionId(null);
+      questionForm.reset();
+    }
+  }, [questionDialogOpen]);
+  
+  useEffect(() => {
+    if (!optionsDialogOpen) {
+      setEditingQuestion(null);
+      optionsForm.reset({
+        options: [{ optionText: "", optionValue: "", order: 1 }]
+      });
+    }
+  }, [optionsDialogOpen]);
+  
+  useEffect(() => {
+    // When selecting a new questionnaire definition, reset related states
+    setSelectedPage(null);
+    setSelectedSection(null);
+  }, [selectedDefinition]);
+  
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Questionnaire Builder</h1>
-        
-        {/* Enhanced search bar with auto-complete across all tabs */}
-        <div className="w-1/3">
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (searchResults.length > 0) {
-              // Navigate to the first result when Enter is pressed
-              navigateToItem(searchResults[0]);
-            }
-          }}>
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search all tabs... (press Enter to navigate)"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  searchAllContent(e.target.value);
-                }}
-                className="pr-10"
-                autoComplete="off"
-              />
-              {searchQuery && (
-                <button 
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchResults([]);
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </form>
-          
-          {/* Enhanced search results dropdown with visual indicators for different item types */}
-          {searchResults.length > 0 && searchQuery && (
-            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
-              {searchResults.map((result, index) => (
-                <div
-                  key={`${result.type}-${result.id}`}
-                  className={`cursor-pointer hover:bg-gray-100 p-3 ${index === 0 ? 'bg-gray-50' : ''}`}
-                  onClick={() => navigateToItem(result)}
-                >
-                  <div className="font-medium truncate flex items-center">
-                    {/* Icon based on item type */}
-                    <span className="mr-2">
-                      {result.type === 'definition' && '📋'}
-                      {result.type === 'page' && '📄'}
-                      {result.type === 'question' && '❓'}
-                      {result.type === 'rule' && '⚙️'}
-                    </span>
-                    {result.title}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    <span>{result.subtitle}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      {/* Highlight style added via className */}
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">Questionnaire Builder</h1>
       
-      <div className="space-y-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab("definitions")} 
-              className={`${activeTab === "definitions" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Questionnaire Definitions
-            </button>
-            <button
-              onClick={() => selectedDefinition && setActiveTab("pages")}
-              disabled={!selectedDefinition}
-              className={`${activeTab === "pages" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Pages
-            </button>
-            <button
-              onClick={() => selectedPage && setActiveTab("questions")}
-              disabled={!selectedPage}
-              className={`${activeTab === "questions" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                ${!selectedPage ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Questions
-            </button>
-            <button
-              onClick={() => selectedDefinition && setActiveTab("conditionalLogic")}
-              disabled={!selectedDefinition}
-              className={`${activeTab === "conditionalLogic" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Conditional Logic
-            </button>
-            <button
-              onClick={() => selectedDefinition && setActiveTab("preview")}
-              disabled={!selectedDefinition}
-              className={`${activeTab === "preview" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                ${!selectedDefinition ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Preview
-            </button>
-            <button
-              onClick={() => setActiveTab("apiTester")}
-              className={`${activeTab === "apiTester" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} 
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              API Tester
-            </button>
-          </nav>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid grid-cols-6 w-full">
+          <TabsTrigger value="definitions">Definitions</TabsTrigger>
+          <TabsTrigger value="sections">Sections</TabsTrigger>
+          <TabsTrigger value="pages" disabled={!selectedDefinition}>Pages</TabsTrigger>
+          <TabsTrigger value="questions" disabled={!selectedSection}>Questions</TabsTrigger>
+          <TabsTrigger value="conditional-logic" disabled={!selectedDefinition}>Logic Rules</TabsTrigger>
+          <TabsTrigger value="preview" disabled={!selectedDefinition}>Preview</TabsTrigger>
+        </TabsList>
         
-        {/* Definitions Tab Content */}
-        {activeTab === "definitions" && (
+        {/* Questionnaire Definitions Tab */}
+        <TabsContent value="definitions">
           <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
                 <CardTitle>Questionnaire Definitions</CardTitle>
-                <Dialog open={definitionDialogOpen} onOpenChange={setDefinitionDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Definition
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create Questionnaire Definition</DialogTitle>
-                      <DialogDescription>
-                        Add a new questionnaire definition to your system.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...definitionForm}>
-                      <form onSubmit={definitionForm.handleSubmit(onSubmitDefinition)} className="space-y-4">
-                        <FormField
-                          control={definitionForm.control}
-                          name="versionName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Version Name</FormLabel>
+                <CardDescription>Manage your questionnaire definitions</CardDescription>
+              </div>
+              <Button onClick={() => setDefinitionDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Definition
+              </Button>
+              
+              {/* Create Definition Dialog */}
+              <Dialog open={definitionDialogOpen} onOpenChange={setDefinitionDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Create Questionnaire Definition</DialogTitle>
+                    <DialogDescription>
+                      Create a new questionnaire definition for a specific event type.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...definitionForm}>
+                    <form onSubmit={definitionForm.handleSubmit(onSubmitDefinition)} className="space-y-4">
+                      <FormField
+                        control={definitionForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Corporate Event Questionnaire" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              A descriptive name for this questionnaire
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={definitionForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="This questionnaire collects details for corporate events"
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              A brief description of this questionnaire's purpose
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={definitionForm.control}
+                        name="versionName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Version Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="v1.0" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Version identifier for this questionnaire
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={definitionForm.control}
+                        name="eventType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Event Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <Input placeholder="e.g., Catering Inquiry Form v1" {...field} />
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select an event type" />
+                                </SelectTrigger>
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={definitionForm.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="Describe the purpose of this questionnaire" 
-                                  {...field} 
-                                  value={field.value || ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                              <SelectContent>
+                                <SelectItem value="corporate">Corporate Event</SelectItem>
+                                <SelectItem value="wedding">Wedding</SelectItem>
+                                <SelectItem value="engagement">Engagement</SelectItem>
+                                <SelectItem value="birthday">Birthday</SelectItem>
+                                <SelectItem value="private_party">Private Party</SelectItem>
+                                <SelectItem value="food_truck">Food Truck</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              The type of event this questionnaire is for
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex space-x-4">
                         <FormField
                           control={definitionForm.control}
                           name="isActive"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                              <div className="space-y-0.5">
-                                <FormLabel>Active</FormLabel>
-                                <FormDescription>
-                                  Make this questionnaire available to clients
-                                </FormDescription>
-                              </div>
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                               <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
                                 />
                               </FormControl>
+                              <FormLabel>Active</FormLabel>
                             </FormItem>
                           )}
                         />
-                        <DialogFooter>
-                          <Button type="submit" disabled={createDefinitionMutation.isPending}>
-                            {createDefinitionMutation.isPending ? "Creating..." : "Create Definition"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+                        
+                        <FormField
+                          control={definitionForm.control}
+                          name="isPublished"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                />
+                              </FormControl>
+                              <FormLabel>Published</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <DialogFooter>
+                        <Button type="submit" disabled={createDefinitionMutation.isPending}>
+                          {createDefinitionMutation.isPending ? "Creating..." : "Create Definition"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {isLoadingDefinitions ? (
                 <div className="text-center py-4">Loading definitions...</div>
-              ) : definitions && Array.isArray(definitions) && definitions.length > 0 ? (
+              ) : !definitions || !definitions.definitions?.length ? (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Questionnaire Definitions</h3>
+                  <p className="text-gray-600 mb-4">Create your first questionnaire definition to get started.</p>
+                  <Button onClick={() => setDefinitionDialogOpen(true)}>
+                    Create Definition
+                  </Button>
+                </div>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
+                      <TableHead>Event Type</TableHead>
+                      <TableHead>Version</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {definitions.map((def: any) => (
+                    {definitions.definitions.map((definition: any) => (
                       <TableRow 
-                        key={def.id}
-                        className={selectedDefinition === def.id ? "bg-primary/10" : ""}
+                        key={definition.id} 
+                        className={selectedDefinition === definition.id ? "bg-muted/50" : ""}
                       >
+                        <TableCell className="font-medium">{definition.name}</TableCell>
+                        <TableCell className="capitalize">{definition.eventType.replace('_', ' ')}</TableCell>
+                        <TableCell>{definition.versionName}</TableCell>
                         <TableCell>
-                          <div className="font-medium">{def.versionName}</div>
-                        </TableCell>
-                        <TableCell>{def.description || "—"}</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            def.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                          }`}>
-                            {def.isActive ? "Active" : "Draft"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(def.createdAt).toLocaleDateString()}
+                          <div className="flex items-center space-x-2">
+                            {definition.isActive ? (
+                              <span className="flex items-center text-green-600">
+                                <CheckCircle2 className="h-4 w-4 mr-1" /> Active
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-gray-500">
+                                <XCircle className="h-4 w-4 mr-1" /> Inactive
+                              </span>
+                            )}
+                            {definition.isPublished && (
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Published</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end space-x-2">
                             <Button
-                              variant={def.isActive ? "destructive" : "default"}
+                              variant="outline"
                               size="sm"
-                              onClick={() => toggleDefinitionStatusMutation.mutate({ 
-                                definitionId: def.id, 
-                                isActive: !def.isActive 
-                              })}
-                              disabled={toggleDefinitionStatusMutation.isPending}
+                              onClick={() => setSelectedDefinition(definition.id)}
                             >
-                              {def.isActive ? (
-                                <>
-                                  <X className="h-4 w-4 mr-1" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Activate
-                                </>
-                              )}
+                              {selectedDefinition === definition.id ? "Selected" : "Select"}
                             </Button>
-                            
                             <Button
-                              variant="default" 
-                              size="sm" 
-                              onClick={() => {
-                                setSelectedDefinition(def.id);
-                                setActiveTab("pages");
-                              }}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePreviewQuestionnaire()}
+                              disabled={selectedDefinition !== definition.id}
                             >
-                              <List className="h-4 w-4 mr-1" />
-                              Pages
+                              <Eye className="h-4 w-4" />
                             </Button>
-                            
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <MoreHorizontal className="h-4 w-4 mr-1" />
-                                  Actions
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    // Clone the current definition with source ID
-                                    const newVersion = {
-                                      versionName: `${def.versionName} (Copy)`,
-                                      description: def.description,
-                                      isActive: false,
-                                      sourceDefinitionId: def.id // Added source ID for complete cloning
-                                    };
-                                    
-                                    toast({
-                                      title: "Cloning Questionnaire",
-                                      description: "Please wait while we clone the entire questionnaire structure...",
-                                    });
-                                    
-                                    createDefinitionMutation.mutate(newVersion, {
-                                      onSuccess: (data) => {
-                                        toast({
-                                          title: "Questionnaire Cloned Successfully",
-                                          description: "Created a complete copy with all pages, questions, and logic rules",
-                                        });
-                                        
-                                        // Select the new definition and navigate to its pages
-                                        setSelectedDefinition(data.id);
-                                        setActiveTab("pages");
-                                      }
-                                    });
-                                  }}
-                                >
-                                  <Copy className="h-4 w-4 mr-2" />
-                                  Clone Questionnaire
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    // Fill form with current values for editing
-                                    definitionForm.reset({
-                                      versionName: def.versionName,
-                                      description: def.description || "",
-                                      isActive: def.isActive
-                                    });
-                                    setEditingDefinitionId(def.id);
-                                    setDefinitionDialogOpen(true);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Details
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuSeparator />
-                                
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => {
-                                    // Show a confirmation dialog using the existing Alert Dialog
-                                    const confirmDelete = window.confirm(
-                                      `Are you absolutely sure you want to delete "${def.versionName}"? This action cannot be undone.`
-                                    );
-                                    
-                                    if (confirmDelete) {
-                                      deleteDefinitionMutation.mutate(def.id, {
-                                        onSuccess: () => {
-                                          toast({
-                                            title: "Questionnaire Deleted",
-                                            description: "The questionnaire has been successfully deleted.",
-                                          });
-                                        }
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              ) : (
-                <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No Questionnaire Definitions Yet</h3>
-                  <p className="text-gray-600 mb-4">Create your first questionnaire definition to get started.</p>
-                  <Button onClick={() => setDefinitionDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create First Definition
-                  </Button>
-                </div>
               )}
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
         
-        {/* Pages Tab Content */}
-        {activeTab === "pages" && (
+        {/* Reusable Sections Tab */}
+        <TabsContent value="sections">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Pages</CardTitle>
+                <CardTitle>Reusable Sections</CardTitle>
+                <CardDescription>Create and manage reusable section templates</CardDescription>
+              </div>
+              <Button onClick={() => setSectionDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Section
+              </Button>
+              
+              {/* Create Section Dialog */}
+              <Dialog open={sectionDialogOpen} onOpenChange={setSectionDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Create Section Template</DialogTitle>
+                    <DialogDescription>
+                      Create a reusable section that can be added to multiple questionnaires.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...sectionForm}>
+                    <form onSubmit={sectionForm.handleSubmit(onSubmitSection)} className="space-y-4">
+                      <FormField
+                        control={sectionForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Section Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Contact Information" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              A descriptive title for this section
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={sectionForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Basic contact details for the client"
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              A brief description of this section's purpose
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={sectionForm.control}
+                        name="templateKey"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Template Key</FormLabel>
+                            <FormControl>
+                              <Input placeholder="contact_information" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              A unique identifier for this template (use snake_case)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button type="submit" disabled={createSectionMutation.isPending}>
+                          {createSectionMutation.isPending ? "Creating..." : "Create Section"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSections ? (
+                <div className="text-center py-4">Loading sections...</div>
+              ) : !sections || !sections.sections?.length ? (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Sections</h3>
+                  <p className="text-gray-600 mb-4">Create your first section template to get started.</p>
+                  <Button onClick={() => setSectionDialogOpen(true)}>
+                    Create Section
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Template Key</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sections.sections.map((section: any) => (
+                      <TableRow 
+                        key={section.id}
+                        className={selectedSection === section.id ? "bg-muted/50" : ""}
+                      >
+                        <TableCell className="font-medium">{section.title}</TableCell>
+                        <TableCell className="font-mono text-sm">{section.templateKey}</TableCell>
+                        <TableCell className="max-w-md truncate">{section.description}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedSection(section.id)}
+                            >
+                              {selectedSection === section.id ? "Selected" : "Select"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingSectionId(section.id);
+                                sectionForm.reset({
+                                  title: section.title,
+                                  description: section.description || "",
+                                  templateKey: section.templateKey
+                                });
+                                setSectionDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Pages Tab */}
+        <TabsContent value="pages">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Questionnaire Pages</CardTitle>
                 <CardDescription>
-                  {selectedDefinition && definitions ? (
-                    <span>Managing pages for: <strong>{definitions.find((d: any) => d.id === selectedDefinition)?.versionName}</strong></span>
-                  ) : (
-                    <span>Select a definition first</span>
-                  )}
+                  {selectedDefinition 
+                    ? `Manage pages for: ${definitions?.definitions?.find((d: any) => d.id === selectedDefinition)?.name}`
+                    : "Select a questionnaire definition first"}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  disabled={!selectedDefinition || !pages || pages.length === 0}
-                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-                  onClick={handleOpenPreview}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Preview Form
-                </Button>
-                
-                <Dialog open={pageDialogOpen} onOpenChange={setPageDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button disabled={!selectedDefinition}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Page
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingPageId ? "Edit Page" : "Add New Page"}</DialogTitle>
-                      <DialogDescription>
-                        {editingPageId ? "Modify this page's properties." : "Create a new page for your questionnaire."}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...pageForm}>
-                      <form onSubmit={pageForm.handleSubmit(onSubmitPage)} className="space-y-4">
-                        <FormField
-                          control={pageForm.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Page Title</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g., Event Details" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={pageForm.control}
-                          name="order"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Order</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="0"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                The order in which this page appears in the questionnaire.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <DialogFooter>
-                          <Button type="submit" disabled={createPageMutation.isPending || updatePageMutation.isPending}>
-                            {editingPageId
-                              ? (updatePageMutation.isPending ? "Updating..." : "Update Page")
-                              : (createPageMutation.isPending ? "Creating..." : "Create Page")
-                            }
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+              <Button onClick={() => setPageDialogOpen(true)} disabled={!selectedDefinition}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Page
+              </Button>
+              
+              {/* Create Page Dialog */}
+              <Dialog open={pageDialogOpen} onOpenChange={setPageDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Add Questionnaire Page</DialogTitle>
+                    <DialogDescription>
+                      Add a new page to the selected questionnaire.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...pageForm}>
+                    <form onSubmit={pageForm.handleSubmit(onSubmitPage)} className="space-y-4">
+                      <FormField
+                        control={pageForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Page Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Event Details" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              A descriptive title for this page
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={pageForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Basic details about the event"
+                                {...field} 
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              A brief description of this page's content
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={pageForm.control}
+                        name="order"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Page Order</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              The order in which this page appears in the questionnaire
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button type="submit" disabled={createPageMutation.isPending}>
+                          {createPageMutation.isPending ? "Creating..." : "Add Page"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {!selectedDefinition ? (
                 <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No Definition Selected</h3>
-                  <p className="text-gray-600 mb-4">Select a questionnaire definition to manage its pages.</p>
+                  <h3 className="text-lg font-semibold mb-2">No Questionnaire Selected</h3>
+                  <p className="text-gray-600 mb-4">Select a questionnaire to manage its pages.</p>
                   <Button onClick={() => setActiveTab("definitions")}>
                     Go to Definitions
                   </Button>
                 </div>
               ) : isLoadingPages ? (
                 <div className="text-center py-4">Loading pages...</div>
-              ) : pages && Array.isArray(pages) && pages.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Questions</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pages.sort((a: any, b: any) => a.order - b.order).map((page: any) => (
-                      <TableRow 
-                        key={page.id}
-                        className={selectedPage === page.id ? "bg-primary/10" : ""}
-                      >
-                        <TableCell>{page.order}</TableCell>
-                        <TableCell>
-                          <div className="font-medium">{page.title}</div>
-                        </TableCell>
-                        <TableCell>
-                          {/* Ideally we'd show the count of questions, but for simplicity we'll leave it empty */}
-                          —
-                        </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              setSelectedPage(page.id);
-                              setActiveTab("questions");
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View Questions
-                          </Button>
-                          <Button
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              // Set up form values for the selected page
-                              pageForm.reset({
-                                title: page.title,
-                                order: page.order
-                              });
-                              
-                              // Set the current page being edited
-                              setEditingPageId(page.id);
-                              
-                              // Open dialog
-                              setPageDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              const confirmDelete = window.confirm(
-                                `Are you sure you want to delete the page "${page.title}"? All questions on this page will also be deleted. This action cannot be undone.`
-                              );
-                              
-                              if (confirmDelete) {
-                                deletePageMutation.mutate(page.id, {
-                                  onSuccess: () => {
-                                    toast({
-                                      title: "Page Deleted",
-                                      description: "The page and its questions have been deleted."
-                                    });
-                                  }
-                                });
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+              ) : !pages || !pages.pages || !pages.pages.length ? (
                 <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No Pages Yet</h3>
-                  <p className="text-gray-600 mb-4">Add your first page to get started.</p>
+                  <h3 className="text-lg font-semibold mb-2">No Pages Created</h3>
+                  <p className="text-gray-600 mb-4">Add your first page to this questionnaire.</p>
                   <Button onClick={() => setPageDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create First Page
+                    Add Page
                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {pages.pages.map((page: any) => (
+                    <div 
+                      key={page.id} 
+                      className={`border rounded-lg p-4 ${selectedPage === page.id ? "border-primary" : ""}`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-lg font-medium flex items-center">
+                            <span className="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-xs">
+                              {page.order}
+                            </span>
+                            {page.title}
+                          </h3>
+                          <p className="text-gray-500 text-sm">{page.description}</p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedPage(page.id)}
+                          >
+                            {selectedPage === page.id ? "Selected" : "Select"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddSectionToPage(page.id, page.title)}
+                          >
+                            <PlusCircle className="h-4 w-4 mr-1" />
+                            Add Section
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Sections in this page */}
+                      <div className="mt-4 space-y-2">
+                        <h4 className="text-sm font-medium text-gray-500 flex items-center">
+                          <ChevronDown className="h-4 w-4 mr-1" />
+                          Sections in this page
+                        </h4>
+                        
+                        {!page.sections || !page.sections.length ? (
+                          <div className="py-2 px-4 border border-dashed rounded text-center text-gray-500 text-sm">
+                            No sections added to this page yet
+                          </div>
+                        ) : (
+                          <div className="space-y-2 pl-4">
+                            {page.sections.map((pageSection: any) => (
+                              <div 
+                                key={pageSection.id} 
+                                className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                              >
+                                <div>
+                                  <span className="font-medium text-sm">{pageSection.title}</span>
+                                  <p className="text-xs text-gray-500">{pageSection.templateKey}</p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedSection(pageSection.id);
+                                    setActiveTab("questions");
+                                  }}
+                                >
+                                  Manage Questions
+                                  <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
         
-        {/* Questions Tab Content */}
-        {activeTab === "questions" && (
+        {/* Questions Tab */}
+        <TabsContent value="questions">
           <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Questions</CardTitle>
-                  <CardDescription>
-                    {selectedPage && pages ? (
-                      <span>
-                        Managing questions for page: <strong>{pages.find((p: any) => p.id === selectedPage)?.title}</strong>
-                      </span>
-                    ) : (
-                      <span>Select a page first</span>
-                    )}
-                  </CardDescription>
-                </div>
-                <div className="flex space-x-2">
-                  <AIQuestionGenerator 
-                    disabled={!selectedPage} 
-                    pageId={selectedPage} 
-                    definitionId={selectedDefinition}
-                    onSuccess={() => {
-                      queryClient.invalidateQueries({ queryKey: ['/api/admin/questionnaires/pages', selectedPage, 'questions'] });
-                    }}
-                  />
-                
-                  <Dialog 
-                    open={questionDialogOpen} 
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        // Reset form and editing state when dialog is closed
-                        setEditingQuestionId(null);
-                        questionForm.reset({
-                          questionText: "",
-                          questionKey: "",
-                          questionType: "text",
-                          order: 0,
-                          isRequired: false,
-                          placeholderText: "",
-                          helpText: ""
-                        });
-                        setQuestionOptions([]);
-                      }
-                      setQuestionDialogOpen(open);
-                    }}
-                  >
-                    <DialogTrigger asChild>
-                      <Button disabled={!selectedPage}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Question
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>{editingQuestionId ? "Edit Question" : "Add New Question"}</DialogTitle>
-                        <DialogDescription>
-                          {editingQuestionId ? "Modify this question's properties." : "Create a new question for this page."}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <Form {...questionForm}>
-                        <form onSubmit={questionForm.handleSubmit(onSubmitQuestion)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Section Questions</CardTitle>
+                <CardDescription>
+                  {selectedSection 
+                    ? `Manage questions for section: ${sections?.sections?.find((s: any) => s.id === selectedSection)?.title}`
+                    : "Select a section first"}
+                </CardDescription>
+              </div>
+              <Button onClick={() => setQuestionDialogOpen(true)} disabled={!selectedSection}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Question
+              </Button>
+              
+              {/* Create Question Dialog */}
+              <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
+                <DialogContent className="sm:max-w-[550px]">
+                  <DialogHeader>
+                    <DialogTitle>Add Question</DialogTitle>
+                    <DialogDescription>
+                      Add a new question to the selected section.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...questionForm}>
+                    <form onSubmit={questionForm.handleSubmit(onSubmitQuestion)} className="space-y-4">
+                      <FormField
+                        control={questionForm.control}
+                        name="componentTypeId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Question Type</FormLabel>
+                            <Select 
+                              onValueChange={(value) => field.onChange(parseInt(value))} 
+                              defaultValue={field.value?.toString()}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a question type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {isLoadingComponentTypes ? (
+                                  <SelectItem value="loading" disabled>Loading...</SelectItem>
+                                ) : (
+                                  componentTypes?.componentTypes?.map((type: any) => (
+                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                      {type.displayName}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              The type of input for this question
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={questionForm.control}
+                        name="text"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Question Text</FormLabel>
+                            <FormControl>
+                              <Input placeholder="What is your full name?" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              The text displayed to the user
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={questionForm.control}
+                          name="helpText"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Help Text</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Please provide your first and last name" 
+                                  {...field} 
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Additional guidance for the user
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={questionForm.control}
+                          name="placeholderText"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Placeholder</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="John Doe" 
+                                  {...field} 
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Example text shown in the field
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={questionForm.control}
+                          name="questionKey"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Question Key</FormLabel>
+                              <FormControl>
+                                <Input placeholder="full_name" {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                Unique identifier for this question
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={questionForm.control}
+                          name="questionOrder"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Question Order</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="1"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Display order in the section
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={questionForm.control}
+                        name="isRequired"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Required Question</FormLabel>
+                              <FormDescription>
+                                User must answer this question to proceed
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button type="submit" disabled={createQuestionMutation.isPending}>
+                          {createQuestionMutation.isPending ? "Creating..." : "Add Question"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+              
+              {/* Question Options Dialog */}
+              <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
+                <DialogContent className="sm:max-w-[550px]">
+                  <DialogHeader>
+                    <DialogTitle>Add Question Options</DialogTitle>
+                    <DialogDescription>
+                      Add options for the {editingQuestion?.text} question.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...optionsForm}>
+                    <form onSubmit={optionsForm.handleSubmit(onSubmitOptions)} className="space-y-4">
+                      {optionsForm.watch('options').map((_, index) => (
+                        <div key={index} className="flex items-end space-x-2">
                           <FormField
-                            control={questionForm.control}
-                            name="questionText"
+                            control={optionsForm.control}
+                            name={`options.${index}.optionText`}
                             render={({ field }) => (
-                              <FormItem className="col-span-2">
-                                <FormLabel>Question Text</FormLabel>
+                              <FormItem className="flex-1">
+                                <FormLabel>Option Text</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., What is your email address?" {...field} />
+                                  <Input placeholder="Yes" {...field} />
                                 </FormControl>
-                                <FormMessage />
                               </FormItem>
                             )}
                           />
                           
                           <FormField
-                            control={questionForm.control}
-                            name="questionKey"
+                            control={optionsForm.control}
+                            name={`options.${index}.optionValue`}
                             render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Question Key</FormLabel>
+                              <FormItem className="flex-1">
+                                <FormLabel>Value</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., email_address" {...field} />
+                                  <Input placeholder="yes" {...field} />
                                 </FormControl>
-                                <FormDescription>
-                                  A unique identifier for this question
-                                </FormDescription>
-                                <FormMessage />
                               </FormItem>
                             )}
                           />
                           
                           <FormField
-                            control={questionForm.control}
-                            name="questionType"
+                            control={optionsForm.control}
+                            name={`options.${index}.order`}
                             render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Question Type</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a question type" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="text">Text Input</SelectItem>
-                                    <SelectItem value="email">Email</SelectItem>
-                                    <SelectItem value="phone">Phone Number</SelectItem>
-                                    <SelectItem value="number">Number</SelectItem>
-                                    <SelectItem value="date">Date</SelectItem>
-                                    <SelectItem value="time">Time</SelectItem>
-                                    <SelectItem value="time_picker">Time Picker (Hours/Minutes/AM-PM)</SelectItem>
-                                    <SelectItem value="textarea">Multiline Text</SelectItem>
-                                    <SelectItem value="select">Dropdown</SelectItem>
-                                    <SelectItem value="name">Full Name (First/Last)</SelectItem>
-                                    <SelectItem value="address">Address</SelectItem>
-                                    <SelectItem value="radio">Radio Buttons</SelectItem>
-                                    <SelectItem value="checkbox">Single Checkbox (Yes/No)</SelectItem>
-                                    <SelectItem value="checkbox_group">Checkbox Group (Multiple Selection)</SelectItem>
-                                    <SelectItem value="toggle">Toggle Switch (Yes/No)</SelectItem>
-                                    <SelectItem value="slider">Slider</SelectItem>
-                                    <SelectItem value="incrementer">Step Counter</SelectItem>
-                                    <SelectItem value="matrix">Matrix</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormDescription>
-                                  The type of input required for this question
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={questionForm.control}
-                            name="order"
-                            render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="w-20">
                                 <FormLabel>Order</FormLabel>
                                 <FormControl>
                                   <Input 
                                     type="number" 
-                                    min="0" 
+                                    min="1"
                                     {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || index + 1)}
                                   />
                                 </FormControl>
-                                <FormDescription>
-                                  Display order on the page
-                                </FormDescription>
-                                <FormMessage />
                               </FormItem>
                             )}
                           />
                           
-                          <FormField
-                            control={questionForm.control}
-                            name="placeholderText"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Placeholder Text</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., Enter your email..." {...field} value={field.value || ""} />
-                                </FormControl>
-                                <FormDescription>
-                                  Optional placeholder text for the input
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={questionForm.control}
-                            name="isRequired"
-                            render={({ field }) => (
-                              <FormItem>
-                                <div className="flex items-center gap-2 pt-8">
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <FormLabel>Required Question</FormLabel>
-                                </div>
-                                <FormDescription>
-                                  Toggle if this question must be answered
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {/* Slider Configuration Fields - Only show when type is slider */}
-                          {showSliderConfig && (
-                            <>
-                              <FormField
-                                control={questionForm.control}
-                                name="validationRules.min"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Minimum Value</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder="0" 
-                                        {...field}
-                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                        value={field.value || 0}
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      The minimum value for the slider
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <FormField
-                                control={questionForm.control}
-                                name="validationRules.max"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Maximum Value</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder="100" 
-                                        {...field}
-                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 100)}
-                                        value={field.value || 100}
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      The maximum value for the slider
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <FormField
-                                control={questionForm.control}
-                                name="validationRules.step"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Step Size</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder="1" 
-                                        {...field}
-                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                                        value={field.value || 1}
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      The increment between values on the slider
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </>
-                          )}
-                          
-                          {/* Checkbox Configuration Fields - Only show when type is checkbox or checkbox_group */}
-                          {showCheckboxConfig && (
-                            <>
-                              <FormField
-                                control={questionForm.control}
-                                name="validationRules.exactCount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Exact Selection Count</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder="e.g., 4" 
-                                        {...field}
-                                        onChange={(e) => {
-                                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                                          field.onChange(value);
-                                        }}
-                                        value={field.value === undefined || field.value === null ? '' : field.value}
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      Require users to select exactly this many options (leave empty for no restriction)
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <FormField
-                                control={questionForm.control}
-                                name="validationRules.minCount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Minimum Selection Count</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder="e.g., 2" 
-                                        {...field}
-                                        onChange={(e) => {
-                                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                                          field.onChange(value);
-                                        }}
-                                        value={field.value === undefined || field.value === null ? '' : field.value}
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      Minimum number of options users must select (leave empty for no minimum)
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <FormField
-                                control={questionForm.control}
-                                name="validationRules.maxCount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Maximum Selection Count</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder="e.g., 6" 
-                                        {...field}
-                                        onChange={(e) => {
-                                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                                          field.onChange(value);
-                                        }}
-                                        value={field.value === undefined || field.value === null ? '' : field.value}
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      Maximum number of options users can select (leave empty for no maximum)
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </>
-                          )}
-                          
-                          <FormField
-                            control={questionForm.control}
-                            name="helpText"
-                            render={({ field }) => (
-                              <FormItem className="col-span-2">
-                                <FormLabel>Help Text</FormLabel>
-                                <FormControl>
-                                  <Textarea 
-                                    placeholder="Additional instructions for answering this question..."
-                                    {...field}
-                                    value={field.value || ""}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Optional help text to provide context or instructions
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        {/* Options section for select/radio/checkbox types */}
-                        {showOptions && (
-                          <div className="space-y-4 border p-4 rounded-md mt-4">
-                            <div className="flex justify-between items-center">
-                              <h4 className="font-semibold">Options</h4>
-                              <Button type="button" variant="outline" size="sm" onClick={addOption}>
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add Option
-                              </Button>
-                            </div>
-                            
-                            {questionOptions.length === 0 ? (
-                              <div className="text-center text-gray-500 py-2">No options added yet</div>
-                            ) : (
-                              <div className="space-y-3">
-                                {questionOptions.map((option, index) => (
-                                  <div key={index} className="flex items-center gap-2">
-                                    <Input
-                                      placeholder="Option text"
-                                      value={option.optionText}
-                                      onChange={(e) => updateOption(index, 'optionText', e.target.value)}
-                                      className="flex-1"
-                                    />
-                                    <Input
-                                      placeholder="Option value"
-                                      value={option.optionValue}
-                                      onChange={(e) => updateOption(index, 'optionValue', e.target.value)}
-                                      className="flex-1"
-                                    />
-                                    <Button 
-                                      type="button" 
-                                      variant="ghost" 
-                                      size="icon"
-                                      onClick={() => removeOption(index)}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* Matrix question configuration */}
-                        {showMatrix && (
-                          <div className="space-y-6 border p-4 rounded-md mt-4">
-                            <h4 className="font-semibold">Matrix Configuration</h4>
-                            <p className="text-gray-500 text-sm mb-4">
-                              A matrix question displays a grid of options where respondents can select responses for each row according to the column options.
-                            </p>
-                            
-                            {/* Matrix Columns (represent the response options for each row) */}
-                            <div className="space-y-4">
-                              <div className="flex justify-between items-center">
-                                <h5 className="font-medium">Matrix Columns (Response Options)</h5>
-                                <Button type="button" variant="outline" size="sm" onClick={addMatrixColumn}>
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Add Column
-                                </Button>
-                              </div>
-                              
-                              {matrixColumns.length === 0 ? (
-                                <div className="text-center text-gray-500 py-2">No columns added yet</div>
-                              ) : (
-                                <div className="space-y-3">
-                                  {matrixColumns.map((column, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                      <Input
-                                        placeholder="Column text (e.g., 'Strongly Agree')"
-                                        value={column.columnText}
-                                        onChange={(e) => updateMatrixColumn(index, 'columnText', e.target.value)}
-                                        className="flex-1"
-                                      />
-                                      <Input
-                                        placeholder="Column key (e.g., 'strongly_agree')"
-                                        value={column.columnKey}
-                                        onChange={(e) => updateMatrixColumn(index, 'columnKey', e.target.value)}
-                                        className="flex-1"
-                                      />
-                                      <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        size="icon"
-                                        onClick={() => removeMatrixColumn(index)}
-                                      >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Matrix Rows (represent the statements or questions) */}
-                            <div className="space-y-4 mt-6">
-                              <div className="flex justify-between items-center">
-                                <h5 className="font-medium">Matrix Rows (Statements)</h5>
-                                <Button type="button" variant="outline" size="sm" onClick={addMatrixRow}>
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Add Row
-                                </Button>
-                              </div>
-                              
-                              {matrixRows.length === 0 ? (
-                                <div className="text-center text-gray-500 py-2">No rows added yet</div>
-                              ) : (
-                                <div className="space-y-3">
-                                  {matrixRows.map((row, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                      <Input
-                                        placeholder="Row text (e.g., 'The service was excellent')"
-                                        value={row.rowText}
-                                        onChange={(e) => updateMatrixRow(index, 'rowText', e.target.value)}
-                                        className="flex-1"
-                                      />
-                                      <Input
-                                        placeholder="Row key (e.g., 'service_quality')"
-                                        value={row.rowKey}
-                                        onChange={(e) => updateMatrixRow(index, 'rowKey', e.target.value)}
-                                        className="flex-1"
-                                      />
-                                      <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        size="icon"
-                                        onClick={() => removeMatrixRow(index)}
-                                      >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Matrix Preview */}
-                            {matrixColumns.length > 0 && matrixRows.length > 0 && (
-                              <div className="mt-6 space-y-2">
-                                <h5 className="font-medium">Matrix Preview</h5>
-                                <div className="border rounded-md overflow-x-auto">
-                                  <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                      <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                          Question
-                                        </th>
-                                        {matrixColumns.map((column, i) => (
-                                          <th key={i} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            {column.columnText || `Column ${i+1}`}
-                                          </th>
-                                        ))}
-                                      </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                      {matrixRows.map((row, i) => (
-                                        <tr key={i}>
-                                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {row.rowText || `Row ${i+1}`}
-                                          </td>
-                                          {matrixColumns.map((column, j) => (
-                                            <td key={j} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                              <div className="h-4 w-4 rounded-full border border-gray-300 mx-auto"></div>
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        <DialogFooter>
-                          <Button type="submit" disabled={createQuestionMutation.isPending || updateQuestionMutation.isPending}>
-                            {editingQuestionId 
-                              ? (updateQuestionMutation.isPending ? "Updating..." : "Update Question") 
-                              : (createQuestionMutation.isPending ? "Creating..." : "Create Question")
-                            }
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeOptionField(index)}
+                            className="mb-[2px]"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              </div>
+                        </div>
+                      ))}
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addOptionField}
+                        className="mt-2"
+                      >
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Add Option
+                      </Button>
+                      
+                      <DialogFooter>
+                        <Button type="submit" disabled={addQuestionOptionsMutation.isPending}>
+                          {addQuestionOptionsMutation.isPending ? "Saving..." : "Save Options"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              {!selectedPage ? (
+              {!selectedSection ? (
                 <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No Page Selected</h3>
-                  <p className="text-gray-600 mb-4">Select a page to manage its questions.</p>
-                  <Button onClick={() => setActiveTab("pages")}>
-                    Go to Pages
+                  <h3 className="text-lg font-semibold mb-2">No Section Selected</h3>
+                  <p className="text-gray-600 mb-4">Select a section to manage its questions.</p>
+                  <Button onClick={() => setActiveTab("sections")}>
+                    Go to Sections
                   </Button>
                 </div>
-              ) : isLoadingQuestions ? (
+              ) : isLoadingAllSectionQuestions ? (
                 <div className="text-center py-4">Loading questions...</div>
-              ) : questions && Array.isArray(questions) && questions.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Question</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Key</TableHead>
-                      <TableHead>Required</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {questions.sort((a: any, b: any) => a.order - b.order).map((question: any) => (
-                      <TableRow key={question.id}>
-                        <TableCell>{question.order}</TableCell>
-                        <TableCell>
-                          <div className="font-medium">{question.questionText}</div>
-                          {question.helpText && (
-                            <div className="text-xs text-gray-500 truncate max-w-xs">{question.helpText}</div>
-                          )}
-                        </TableCell>
-                        <TableCell><QuestionType value={question.questionType} /></TableCell>
-                        <TableCell><code className="text-xs">{question.questionKey}</code></TableCell>
-                        <TableCell>{question.isRequired ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-gray-300" />}</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              // Set up form values for the selected question
-                              console.log("Loading question for editing:", question);
-                              
-                              // For checkboxes with selection limits, we need to handle validation rules safely
-                              let parsedValidationRules = {
-                                min: undefined, 
-                                max: undefined, 
-                                step: undefined,
-                                exactCount: undefined,
-                                minCount: undefined,
-                                maxCount: undefined
-                              };
-                              
-                              try {
-                                if (question.validationRules) {
-                                  // If it's a string, try to parse it as JSON
-                                  if (typeof question.validationRules === 'string') {
-                                    // Skip parsing if it's "[object Object]" which is a string representation of an object that can't be parsed as JSON
-                                    if (question.validationRules !== "[object Object]") {
-                                      const parsed = JSON.parse(question.validationRules);
-                                      if (parsed) {
-                                        // Extract only the properties we need and ensure they're numbers
-                                        if (parsed.exactCount !== undefined) parsedValidationRules.exactCount = Number(parsed.exactCount);
-                                        if (parsed.minCount !== undefined) parsedValidationRules.minCount = Number(parsed.minCount);
-                                        if (parsed.maxCount !== undefined) parsedValidationRules.maxCount = Number(parsed.maxCount);
-                                        if (parsed.min !== undefined) parsedValidationRules.min = Number(parsed.min);
-                                        if (parsed.max !== undefined) parsedValidationRules.max = Number(parsed.max);
-                                        if (parsed.step !== undefined) parsedValidationRules.step = Number(parsed.step);
-                                      }
-                                    }
-                                  } 
-                                  // If it's already an object, extract the properties we need
-                                  else if (typeof question.validationRules === 'object' && question.validationRules !== null) {
-                                    const rules = question.validationRules;
-                                    if (rules.exactCount !== undefined) parsedValidationRules.exactCount = Number(rules.exactCount);
-                                    if (rules.minCount !== undefined) parsedValidationRules.minCount = Number(rules.minCount);
-                                    if (rules.maxCount !== undefined) parsedValidationRules.maxCount = Number(rules.maxCount);
-                                    if (rules.min !== undefined) parsedValidationRules.min = Number(rules.min);
-                                    if (rules.max !== undefined) parsedValidationRules.max = Number(rules.max);
-                                    if (rules.step !== undefined) parsedValidationRules.step = Number(rules.step);
-                                  }
-                                }
-                              } catch (e) {
-                                console.error("Error parsing validation rules:", e);
-                              }
-                              
-                              console.log("Parsed validation rules:", parsedValidationRules);
-                              
-                              // Reset form with base values
-                              questionForm.reset({
-                                questionText: question.questionText,
-                                questionKey: question.questionKey,
-                                questionType: question.questionType,
-                                order: question.order,
-                                isRequired: question.isRequired,
-                                placeholderText: question.placeholderText || "",
-                                helpText: question.helpText || "",
-                                validationRules: parsedValidationRules
-                              });
-                              
-                              // Set options if they exist
-                              if (question.options && question.options.length > 0) {
-                                setQuestionOptions(question.options);
-                              } else {
-                                setQuestionOptions([]);
-                              }
-                              
-                              // Set the current question being edited
-                              setEditingQuestionId(question.id);
-                              
-                              // Open dialog
-                              setQuestionDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              const confirmDelete = window.confirm(
-                                `Are you sure you want to delete the question "${question.questionText}"? This action cannot be undone.`
-                              );
-                              
-                              if (confirmDelete) {
-                                deleteQuestionMutation.mutate(question.id, {
-                                  onSuccess: () => {
-                                    toast({
-                                      title: "Question Deleted",
-                                      description: "The question has been successfully deleted."
-                                    });
-                                  }
-                                });
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+              ) : !allSectionQuestions || !allSectionQuestions.questions || !allSectionQuestions.questions.length ? (
                 <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No Questions Yet</h3>
-                  <p className="text-gray-600 mb-4">Add your first question to this page.</p>
+                  <h3 className="text-lg font-semibold mb-2">No Questions Added</h3>
+                  <p className="text-gray-600 mb-4">Add your first question to this section.</p>
                   <Button onClick={() => setQuestionDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create First Question
+                    Add Question
                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {allSectionQuestions.questions.map((question: any) => {
+                    // Find component type name
+                    const componentType = componentTypes?.componentTypes?.find((ct: any) => ct.id === question.componentTypeId);
+                    
+                    return (
+                      <div 
+                        key={question.id} 
+                        className="border rounded-lg p-4"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="text-lg font-medium flex items-center">
+                              <span className="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-xs">
+                                {question.order || "-"}
+                              </span>
+                              {question.text}
+                              {question.isRequired && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
+                            </h3>
+                            {question.helpText && (
+                              <p className="text-gray-500 text-sm">{question.helpText}</p>
+                            )}
+                            <div className="mt-1 flex space-x-4 text-xs">
+                              <span className="font-mono bg-slate-100 px-2 py-1 rounded">
+                                {question.questionKey}
+                              </span>
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                {componentType?.displayName || "Unknown Type"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingQuestion(question);
+                                setOptionsDialogOpen(true);
+                              }}
+                              disabled={!["radio", "checkbox", "select", "multi_select"].includes(componentType?.typeKey || "")}
+                            >
+                              Manage Options
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingQuestionId(question.id);
+                                questionForm.reset({
+                                  componentTypeId: question.componentTypeId,
+                                  text: question.text,
+                                  helpText: question.helpText || "",
+                                  placeholderText: question.placeholderText || "",
+                                  isRequired: question.isRequired,
+                                  questionKey: question.questionKey,
+                                  questionOrder: question.order
+                                });
+                                setQuestionDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Question options if applicable */}
+                        {question.options && question.options.length > 0 && (
+                          <div className="mt-4 pl-8">
+                            <h4 className="text-sm font-medium text-gray-500 mb-2">Options:</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                              {question.options.map((option: any) => (
+                                <div key={option.id} className="flex items-center space-x-2 text-sm">
+                                  <span className="bg-gray-200 text-gray-800 rounded-full w-5 h-5 inline-flex items-center justify-center text-xs">
+                                    {option.order}
+                                  </span>
+                                  <span>{option.optionText}</span>
+                                  <span className="text-gray-400">→</span>
+                                  <span className="font-mono text-xs">{option.optionValue}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
         
-        {/* Conditional Logic Tab Content */}
-        {activeTab === "conditionalLogic" && (
+        {/* Conditional Logic Tab */}
+        <TabsContent value="conditional-logic">
           <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Conditional Logic</CardTitle>
-                  <CardDescription>
-                    Managing logic for: <strong>{definitions?.find((d: any) => d.id === selectedDefinition)?.versionName}</strong>
-                  </CardDescription>
-                </div>
-                <Dialog 
-                  open={conditionalLogicDialogOpen} 
-                  onOpenChange={(open) => {
-                    if (!open) {
-                      // Reset form and editing state when dialog is closed
-                      setEditingConditionalLogicId(null);
-                      conditionalLogicForm.reset({
-                        triggerQuestionKey: "",
-                        triggerCondition: "equals",
-                        triggerValue: "",
-                        actionType: "show_question",
-                        targetQuestionKey: ""
-                      });
-                    }
-                    setConditionalLogicDialogOpen(open);
-                  }}
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Conditional Logic Rules</CardTitle>
+                <CardDescription>
+                  {selectedDefinition 
+                    ? `Manage logic rules for: ${definitions?.definitions?.find((d: any) => d.id === selectedDefinition)?.name}`
+                    : "Select a questionnaire definition first"}
+                </CardDescription>
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => setConditionalLogicDialogOpen(true)} 
+                  disabled={!selectedDefinition || !allDefinitionQuestions || allDefinitionQuestions.length < 2}
                 >
-                  <DialogTrigger asChild>
-                    <Button disabled={!allDefinitionQuestions || !Array.isArray(allDefinitionQuestions) || allDefinitionQuestions.length < 1}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Logic Rule
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>{editingConditionalLogicId ? "Edit Logic Rule" : "Create Conditional Logic Rule"}</DialogTitle>
-                      <DialogDescription>
-                        {editingConditionalLogicId 
-                          ? "Update this conditional logic rule." 
-                          : "Define behavior based on answers to questions."}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...conditionalLogicForm}>
-                      <form onSubmit={conditionalLogicForm.handleSubmit(onSubmitConditionalLogic)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="triggerQuestionKey"
-                            render={({ field }) => (
-                              <FormItem className="col-span-2">
-                                <FormLabel>If Question</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a trigger question" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {allDefinitionQuestions && Array.isArray(allDefinitionQuestions) && allDefinitionQuestions.map((q: any) => (
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Logic Rule
+                </Button>
+              </div>
+              
+              {/* Create Conditional Logic Dialog */}
+              <Dialog open={conditionalLogicDialogOpen} onOpenChange={setConditionalLogicDialogOpen}>
+                <DialogContent className="sm:max-w-[550px]">
+                  <DialogHeader>
+                    <DialogTitle>Create Conditional Logic Rule</DialogTitle>
+                    <DialogDescription>
+                      Define a rule to show, hide, or require questions based on conditions.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...conditionalLogicForm}>
+                    <form onSubmit={conditionalLogicForm.handleSubmit(onSubmitConditionalLogic)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={conditionalLogicForm.control}
+                          name="triggerQuestionKey"
+                          render={({ field }) => (
+                            <FormItem className="col-span-2">
+                              <FormLabel>If Question</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a trigger question" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {allDefinitionQuestions && Array.isArray(allDefinitionQuestions) && allDefinitionQuestions.map((q: any) => (
+                                    <SelectItem key={q.questionKey} value={q.questionKey}>
+                                      {q.questionText} ({q.questionKey})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                The question that will trigger this rule
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={conditionalLogicForm.control}
+                          name="triggerCondition"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Condition</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a condition" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="equals">Equals</SelectItem>
+                                  <SelectItem value="not_equals">Does Not Equal</SelectItem>
+                                  <SelectItem value="contains">Contains</SelectItem>
+                                  <SelectItem value="greater_than">Greater Than</SelectItem>
+                                  <SelectItem value="less_than">Less Than</SelectItem>
+                                  <SelectItem value="is_empty">Is Empty</SelectItem>
+                                  <SelectItem value="is_not_empty">Is Not Empty</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                How to evaluate the question's answer
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={conditionalLogicForm.control}
+                          name="triggerValue"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Value</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="yes" 
+                                  {...field} 
+                                  value={field.value || ""}
+                                  disabled={['is_empty', 'is_not_empty'].includes(conditionalLogicForm.watch('triggerCondition'))}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                The value to compare against
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={conditionalLogicForm.control}
+                          name="actionType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Action</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select an action" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="show_question">Show Question</SelectItem>
+                                  <SelectItem value="hide_question">Hide Question</SelectItem>
+                                  <SelectItem value="require_question">Make Required</SelectItem>
+                                  <SelectItem value="unrequire_question">Make Optional</SelectItem>
+                                  <SelectItem value="skip_to_page">Skip to Page</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                What happens when the condition is met
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={conditionalLogicForm.control}
+                          name="targetQuestionKey"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Target Question</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                defaultValue={field.value}
+                                disabled={conditionalLogicForm.watch('actionType') === 'skip_to_page'}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a target question" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {allDefinitionQuestions && Array.isArray(allDefinitionQuestions) && allDefinitionQuestions
+                                    .filter((q: any) => q.questionKey !== conditionalLogicForm.watch('triggerQuestionKey'))
+                                    .map((q: any) => (
                                       <SelectItem key={q.questionKey} value={q.questionKey}>
                                         {q.questionText} ({q.questionKey})
                                       </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormDescription>
-                                  The question that will trigger this rule
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="triggerCondition"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Condition</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a condition" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="equals">Equals</SelectItem>
-                                    <SelectItem value="not_equals">Not Equals</SelectItem>
-                                    <SelectItem value="contains">Contains</SelectItem>
-                                    <SelectItem value="not_contains">Doesn't Contain</SelectItem>
-                                    <SelectItem value="starts_with">Starts With</SelectItem>
-                                    <SelectItem value="ends_with">Ends With</SelectItem>
-                                    <SelectItem value="greater_than">Greater Than</SelectItem>
-                                    <SelectItem value="less_than">Less Than</SelectItem>
-                                    <SelectItem value="is_answered">Is Answered</SelectItem>
-                                    <SelectItem value="is_empty">Is Empty</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {/* Only show value field for conditions that need a comparison value */}
-                          <FormField
-                            control={conditionalLogicForm.control}
-                            name="triggerValue"
-                            render={({ field }) => {
-                              const condition = conditionalLogicForm.watch("triggerCondition");
-                              const needsValue = !["is_answered", "is_empty"].includes(condition);
-                              
-                              return (
-                                <FormItem>
-                                  <FormLabel>Expected Value</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      disabled={!needsValue}
-                                      placeholder={needsValue ? "Value to compare against" : "Not needed for this condition"}
-                                    />
-                                  </FormControl>
-                                  <FormDescription>
-                                    The value to compare against in the condition
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              );
-                            }}
-                          />
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                              control={conditionalLogicForm.control}
-                              name="actionType"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Action</FormLabel>
-                                  <Select 
-                                    onValueChange={field.onChange} 
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select an action" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="show_question">Show Question</SelectItem>
-                                      <SelectItem value="hide_question">Hide Question</SelectItem>
-                                      <SelectItem value="require_question">Make Question Required</SelectItem>
-                                      <SelectItem value="unrequire_question">Make Question Optional</SelectItem>
-                                      <SelectItem value="skip_to_page">Skip to Page</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    The action to take when the condition is met
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={conditionalLogicForm.control}
-                              name="targetQuestionKey"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Target Question</FormLabel>
-                                  <Select 
-                                    onValueChange={field.onChange} 
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select target question" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {allDefinitionQuestions && Array.isArray(allDefinitionQuestions) && allDefinitionQuestions
-                                        .filter((q: any) => q.questionKey !== conditionalLogicForm.watch("triggerQuestionKey"))
-                                        .map((q: any) => (
-                                          <SelectItem key={q.questionKey} value={q.questionKey}>
-                                            {q.questionText} ({q.questionKey})
-                                          </SelectItem>
-                                        ))
-                                      }
-                                    </SelectContent>
-                                  </Select>
-                                  <FormDescription>
-                                    The question affected by this rule
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                        
-                        <DialogFooter>
-                          <Button type="submit" disabled={createConditionalLogicMutation.isPending || updateConditionalLogicMutation.isPending}>
-                            {editingConditionalLogicId
-                              ? (updateConditionalLogicMutation.isPending ? "Updating..." : "Update Logic Rule")
-                              : (createConditionalLogicMutation.isPending ? "Creating..." : "Create Logic Rule")
-                            }
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+                                    ))
+                                  }
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                The question affected by this rule
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <DialogFooter>
+                        <Button type="submit" disabled={createConditionalLogicMutation.isPending}>
+                          {createConditionalLogicMutation.isPending ? "Creating..." : "Create Logic Rule"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {!selectedDefinition ? (
                 <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No Definition Selected</h3>
-                  <p className="text-gray-600 mb-4">Select a questionnaire definition to manage conditional logic.</p>
+                  <h3 className="text-lg font-semibold mb-2">No Questionnaire Selected</h3>
+                  <p className="text-gray-600 mb-4">Select a questionnaire to manage its logic rules.</p>
                   <Button onClick={() => setActiveTab("definitions")}>
                     Go to Definitions
                   </Button>
@@ -2580,7 +1906,7 @@ const QuestionnaireBuilder = () => {
                   <TableBody>
                     {conditionalLogic.map((rule: any) => (
                       <TableRow key={rule.id}>
-                        <TableCell>
+                        <TableCell className="font-medium">
                           {allDefinitionQuestions.find((q: any) => q.questionKey === rule.triggerQuestionKey)?.questionText || rule.triggerQuestionKey}
                         </TableCell>
                         <TableCell>
@@ -2590,60 +1916,36 @@ const QuestionnaireBuilder = () => {
                           {rule.triggerValue || '—'}
                         </TableCell>
                         <TableCell>
-                          {rule.actionType.replace(/_/g, ' ')}
+                          {{
+                            'show_question': 'Show',
+                            'hide_question': 'Hide',
+                            'require_question': 'Make Required',
+                            'unrequire_question': 'Make Optional',
+                            'skip_to_page': 'Skip to Page'
+                          }[rule.actionType] || rule.actionType}
                         </TableCell>
                         <TableCell>
                           {allDefinitionQuestions.find((q: any) => q.questionKey === rule.targetQuestionKey)?.questionText || rule.targetQuestionKey}
                         </TableCell>
-                        <TableCell className="text-right space-x-2">
+                        <TableCell className="text-right">
                           <Button
-                            variant="outline" 
-                            size="sm" 
+                            variant="outline"
+                            size="sm"
                             onClick={() => {
-                              // Set up form values for the selected conditional logic rule
+                              // Set up form with current values
+                              setEditingConditionalLogicId(rule.id);
                               conditionalLogicForm.reset({
                                 triggerQuestionKey: rule.triggerQuestionKey,
-                                triggerCondition: rule.triggerCondition,
-                                triggerValue: rule.triggerValue || "",
-                                actionType: rule.actionType,
-                                targetQuestionKey: rule.targetQuestionKey
+                                targetQuestionKey: rule.targetQuestionKey,
+                                triggerCondition: rule.triggerCondition as any,
+                                triggerValue: rule.triggerValue || '',
+                                actionType: rule.actionType as any
                               });
-                              
-                              // Set the current rule being edited
-                              setEditingConditionalLogicId(rule.id);
-                              
-                              // Open dialog
                               setConditionalLogicDialogOpen(true);
                             }}
                           >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
+                            <Edit className="h-4 w-4" />
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Logic Rule</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this conditional logic rule? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => deleteConditionalLogicMutation.mutate(rule.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -2651,89 +1953,246 @@ const QuestionnaireBuilder = () => {
                 </Table>
               ) : (
                 <div className="text-center py-10 border rounded-md">
-                  <h3 className="text-lg font-semibold mb-2">No conditional logic rules yet</h3>
-                  <p className="text-gray-600 mb-4">Create your first logic rule.</p>
-                  <Button onClick={() => setConditionalLogicDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create First Logic Rule
+                  <h3 className="text-lg font-semibold mb-2">No Logic Rules Created</h3>
+                  <p className="text-gray-600 mb-4">Add your first conditional logic rule to control how questions behave.</p>
+                  <Button 
+                    onClick={() => setConditionalLogicDialogOpen(true)}
+                    disabled={allDefinitionQuestions.length < 2}
+                  >
+                    Create Logic Rule
                   </Button>
+                  {allDefinitionQuestions.length < 2 && (
+                    <p className="text-yellow-600 text-sm mt-4">You need at least 2 questions to create conditional logic</p>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
         
-        {/* API Tester Tab Content */}
-        {activeTab === "apiTester" && (
-          <JSONRequestTester />
-        )}
-        
-        {/* Preview Tab Content */}
-        {activeTab === "preview" && (
+        {/* Preview Tab */}
+        <TabsContent value="preview">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Preview</CardTitle>
-                  <CardDescription>
-                    Preview your questionnaire as it will appear to users.
-                  </CardDescription>
-                </div>
-              </div>
+              <CardTitle>Questionnaire Preview</CardTitle>
+              <CardDescription>
+                {selectedDefinition 
+                  ? `Preview of: ${definitions?.definitions?.find((d: any) => d.id === selectedDefinition)?.name}`
+                  : "Select a questionnaire to preview"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {selectedDefinition && pages && pages.length > 0 ? (
-                <div>
-                  <div className="mb-4">
-                    <Button onClick={() => setActiveTab("definitions")} variant="outline" className="mr-2">
-                      <ArrowLeft className="mr-2 h-4 w-4" /> Return to Definitions
-                    </Button>
-                    <Button onClick={() => loadAllQuestionsForPreview()} variant="outline">
-                      <RefreshCw className="mr-2 h-4 w-4" /> Refresh Preview
-                    </Button>
-                  </div>
-                  <QuestionnairePreview
-                    definitionId={selectedDefinition}
-                    pages={pages || []}
-                    questionsMap={questionsMap}
-                    onClose={() => setActiveTab("definitions")}
-                  />
-                </div>
-              ) : (
+              {!selectedDefinition ? (
                 <div className="text-center py-10 border rounded-md">
                   <h3 className="text-lg font-semibold mb-2">No Questionnaire Selected</h3>
-                  <p className="text-gray-600 mb-4">Please select a questionnaire definition to preview.</p>
+                  <p className="text-gray-600 mb-4">Select a questionnaire to preview it.</p>
                   <Button onClick={() => setActiveTab("definitions")}>
-                    Return to Definitions
+                    Go to Definitions
                   </Button>
+                </div>
+              ) : isLoadingPages ? (
+                <div className="text-center py-4">Loading questionnaire preview...</div>
+              ) : !pages || !pages.pages || !pages.pages.length ? (
+                <div className="text-center py-10 border rounded-md">
+                  <h3 className="text-lg font-semibold mb-2">No Pages Created</h3>
+                  <p className="text-gray-600 mb-4">Add pages to your questionnaire to see a preview.</p>
+                  <Button onClick={() => setActiveTab("pages")}>
+                    Go to Pages
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center border-b pb-4">
+                    <h2 className="text-2xl font-bold">
+                      {definitions?.definitions?.find((d: any) => d.id === selectedDefinition)?.name}
+                    </h2>
+                    <div className="flex space-x-2">
+                      <Button variant="outline">
+                        <Save className="h-4 w-4 mr-2" />
+                        Save as Template
+                      </Button>
+                      <Button>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Publish
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Pages Tabs */}
+                  <Tabs defaultValue={pages.pages[0]?.id.toString()}>
+                    <TabsList className="mb-4">
+                      {pages.pages.map((page: any, index: number) => (
+                        <TabsTrigger key={page.id} value={page.id.toString()}>
+                          {index + 1}. {page.title}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    
+                    {pages.pages.map((page: any) => (
+                      <TabsContent key={page.id} value={page.id.toString()}>
+                        <div className="border rounded-lg p-6">
+                          <h3 className="text-xl font-semibold mb-1">{page.title}</h3>
+                          {page.description && (
+                            <p className="text-gray-600 mb-6">{page.description}</p>
+                          )}
+                          
+                          {!page.sections || !page.sections.length ? (
+                            <div className="py-4 text-center text-gray-500">
+                              No sections added to this page
+                            </div>
+                          ) : (
+                            <div className="space-y-8">
+                              {page.sections.map((section: any) => (
+                                <div key={section.id} className="border-t pt-6">
+                                  <h4 className="text-lg font-medium mb-4">{section.title}</h4>
+                                  
+                                  {!section.questions || !section.questions.length ? (
+                                    <div className="py-2 text-center text-gray-500">
+                                      No questions added to this section
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-6">
+                                      {section.questions.map((question: any) => {
+                                        // Determine which input type to render based on componentTypeId
+                                        let inputComponent = null;
+                                        const componentType = componentTypes?.componentTypes?.find(
+                                          (ct: any) => ct.id === question.componentTypeId
+                                        )?.typeKey;
+                                        
+                                        switch (componentType) {
+                                          case 'text':
+                                            inputComponent = (
+                                              <Input 
+                                                placeholder={question.placeholderText || ''} 
+                                                disabled
+                                              />
+                                            );
+                                            break;
+                                          case 'textarea':
+                                            inputComponent = (
+                                              <Textarea 
+                                                placeholder={question.placeholderText || ''} 
+                                                disabled
+                                              />
+                                            );
+                                            break;
+                                          case 'radio':
+                                            inputComponent = (
+                                              <div className="space-y-2">
+                                                {question.options?.map((option: any) => (
+                                                  <div key={option.id} className="flex items-center">
+                                                    <input 
+                                                      type="radio" 
+                                                      name={`preview_${question.id}`}
+                                                      id={`preview_${question.id}_${option.id}`}
+                                                      className="mr-2"
+                                                      disabled
+                                                    />
+                                                    <label htmlFor={`preview_${question.id}_${option.id}`}>
+                                                      {option.optionText}
+                                                    </label>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            );
+                                            break;
+                                          case 'checkbox':
+                                          case 'checkbox_group':
+                                            inputComponent = (
+                                              <div className="space-y-2">
+                                                {question.options?.map((option: any) => (
+                                                  <div key={option.id} className="flex items-center">
+                                                    <Checkbox 
+                                                      id={`preview_${question.id}_${option.id}`}
+                                                      className="mr-2"
+                                                      disabled
+                                                    />
+                                                    <label 
+                                                      htmlFor={`preview_${question.id}_${option.id}`}
+                                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                    >
+                                                      {option.optionText}
+                                                    </label>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            );
+                                            break;
+                                          case 'select':
+                                            inputComponent = (
+                                              <Select disabled>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select an option" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {question.options?.map((option: any) => (
+                                                    <SelectItem key={option.id} value={option.optionValue}>
+                                                      {option.optionText}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            );
+                                            break;
+                                          default:
+                                            inputComponent = (
+                                              <div className="p-2 border border-dashed rounded text-center text-gray-500">
+                                                {componentType || 'Unknown'} input
+                                              </div>
+                                            );
+                                        }
+                                        
+                                        return (
+                                          <div key={question.id} className="space-y-2">
+                                            <div className="flex items-start">
+                                              <Label className="flex-1">
+                                                {question.text}
+                                                {question.isRequired && (
+                                                  <span className="text-red-500 ml-1">*</span>
+                                                )}
+                                              </Label>
+                                              
+                                              {/* Conditional status indicator */}
+                                              {question.conditionalLogic && question.conditionalLogic.length > 0 && (
+                                                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                                  Conditional
+                                                </span>
+                                              )}
+                                            </div>
+                                            
+                                            {question.helpText && (
+                                              <p className="text-gray-500 text-sm">{question.helpText}</p>
+                                            )}
+                                            
+                                            <div>{inputComponent}</div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <div className="mt-8 pt-4 border-t flex justify-between">
+                            <Button variant="outline" disabled={pages.pages.indexOf(page) === 0}>
+                              &larr; Previous
+                            </Button>
+                            <Button disabled={pages.pages.indexOf(page) === pages.pages.length - 1}>
+                              Next &rarr;
+                            </Button>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
-        {/* Preview Dialog */}
-        <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-          <DialogContent className="max-w-5xl h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Questionnaire Preview</DialogTitle>
-              <DialogDescription>
-                This is how your questionnaire will appear to users. You can navigate through pages to test the experience.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedDefinition && (
-              <QuestionnairePreview
-                definitionId={selectedDefinition}
-                pages={pages || []}
-                questionsMap={questionsMap}
-                onClose={() => setPreviewDialogOpen(false)}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
-
-export default QuestionnaireBuilder;
+}
