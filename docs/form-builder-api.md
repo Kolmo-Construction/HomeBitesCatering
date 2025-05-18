@@ -756,46 +756,12 @@ This endpoint receives, validates, and stores a form submission from a client.
 The Form Builder API works closely with the Question Library API. You need to create questions in the question library first before you can add them to form pages.
 
 For more information on the Question Library API, please refer to the Question Library API documentation.
-          "displayOrder": 0,
-          "metadata": {
-            "textType": "short"
-          },
-          "options": null
-        },
-        {
-          "questionInstanceId": 2,
-          "libraryQuestionId": 8,
-          "questionType": "matrix",
-          "displayText": "Please rate the following venue features",
-          "isRequired": true,
-          "isHidden": false,
-          "placeholder": null,
-          "helperText": "Rate each feature from 1-5",
-          "displayOrder": 1,
-          "metadata": {
-            "ratingScale": "1-5"
-          },
-          "matrixStructure": {
-            "rows": [
-              {
-                "id": 1,
-                "key": "location",
-                "label": "Convenient Location",
-                "displayOrder": 0
-              },
-              {
-                "id": 2,
-                "key": "parking",
-                "label": "Parking Availability",
-                "displayOrder": 1
-              }
-            ],
-            "columns": [
-              {
-                "id": 1,
-                "key": "rating_1",
-                "label": "1 - Poor",
-                "displayOrder": 0
+
+## Next Steps
+
+Now that you have learned about the Form Builder API, you can use it to create dynamic questionnaires for your catering management system. The API allows for a fully customizable form building experience with conditional logic, a variety of question types, and a reusable question library.
+
+For testing these endpoints, you can use the included test scripts in the project root, such as `test-form-builder-api.js` and `test-form-submission.js`.
               },
               {
                 "id": 2,
