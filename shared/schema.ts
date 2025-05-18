@@ -1,32 +1,37 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, doublePrecision, pgEnum, numeric, unique, primaryKey } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique } from "drizzle-orm/pg-core";
+import { relations, type PgColumn, type PgTableWithColumns, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User and authentication tables
+// --- USER & AUTH ---
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+  email: text("email").unique(),
+  username: text("username").unique().notNull(),
   password: text("password").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  email: text("email").notNull().unique(),
-  phone: text("phone"),
-  role: text("role").default("staff").notNull(), // admin, staff, kitchen, client
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  role: text("role").default("member").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  createdAt: true
+  createdAt: true,
+  updatedAt: true
 });
 
-// Priority enum for opportunities
+// --- ENUMS ---
+
 export const opportunityPriorityEnum = pgEnum("opportunity_priority", ['hot', 'high', 'medium', 'low']);
 
-// Opportunities (forward reference to clients handled later)
+// --- OPPORTUNITIES ---
+
 export const opportunities = pgTable("opportunities", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
@@ -35,42 +40,34 @@ export const opportunities = pgTable("opportunities", {
   eventDate: timestamp("event_date"),
   guestCount: integer("guest_count"),
   venue: text("venue"),
-  notes: text("notes"),
-  status: text("status").default("new").notNull(), // new, contacted, qualified, proposal, booked, archived
-  opportunitySource: text("opportunity_source"), // website, referral, google, social, etc.
-  priority: opportunityPriorityEnum("priority").default('medium'), // NEW FIELD for prioritizing opportunities
-  assignedTo: integer("assigned_to").references(() => users.id),
-  clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
-  // Fields for future extensions
+  budget: text("budget"),
+  details: text("details"),
+  status: text("status").default("new").notNull(),
+  priority: opportunityPriorityEnum("priority").default('medium'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertOpportunitySchema = createInsertSchema(opportunities, {
-  eventDate: z.string().nullable().transform(date => date ? new Date(date) : null),
-  priority: z.enum(opportunityPriorityEnum.enumValues).optional(), // Make it optional on creation, defaults to 'medium'
-  opportunitySource: z.string().optional(),
+  userId: z.number().optional().nullable(),
+  guestCount: z.number().optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  clientId: true
 });
 
-// Menu Items
+// --- MENU ITEMS ---
+
 export const menuItems = pgTable("menu_items", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  itemName: text("item_name").notNull(),
+  category: text("category").notNull(),
   description: text("description"),
-  category: text("category").notNull(), // appetizer, entree, side, dessert, beverage
-  price: numeric("price", { precision: 10, scale: 2 }), // stored as decimal, nullable for items without price
-  ingredients: text("ingredients"),
-  isVegetarian: boolean("is_vegetarian").default(false),
-  isVegan: boolean("is_vegan").default(false),
-  isGlutenFree: boolean("is_gluten_free").default(false),
-  isDairyFree: boolean("is_dairy_free").default(false),
-  isNutFree: boolean("is_nut_free").default(false),
-  image: text("image"), // url to image
+  pricePerPerson: text("price_per_person"),
+  metadata: jsonb("metadata"),
+  ingredients: jsonb("ingredients"),
+  dietaryLimitations: jsonb("dietary_limitations"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -81,13 +78,14 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).omit({
   updatedAt: true
 });
 
-// Menus (collection of menu items)
+// --- MENUS ---
+
 export const menus = pgTable("menus", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  type: text("type").notNull(), // standard, custom, seasonal
-  items: jsonb("items").notNull(), // array of menu item IDs with quantities
+  items: jsonb("items").notNull(),
+  tags: jsonb("tags"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -98,7 +96,8 @@ export const insertMenuSchema = createInsertSchema(menus).omit({
   updatedAt: true
 });
 
-// Clients
+// --- CLIENTS ---
+
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
@@ -112,15 +111,9 @@ export const clients = pgTable("clients", {
   state: text("state"),
   zip: text("zip"),
   notes: text("notes"),
-  opportunityId: integer("opportunity_id").references(() => opportunities.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
-// The proper way to handle circular references in Drizzle is to declare both tables
-// without circular foreign keys first, then use the relations API instead of trying to
-// add the reference after the fact. We'll keep it simple in this case by just documenting
-// that opportunities.clientId refers to clients.id.
 
 export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
@@ -128,68 +121,51 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   updatedAt: true
 });
 
-// Estimates/Proposals
+// --- ESTIMATES ---
+
 export const estimates = pgTable("estimates", {
   id: serial("id").primaryKey(),
-  clientId: integer("client_id").references(() => clients.id).notNull(),
-  eventDate: timestamp("event_date"),
-  eventType: text("event_type").notNull(),
-  guestCount: integer("guest_count"),
-  venue: text("venue"),
-  // Address fields for Washington Tax Rates API
-  venueAddress: text("venue_address"), // Street address for venue
-  venueCity: text("venue_city"), // City for venue
-  venueState: text("venue_state"), // State for venue (always WA)
-  venueZip: text("venue_zip"), // ZIP code for venue
-  taxRate: doublePrecision("tax_rate"), // Stored tax rate from API
-  // Legacy field - kept for backward compatibility
-  zipCode: text("zip_code"),
+  opportunityId: integer("opportunity_id").references(() => opportunities.id).notNull(),
+  clientId: integer("client_id").references(() => clients.id),
   menuId: integer("menu_id").references(() => menus.id),
-  items: jsonb("items"), // JSON of custom items if not using a standard menu
-  additionalServices: jsonb("additional_services"), // JSON of additional services
-  subtotal: integer("subtotal").notNull(), // stored in cents
-  tax: integer("tax").notNull(), // stored in cents
-  total: integer("total").notNull(), // stored in cents
-  status: text("status").default("draft").notNull(), // draft, sent, viewed, accepted, declined
+  eventDate: timestamp("event_date"),
+  eventLocation: text("event_location"),
+  guestCount: integer("guest_count"),
+  status: text("status").default("draft").notNull(),
+  subtotal: text("subtotal"),
+  taxRate: text("tax_rate"),
+  taxAmount: text("tax_amount"),
+  total: text("total"),
   notes: text("notes"),
-  expiresAt: timestamp("expires_at"),
-  sentAt: timestamp("sent_at"),
-  viewedAt: timestamp("viewed_at"),
-  acceptedAt: timestamp("accepted_at"),
-  declinedAt: timestamp("declined_at"),
-  createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertEstimateSchema = createInsertSchema(estimates, {
-  // Ensure proper handling of dates
-  eventDate: z.coerce.date().nullable(),
-  sentAt: z.coerce.date().nullable(),
-  expiresAt: z.coerce.date().nullable(),
-  viewedAt: z.coerce.date().nullable(),
-  acceptedAt: z.coerce.date().nullable(),
-  declinedAt: z.coerce.date().nullable(),
+  opportunityId: z.number(),
+  clientId: z.number().optional().nullable(),
+  menuId: z.number().optional().nullable(),
+  guestCount: z.number().optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,
   updatedAt: true
 });
 
-// Events (confirmed bookings)
+// --- EVENTS ---
+
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
-  clientId: integer("client_id").references(() => clients.id).notNull(),
-  estimateId: integer("estimate_id").references(() => estimates.id),
-  eventDate: timestamp("event_date").notNull(),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
-  eventType: text("event_type").notNull(),
-  guestCount: integer("guest_count").notNull(),
-  venue: text("venue").notNull(),
-  menuId: integer("menu_id").references(() => menus.id),
-  status: text("status").default("confirmed").notNull(), // confirmed, in-progress, completed, cancelled
-  notes: text("notes"),
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
+  clientId: integer("client_id").references(() => clients.id),
+  title: text("title").notNull(),
+  start: timestamp("start").notNull(),
+  end: timestamp("end").notNull(),
+  location: text("location"),
+  description: text("description"),
+  allDay: boolean("all_day").default(false).notNull(),
+  status: text("status").default("scheduled").notNull(),
+  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -200,17 +176,18 @@ export const insertEventSchema = createInsertSchema(events).omit({
   updatedAt: true
 });
 
-// --- NEW: Contact Identifiers Table ---
+// --- CONTACT IDENTIFIERS ---
+
 export const identifierTypeEnum = pgEnum("identifier_type", ["email", "phone"]);
 
 export const contactIdentifiers = pgTable("contact_identifiers", {
   id: serial("id").primaryKey(),
-  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'cascade' }), // Link to opportunity
-  clientId: integer("client_id").references(() => clients.id, { onDelete: 'cascade' }), // Link to client
-  type: identifierTypeEnum("type").notNull(), // 'email' or 'phone'
-  value: text("value").notNull(), // The actual email address or phone number
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
+  clientId: integer("client_id").references(() => clients.id),
+  type: identifierTypeEnum("type").notNull(),
+  value: text("value").notNull(),
   isPrimary: boolean("is_primary").default(false).notNull(),
-  source: text("source"), // How this identifier was added (e.g., 'lead_form', 'email_sync', 'manual_entry')
+  source: text("source"), // Where did this identifier come from? A form, manual entry, etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -219,42 +196,39 @@ export const insertContactIdentifierSchema = createInsertSchema(contactIdentifie
   createdAt: true,
 });
 
-// --- NEW: Communications/Interactions Table ---
+// --- COMMUNICATIONS ---
+
 export const communicationTypeEnum = pgEnum("communication_type", ["email", "call", "sms", "note", "meeting"]);
 export const communicationDirectionEnum = pgEnum("communication_direction", ["incoming", "outgoing", "internal"]);
 
 export const communications = pgTable("communications", {
   id: serial("id").primaryKey(),
-  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }), // Link to opportunity
-  clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }), // Link to client
-  userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }), // User who created/logged this, or involved internal user
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
+  clientId: integer("client_id").references(() => clients.id),
+  userId: integer("user_id").references(() => users.id),
   type: communicationTypeEnum("type").notNull(),
   direction: communicationDirectionEnum("direction").notNull(),
-  timestamp: timestamp("timestamp").notNull().defaultNow(), // When the actual communication happened
-  source: text("source"), // e.g., 'gmail_sync', 'twilio_sync', 'manual_entry', 'system_generated'
-  externalId: text("external_id"), // Unique ID from the external system (e.g., email Message-ID, call SID)
-  subject: text("subject"), // For emails or meeting titles
-  fromAddress: text("from_address"), // For emails
-  toAddress: text("to_address"), // For emails (could be an array, consider how to store if multiple)
-  bodyRaw: text("body_raw"), // Full email body, call transcript, etc.
-  bodySummary: text("body_summary"), // AI-generated summary or user-provided summary
-  durationMinutes: integer("duration_minutes"), // For calls
-  recordingUrl: text("recording_url"), // For call recordings
-  metaData: jsonb("meta_data"), // Any other structured data (e.g., email headers, call tags, AI analysis results)
+  subject: text("subject"),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"),
+  sentAt: timestamp("sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertCommunicationSchema = createInsertSchema(communications, {
-  timestamp: z.coerce.date(), // Ensure timestamp is handled as Date
-  metaData: z.any().optional(), // For JSONB
+  opportunityId: z.number().optional().nullable(),
+  clientId: z.number().optional().nullable(),
+  userId: z.number().optional().nullable(),
+  sentAt: z.date().optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-// Type exports
+// --- TYPES ---
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
@@ -276,102 +250,90 @@ export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 
-// --- NEW: Types for new tables ---
 export type ContactIdentifier = typeof contactIdentifiers.$inferSelect;
 export type InsertContactIdentifier = z.infer<typeof insertContactIdentifierSchema>;
 
 export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 
-// Raw Leads module
-// Add new enum types for leads scoring and quality assessment
+// --- AI-ANALYSIS ENUMS ---
+
 export const leadScoreEnum = pgEnum("lead_score", ['1', '2', '3', '4', '5']);
 export const leadQualityCategoryEnum = pgEnum("lead_quality_category", ['hot', 'warm', 'cold', 'nurture']);
 export const budgetIndicationEnum = pgEnum("budget_indication", ['not_mentioned', 'low', 'medium', 'high', 'specific_amount']);
 export const sentimentEnum = pgEnum("sentiment", ['positive', 'neutral', 'negative', 'urgent']);
 
-// Updated status enum to include new statuses
+// --- RAW LEADS ---
+
 export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'archived', 'junk', 'parsing_failed', 'needs_manual_review']);
 
-// Forward declare rawLeads for circular references
 export const rawLeads = pgTable("raw_leads", {
   id: serial("id").primaryKey(),
-  source: text("source").notNull(), // e.g., 'weddingwire', 'website_form', 'gmail_sync', 'manual_entry'
-  rawData: jsonb("raw_data"), // Store the original request payload/email body etc.
-  extractedProspectName: text("extracted_prospect_name"),
-  extractedProspectEmail: text("extracted_prospect_email"),
-  extractedProspectPhone: text("extracted_prospect_phone"),
-  eventSummary: text("event_summary"), // Brief summary/keywords from raw_data
-  receivedAt: timestamp("received_at").notNull(), // Removed defaultNow() so we can set this to the email's original date
+  source: text("source").notNull(), // "gmail", "web_form", "manual_entry"
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
   status: rawLeadStatusEnum("status").default('new').notNull(),
-  // This field links a raw lead to the opportunity created from it.
-  createdOpportunityId: integer("created_opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
-  notes: text("internal_notes"), // For internal notes about this raw lead
-  assignedToUserId: integer("assigned_to_user_id").references(() => users.id), // Optional: if raw leads can be assigned for review
+  notes: text("notes"),
+  rawData: jsonb("raw_data"), // For email, the email JSON; for form, the form data
+  subjectLine: text("subject_line"), 
+  bodyText: text("body_text"),
+  senderName: text("sender_name"),
+  senderEmail: text("sender_email"),
+  messageId: text("message_id"), // For tracking email threads
+  eventType: text("event_type"), // AI-extracted event type
+  eventDate: timestamp("event_date"), // AI-extracted date
+  guestCount: integer("guest_count"), // AI-extracted guest count
+  venue: text("venue"), // AI-extracted venue
+  budget: text("budget"), // AI-extracted budget
+  leadScore: leadScoreEnum("lead_score"), // AI-scored lead quality (1-5)
+  leadQuality: leadQualityCategoryEnum("lead_quality"), // AI categorization (hot/warm/cold/nurture)
+  budgetIndication: budgetIndicationEnum("budget_indication"), // AI budget estimate
+  sentiment: sentimentEnum("sentiment"), // AI sentiment analysis
+  requestUrgency: integer("request_urgency"), // 1-10, AI urgency assessment
+  aiExtractedContact: jsonb("ai_extracted_contact"), // Name, email, phone
+  aiAnalysisJson: jsonb("ai_analysis_json"), // Full analysis results
+  aiCalendarConflictAssessment: text("ai_calendar_conflict_assessment"),
   
-  // New fields for AI-parsed event details
-  extractedEventType: text("extracted_event_type"),
-  extractedEventDate: text("extracted_event_date"),
-  extractedEventTime: text("extracted_event_time"),
-  extractedGuestCount: integer("extracted_guest_count"),
-  extractedVenue: text("extracted_venue"),
-  extractedMessageSummary: text("extracted_message_summary"),
-  leadSourcePlatform: text("lead_source_platform"),
-  
-  // New fields for AI assessment and scoring
-  aiUrgencyScore: leadScoreEnum("ai_urgency_score"),
-  aiBudgetIndication: budgetIndicationEnum("ai_budget_indication"),
-  aiBudgetValue: integer("ai_budget_value"),
-  aiClarityOfRequestScore: leadScoreEnum("ai_clarity_of_request_score"),
-  aiDecisionMakerLikelihood: leadScoreEnum("ai_decision_maker_likelihood"),
-  aiKeyRequirements: jsonb("ai_key_requirements"),
-  aiPotentialRedFlags: jsonb("ai_potential_red_flags"),
-  aiOverallLeadQuality: leadQualityCategoryEnum("ai_overall_lead_quality"),
-  aiSuggestedNextStep: text("ai_suggested_next_step"),
-  aiSentiment: sentimentEnum("ai_sentiment"),
-  aiConfidenceScore: doublePrecision("ai_confidence_score"),
-  aiCalendarConflictAssessment: text("ai_calendar_conflict_assessment"), // New field for calendar conflict assessment
-  
+  // For tracking which leads have been processed
+  convertedToOpportunityId: integer("converted_to_opportunity_id").references(() => opportunities.id),
+  assignedUserId: integer("assigned_user_id").references(() => users.id),
+  processingStartedAt: timestamp("processing_started_at"),
+  processingCompletedAt: timestamp("processing_completed_at"),
+  processingNotes: text("processing_notes"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertRawLeadSchema = createInsertSchema(rawLeads, {
-  rawData: z.any().optional(),
-  receivedAt: z.coerce.date().optional(),
-  
-  // New AI fields as optional
-  aiKeyRequirements: z.any().optional(),
-  aiPotentialRedFlags: z.any().optional(),
-  aiCalendarConflictAssessment: z.string().nullable().optional(), // Added new field for calendar conflicts
+  guestCount: z.number().optional().nullable(),
+  eventDate: z.date().optional().nullable(),
+  convertedToOpportunityId: z.number().optional().nullable(),
+  assignedUserId: z.number().optional().nullable(),
+  processingStartedAt: z.date().optional().nullable(),
+  processingCompletedAt: z.date().optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
+  updatedAt: true
 });
 
 export type RawLead = typeof rawLeads.$inferSelect;
 export type InsertRawLead = z.infer<typeof insertRawLeadSchema>;
 
-// Define the relationships between tables
+// --- RELATIONS ---
+
 export const userRelations = relations(users, ({ many }) => ({
-  opportunities: many(opportunities, { relationName: 'assignedOpportunities' }),
-  estimates: many(estimates),
-  rawLeads: many(rawLeads, { relationName: 'assignedRawLeads' }),
+  opportunities: many(opportunities),
+  clients: many(clients),
 }));
 
 export const opportunityRelations = relations(opportunities, ({ one, many }) => ({
-  assignedUser: one(users, {
-    fields: [opportunities.assignedTo],
-    references: [users.id],
-    relationName: 'assignedOpportunities'
+  user: one(users, {
+    fields: [opportunities.userId],
+    references: [users.id]
   }),
-  client: one(clients, {
-    fields: [opportunities.clientId],
-    references: [clients.id]
-  }),
-  // Related raw leads
-  rawLeads: many(rawLeads, { relationName: 'createdFromOpportunity' }),
+  estimates: many(estimates),
+  events: many(events),
 }));
 
 export const clientRelations = relations(clients, ({ one, many }) => ({
@@ -379,42 +341,34 @@ export const clientRelations = relations(clients, ({ one, many }) => ({
     fields: [clients.userId],
     references: [users.id]
   }),
-  opportunity: one(opportunities, {
-    fields: [clients.opportunityId],
-    references: [opportunities.id]
-  }),
   estimates: many(estimates),
   events: many(events),
 }));
 
 export const estimateRelations = relations(estimates, ({ one }) => ({
+  opportunity: one(opportunities, {
+    fields: [estimates.opportunityId],
+    references: [opportunities.id]
+  }),
   client: one(clients, {
     fields: [estimates.clientId],
     references: [clients.id]
   }),
-  createdBy: one(users, {
-    fields: [estimates.createdBy],
-    references: [users.id]
-  }),
   menu: one(menus, {
     fields: [estimates.menuId],
     references: [menus.id]
-  }),
+  })
 }));
 
 export const eventRelations = relations(events, ({ one }) => ({
+  opportunity: one(opportunities, {
+    fields: [events.opportunityId],
+    references: [opportunities.id]
+  }),
   client: one(clients, {
     fields: [events.clientId],
     references: [clients.id]
-  }),
-  estimate: one(estimates, {
-    fields: [events.estimateId],
-    references: [estimates.id]
-  }),
-  menu: one(menus, {
-    fields: [events.menuId],
-    references: [menus.id]
-  }),
+  })
 }));
 
 export const contactIdentifierRelations = relations(contactIdentifiers, ({ one }) => ({
@@ -425,7 +379,7 @@ export const contactIdentifierRelations = relations(contactIdentifiers, ({ one }
   client: one(clients, {
     fields: [contactIdentifiers.clientId],
     references: [clients.id]
-  }),
+  })
 }));
 
 export const communicationRelations = relations(communications, ({ one }) => ({
@@ -440,52 +394,53 @@ export const communicationRelations = relations(communications, ({ one }) => ({
   user: one(users, {
     fields: [communications.userId],
     references: [users.id]
-  }),
+  })
 }));
 
 export const rawLeadRelations = relations(rawLeads, ({ one }) => ({
-  createdOpportunity: one(opportunities, {
-    fields: [rawLeads.createdOpportunityId],
-    references: [opportunities.id],
-    relationName: 'createdFromOpportunity'
+  opportunity: one(opportunities, {
+    fields: [rawLeads.convertedToOpportunityId],
+    references: [opportunities.id]
   }),
   assignedUser: one(users, {
-    fields: [rawLeads.assignedToUserId],
-    references: [users.id],
-    relationName: 'assignedRawLeads'
-  }),
+    fields: [rawLeads.assignedUserId],
+    references: [users.id]
+  })
 }));
 
-// Gmail Sync State table to track the last known history ID and watch expiration
+// --- GMAIL SYNC ---
+
 export const gmailSyncState = pgTable("gmail_sync_state", {
-  targetEmail: text("target_email").primaryKey(), // The email address being watched
-  lastHistoryId: text("last_history_id").notNull(),
-  watchExpirationTimestamp: timestamp("watch_expiration_timestamp"), // Store when the current watch expires
-  lastWatchAttemptTimestamp: timestamp("last_watch_attempt_timestamp").defaultNow(),
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  lastSyncTimestamp: text("last_sync_timestamp").notNull(),
+  historyId: text("history_id"),
+  nextSyncToken: text("next_sync_token"),
+  status: text("status").default("idle").notNull(),
+  lastError: text("last_error"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertGmailSyncStateSchema = createInsertSchema(gmailSyncState, {
-  watchExpirationTimestamp: z.coerce.date().nullable(),
+  historyId: z.string().optional().nullable(),
+  nextSyncToken: z.string().optional().nullable(),
+  lastError: z.string().optional().nullable(),
 }).omit({
+  id: true,
   createdAt: true,
-  updatedAt: true,
+  updatedAt: true
 });
 
 export type GmailSyncState = typeof gmailSyncState.$inferSelect;
 export type InsertGmailSyncState = z.infer<typeof insertGmailSyncStateSchema>;
 
-// Processed Emails table to track which emails have been processed
 export const processedEmails = pgTable("processed_emails", {
   id: serial("id").primaryKey(),
   messageId: text("message_id").notNull().unique(),
-  gmailId: text("gmail_id").notNull(),
-  service: text("service").notNull(), // Which service processed this email (e.g., 'lead_gen', 'email_sync')
+  threadId: text("thread_id").notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
-  email: text("email").notNull(), // The email address this message was processed for
-  subject: text("subject"),
-  labelApplied: boolean("label_applied").default(false),
 });
 
 export const insertProcessedEmailSchema = createInsertSchema(processedEmails).omit({
@@ -494,266 +449,22 @@ export const insertProcessedEmailSchema = createInsertSchema(processedEmails).om
 });
 
 export type ProcessedEmail = typeof processedEmails.$inferSelect;
-export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;// In your shared/schema.ts or a new file (e.g., shared/form-schema.ts)
+export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
 
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, primaryKey } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+// Import form-schema tables for usage in this file
+import {
+  formQuestionTypeEnum, 
+  conditionalLogicActionTypeEnum, 
+  conditionalLogicConditionTypeEnum,
+  formStatusEnum, 
+  formRuleTargetTypeEnum,
+  questionLibrary,
+  forms,
+  formPages,
+  formPageQuestions,
+  formRules,
+  formRuleTargets
+} from "./form-schema";
 
-// Don't import from schema.ts to avoid circular references
-
-// --- ENUMS ---
-
-export const formQuestionTypeEnum = pgEnum("form_question_type", [
-  // Core types
-  'header', 'text_display', 'textbox', 'textarea', 'email', 'phone', 'number',
-  'datetime', 'time', 'checkbox_group', 'radio_group', 'dropdown',
-  'full_name', 'address', 'matrix',
-  // Modern, mobile-first types
-  'image_upload', 'file_upload', 'signature_pad', 'rating_scale', 'slider',
-  'toggle_switch', 'location_picker', 'tag_select', 'date_range_picker', 'stepper_input',
-]);
-
-export const conditionalLogicActionTypeEnum = pgEnum("conditional_logic_action_type", [
-  'show_question', 'hide_question', 'require_question', 'unrequire_question',
-  'skip_to_page', 'enable_option', 'disable_option', 'set_value',
-  'show_page', 'hide_page', // Added page-level actions
-]);
-
-export const conditionalLogicConditionTypeEnum = pgEnum("conditional_logic_condition_type", [
-  'equals', 'not_equals', 'is_filled', 'is_not_filled', 'contains',
-  'does_not_contain', 'greater_than', 'less_than', 'is_selected_option_value',
-  'is_not_selected_option_value',
-]);
-
-export const formRuleTargetTypeEnum = pgEnum("form_rule_target_type", [
-  'question', // Targets a form_page_questions instance
-  'page',     // Targets a form_pages instance
-]);
-
-// --- TABLES ---
-
-// 1. Reusable Question Building Blocks
-export const questionLibrary = pgTable("question_library", {
-  id: serial("id").primaryKey(),
-  libraryQuestionKey: text("library_question_key").unique().notNull(),
-  defaultText: text("default_text").notNull(),
-  questionType: formQuestionTypeEnum("question_type").notNull(),
-  defaultMetadata: jsonb("default_metadata"), // For non-matrix types, or general matrix properties.
-                                             // For matrix, specific row/col structure is now in separate tables.
-  defaultOptions: jsonb("default_options"), // For checkbox_group, radio_group, dropdown
-  category: text("category"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// NEW: For Matrix Question Structure (linked to question_library)
-export const libraryMatrixRows = pgTable("library_matrix_rows", {
-  id: serial("id").primaryKey(),
-  libraryQuestionId: integer("library_question_id").references(() => questionLibrary.id, { onDelete: 'cascade' }).notNull(), // FK to the 'matrix' type question in library
-  rowKey: text("row_key").notNull(), // Unique key for this row within its matrix question
-  label: text("label").notNull(),
-  price: text("price"), // Storing as text to allow for various formats like "$2.25 each"
-  defaultMetadata: jsonb("default_metadata"), // Row-specific metadata
-  rowOrder: integer("row_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-    libraryQuestionRowKeyUnique: unique().on(table.libraryQuestionId, table.rowKey),
-}));
-
-export const libraryMatrixColumns = pgTable("library_matrix_columns", {
-  id: serial("id").primaryKey(),
-  libraryQuestionId: integer("library_question_id").references(() => questionLibrary.id, { onDelete: 'cascade' }).notNull(), // FK to the 'matrix' type question in library
-  columnKey: text("column_key").notNull(), // Unique key for this col within its matrix question (e.g., "quantity", "selection")
-  header: text("header").notNull(),
-  // Type of input for the cells in this column (could be a simpler enum or use formQuestionTypeEnum if cells can be complex)
-  cellInputType: text("cell_input_type").notNull(), // e.g., 'number_input', 'radio_select_from_options_key', 'text_input'
-  defaultMetadata: jsonb("default_metadata"), // Column-specific metadata (e.g., options for a 'radio_select' column cell, min/max for 'number_input')
-  columnOrder: integer("column_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-    libraryQuestionColumnKeyUnique: unique().on(table.libraryQuestionId, table.columnKey),
-}));
-
-
-// 2. The Overall Form Structure
-export const forms = pgTable("forms", {
-  id: serial("id").primaryKey(),
-  formKey: text("form_key").unique().notNull(),
-  formTitle: text("form_title").notNull(),
-  description: text("description"),
-  version: integer("version").default(1).notNull(),
-  status: text("status").default("draft").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// 3. Pages Within a Form
-export const formPages = pgTable("form_pages", {
-  id: serial("id").primaryKey(),
-  formId: integer("form_id").references(() => forms.id, { onDelete: 'cascade' }).notNull(),
-  pageTitle: text("page_title"),
-  pageOrder: integer("page_order").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-    formPageOrderUnique: unique().on(table.formId, table.pageOrder),
-}));
-
-// 4. Placing Library Questions onto a Form Page (The Instance)
-export const formPageQuestions = pgTable("form_page_questions", {
-  id: serial("id").primaryKey(),
-  formPageId: integer("form_page_id").references(() => formPages.id, { onDelete: 'cascade' }).notNull(),
-  libraryQuestionId: integer("library_question_id").references(() => questionLibrary.id, { onDelete: 'restrict' }).notNull(),
-  displayOrder: integer("display_order").notNull(),
-  displayTextOverride: text("display_text_override"),
-  isRequiredOverride: boolean("is_required_override"),
-  isHiddenOverride: boolean("is_hidden_override"),
-  placeholderOverride: text("placeholder_override"),
-  helperTextOverride: text("helper_text_override"),
-  metadataOverrides: jsonb("metadata_overrides"), // For a matrix instance, this could specify which library rows/cols are active or their overridden labels.
-  optionsOverrides: jsonb("options_overrides"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-    pageQuestionOrderUnique: unique().on(table.formPageId, table.displayOrder),
-}));
-
-// 5. Conditional Logic
-export const formRules = pgTable("form_rules", {
-  id: serial("id").primaryKey(),
-  formId: integer("form_id").references(() => forms.id, { onDelete: 'cascade' }).notNull(),
-  triggerFormPageQuestionId: integer("trigger_form_page_question_id").references(() => formPageQuestions.id, { onDelete: 'cascade' }).notNull(),
-  conditionType: conditionalLogicConditionTypeEnum("condition_type").notNull(),
-  conditionValue: text("condition_value"),
-  actionType: conditionalLogicActionTypeEnum("action_type").notNull(),
-  // Removed single target fields: targetFormPageQuestionId, targetFormPageId
-  ruleDescription: text("rule_description"),
-  executionOrder: integer("execution_order").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// NEW: Join Table for Multiple Rule Targets
-export const formRuleTargets = pgTable("form_rule_targets", {
-  id: serial("id").primaryKey(),
-  ruleId: integer("rule_id").references(() => formRules.id, { onDelete: 'cascade' }).notNull(),
-  targetType: formRuleTargetTypeEnum("target_type").notNull(), // 'question' or 'page'
-  targetId: integer("target_id").notNull(), // This ID refers to either form_page_questions.id or form_pages.id based on target_type
-  // You might add constraints or application-level checks to ensure targetId is valid for the targetType
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-
-// 6. Client Submissions
-export const formSubmissions = pgTable("form_submissions", {
-  id: serial("id").primaryKey(),
-  formId: integer("form_id").references(() => forms.id, { onDelete: 'restrict' }).notNull(),
-  formVersion: integer("form_version").notNull(),
-  userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }),
-  clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }),
-  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
-  rawLeadId: integer("raw_lead_id").references(() => rawLeads.id, { onDelete: 'set null' }),
-  status: text("status").default("in_progress").notNull(),
-  submittedAt: timestamp("submitted_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// 7. Answers to Questions in a Submission
-export const formSubmissionAnswers = pgTable("form_submission_answers", {
-  id: serial("id").primaryKey(),
-  formSubmissionId: integer("form_submission_id").references(() => formSubmissions.id, { onDelete: 'cascade' }).notNull(),
-  formPageQuestionId: integer("form_page_question_id").references(() => formPageQuestions.id, { onDelete: 'restrict' }).notNull(),
-  // For matrix answers, answerValue would be a JSON array like:
-  // [ { "rowKey": "pate_sandwich", "columnKey": "quantity_36", "value": true (if radio) or "selected" },
-  //   { "rowKey": "pate_sandwich", "columnKey": "user_notes", "value": "extra crispy" } ]
-  // Or, if cells are simple values: { "pate_sandwich_quantity_36": true, "pate_sandwich_user_notes": "extra crispy" }
-  answerValue: jsonb("answer_value"),
-  answeredAt: timestamp("answered_at").defaultNow().notNull(),
-});
-
-
-// --- RELATIONS ---
-
-export const questionLibraryRelations = relations(questionLibrary, ({ many }) => ({
-  formPageQuestions: many(formPageQuestions),
-  matrixRows: many(libraryMatrixRows),
-  matrixColumns: many(libraryMatrixColumns),
-}));
-
-export const libraryMatrixRowsRelations = relations(libraryMatrixRows, ({ one }) => ({
-    libraryQuestion: one(questionLibrary, {
-        fields: [libraryMatrixRows.libraryQuestionId],
-        references: [questionLibrary.id]
-    })
-}));
-
-export const libraryMatrixColumnsRelations = relations(libraryMatrixColumns, ({ one }) => ({
-    libraryQuestion: one(questionLibrary, {
-        fields: [libraryMatrixColumns.libraryQuestionId],
-        references: [questionLibrary.id]
-    })
-}));
-
-export const formsRelations = relations(forms, ({ many }) => ({
-  formPages: many(formPages),
-  formRules: many(formRules),
-  formSubmissions: many(formSubmissions),
-}));
-
-export const formPagesRelations = relations(formPages, ({ one, many }) => ({
-  form: one(forms, { fields: [formPages.formId], references: [forms.id] }),
-  formPageQuestions: many(formPageQuestions),
-  // No direct relation to formRuleTargets from here, managed through formRules
-}));
-
-export const formPageQuestionsRelations = relations(formPageQuestions, ({ one, many }) => ({
-  formPage: one(formPages, { fields: [formPageQuestions.formPageId], references: [formPages.id] }),
-  libraryQuestion: one(questionLibrary, { fields: [formPageQuestions.libraryQuestionId], references: [questionLibrary.id] }),
-  triggeringRules: many(formRules, { relationName: 'triggerQuestionRules' }),
-  targetedByRuleTargets: many(formRuleTargets, { relationName: 'targetedQuestionRuleItems' }), // A question can be one of many targets for different rules
-  submissionAnswers: many(formSubmissionAnswers),
-}));
-
-export const formRulesRelations = relations(formRules, ({ one, many }) => ({
-  form: one(forms, { fields: [formRules.formId], references: [forms.id] }),
-  triggerFormPageQuestion: one(formPageQuestions, {
-    fields: [formRules.triggerFormPageQuestionId],
-    references: [formPageQuestions.id],
-    relationName: 'triggerQuestionRules',
-  }),
-  targets: many(formRuleTargets), // A rule now has many targets
-}));
-
-export const formRuleTargetsRelations = relations(formRuleTargets, ({ one }) => ({
-    rule: one(formRules, {
-        fields: [formRuleTargets.ruleId],
-        references: [formRules.id],
-    }),
-    // Note: Polymorphic relation for targetId (to formPageQuestions or formPages)
-    // is tricky with Drizzle's static relations. You'd handle this join logic in your queries
-    // based on the 'targetType'. For example, if targetType is 'question', join targetId with formPageQuestions.id.
-    // For Drizzle's `relations`, you might define two optional relations and only one would be valid per row.
-    targetQuestion: one(formPageQuestions, {
-        fields: [formRuleTargets.targetId],
-        references: [formPageQuestions.id],
-        relationName: 'targetedQuestionRuleItems'
-    }),
-}));
-
-export const formSubmissionsRelations = relations(formSubmissions, ({ one, many }) => ({
-  form: one(forms, { fields: [formSubmissions.formId], references: [forms.id] }),
-  user: one(users, { fields: [formSubmissions.userId], references: [users.id] }),
-  client: one(clients, { fields: [formSubmissions.clientId], references: [clients.id] }),
-  opportunity: one(opportunities, { fields: [formSubmissions.opportunityId], references: [opportunities.id] }),
-  rawLead: one(rawLeads, { fields: [formSubmissions.rawLeadId], references: [rawLeads.id] }),
-  answers: many(formSubmissionAnswers),
-}));
-
-export const formSubmissionAnswersRelations = relations(formSubmissionAnswers, ({ one }) => ({
-  submission: one(formSubmissions, { fields: [formSubmissionAnswers.formSubmissionId], references: [formSubmissions.id] }),
-  formPageQuestion: one(formPageQuestions, { fields: [formSubmissionAnswers.formPageQuestionId], references: [formPageQuestions.id] }),
-}));
+// Re-export everything from form-schema
+export * from "./form-schema";
