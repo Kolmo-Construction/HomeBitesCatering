@@ -31,11 +31,7 @@ export default function Sidebar() {
     { name: "Menus", href: "/menus", icon: ClipboardList },
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },
-    { name: "Questionnaires", href: "/questionnaire-builder", icon: FileQuestion },
-    { name: "Questionnaire Docs", href: "/questionnaire-docs", icon: BookOpen },
-    { name: "Form Builder API", href: "/form-builder-tester", icon: Code },
-    { name: "Form Builder Docs", href: "/form-builder-docs", icon: BookOpen },
-    { name: "Home Bites 2025 Form", href: "/form-examples/home-bites-2025", icon: FileText },
+    /* Questionnaire menu items removed */
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];

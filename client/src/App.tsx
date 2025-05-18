@@ -14,13 +14,6 @@ import Calendar from "@/pages/calendar";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
-import QuestionnaireBuilder from "@/pages/QuestionnaireBuilder";
-import QuestionnaireDocumentation from "@/pages/QuestionnaireDocumentation";
-import FormBuilderTester from "@/pages/FormBuilderTester";
-import UnifiedFormBuilderDocs from "@/pages/UnifiedFormBuilderDocs";
-import HomeBites2025Form from "@/examples/HomeBites2025Form";
-import PublicQuestionnaire from "@/pages/PublicQuestionnaire";
-import ThankYou from "@/pages/ThankYou";
 import ConditionalRenderingTestPage from "@/pages/ConditionalRenderingTestPage";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
@@ -61,12 +54,7 @@ function AppContent() {
             <Route path="/estimates/new" component={Estimates} />
             <Route path="/estimates/:id/view" component={Estimates} />
             <Route path="/estimates/:id/edit" component={Estimates} />
-            <Route path="/questionnaire-builder" component={QuestionnaireBuilder} />
-            <Route path="/questionnaire-docs" component={QuestionnaireDocumentation} />
-            <Route path="/form-builder-tester" component={FormBuilderTester} />
-            <Route path="/form-builder-docs" component={UnifiedFormBuilderDocs} />
-            <Route path="/form-examples/home-bites" component={FormBuilderTester} />
-            <Route path="/form-examples/home-bites-2025" component={HomeBites2025Form} />
+            {/* Questionnaire routes removed */}
             <Route path="/menu-items" component={MenuItems} />
             <Route path="/menu-items/new" component={MenuItems} />
             <Route path="/menu-items/:id" component={MenuItems} />
@@ -90,30 +78,12 @@ function AppContent() {
   );
 }
 
-// We need to create a separation between authenticated and public routes
-function PublicRoutes() {
-  return (
-    <div className="min-h-screen">
-      <Toaster />
-      <Switch>
-        <Route path="/questionnaire/:id" component={PublicQuestionnaire} />
-        <Route path="/questionnaire" component={PublicQuestionnaire} />
-        <Route path="/thank-you" component={ThankYou} />
-        <Route>
-          {/* Fallback to the auth-protected app */}
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </Route>
-      </Switch>
-    </div>
-  );
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <PublicRoutes />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

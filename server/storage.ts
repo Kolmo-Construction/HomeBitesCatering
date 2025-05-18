@@ -2,9 +2,7 @@
 import { Pool } from '@neondatabase/serverless';
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
-  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, processedEmails,
-  questionnairePages, questionnaireDefinitions, questionnaireQuestions, questionnaireQuestionOptions, questionTypeEnum,
-  questionnaireConditionalLogic, questionnaireSubmissions, questionnaireMatrixColumns, 
+  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -14,15 +12,7 @@ import {
   type Event, type InsertEvent,
   type ContactIdentifier, type InsertContactIdentifier,
   type Communication, type InsertCommunication,
-  type RawLead, type InsertRawLead,
-  type ProcessedEmail, type InsertProcessedEmail,
-  type QuestionnairePage, type InsertQuestionnairePage, 
-  type QuestionnaireDefinition, insertQuestionnaireDefinitionSchema,
-  type QuestionnaireQuestion, type InsertQuestionnaireQuestion,
-  type QuestionnaireQuestionOption, type InsertQuestionnaireQuestionOption,
-  type QuestionnaireMatrixColumn, type InsertQuestionnaireMatrixColumn,
-  type QuestionnaireConditionalLogic, type InsertQuestionnaireConditionalLogic,
-  type QuestionnaireSubmission, type InsertQuestionnaireSubmission
+  type RawLead, type InsertRawLead
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added sql for raw SQL operations
@@ -168,21 +158,7 @@ export interface IStorage {
   deleteConditionalLogicRule(ruleId: number): Promise<boolean>;
   questionKeyExistsInDefinition(definitionId: number, questionKey: string): Promise<boolean>;
   
-  // Public-facing questionnaire methods
-  getActiveQuestionnaireDefinition(): Promise<QuestionnaireDefinition | undefined>;
-  getPublicQuestionnaireStructure(definitionId: number): Promise<{
-    definition: QuestionnaireDefinition;
-    pages: {
-      page: QuestionnairePage;
-      questions: {
-        question: QuestionnaireQuestion;
-        options: QuestionnaireQuestionOption[];
-        matrixColumns: QuestionnaireMatrixColumn[];
-      }[];
-    }[];
-    conditionalLogic: QuestionnaireConditionalLogic[];
-  } | undefined>;
-  submitQuestionnaireResponse(submission: InsertQuestionnaireSubmission): Promise<QuestionnaireSubmission>;
+  // Questionnaire methods removed
 }
 
 // DatabaseStorage implementation using PostgreSQL
