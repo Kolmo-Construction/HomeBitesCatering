@@ -100,7 +100,7 @@ async function testQuestionLibraryAPI() {
     // 2. Create a matrix question
     console.log('\nCreating a matrix question...');
     const matrixQuestion = {
-      libraryQuestionKey: 'matrix_question_1',
+      libraryQuestionKey: `matrix_question_${timestamp}`,
       defaultText: 'Please rate our services:',
       questionType: 'matrix',
       category: 'feedback',
@@ -136,11 +136,12 @@ async function testQuestionLibraryAPI() {
       console.log('Count:', listResponse.data.pagination.total);
       console.log('Questions:', listResponse.data.data.map(q => ({ 
         id: q.id, 
-        key: q.library_question_key, 
-        type: q.question_type 
+        key: q.libraryQuestionKey, 
+        type: q.questionType 
       })));
     } else {
       console.error('Failed to list questions');
+      console.error('Error:', listResponse.data);
     }
 
     // 4. Get a matrix question details

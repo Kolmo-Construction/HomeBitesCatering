@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { z, ZodError } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   insertQuestionLibrarySchema,
@@ -116,14 +116,20 @@ export const registerFormRoutes = (app: Express) => {
       // Get total count for pagination
       let count = 0;
       try {
-        // Use SQL query to get count directly
-        const countQuery = category 
-          ? `SELECT COUNT(*) as count FROM question_library WHERE category = $1`
-          : `SELECT COUNT(*) as count FROM question_library`;
-        
-        const params = category ? [category] : [];
-        const countResult = await db.execute(countQuery, params);
-        count = parseInt(countResult.rows[0]?.count || '0', 10);
+        if (category) {
+          // Use count with where clause
+          const countResult = await db
+            .select({ count: sql`count(*)` })
+            .from(questionLibrary)
+            .where(eq(questionLibrary.category, category));
+          count = Number(countResult[0]?.count || 0);
+        } else {
+          // Use simple count query
+          const countResult = await db
+            .select({ count: sql`count(*)` })
+            .from(questionLibrary);
+          count = Number(countResult[0]?.count || 0);
+        }
       } catch (err) {
         console.error('Error counting questions:', err);
         // In case of error, use array length as fallback
