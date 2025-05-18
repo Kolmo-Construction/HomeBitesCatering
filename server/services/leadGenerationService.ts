@@ -21,15 +21,12 @@ export class LeadGenerationService {
   
   private gmail: gmail_v1.Gmail | null = null;
   private _isRunning: boolean = false;
-  private timeoutId: NodeJS.Timeout | null = null;
-  private processingInterval: number;
   private aiEnabled: boolean;
   private targetEmail: string = "";
   private lastSyncTimestamp: number | null = null;
   private customLabelId: string | null = null;
 
-  constructor(intervalMs: number = 15 * 60 * 1000, aiEnabled: boolean = true) {
-    this.processingInterval = intervalMs;
+  constructor(aiEnabled: boolean = true) {
     this.aiEnabled = aiEnabled;
     this.targetEmail = tokenStore.targetEmail || process.env.SYNC_TARGET_EMAIL_ADDRESS || '';
 
@@ -46,17 +43,11 @@ export class LeadGenerationService {
     return this.targetEmail;
   }
 
-  public getTimerId(): NodeJS.Timeout | null {
-    return this.timeoutId;
-  }
-
   public inspectStatus(): any {
     return {
       isRunning: this._isRunning,
-      hasTimeout: this.timeoutId !== null,
       hasGmailClient: this.gmail !== null,
       targetEmailConfigured: !!this.targetEmail,
-      processingInterval: this.processingInterval,
       aiEnabled: this.aiEnabled,
       lastSyncTimestamp: this.lastSyncTimestamp,
       lastSyncDate: this.lastSyncTimestamp ? new Date(this.lastSyncTimestamp * 1000).toISOString() : null,
@@ -94,39 +85,37 @@ export class LeadGenerationService {
     }
 
     this._isRunning = true;
-    console.log(`LeadGenerationService started. Checking for lead emails for "${this.targetEmail}" every ${this.processingInterval / 1000} seconds.`);
-    this.scheduleNextFetch();
+    console.log(`LeadGenerationService started. Ready to process emails for "${this.targetEmail}" on demand.`);
   }
 
   public stop(): void {
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
     this._isRunning = false;
     console.log('LeadGenerationService stopped.');
   }
 
-  private scheduleNextFetch(): void {
-    if (!this._isRunning) return;
+  /**
+   * Process lead emails on demand 
+   * This method replaces the scheduled polling with on-demand processing
+   */
+  public async processLeadEmailsOnDemand(): Promise<void> {
+    if (!this._isRunning) {
+      console.log('LeadGenerationService is not running. Start the service first.');
+      return;
+    }
     
-    this.timeoutId = setTimeout(async () => {
-      try {
-        await this.fetchAndProcessLeadEmails();
-      } catch (error) {
-        console.error('LeadGenerationService error during fetch cycle:', error);
-      } finally {
-        // Schedule next run only if service is still running
-        if (this._isRunning) {
-          this.scheduleNextFetch();
-        }
-      }
-    }, this.processingInterval);
+    try {
+      await this.fetchAndProcessLeadEmails();
+      this.lastSyncTimestamp = Math.floor(Date.now() / 1000);
+      console.log(`LeadGenerationService: Completed on-demand email processing at ${new Date().toISOString()}`);
+    } catch (error) {
+      console.error('LeadGenerationService error during processing:', error);
+      throw error;
+    }
   }
 
   private async fetchAndProcessLeadEmails(): Promise<void> {
-    if (!this._isRunning || !this.gmail) {
-      console.warn('LeadGenerationService: Cannot fetch emails, service stopped or client unavailable.');
+    if (!this.gmail) {
+      console.warn('LeadGenerationService: Cannot fetch emails, client unavailable.');
       return;
     }
 
@@ -152,10 +141,6 @@ export class LeadGenerationService {
       console.log(`LeadGenerationService: Found ${messages.length} potential lead emails.`);
 
       for (const messageEntry of messages) {
-        if (!this._isRunning) {
-          console.log(`LeadGenerationService: Stopping processing early due to service stop.`);
-          break;
-        }
 
         if (!messageEntry.id) continue;
 
@@ -270,14 +255,15 @@ export class LeadGenerationService {
         }
       }
     } catch (err: any) {
-      console.error('LeadGenerationService: API Error during fetch cycle:', err.message || err);
+      console.error('LeadGenerationService: API Error during email fetching:', err.message || err);
       if (err.code === 401 || (err.response && err.response.status === 401)) {
         console.error("LeadGenerationService: Authentication error (401). Please re-authorize.");
         this.stop();
       }
+      // Rethrow the error to be handled by the caller
+      throw err;
     } finally {
-      this.lastSyncTimestamp = Math.floor(Date.now() / 1000);
-      console.log(`[${new Date().toISOString()}] LeadGenerationService: Finished lead email fetch cycle.`);
+      console.log(`[${new Date().toISOString()}] LeadGenerationService: Finished processing lead emails.`);
     }
   }
 

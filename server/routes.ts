@@ -1413,6 +1413,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Manually process lead emails
+  app.post('/api/admin/lead-gen/process', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const leadGenService = req.app.get('leadGenService');
+      
+      if (!leadGenService) {
+        return res.status(503).json({ message: 'Lead Generation Service not initialized' });
+      }
+      
+      if (!leadGenService.isRunning()) {
+        return res.status(400).json({ 
+          message: 'Lead Generation Service is not running. Start the service first.',
+          success: false
+        });
+      }
+      
+      // Process emails on demand
+      await leadGenService.processLeadEmailsOnDemand();
+      
+      res.status(200).json({
+        message: 'Lead emails processed successfully',
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error processing lead emails:', error);
+      res.status(500).json({ 
+        message: 'Failed to process lead emails',
+        error: error.message,
+        success: false
+      });
+    }
+  });
+  
   // Stop lead generation service
   app.post('/api/admin/lead-gen/stop', isAdmin, async (req: Request, res: Response) => {
     try {
