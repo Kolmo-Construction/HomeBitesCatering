@@ -12,12 +12,13 @@ All API endpoints require authentication. Make sure you include the authenticati
 
 ## API Overview
 
-The Form Builder API consists of four main components:
+The Form Builder API consists of five main components:
 
 1. **Forms API** - Manage overall form definitions
 2. **Form Pages API** - Manage pages within forms
 3. **Form Page Questions API** - Manage question instances on pages
 4. **Form Rules API** - Manage conditional logic for questions and pages
+5. **Resolved Form API** - Get fully resolved form definitions ready for rendering
 
 ## 1. Forms API
 
@@ -660,6 +661,143 @@ DELETE /api/form-builder/forms/:formId/rules/:ruleId
   "message": "Rule deleted successfully"
 }
 ```
+
+## 5. Resolved Form API
+
+Fetch a complete, ready-to-render form definition that merges library questions with instance-specific overrides.
+
+### Get Resolved Form Definition
+
+```
+GET /api/form-builder/forms/:formKey/versions/:versionNumber/render
+```
+
+This endpoint assembles a complete form definition ready for client-side rendering.
+
+**URL Parameters:**
+- `formKey` - The unique key identifier for the form (e.g., "wedding_questionnaire")
+- `versionNumber` - The version number of the form to render
+
+**Response:**
+```json
+{
+  "formId": 1,
+  "formKey": "wedding_questionnaire",
+  "formTitle": "Wedding Questionnaire",
+  "description": "Form for gathering wedding details from clients",
+  "version": 1,
+  "pages": [
+    {
+      "pageId": 1,
+      "pageTitle": "Basic Information",
+      "pageOrder": 0,
+      "description": "Collect basic wedding information",
+      "questions": [
+        {
+          "questionInstanceId": 1,
+          "libraryQuestionId": 5,
+          "questionType": "textbox",
+          "displayText": "What is the couple's names?",
+          "isRequired": true,
+          "isHidden": false,
+          "placeholder": "Enter your full name",
+          "helperText": "Please provide both names",
+          "displayOrder": 0,
+          "metadata": {
+            "textType": "short"
+          },
+          "options": null
+        },
+        {
+          "questionInstanceId": 2,
+          "libraryQuestionId": 8,
+          "questionType": "matrix",
+          "displayText": "Please rate the following venue features",
+          "isRequired": true,
+          "isHidden": false,
+          "placeholder": null,
+          "helperText": "Rate each feature from 1-5",
+          "displayOrder": 1,
+          "metadata": {
+            "ratingScale": "1-5"
+          },
+          "matrixStructure": {
+            "rows": [
+              {
+                "id": 1,
+                "key": "location",
+                "label": "Convenient Location",
+                "displayOrder": 0
+              },
+              {
+                "id": 2,
+                "key": "parking",
+                "label": "Parking Availability",
+                "displayOrder": 1
+              }
+            ],
+            "columns": [
+              {
+                "id": 1,
+                "key": "rating_1",
+                "label": "1 - Poor",
+                "displayOrder": 0
+              },
+              {
+                "id": 2,
+                "key": "rating_2",
+                "label": "2 - Fair",
+                "displayOrder": 1
+              },
+              {
+                "id": 3,
+                "key": "rating_3",
+                "label": "3 - Average",
+                "displayOrder": 2
+              },
+              {
+                "id": 4,
+                "key": "rating_4",
+                "label": "4 - Good",
+                "displayOrder": 3
+              },
+              {
+                "id": 5,
+                "key": "rating_5",
+                "label": "5 - Excellent",
+                "displayOrder": 4
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "ruleId": 1,
+      "triggerFormPageQuestionId": 3,
+      "conditionType": "is_selected_option_value",
+      "conditionValue": "outdoor",
+      "actionType": "show",
+      "ruleDescription": "Show guest count question if venue is outdoor",
+      "executionOrder": 0,
+      "targets": [
+        {
+          "targetId": 4,
+          "targetType": "question"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Notes:**
+- This endpoint returns a published form by default. It filters for forms with status "published".
+- Every question in the response is fully resolved with all defaults and overrides merged.
+- Matrix questions include the full structure of their rows and columns.
+- All rules and their targets are included for the client to apply conditional logic.
 
 ## Question Library Integration
 
