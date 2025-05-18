@@ -96,8 +96,24 @@ export default function QuestionLibraryEdit() {
   const [options, setOptions] = useState<{id: string, label: string, value: string}[]>([]);
   
   // For matrix question type
-  const [rows, setRows] = useState<{id: string, label: string}[]>([]);
-  const [columns, setColumns] = useState<{id: string, label: string, value: string}[]>([]);
+  const [rows, setRows] = useState<{
+    id: string, 
+    label: string, 
+    rowKey?: string, 
+    price?: string, 
+    defaultMetadata?: any, 
+    rowOrder?: number
+  }[]>([]);
+  
+  const [columns, setColumns] = useState<{
+    id: string, 
+    label: string, 
+    value: string, 
+    columnKey?: string, 
+    cellInputType?: string, 
+    defaultMetadata?: any,
+    columnOrder?: number
+  }[]>([]);
   
   // For validation rules
   const [validationRules, setValidationRules] = useState<Record<string, any>>({});
@@ -282,25 +298,27 @@ export default function QuestionLibraryEdit() {
       
       // Set form values based on the loaded question
       // Extract metadata fields for easier access
-      const metadata = questionData.default_metadata || {};
+      const metadata = questionData.defaultMetadata || {};
       
       form.reset({
-        questionKey: questionData.library_question_key,
-        defaultText: questionData.default_text,
-        questionType: questionData.question_type,
+        questionKey: questionData.libraryQuestionKey,
+        defaultText: questionData.defaultText,
+        questionType: questionData.questionType,
         category: questionData.category || "",
         defaultRequired: metadata.defaultRequired || false,
         helperText: metadata.helperText || "",
         placeholder: metadata.placeholder || "",
         defaultMetadata: metadata,
       });
+      
+      console.log("Form values after reset:", form.getValues());
 
       // Set local state for specialized fields
-      setQuestionType(questionData.question_type);
+      setQuestionType(questionData.questionType);
       
       // Initialize options for multiple choice question types
-      if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionData.question_type)) {
-        const savedOptions = questionData.default_metadata?.options || [];
+      if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionData.questionType)) {
+        const savedOptions = questionData.defaultOptions || [];
         setOptions(savedOptions.map((opt: any, index: number) => ({
           id: `option-${index}`,
           label: opt.label,
@@ -309,7 +327,7 @@ export default function QuestionLibraryEdit() {
       }
       
       // Initialize matrix rows and columns
-      if (questionData.question_type === 'matrix') {
+      if (questionData.questionType === 'matrix') {
         // For matrix questions, the server now returns matrixRows and matrixColumns directly as top-level properties
         const savedRows = questionData.matrixRows || [];
         const savedColumns = questionData.matrixColumns || [];
@@ -317,20 +335,28 @@ export default function QuestionLibraryEdit() {
         setRows(savedRows.map((row: any, index: number) => ({
           id: `row-${index}`,
           label: row.label,
-          rowKey: row.row_key // Store the row_key for proper updating
+          rowKey: row.rowKey || row.row_key, // Try both camelCase and snake_case due to possible inconsistencies
+          price: row.price,
+          defaultMetadata: row.defaultMetadata || {},
+          rowOrder: row.rowOrder || index
         })));
         
         setColumns(savedColumns.map((col: any, index: number) => ({
           id: `col-${index}`,
           label: col.header, // The server uses 'header' for column label
-          value: col.column_key, // The server uses 'column_key' as the value
-          cellInputType: col.cell_input_type // Store the cell_input_type for proper updating
+          value: col.columnKey || col.column_key, // Try both formats
+          columnKey: col.columnKey || col.column_key,
+          cellInputType: col.cellInputType || col.cell_input_type || 'radio', // Try both formats with default
+          defaultMetadata: col.defaultMetadata || {},
+          columnOrder: col.columnOrder || index
         })));
       }
       
       // Initialize validation rules
-      if (questionData.default_metadata?.validation) {
-        setValidationRules(questionData.default_metadata.validation);
+      if (questionData.defaultMetadata?.validation) {
+        setValidationRules(questionData.defaultMetadata.validation);
+      } else {
+        setValidationRules({});
       }
     }
   }, [questionData, form]);
