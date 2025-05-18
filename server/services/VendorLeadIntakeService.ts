@@ -4,7 +4,7 @@ import { simpleParser, ParsedMail } from 'mailparser';
 import { storage } // Assuming your storage methods for gmailSyncState are added here
 from '../storage';
 import { aiService } from './aiService';
-import { oauth2Client, tokenStore, setOAuthCredentials } from './emailSyncService'; // Re-use existing OAuth setup
+import { oauth2Client, tokenStore, setOAuthCredentials } from './googleAuth'; // Use shared Google Auth utilities
 import {
     InsertRawLead,
     rawLeadStatusEnum,

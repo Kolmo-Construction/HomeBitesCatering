@@ -13,8 +13,8 @@ import {
   InsertProcessedEmail
 } from '@shared/schema';
 
-// Use the same token store as emailSyncService
-import { tokenStore, oauth2Client, setOAuthCredentials } from './emailSyncService';
+// Use the shared Google Auth utilities
+import { tokenStore, oauth2Client, setOAuthCredentials } from './googleAuth';
 
 export class LeadGenerationService {
   private static readonly CUSTOM_LABEL_NAME = 'PROCESSED_BY_LEAD_GEN';
