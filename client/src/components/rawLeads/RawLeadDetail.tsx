@@ -233,16 +233,24 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <h3 className="text-sm font-medium text-gray-500">Email</h3>
-            <p>{rawLead.extractedEmail || 'N/A'}</p>
+            <p>{rawLead.extractedProspectEmail || 'N/A'}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Phone</h3>
-            <p>{rawLead.extractedPhone || 'N/A'}</p>
+            <p>{rawLead.extractedProspectPhone || 'N/A'}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Event Summary</h3>
             <p>{rawLead.eventSummary || 'No summary available'}</p>
           </div>
+          {rawLead.aiCalendarConflictAssessment && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Calendar Conflict Assessment</h3>
+              <p className={rawLead.aiCalendarConflictAssessment.toLowerCase().includes('conflict') ? 'text-amber-600' : 'text-green-600'}>
+                {rawLead.aiCalendarConflictAssessment}
+              </p>
+            </div>
+          )}
           {rawLead.createdOpportunityId && (
             <div>
               <h3 className="text-sm font-medium text-gray-500">Linked Opportunity</h3>

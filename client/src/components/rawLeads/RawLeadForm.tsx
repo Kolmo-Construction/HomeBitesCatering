@@ -29,8 +29,8 @@ import { useToast } from '@/hooks/use-toast';
 
 // Extend the schema to add form validation rules
 const formSchema = insertRawLeadSchema.extend({
-  extractedEmail: z.string().email().optional().or(z.literal('')),
-  extractedPhone: z.string().optional().or(z.literal('')),
+  extractedProspectEmail: z.string().email().optional().or(z.literal('')),
+  extractedProspectPhone: z.string().optional().or(z.literal('')),
   eventSummary: z.string().min(3, {
     message: 'Event summary must be at least 3 characters long',
   }).optional().or(z.literal('')),
@@ -47,9 +47,9 @@ export default function RawLeadForm() {
     defaultValues: {
       source: 'manual',
       status: 'new',
-      extractedName: '',
-      extractedEmail: '',
-      extractedPhone: '',
+      extractedProspectName: '',
+      extractedProspectEmail: '',
+      extractedProspectPhone: '',
       eventSummary: '',
       notes: '',
       rawData: {},
@@ -109,10 +109,10 @@ export default function RawLeadForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
-                name="extractedName"
+                name="extractedProspectName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contact Name</FormLabel>
+                    <FormLabel>Prospect Name</FormLabel>
                     <FormControl>
                       <Input placeholder="John Doe" {...field} />
                     </FormControl>
@@ -123,10 +123,10 @@ export default function RawLeadForm() {
 
               <FormField
                 control={form.control}
-                name="extractedEmail"
+                name="extractedProspectEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Prospect Email</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="john@example.com" {...field} />
                     </FormControl>
@@ -137,10 +137,10 @@ export default function RawLeadForm() {
 
               <FormField
                 control={form.control}
-                name="extractedPhone"
+                name="extractedProspectPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Prospect Phone</FormLabel>
                     <FormControl>
                       <Input type="tel" placeholder="555-123-4567" {...field} />
                     </FormControl>
