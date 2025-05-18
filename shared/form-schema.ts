@@ -4,6 +4,37 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Reference types only - no imports of actual tables to avoid circular dependencies
+type UserTable = PgTableWithColumns<{
+  id: { name: string; dataType: number; columnType: string };
+}>;
+
+type ClientTable = PgTableWithColumns<{
+  id: { name: string; dataType: number; columnType: string };
+}>;
+
+type OpportunityTable = PgTableWithColumns<{
+  id: { name: string; dataType: number; columnType: string };
+}>;
+
+type RawLeadTable = PgTableWithColumns<{
+  id: { name: string; dataType: number; columnType: string };
+}>;
+
+// These will be resolved at runtime
+let usersTable: UserTable;
+let clientsTable: ClientTable;
+let opportunitiesTable: OpportunityTable;
+let rawLeadsTable: RawLeadTable;
+
+// Function to set tables from outside to avoid circular imports
+export function setReferenceTables(users: UserTable, clients: ClientTable, opportunities: OpportunityTable, rawLeads: RawLeadTable) {
+  usersTable = users;
+  clientsTable = clients;
+  opportunitiesTable = opportunities;
+  rawLeadsTable = rawLeads;
+}
+
 // --- ENUMS ---
 
 export const formQuestionTypeEnum = pgEnum("form_question_type", [
@@ -15,10 +46,6 @@ export const formQuestionTypeEnum = pgEnum("form_question_type", [
   'image_upload', 'file_upload', 'signature_pad', 'rating_scale', 'slider',
   'toggle_switch', 'location_picker', 'tag_select', 'date_range_picker', 'stepper_input',
 ]);
-
-// Using references to tables defined in schema.ts in a safe way 
-// instead of trying to import them directly to avoid circular dependencies
-// We'll reference these tables by column name in the relations
 
 export const conditionalLogicActionTypeEnum = pgEnum("conditional_logic_action_type", [
   'show_question', 'hide_question', 'require_question', 'unrequire_question',
@@ -32,25 +59,14 @@ export const conditionalLogicConditionTypeEnum = pgEnum("conditional_logic_condi
   'is_not_selected_option_value',
 ]);
 
-export const formStatusEnum = pgEnum("form_status", [
-  'draft', 'published', 'archived', 'testing'
-]);
-
 export const formRuleTargetTypeEnum = pgEnum("form_rule_target_type", [
   'question',
   'page',
 ]);
 
-export const reorderFormPagesSchema = z.array(z.object({
-  pageId: z.number(),
-  newPageOrder: z.number().int().min(0)
-}));
-
-export type ReorderFormPages = z.infer<typeof reorderFormPagesSchema>;
-
 // --- TABLES ---
 
-// 1. The Question Library for reusable questions
+// 1. Reusable Question Building Blocks
 export const questionLibrary = pgTable("question_library", {
   id: serial("id").primaryKey(),
   libraryQuestionKey: text("library_question_key").unique().notNull(),
@@ -69,6 +85,7 @@ export const insertQuestionLibrarySchema = createInsertSchema(questionLibrary).o
   updatedAt: true
 });
 
+// NEW: For Matrix Question Structure (linked to question_library)
 export const libraryMatrixRows = pgTable("library_matrix_rows", {
   id: serial("id").primaryKey(),
   libraryQuestionId: integer("library_question_id").references(() => questionLibrary.id, { onDelete: 'cascade' }).notNull(),
@@ -116,8 +133,7 @@ export const forms = pgTable("forms", {
   formTitle: text("form_title").notNull(),
   description: text("description"),
   version: integer("version").default(1).notNull(),
-  status: formStatusEnum("status").default('draft').notNull(),
-  metadata: jsonb("metadata"),
+  status: text("status").default("draft").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -128,17 +144,18 @@ export const insertFormSchema = createInsertSchema(forms).omit({
   updatedAt: true
 });
 
+// 3. Pages Within a Form
 export const formPages = pgTable("form_pages", {
   id: serial("id").primaryKey(),
   formId: integer("form_id").references(() => forms.id, { onDelete: 'cascade' }).notNull(),
-  pageTitle: text("page_title").notNull(),
+  pageTitle: text("page_title"),
   pageOrder: integer("page_order").notNull(),
   description: text("description"),
-  isVisible: boolean("is_visible").default(true).notNull(),
-  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+    formPageOrderUnique: unique().on(table.formId, table.pageOrder),
+}));
 
 export const insertFormPageSchema = createInsertSchema(formPages).omit({
   id: true,
@@ -146,22 +163,23 @@ export const insertFormPageSchema = createInsertSchema(formPages).omit({
   updatedAt: true
 });
 
+// 4. Placing Library Questions onto a Form Page (The Instance)
 export const formPageQuestions = pgTable("form_page_questions", {
   id: serial("id").primaryKey(),
   formPageId: integer("form_page_id").references(() => formPages.id, { onDelete: 'cascade' }).notNull(),
-  libraryQuestionId: integer("library_question_id").references(() => questionLibrary.id).notNull(),
-  questionKey: text("question_key").notNull(), // Unique within a specific form, used for rules & responses
-  questionText: text("question_text").notNull(),
-  questionOrder: integer("question_order").notNull(),
-  isRequired: boolean("is_required").default(false).notNull(),
-  isVisible: boolean("is_visible").default(true).notNull(),
-  metadata: jsonb("metadata"), // Override any defaults
-  options: jsonb("options"), // Override any defaults
-  helpText: text("help_text"),
+  libraryQuestionId: integer("library_question_id").references(() => questionLibrary.id, { onDelete: 'restrict' }).notNull(),
+  displayOrder: integer("display_order").notNull(),
+  displayTextOverride: text("display_text_override"),
+  isRequiredOverride: boolean("is_required_override"),
+  isHiddenOverride: boolean("is_hidden_override"),
+  placeholderOverride: text("placeholder_override"),
+  helperTextOverride: text("helper_text_override"),
+  metadataOverrides: jsonb("metadata_overrides"),
+  optionsOverrides: jsonb("options_overrides"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-    formPageQuestionKeyUnique: unique().on(table.formPageId, table.questionKey),
+    pageQuestionOrderUnique: unique().on(table.formPageId, table.displayOrder),
 }));
 
 export const insertFormPageQuestionSchema = createInsertSchema(formPageQuestions).omit({
@@ -170,15 +188,16 @@ export const insertFormPageQuestionSchema = createInsertSchema(formPageQuestions
   updatedAt: true
 });
 
+// 5. Conditional Logic
 export const formRules = pgTable("form_rules", {
   id: serial("id").primaryKey(),
   formId: integer("form_id").references(() => forms.id, { onDelete: 'cascade' }).notNull(),
-  ruleName: text("rule_name").notNull(),
-  condition: conditionalLogicConditionTypeEnum("condition").notNull(),
-  sourceQuestionKey: text("source_question_key").notNull(), // Question key that triggers this rule
-  conditionValue: text("condition_value"), // Value to compare against
-  action: conditionalLogicActionTypeEnum("action").notNull(), // What happens when condition is met
-  isActive: boolean("is_active").default(true).notNull(),
+  triggerFormPageQuestionId: integer("trigger_form_page_question_id").references(() => formPageQuestions.id, { onDelete: 'cascade' }).notNull(),
+  conditionType: conditionalLogicConditionTypeEnum("condition_type").notNull(),
+  conditionValue: text("condition_value"),
+  actionType: conditionalLogicActionTypeEnum("action_type").notNull(),
+  ruleDescription: text("rule_description"),
+  executionOrder: integer("execution_order").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -189,143 +208,127 @@ export const insertFormRuleSchema = createInsertSchema(formRules).omit({
   updatedAt: true
 });
 
+// NEW: Join Table for Multiple Rule Targets
 export const formRuleTargets = pgTable("form_rule_targets", {
   id: serial("id").primaryKey(),
-  formRuleId: integer("form_rule_id").references(() => formRules.id, { onDelete: 'cascade' }).notNull(),
+  ruleId: integer("rule_id").references(() => formRules.id, { onDelete: 'cascade' }).notNull(),
   targetType: formRuleTargetTypeEnum("target_type").notNull(),
-  targetId: integer("target_id").notNull(), // pageId or questionId depending on targetType
-  targetValue: text("target_value"), // For "set_value" actions
+  targetId: integer("target_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertFormRuleTargetSchema = createInsertSchema(formRuleTargets).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true
+  createdAt: true
 });
 
+// 6. Client Submissions
 export const formSubmissions = pgTable("form_submissions", {
   id: serial("id").primaryKey(),
-  formId: integer("form_id").references(() => forms.id).notNull(),
-  formVersion: integer("form_version").notNull(), // Version of the form when submitted
-  clientId: integer("client_id"),
-  opportunityId: integer("opportunity_id"),
-  startedAt: timestamp("started_at").defaultNow().notNull(),
-  completedAt: timestamp("completed_at"),
-  status: text("status").default("in_progress").notNull(), // in_progress, completed, abandoned
-  metadata: jsonb("metadata"),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
+  formId: integer("form_id").references(() => forms.id, { onDelete: 'restrict' }).notNull(),
+  formVersion: integer("form_version").notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }),
+  clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }),
+  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
+  rawLeadId: integer("raw_lead_id").references(() => rawLeads.id, { onDelete: 'set null' }),
+  status: text("status").default("in_progress").notNull(),
+  submittedAt: timestamp("submitted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertFormSubmissionSchema = createInsertSchema(formSubmissions, {
-  clientId: z.number().optional().nullable(),
-  opportunityId: z.number().optional().nullable(),
-  completedAt: z.date().optional().nullable(),
+  submittedAt: z.coerce.date().nullable(),
 }).omit({
   id: true,
   createdAt: true,
   updatedAt: true
 });
 
+// 7. Answers to Questions in a Submission
 export const formSubmissionAnswers = pgTable("form_submission_answers", {
   id: serial("id").primaryKey(),
   formSubmissionId: integer("form_submission_id").references(() => formSubmissions.id, { onDelete: 'cascade' }).notNull(),
-  questionKey: text("question_key").notNull(), // Matches the question_key in form_page_questions
-  answer: jsonb("answer").notNull(), // Structured response data
+  formPageQuestionId: integer("form_page_question_id").references(() => formPageQuestions.id, { onDelete: 'restrict' }).notNull(),
+  answerValue: jsonb("answer_value"),
   answeredAt: timestamp("answered_at").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-    submissionQuestionKeyUnique: unique().on(table.formSubmissionId, table.questionKey),
-}));
+});
 
 export const insertFormSubmissionAnswerSchema = createInsertSchema(formSubmissionAnswers, {
+  answerValue: z.any().optional(),
 }).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true
+  id: true
 });
 
 // --- RELATIONS ---
 
 export const questionLibraryRelations = relations(questionLibrary, ({ many }) => ({
+  formPageQuestions: many(formPageQuestions),
   matrixRows: many(libraryMatrixRows),
   matrixColumns: many(libraryMatrixColumns),
 }));
 
 export const libraryMatrixRowsRelations = relations(libraryMatrixRows, ({ one }) => ({
-  question: one(questionLibrary, {
-    fields: [libraryMatrixRows.libraryQuestionId],
-    references: [questionLibrary.id],
-  }),
+    libraryQuestion: one(questionLibrary, {
+        fields: [libraryMatrixRows.libraryQuestionId],
+        references: [questionLibrary.id]
+    })
 }));
 
 export const libraryMatrixColumnsRelations = relations(libraryMatrixColumns, ({ one }) => ({
-  question: one(questionLibrary, {
-    fields: [libraryMatrixColumns.libraryQuestionId],
-    references: [questionLibrary.id],
-  }),
+    libraryQuestion: one(questionLibrary, {
+        fields: [libraryMatrixColumns.libraryQuestionId],
+        references: [questionLibrary.id]
+    })
 }));
 
 export const formsRelations = relations(forms, ({ many }) => ({
-  pages: many(formPages),
-  rules: many(formRules),
-  submissions: many(formSubmissions),
+  formPages: many(formPages),
+  formRules: many(formRules),
+  formSubmissions: many(formSubmissions),
 }));
 
 export const formPagesRelations = relations(formPages, ({ one, many }) => ({
-  form: one(forms, {
-    fields: [formPages.formId],
-    references: [forms.id],
-  }),
-  questions: many(formPageQuestions),
+  form: one(forms, { fields: [formPages.formId], references: [forms.id] }),
+  formPageQuestions: many(formPageQuestions),
 }));
 
 export const formPageQuestionsRelations = relations(formPageQuestions, ({ one, many }) => ({
-  page: one(formPages, {
-    fields: [formPageQuestions.formPageId],
-    references: [formPages.id],
-  }),
-  libraryQuestion: one(questionLibrary, {
-    fields: [formPageQuestions.libraryQuestionId],
-    references: [questionLibrary.id],
-  }),
+  formPage: one(formPages, { fields: [formPageQuestions.formPageId], references: [formPages.id] }),
+  libraryQuestion: one(questionLibrary, { fields: [formPageQuestions.libraryQuestionId], references: [questionLibrary.id] }),
+  triggeringRules: many(formRules, { relationName: 'triggerQuestionRules' }),
+  submissionAnswers: many(formSubmissionAnswers),
 }));
 
 export const formRulesRelations = relations(formRules, ({ one, many }) => ({
-  form: one(forms, {
-    fields: [formRules.formId],
-    references: [forms.id],
+  form: one(forms, { fields: [formRules.formId], references: [forms.id] }),
+  triggerFormPageQuestion: one(formPageQuestions, {
+    fields: [formRules.triggerFormPageQuestionId],
+    references: [formPageQuestions.id],
+    relationName: 'triggerQuestionRules',
   }),
   targets: many(formRuleTargets),
 }));
 
 export const formRuleTargetsRelations = relations(formRuleTargets, ({ one }) => ({
-  rule: one(formRules, {
-    fields: [formRuleTargets.formRuleId],
-    references: [formRules.id],
-  }),
+    rule: one(formRules, {
+        fields: [formRuleTargets.ruleId],
+        references: [formRules.id],
+    })
 }));
 
 export const formSubmissionsRelations = relations(formSubmissions, ({ one, many }) => {
-  return {
-    form: one(forms, {
-      fields: [formSubmissions.formId],
-      references: [forms.id],
-    }),
-    answers: many(formSubmissionAnswers),
+  const relations = {
+    form: one(forms, { fields: [formSubmissions.formId], references: [forms.id] }),
+    answers: many(formSubmissionAnswers)
   };
+  
+  return relations;
 });
 
 export const formSubmissionAnswersRelations = relations(formSubmissionAnswers, ({ one }) => ({
-  submission: one(formSubmissions, {
-    fields: [formSubmissionAnswers.formSubmissionId],
-    references: [formSubmissions.id],
-  }),
+  submission: one(formSubmissions, { fields: [formSubmissionAnswers.formSubmissionId], references: [formSubmissions.id] }),
+  formPageQuestion: one(formPageQuestions, { fields: [formSubmissionAnswers.formPageQuestionId], references: [formPageQuestions.id] }),
 }));
 
 // --- TYPES ---
