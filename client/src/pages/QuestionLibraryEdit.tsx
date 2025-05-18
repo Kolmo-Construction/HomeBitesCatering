@@ -350,25 +350,11 @@ export default function QuestionLibraryEdit() {
       metadata.validation = validationRules;
     }
     
-    // Add options for choice-based questions
-    if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
-      metadata.options = options.map(opt => ({
-        label: opt.label,
-        value: opt.value || opt.label.toLowerCase().replace(/\s+/g, '_')
-      }));
-    }
+    // We no longer need to add options for choice-based questions here
+    // as they're now handled directly in the submission object as default_options
     
-    // Add matrix structure
-    if (questionType === 'matrix') {
-      metadata.rows = rows.map(row => ({
-        label: row.label
-      }));
-      
-      metadata.columns = columns.map(col => ({
-        label: col.label,
-        value: col.value || col.label.toLowerCase().replace(/\s+/g, '_')
-      }));
-    }
+    // We also no longer need to add matrix structure here
+    // as rows and columns are now added as top-level properties (matrixRows, matrixColumns)
     
     return metadata;
   };
