@@ -982,9 +982,9 @@ export default function FormEditor() {
                       </Button>
                     </div>
                   ) : (
-                    <SortableContext items={pages.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={pages.map(p => p.id || `temp-${Math.random()}`)} strategy={verticalListSortingStrategy}>
                       {pages.map(page => (
-                        <div key={page.id} className="relative group">
+                        <div key={page.id || `page-${Math.random()}`} className="relative group">
                           <SortablePage
                             page={page}
                             isSelected={selectedPage?.id === page.id}
@@ -1119,7 +1119,7 @@ export default function FormEditor() {
               )}
             </div>
             
-            <div className="flex-1 overflow-auto p-6" id="questions-container">
+            <div id="questions-container" className="flex-1 overflow-auto p-6">
               {!selectedPage ? (
                 <div className="h-full flex items-center justify-center text-center">
                   <div className="max-w-md p-6">
@@ -1151,7 +1151,7 @@ export default function FormEditor() {
                 <SortableContext items={questions.map(q => q.id || `temp-${Math.random()}`)} strategy={verticalListSortingStrategy}>
                   {questions.map(question => (
                     <SortableQuestion
-                      key={question.id || `temp-${Math.random()}`}
+                      key={question.id || `question-${Math.random()}`}
                       question={question}
                       isSelected={selectedQuestion?.id === question.id}
                       onSelect={() => setSelectedQuestion(question)}
