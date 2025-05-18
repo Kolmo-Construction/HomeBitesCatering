@@ -1494,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Placeholder for future questionnaire API routes
+  // API routes removed
 
   // Create an HTTP server
   const server = createServer(app);

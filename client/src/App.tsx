@@ -14,7 +14,7 @@ import Calendar from "@/pages/calendar";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
-import ConditionalRenderingTestPage from "@/pages/ConditionalRenderingTestPage";
+// Removed questionnaire test page import
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -67,7 +67,7 @@ function AppContent() {
             <Route path="/raw-leads" component={RawLeadsPage} />
             <Route path="/raw-leads/new" component={RawLeadFormPage} />
             <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
-            <Route path="/conditional-rendering-test" component={ConditionalRenderingTestPage} />
+            {/* Removed conditional rendering test route */}
             <Route>
               <Dashboard />
             </Route>
