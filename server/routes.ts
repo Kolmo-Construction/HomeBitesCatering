@@ -1303,6 +1303,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // ===== Raw Leads Management =====
+
+  // Test endpoint to create a sample lead with AI-enriched fields
+  app.post('/api/raw-leads/create-sample', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { sampleWeddingInquiryEmail } = await import('./testData');
+      
+      // Create the sample lead with the current time
+      const leadData = {
+        ...sampleWeddingInquiryEmail,
+        receivedAt: new Date()
+      };
+      
+      const newLead = await storage.createRawLead(leadData);
+      
+      res.status(201).json({
+        message: 'Sample lead created successfully',
+        lead: newLead
+      });
+    } catch (error) {
+      console.error('Error creating sample lead:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
   
   // Process a raw lead into an opportunity
   app.post('/api/raw-leads/:id/process', isAuthenticated, async (req: Request, res: Response) => {

@@ -494,6 +494,22 @@ ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
 
 --
+-- Name: gmail_sync_state; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.gmail_sync_state (
+    target_email text NOT NULL,
+    last_history_id text NOT NULL,
+    watch_expiration_timestamp timestamp without time zone,
+    last_watch_attempt_timestamp timestamp without time zone DEFAULT now(),
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.gmail_sync_state OWNER TO neondb_owner;
+
+--
 -- Name: opportunities; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -677,9 +693,9 @@ CREATE TABLE public.raw_leads (
     id integer NOT NULL,
     source text NOT NULL,
     raw_data jsonb,
-    extracted_name text,
-    extracted_email text,
-    extracted_phone text,
+    extracted_prospect_name text,
+    extracted_prospect_email text,
+    extracted_prospect_phone text,
     event_summary text,
     received_at timestamp without time zone NOT NULL,
     status public.raw_lead_status DEFAULT 'new'::public.raw_lead_status NOT NULL,
@@ -707,7 +723,8 @@ CREATE TABLE public.raw_leads (
     ai_sentiment public.sentiment,
     ai_confidence_score double precision,
     questionnaire_submission_id integer,
-    questionnaire_definition_id integer
+    questionnaire_definition_id integer,
+    ai_calendar_conflict_assessment text
 );
 
 
@@ -957,6 +974,14 @@ COPY public.events (id, client_id, estimate_id, event_date, start_time, end_time
 
 
 --
+-- Data for Name: gmail_sync_state; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.gmail_sync_state (target_email, last_history_id, watch_expiration_timestamp, last_watch_attempt_timestamp, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: menu_items; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
@@ -1022,7 +1047,7 @@ COPY public.processed_emails (id, message_id, gmail_id, service, processed_at, e
 -- Data for Name: raw_leads; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.raw_leads (id, source, raw_data, extracted_name, extracted_email, extracted_phone, event_summary, received_at, status, created_opportunity_id, internal_notes, assigned_to_user_id, created_at, updated_at, extracted_event_type, extracted_event_date, extracted_event_time, extracted_guest_count, extracted_venue, extracted_message_summary, lead_source_platform, ai_urgency_score, ai_budget_indication, ai_budget_value, ai_clarity_of_request_score, ai_decision_maker_likelihood, ai_key_requirements, ai_potential_red_flags, ai_overall_lead_quality, ai_suggested_next_step, ai_sentiment, ai_confidence_score, questionnaire_submission_id, questionnaire_definition_id) FROM stdin;
+COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_prospect_email, extracted_prospect_phone, event_summary, received_at, status, created_opportunity_id, internal_notes, assigned_to_user_id, created_at, updated_at, extracted_event_type, extracted_event_date, extracted_event_time, extracted_guest_count, extracted_venue, extracted_message_summary, lead_source_platform, ai_urgency_score, ai_budget_indication, ai_budget_value, ai_clarity_of_request_score, ai_decision_maker_likelihood, ai_key_requirements, ai_potential_red_flags, ai_overall_lead_quality, ai_suggested_next_step, ai_sentiment, ai_confidence_score, questionnaire_submission_id, questionnaire_definition_id, ai_calendar_conflict_assessment) FROM stdin;
 \.
 
 
@@ -1031,7 +1056,9 @@ COPY public.raw_leads (id, source, raw_data, extracted_name, extracted_email, ex
 --
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
-FuN9u7VS3_Vt9vE6Gt41NoiNwOqDrBmL	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T01:22:41.786Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 03:11:10
+YR_sQtbn1d-DYvLa8HSxhDHTH1dQbb-X	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:21:17.453Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:21:18
+RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:33:09
+Gu7aqptXzodzEXmGz0BfoUFoY9MQb_m2	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T05:24:21.649Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 05:24:22
 \.
 
 
@@ -1040,7 +1067,7 @@ FuN9u7VS3_Vt9vE6Gt41NoiNwOqDrBmL	{"cookie":{"originalMaxAge":86400000,"expires":
 --
 
 COPY public.users (id, username, password, first_name, last_name, email, phone, role, created_at) FROM stdin;
-1	admin	$2b$10$iErkBQszTq0n4E82mR4cvuvA6bgh3m1sv2xNmteT2LbpUVHVLuNDW	Admin	User	admin@homebites.net	\N	admin	2025-05-13 23:12:24.024026
+1	admin	$2b$10$njGm0yb22TxH77Kv4t6zH.rn/88xgcccGtzy6kxh9sPr5evFda5sC	Admin	User	admin@homebites.net	\N	admin	2025-05-13 23:12:24.024026
 \.
 
 
@@ -1162,6 +1189,14 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: gmail_sync_state gmail_sync_state_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.gmail_sync_state
+    ADD CONSTRAINT gmail_sync_state_pkey PRIMARY KEY (target_email);
+
+
+--
 -- Name: opportunities leads_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
@@ -1191,6 +1226,14 @@ ALTER TABLE ONLY public.menus
 
 ALTER TABLE ONLY public.opportunities
     ADD CONSTRAINT opportunities_questionnaire_submission_id_key UNIQUE (questionnaire_submission_id);
+
+
+--
+-- Name: processed_emails processed_emails_message_id_service_unique; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.processed_emails
+    ADD CONSTRAINT processed_emails_message_id_service_unique UNIQUE (message_id, service);
 
 
 --
