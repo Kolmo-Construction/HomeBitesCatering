@@ -1,0 +1,62 @@
+Detailed Plan for Form Editor Enhancements:
+
+Feature 1: Question Placement & Overrides on Pages
+
+Objective: Allow administrators to visually populate selected form pages with questions from the library, reorder them, and customize each question instance with specific overrides.
+
+Assumptions:
+
+The admin is in the "Form Editor" view for a specific form and has selected a form_page to edit.
+The UI already has a way to display the list of pages for the current form and select one (from "Step 2a: Basic Form Management & Page Structure UI").
+Key UI Components (React, using shadcn/ui):
+
+QuestionLibraryPanel.tsx:
+Displays a list of questions from the question_library (fetched via GET /api/form-builder/library-questions).
+Should be filterable/searchable by category, key, or text.
+Each item in this panel should be draggable.
+FormPageCanvas.tsx (or QuestionInstanceList.tsx):
+The main area representing the selected form_page.
+Displays the form_page_questions (question instances) already on this page, in their displayOrder.
+Acts as a drop target for questions dragged from QuestionLibraryPanel.tsx.
+Allows reordering of question instances within it via drag-and-drop.
+Each displayed question instance should be selectable to open its settings.
+QuestionInstanceSettingsPanel.tsx:
+A sidebar or modal that appears when a question instance on the FormPageCanvas.tsx is selected.
+Uses React Hook Form and Zod for managing and validating the override fields.
+Dynamically displays input fields (using shadcn/ui components) for editing overrides based on the selected question instance's questionType (fetched from its linked library question).
+Core Functionality & User Interactions:
+
+Display Question Library:
+QuestionLibraryPanel.tsx fetches and displays questions. Users can browse/search.
+Drag Question from Library to Page Canvas:
+DnD Implementation (using Dnd Kit):
+Make items in QuestionLibraryPanel.tsx draggable.
+Make FormPageCanvas.tsx a droppable area.
+On Drop:
+Capture the libraryQuestionId of the dragged item and the target formPageId and intended displayOrder (e.g., based on drop position or end of list).
+Call POST /api/form-builder/pages/:pageId/questions with { libraryQuestionId, displayOrder, ... (any initial minimal overrides if needed) }.
+Refresh the FormPageCanvas.tsx (TanStack Query invalidation/refetch).
+Display Question Instances on Page:
+FormPageCanvas.tsx fetches and renders question instances for the current formPageId (from GET /api/form-builder/pages/:pageId/questions).
+For each instance, display a representation (e.g., its displayTextOverride or libraryQuestion.defaultText, questionType).
+Reorder Question Instances on Page:
+DnD Implementation (Dnd Kit): Make question instances within FormPageCanvas.tsx draggable and sortable.
+On Reorder: Call your batch reorder API for form_page_questions (POST /api/form-builder/pages/:pageId/questions/reorder) with the new displayOrder for each affected question instance.
+Refresh the display.
+Edit Question Instance Overrides (QuestionInstanceSettingsPanel.tsx):
+Selection: Clicking a question instance on FormPageCanvas.tsx sets it as the "selected question instance" and opens/populates the QuestionInstanceSettingsPanel.tsx.
+Display Base Properties: Show read-only base properties from the linked question_library item (e.g., defaultText, questionType, defaultMetadata, defaultOptions, matrix structure).
+Provide Override Inputs:
+displayTextOverride: <Input /> or <Textarea />.
+isRequiredOverride: <Checkbox /> or <Switch />.
+isHiddenOverride: <Checkbox /> or <Switch />.
+placeholderOverride: <Input />.
+helperTextOverride: <Textarea />.
+metadataOverrides: Dynamically render input fields based on the questionType to allow overriding specific parts of the defaultMetadata. This UI will be similar to the defaultMetadata section in your QuestionLibraryForm.tsx, but focused on overriding or adding to existing defaults. For matrix questions, this could involve UI to select which library rows/columns are active for this instance, or to override labels/prices.
+optionsOverrides: UI to manage which options (from defaultOptions of the library question) are shown, their order, or if their text is slightly modified for this instance. Could use useFieldArray if you're managing a list of modified options.
+Saving Overrides: On save, call PUT /api/form-builder/pages/:pageId/questions/:questionInstanceId with the override values.
+Refresh the display on FormPageCanvas.tsx to reflect changes.
+Remove Question Instance from Page:
+A "Remove" or "Delete" button in the QuestionInstanceSettingsPanel.tsx or directly on the question instance item in the canvas.
+Requires confirmation (e.g., DeleteQuestionDialog.tsx).
+Calls DELETE /api/form-builder/pages/:pageId/questions/:questionInstanceId.
