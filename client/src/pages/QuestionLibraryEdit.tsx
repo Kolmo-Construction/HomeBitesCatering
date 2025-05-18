@@ -87,7 +87,7 @@ const questionTypes = [
 export default function QuestionLibraryEdit() {
   const { id } = useParams();
   const [, navigate] = useLocation();
-  const isEditing = id !== "new";
+  const isEditing = id !== "new" && id !== undefined;
   const [activeTab, setActiveTab] = useState("basic");
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [questionType, setQuestionType] = useState<string>("");
@@ -121,7 +121,7 @@ export default function QuestionLibraryEdit() {
   const { data: questionData, isLoading } = useQuery({
     queryKey: ['/api/form-builder/library-questions', id],
     queryFn: async () => {
-      if (!isEditing) return null;
+      if (!isEditing || !id) return null;
       
       const response = await fetch(`/api/form-builder/library-questions/${id}`);
       if (!response.ok) {
@@ -129,7 +129,7 @@ export default function QuestionLibraryEdit() {
       }
       return await response.json();
     },
-    enabled: isEditing,
+    enabled: isEditing && !!id,
   });
 
   // Mutation for saving question
