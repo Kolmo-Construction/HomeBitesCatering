@@ -834,18 +834,6 @@ export default function FormEditor() {
     setActiveEntity(draggedItem);
   };
 
-  // Handle drag over indicators
-  const handleDragOver = (event) => {
-    const { active, over } = event;
-    
-    // Check if dragging a library question over the questions container
-    if (activeLibraryTab === "library" && over?.id === "questions-container" && active?.id) {
-      // We'll handle this in handleDragEnd to avoid duplicate adds
-      console.log("Dragging library question over questions container", active.id);
-    }
-  };
-
-  // Handle drop events
   const handleDragEnd = async (event) => {
     const { active, over } = event;
     setActiveDragId(null);
@@ -853,32 +841,28 @@ export default function FormEditor() {
     
     if (!over) return;
     
-    // Handle dropping a library question from the library panel onto the questions container
-    if (activeLibraryTab === "library" && over.id === "questions-container" && active.id) {
-      // Find the library question being dragged
-      const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
-      if (libraryQuestion && selectedPage) {
-        await handleAddQuestionFromLibrary(libraryQuestion);
-      } else if (!selectedPage) {
-        toast({
-          variant: "destructive", 
-          title: "No page selected",
-          description: "Please select a page first before adding questions."
-        });
-      }
-      return;
-    }
-    
-    // Handle reordering pages
+    // Handle page reordering
     if (activeLibraryTab === "pages" && active.id !== over.id) {
       // TODO: Implement page reordering with the API
-      console.log("Reordering pages", active.id, over.id);
     }
     
-    // Handle reordering questions within a page
-    if (activeLibraryTab === "page-content" && active.id !== over.id && selectedPage) {
+    // Handle question reordering
+    if (activeLibraryTab === "library" && active.id !== over.id) {
       // TODO: Implement question reordering with the API
-      console.log("Reordering questions", active.id, over.id);
+    }
+  };
+
+  // Handle library question drop onto page
+  const handleDragOver = (event) => {
+    const { active, over } = event;
+    
+    // Check if dragging a library question over the questions container
+    if (activeLibraryTab === "library" && over?.id === "questions-container" && active?.id) {
+      // Find the library question being dragged
+      const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
+      if (libraryQuestion) {
+        handleAddQuestionFromLibrary(libraryQuestion);
+      }
     }
   };
 
@@ -1053,51 +1037,28 @@ export default function FormEditor() {
                     </div>
                   ) : (
                     <div>
-                      {libraryQuestions.map(question => {
-                        const id = question.id || `temp-question-${Math.random()}`;
-                        return (
-                          <div
-                            key={id}
-                            className="p-3 mb-2 rounded-md border border-gray-200 bg-white cursor-move relative group"
-                            draggable
-                            onDragStart={(e) => {
-                              setActiveDragId(id);
-                              setActiveEntity(question);
-                              // Set drag image (optional)
-                              const dragImg = document.createElement('div');
-                              dragImg.innerHTML = question.defaultText || question.default_text || 'Question';
-                              dragImg.className = 'p-2 bg-white shadow rounded opacity-70 text-sm font-medium';
-                              document.body.appendChild(dragImg);
-                              e.dataTransfer.setDragImage(dragImg, 20, 20);
-                              setTimeout(() => {
-                                document.body.removeChild(dragImg);
-                              }, 0);
-                            }}
-                          >
-                            <div className="flex justify-between items-center mb-1">
-                              <p className="font-medium text-sm">{question.defaultText || question.default_text}</p>
-                              <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                                {getQuestionTypeLabel(question.questionType || question.question_type)}
-                              </span>
-                            </div>
-                            {(question.helperText || question.helper_text) && (
-                              <p className="text-xs text-gray-500 truncate">{question.helperText || question.helper_text}</p>
-                            )}
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-6 w-6 p-0"
-                                onClick={() => handleAddQuestionFromLibrary(question)}
-                                title="Add to page"
-                              >
-                                <PlusCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-b opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {libraryQuestions.map(question => (
+                        <div
+                          key={question.id}
+                          className="p-3 mb-2 rounded-md border border-gray-200 bg-white cursor-move"
+                          draggable
+                          onDragStart={() => {
+                            setActiveDragId(question.id);
+                            setActiveEntity(question);
+                          }}
+                          onClick={() => handleAddQuestionFromLibrary(question)}
+                        >
+                          <div className="flex justify-between items-center mb-1">
+                            <p className="font-medium text-sm">{question.defaultText || question.default_text}</p>
+                            <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                              {getQuestionTypeLabel(question.questionType || question.question_type)}
+                            </span>
                           </div>
-                        );
-                      })}
+                          {(question.helperText || question.helper_text) && (
+                            <p className="text-xs text-gray-500 truncate">{question.helperText || question.helper_text}</p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </ScrollArea>
