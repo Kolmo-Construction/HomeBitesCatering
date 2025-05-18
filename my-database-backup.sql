@@ -1032,6 +1032,7 @@ COPY public.opportunities (id, first_name, last_name, email, phone, event_type, 
 3	PASCAL	MATTA	pascal.matta@gmail.com	7865993948	Fundraiser	\N	\N			new		\N	2025-05-13 23:48:41.828503	2025-05-13 23:48:41.828503	4	medium	\N	\N
 2	PASCAL	MATTA	pascal.matta@gmail.com	7865993948	Other	\N	\N			new		\N	2025-05-13 23:36:17.232556	2025-05-13 23:36:17.232556	2	medium	\N	\N
 1	PASCAL	MATTA	projects@kolmo.io	asd	Corporate	\N	\N			new		\N	2025-05-13 23:32:15.687552	2025-05-13 23:32:15.687552	2	medium	\N	\N
+5	Samantha	Johnson	samantha.johnson@example.com	(206) 555-1234	Wedding	2025-08-15 00:00:00	120	The Overlook Venue, Seattle	Client Message: Couple seeking Mediterranean/PNW fusion menu for wedding. Budget $8,500-$10,000. Need appetizers, plated dinner, and late-night snacks.\n\nKey Requirements:\n• Mediterranean and Pacific Northwest fusion cuisine\n• Appetizers during cocktail hour\n• Plated dinner service\n• Late-night snacks option\n• Catering for 120 guests\n• Services within budget range of $8,500-$10,000\n\nPotential Concerns:\n• Decision timeline is only one month\n• Premium services requested with mid-range budget\n\nBudget: $9000 (specific_amount)\n\nCalendar Assessment: No conflicts detected for August 15, 2025. This date is currently available.\n\nInternal Notes: This lead came through the website contact form	new	website_form	\N	2025-05-18 06:44:19.941334	2025-05-18 06:44:19.941334	\N	high	\N	\N
 \.
 
 
@@ -1048,6 +1049,7 @@ COPY public.processed_emails (id, message_id, gmail_id, service, processed_at, e
 --
 
 COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_prospect_email, extracted_prospect_phone, event_summary, received_at, status, created_opportunity_id, internal_notes, assigned_to_user_id, created_at, updated_at, extracted_event_type, extracted_event_date, extracted_event_time, extracted_guest_count, extracted_venue, extracted_message_summary, lead_source_platform, ai_urgency_score, ai_budget_indication, ai_budget_value, ai_clarity_of_request_score, ai_decision_maker_likelihood, ai_key_requirements, ai_potential_red_flags, ai_overall_lead_quality, ai_suggested_next_step, ai_sentiment, ai_confidence_score, questionnaire_submission_id, questionnaire_definition_id, ai_calendar_conflict_assessment) FROM stdin;
+994	website_form	"{\\"subject\\":\\"Wedding Catering Inquiry - Aug 15, 2025\\",\\"body\\":\\"Hello,\\\\n\\\\nMy fiancé and I are planning our wedding for August 15, 2025, at The Overlook Venue in Seattle. We're expecting around 120 guests and looking for catering options. We're particularly interested in a mix of Mediterranean and local Pacific Northwest cuisine.\\\\n\\\\nOur budget is flexible but ideally around $8,500-$10,000 for food and service. We would need appetizers during cocktail hour, a plated dinner, and possibly late-night snacks.\\\\n\\\\nCould you send us information about your wedding packages? We're hoping to make a decision within the next month.\\\\n\\\\nThank you,\\\\nSamantha Johnson\\\\nPhone: (206) 555-1234\\\\nEmail: samantha.johnson@example.com\\"}"	Samantha Johnson	samantha.johnson@example.com	(206) 555-1234	Wedding catering for 120 guests on Aug 15, 2025	2025-05-18 06:44:19.73	qualified	\N	This lead came through the website contact form	\N	2025-05-18 06:44:19.750029	2025-05-18 06:44:19.97	Wedding	2025-08-15	Not specified	120	The Overlook Venue, Seattle	Couple seeking Mediterranean/PNW fusion menu for wedding. Budget $8,500-$10,000. Need appetizers, plated dinner, and late-night snacks.	\N	4	specific_amount	9000	5	5	"[\\"Mediterranean and Pacific Northwest fusion cuisine\\",\\"Appetizers during cocktail hour\\",\\"Plated dinner service\\",\\"Late-night snacks option\\",\\"Catering for 120 guests\\",\\"Services within budget range of $8,500-$10,000\\"]"	"[\\"Decision timeline is only one month\\",\\"Premium services requested with mid-range budget\\"]"	hot	\N	\N	\N	\N	\N	No conflicts detected for August 15, 2025. This date is currently available.
 \.
 
 
@@ -1057,7 +1059,8 @@ COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
 YR_sQtbn1d-DYvLa8HSxhDHTH1dQbb-X	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:21:17.453Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:21:18
-RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:33:09
+RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:45:29
+W5cOc0Fx0YMu0jxcPQe6zNqaJhXZ2I_b	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:44:19.324Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 06:44:21
 Gu7aqptXzodzEXmGz0BfoUFoY9MQb_m2	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T05:24:21.649Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 05:24:22
 \.
 
@@ -1110,7 +1113,7 @@ SELECT pg_catalog.setval('public.events_id_seq', 1, false);
 -- Name: leads_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.leads_id_seq', 4, true);
+SELECT pg_catalog.setval('public.leads_id_seq', 5, true);
 
 
 --
@@ -1138,7 +1141,7 @@ SELECT pg_catalog.setval('public.processed_emails_id_seq', 1, false);
 -- Name: raw_leads_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.raw_leads_id_seq', 993, true);
+SELECT pg_catalog.setval('public.raw_leads_id_seq', 994, true);
 
 
 --
