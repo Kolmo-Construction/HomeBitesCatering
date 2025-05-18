@@ -301,18 +301,21 @@ export default function QuestionLibraryEdit() {
       
       // Initialize matrix rows and columns
       if (questionData.question_type === 'matrix') {
-        const savedRows = questionData.default_metadata?.rows || [];
-        const savedColumns = questionData.default_metadata?.columns || [];
+        // For matrix questions, the server now returns matrixRows and matrixColumns directly as top-level properties
+        const savedRows = questionData.matrixRows || [];
+        const savedColumns = questionData.matrixColumns || [];
         
         setRows(savedRows.map((row: any, index: number) => ({
           id: `row-${index}`,
-          label: row.label
+          label: row.label,
+          rowKey: row.row_key // Store the row_key for proper updating
         })));
         
         setColumns(savedColumns.map((col: any, index: number) => ({
           id: `col-${index}`,
-          label: col.label,
-          value: col.value
+          label: col.header, // The server uses 'header' for column label
+          value: col.column_key, // The server uses 'column_key' as the value
+          cellInputType: col.cell_input_type // Store the cell_input_type for proper updating
         })));
       }
       
