@@ -6,6 +6,8 @@ import { queryClient } from '@/lib/queryClient';
 
 // Pages
 import QuestionnaireBuilder from './pages/QuestionnaireBuilder';
+import QuestionnaireSubmit from './pages/QuestionnaireSubmit';
+import SubmissionComplete from './pages/SubmissionComplete';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
@@ -18,6 +20,8 @@ export default function App() {
           <Route path="/" component={Dashboard} />
           <Route path="/login" component={Login} />
           <Route path="/questionnaires/builder" component={QuestionnaireBuilder} />
+          <Route path="/questionnaires/submit/:id?" component={QuestionnaireSubmit} />
+          <Route path="/submission-complete" component={SubmissionComplete} />
           <Route component={NotFound} />
         </Switch>
         <Toaster />
