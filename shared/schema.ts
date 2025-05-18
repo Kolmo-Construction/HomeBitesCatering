@@ -499,8 +499,7 @@ export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;//
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, primaryKey } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-// Assuming these are imported from your existing schema.ts if in a separate file
-import { users, clients, opportunities, rawLeads } from "./schema"; // Adjust path if needed
+// Don't import from schema.ts to avoid circular references
 
 // --- ENUMS ---
 

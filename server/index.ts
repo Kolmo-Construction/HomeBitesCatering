@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { registerFormRoutes } from "./formRoutes";
+import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
 import { setupVite, serveStatic, log } from "./vite";
 // Gmail sync service has been retired in favor of more specialized services
 import { LeadGenerationService } from './services/leadGenerationService';
@@ -47,6 +49,12 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Register form-building API routes
+  registerFormRoutes(app);
+  
+  // Register question library API routes
+  registerQuestionLibraryRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
