@@ -17,6 +17,8 @@ import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
 // Form Builder pages
 import QuestionLibraryManager from "@/pages/QuestionLibraryManager";
 import QuestionLibraryEdit from "@/pages/QuestionLibraryEdit";
+import FormManager from "@/pages/FormManager";
+import FormEditor from "@/pages/FormEditor";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -73,6 +75,8 @@ function AppContent() {
             <Route path="/admin/form-builder/question-library" component={QuestionLibraryManager} />
             <Route path="/admin/form-builder/question-library/new" component={QuestionLibraryEdit} />
             <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
+            <Route path="/admin/form-builder/forms" component={FormManager} />
+            <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
             {/* Fallback Route */}
             <Route>
               <Dashboard />

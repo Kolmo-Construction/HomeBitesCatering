@@ -1,0 +1,79 @@
+Build the "Form Management & Form Editor UI"
+
+With the question library manageable, the next logical step is to build the interfaces that allow administrators to:
+
+Create and manage the overall forms (e.g., "Wedding Quote Form V1," "Corporate Event Inquiry Form").
+Design the structure of these forms by adding form_pages.
+Populate these pages by selecting questions from the question_library and creating form_page_questions instances (applying specific overrides).
+Define form_rules (conditional logic) for these forms.
+This is the core "Form Builder" functionality.
+
+Phase 2 - Step 2: Form Management and Core Form Editor UI
+
+Let's break this down:
+
+A. Basic Form Management UI:
+
+Component/Page: A new page, e.g., /admin/form-builder/forms.
+Functionality:
+List Forms (GET /api/form-builder/forms):
+Display a table (using shadcn/ui Table) of all created forms.
+Columns: formTitle, formKey, version, status (draft, published, archived, template - using your formStatusEnum), createdAt, "Actions".
+Use TanStack Query for data fetching.
+Create New Form Button:
+This button will likely open a modal/dialog (FormDefinitionDialog.tsx or similar) or navigate to a new page (e.g., /admin/form-builder/forms/new).
+Create/Edit Form Definition Form (FormDefinitionDialog.tsx or page):
+Fields (using shadcn/ui & React Hook Form): formTitle, formKey (perhaps auto-suggested but editable and validated for uniqueness), description, status. version would typically start at 1 and be managed by the system upon "publishing" changes to an already published form.
+API Calls: POST /api/form-builder/forms (for create) and PUT /api/form-builder/forms/:formId (for edit basic details).
+Actions per Form in List:
+"Edit Structure / Design": Navigates to the main Form Editor interface for that specific form (e.g., /admin/form-builder/forms/:formId/edit).
+"Edit Details": Opens the FormDefinitionDialog.tsx to change title, key, description, status.
+"Duplicate Form": (Future enhancement, but good to keep in mind) A button to create a new form as a copy of an existing one.
+"Archive/Delete Form": With confirmation.
+B. Core Form Editor UI (for a specific selected form):
+
+This will be a more complex, multi-paneled interface, likely at a route like /admin/form-builder/forms/:formId/edit.
+
+Overall Layout:
+
+Could have a three-column layout:
+Left Panel: Page Management & Question Library Panel:
+Section to list, add, reorder (DnD), and delete form_pages for the current form (uses form_pages APIs).
+A tab or section to display the question_library (fetched via its API), allowing admins to drag questions from here onto the selected page.
+Center Panel: Page Canvas / Question List:
+Displays the form_page_questions for the currently selected form_page.
+This is where questions dragged from the library panel are dropped.
+Allows reordering of question instances on the page (DnD).
+Each question instance is selectable.
+Right Panel: Question Instance Settings / Rule Editor Panel:
+When a question instance is selected on the Page Canvas, this panel shows its properties (base from library + overrides) and allows editing of the overrides (displayTextOverride, isRequiredOverride, isHiddenOverride, metadataOverrides, optionsOverrides). This uses the PUT /api/form-builder/pages/:pageId/questions/:questionInstanceId API.
+A section/tab in this panel for defining/editing form_rules related to the selected question or the current form.
+Implementation Steps for Core Form Editor UI (Iterative):
+
+i. Page Management:
+When a form is selected for editing, fetch and display its form_pages in the left panel.
+Implement functionality to add a new page (calling POST /api/form-builder/forms/:formId/pages).
+Implement deleting a page.
+Implement reordering pages using Dnd Kit (calling your batch reorder API for pages).
+ii. Displaying Questions on a Selected Page:
+When a page is selected in the left panel, fetch and display its form_page_questions in the center panel (calling GET /api/form-builder/pages/:pageId/questions). Display them as non-editable items first.
+iii. Adding Questions from Library to Page (Drag-and-Drop):
+Display the question_library in the left panel.
+Implement Dnd Kit to allow dragging a question from the library and dropping it onto the center Page Canvas.
+On drop, call POST /api/form-builder/pages/:pageId/questions with the libraryQuestionId and initial displayOrder.
+Refresh the list of questions on the page.
+iv. Reordering Questions on Page (Drag-and-Drop):
+Implement Dnd Kit for reordering items within the center Page Canvas.
+On reorder, call your batch reorder API for form_page_questions.
+v. Question Instance Settings Panel:
+When a question instance in the center panel is clicked, populate the right settings panel.
+Fetch the full library question details (if not already available) and the current instance's overrides.
+Provide UI fields (using shadcn/ui components and React Hook Form) to edit the overrides.
+On save, call PUT /api/form-builder/pages/:pageId/questions/:questionInstanceId.
+The dynamic UI for metadataOverrides and optionsOverrides will be similar to what you built for the QuestionLibraryForm.tsx but now focused on overriding existing defaults.
+vi. Conditional Logic (Rules) Editor UI:
+This will be a significant sub-component, likely accessed from the Question Instance Settings Panel or a form-level "Rules" tab.
+UI to list rules for the form, create new rules (selecting trigger question instance, condition, action, and multiple target question/page instances), edit, and delete rules. This will use your form_rules CRUD APIs.
+vii. Form Preview/Simulation Feature:
+Add a button that opens the current form (with its unsaved or latest saved structure) in a "preview mode" that uses your client-facing form rendering logic (to be built in Phase 3).
+This is a large phase. I recommend tackling A. Basic Form Management UI first to allow creation and listing of forms. Then, for B. Core Form Editor UI, start with i. Page Management and ii. Displaying Questions on a Selected Page (read-only). This gives you a structure to build upon. Then iteratively add the drag-and-drop, overrides editor, and rules editor.
