@@ -445,7 +445,12 @@ export default function FormManager() {
                   forms.map((form) => (
                     <TableRow key={form.id}>
                       <TableCell className="font-medium">
-                        {form.formTitle || form.form_title}
+                        <button
+                          className="text-blue-600 hover:underline focus:outline-none"
+                          onClick={() => handleEditStructure(form.id)}
+                        >
+                          {form.formTitle || form.form_title}
+                        </button>
                       </TableCell>
                       <TableCell>{form.formKey || form.form_key}</TableCell>
                       <TableCell>{form.version || 1}</TableCell>
