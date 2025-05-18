@@ -2,7 +2,7 @@
 import { Pool } from '@neondatabase/serverless';
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
-  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads,
+  opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, gmailSyncState, processedEmails,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -12,10 +12,12 @@ import {
   type Event, type InsertEvent,
   type ContactIdentifier, type InsertContactIdentifier,
   type Communication, type InsertCommunication,
-  type RawLead, type InsertRawLead
+  type RawLead, type InsertRawLead,
+  type GmailSyncState, type InsertGmailSyncState,
+  type ProcessedEmail, type InsertProcessedEmail
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, gte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added sql for raw SQL operations
+import { eq, gte, lte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added lte for date range query
 import { z } from "zod";
 
 // Define storage interface
@@ -28,6 +30,15 @@ export interface IStorage {
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
   listUsers(): Promise<User[]>;
+  
+  // Gmail Sync State
+  getGmailSyncState(targetEmail: string): Promise<GmailSyncState | null>;
+  saveGmailSyncState(data: InsertGmailSyncState): Promise<void>;
+  
+  // Processed Emails
+  isEmailProcessed(messageId: string, serviceName: string | null): Promise<boolean>;
+  recordProcessedEmail(data: InsertProcessedEmail): Promise<void>;
+  updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<void>;
 
   // Opportunities
   getOpportunity(id: number): Promise<Opportunity | undefined>;
@@ -115,6 +126,72 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
+  }
+  
+  // Gmail Sync State methods
+  async getGmailSyncState(targetEmail: string): Promise<GmailSyncState | null> {
+    const [result] = await db.select().from(gmailSyncState).where(eq(gmailSyncState.targetEmail, targetEmail));
+    return result || null;
+  }
+
+  async saveGmailSyncState(data: InsertGmailSyncState): Promise<void> {
+    await db.insert(gmailSyncState)
+        .values({
+            ...data,
+            lastWatchAttemptTimestamp: data.lastWatchAttemptTimestamp || new Date()
+        })
+        .onConflict(c => c.target(gmailSyncState.targetEmail))
+        .doUpdateSet({
+            lastHistoryId: data.lastHistoryId,
+            watchExpirationTimestamp: data.watchExpirationTimestamp,
+            lastWatchAttemptTimestamp: new Date(),
+        });
+  }
+  
+  // Processed Emails methods
+  async isEmailProcessed(messageId: string, serviceName: string | null): Promise<boolean> {
+    const conditions = [eq(processedEmails.messageId, messageId)];
+    if (serviceName) {
+      conditions.push(eq(processedEmails.service, serviceName));
+    }
+    const existing = await db.select({ id: processedEmails.id })
+                           .from(processedEmails)
+                           .where(and(...conditions))
+                           .limit(1);
+    return existing.length > 0;
+  }
+
+  async recordProcessedEmail(data: InsertProcessedEmail): Promise<void> {
+    // Ensure you don't re-insert if somehow missed by isEmailProcessed
+    try {
+      await db.insert(processedEmails).values(data)
+        .onConflict(c => c.column(processedEmails.messageId))
+        .doNothing(); // Or doUpdateSet if you want to update timestamp
+    } catch (e) {
+      console.error("Error recording processed email, possibly duplicate:", e);
+    }
+  }
+
+  async updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<void> {
+    await db.update(processedEmails)
+      .set({ labelApplied })
+      .where(eq(processedEmails.messageId, messageId));
+  }
+  
+  // Events method for conflict checking
+  async getEventsAroundDate(date: Date, daysBuffer: number = 3): Promise<Event[]> {
+    const startDate = new Date(date);
+    startDate.setDate(date.getDate() - daysBuffer);
+    const endDate = new Date(date);
+    endDate.setDate(date.getDate() + daysBuffer);
+
+    return await db.select()
+      .from(events)
+      .where(and(
+        gte(events.eventDate, startDate),
+        lte(events.eventDate, endDate)
+      ))
+      .orderBy(events.eventDate);
   }
 
   async createUser(user: InsertUser): Promise<User> {
