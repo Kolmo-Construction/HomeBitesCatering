@@ -70,8 +70,9 @@ import { CSS } from "@dnd-kit/utilities";
 
 // Schema for form page definition
 const formPageSchema = z.object({
-  title: z.string().min(1, "Page title is required"),
+  pageTitle: z.string().min(1, "Page title is required"),
   description: z.string().optional(),
+  pageOrder: z.number().optional(),
 });
 
 // Page Component for the sortable page list
@@ -232,7 +233,7 @@ const PageFormDialog = ({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2">
             <FormField
               control={form.control}
-              name="title"
+              name="pageTitle"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Page Title</FormLabel>
