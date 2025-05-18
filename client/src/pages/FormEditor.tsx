@@ -58,6 +58,7 @@ import {
   X,
   Loader2
 } from "lucide-react";
+import FormPreview from "@/components/form-builder/FormPreview";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -1601,7 +1602,11 @@ export default function FormEditor() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowPreview(true)}
+            >
               <Eye className="h-4 w-4 mr-1" />
               Preview
             </Button>
