@@ -33,6 +33,9 @@ export function setReferenceTables(users: UserTable, clients: ClientTable, oppor
   clientsTable = clients;
   opportunitiesTable = opportunities;
   rawLeadsTable = rawLeads;
+  
+  // This function should be called before any queries involving these relations are executed
+  console.log("Reference tables for form-schema have been set");
 }
 
 // --- ENUMS ---
@@ -62,6 +65,13 @@ export const conditionalLogicConditionTypeEnum = pgEnum("conditional_logic_condi
 export const formRuleTargetTypeEnum = pgEnum("form_rule_target_type", [
   'question',
   'page',
+]);
+
+export const formStatusEnum = pgEnum("form_status", [
+  'draft',
+  'published',
+  'archived',
+  'template',
 ]);
 
 // --- TABLES ---
@@ -133,7 +143,7 @@ export const forms = pgTable("forms", {
   formTitle: text("form_title").notNull(),
   description: text("description"),
   version: integer("version").default(1).notNull(),
-  status: text("status").default("draft").notNull(),
+  status: formStatusEnum("status").default("draft").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -227,10 +237,10 @@ export const formSubmissions = pgTable("form_submissions", {
   id: serial("id").primaryKey(),
   formId: integer("form_id").references(() => forms.id, { onDelete: 'restrict' }).notNull(),
   formVersion: integer("form_version").notNull(),
-  userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }),
-  clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }),
-  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
-  rawLeadId: integer("raw_lead_id").references(() => rawLeads.id, { onDelete: 'set null' }),
+  userId: integer("user_id"), // References will be set via relations
+  clientId: integer("client_id"), 
+  opportunityId: integer("opportunity_id"),
+  rawLeadId: integer("raw_lead_id"),
   status: text("status").default("in_progress").notNull(),
   submittedAt: timestamp("submitted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
