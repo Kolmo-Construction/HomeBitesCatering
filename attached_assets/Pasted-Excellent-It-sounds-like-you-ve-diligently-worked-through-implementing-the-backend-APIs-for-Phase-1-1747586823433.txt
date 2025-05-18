@@ -1,0 +1,149 @@
+Excellent! It sounds like you've diligently worked through implementing the backend APIs for Phase 1 based on your form-schema (2).ts. This is a significant accomplishment.
+
+Let's recap what this means and then suggest a couple of focused test cases to ensure this foundation is solid before we outline Phase 2 (Frontend Admin UI).
+
+Summary of Phase 1 Accomplishments:
+
+You have now built the complete backend infrastructure that allows your system to:
+
+Define and Manage a Library of Reusable Questions (question_library):
+
+Create, read, update, and delete master question templates.
+Define their default properties: defaultText, questionType, defaultMetadata (for settings like placeholders, validation rules), defaultOptions (for selection-based questions like dropdowns, radios, checkboxes), and category.
+For 'matrix' type questions, you can define their structure with libraryMatrixRows and libraryMatrixColumns, including row/column keys, labels, cell input types, and metadata.
+Define and Manage Forms (forms):
+
+Create, read, update, and delete form definitions (e.g., "Wedding Catering Quote Form V1").
+Manage form properties like formKey, formTitle, description, version, and status (draft, published, archived, template).
+Structure Forms with Pages (form_pages):
+
+Add, list, update (including pageOrder), and delete pages within a specific form.
+Assemble Form Pages with Question Instances (form_page_questions):
+
+Place questions from the question_library onto specific form_pages.
+For each instance of a library question, you can set its displayOrder and apply crucial overrides:
+displayTextOverride
+isRequiredOverride
+isHiddenOverride
+placeholderOverride
+helperTextOverride
+metadataOverrides (to customize behavior like min/max selections, or filter active matrix rows/columns)
+optionsOverrides (to customize the list/order of options for this instance)
+Define Complex Conditional Logic (form_rules and form_rule_targets):
+
+Create rules linked to a specific form.
+Define triggers (based on specific form_page_questions instances and their answers/state).
+Set conditions (equals, is_filled, etc.) and actions (show_question, hide_page, skip_to_page, etc.).
+A single rule can now have multiple targets (other question instances or pages) thanks to the form_rule_targets table.
+Serve Fully Resolved Forms for Client Rendering:
+
+You have an API endpoint (e.g., GET /api/form-builder/forms/:formKey/versions/:versionNumber/render) that can take a form key and version, and then query all the necessary tables to assemble a comprehensive JSON payload. This payload represents the complete form structure, with pages in order, question instances on each page (with library defaults merged with instance overrides), and all applicable conditional rules with their targets.
+Process Form Submissions:
+
+You have an API endpoint (e.g., POST /api/forms/:formKey/versions/:versionNumber/submit) that can receive client-submitted data.
+This endpoint performs server-side validation against the specific form version's definition (including required fields based on conditional paths and data types).
+Valid submissions are stored in form_submissions and form_submission_answers, linked appropriately to the form, version, client, opportunity, etc.
+Use Cases Enabled by Completed Phase 1 Backend:
+
+Your backend is now a "headless" form engine capable of:
+
+Full Form Definition: Any form, no matter how complex with its questions, pages, conditional logic, and reuse of standard elements, can be fully defined and stored.
+Serving Dynamic Forms: Any client application (web, mobile) can request a form structure and receive all the information needed to render it dynamically.
+Secure Data Capture: Receiving and validating form submissions on the server before storing them ensures data integrity.
+Data Foundation for Other Processes: The stored submission data can be queried and used to generate reports, populate estimates, update CRM records, or feed into other business workflows.
+Essentially, the "brain" of your dynamic form system is built.
+
+A Couple of Focused Test Cases for Phase 1 (API Level):
+
+Before moving to building the admin UI, it's vital to ensure these backend APIs are working as expected. You'd typically use API testing tools like Postman, Insomnia, or write automated integration tests (e.g., using Jest/Supertest if you're in Node.js).
+
+Test Case 1: Creating and Rendering a Simple Form with Overrides and Basic Conditional Logic
+
+Setup (via API calls):
+
+Create Library Questions:
+POST /api/form-builder/library-questions to create "LQ1: Event Type" (type: dropdown, defaultOptions: ["Wedding", "Corporate", "Birthday"]).
+POST /api/form-builder/library-questions to create "LQ2: Ceremony Time" (type: time).
+POST /api/form-builder/library-questions to create "LQ3: Company Name" (type: textbox).
+Create Form: POST /api/form-builder/forms to create "F1: Basic Inquiry Form V1" (formKey: "basic_inquiry_v1", status: "published"). Note the formId.
+Create Page: POST /api/form-builder/forms/:formId/pages to create "P1: Details" (pageOrder: 1). Note the pageId.
+Add Questions to Page:
+POST /api/form-builder/pages/:pageId/questions to add LQ1 as "FPQ1: What is your event type?" (displayOrder: 1, isRequiredOverride: true). Note formPageQuestionId (e.g., fpqId1).
+POST /api/form-builder/pages/:pageId/questions to add LQ2 as "FPQ2: What is your ceremony time?" (displayOrder: 2, isHiddenOverride: true). Note formPageQuestionId (e.g., fpqId2).
+POST /api/form-builder/pages/:pageId/questions to add LQ3 as "FPQ3: What is your company name?" (displayOrder: 3, isHiddenOverride: true, displayTextOverride: "Your Company's Official Name"). Note formPageQuestionId (e.g., fpqId3).
+Add Rules:
+POST /api/form-builder/forms/:formId/rules for "Rule1: Show Ceremony Time if Wedding":
+triggerFormPageQuestionId: fpqId1
+conditionType: "is_selected_option_value"
+conditionValue: "Wedding"
+actionType: "show_question"
+targets: [{ targetType: "question", targetId: fpqId2 }]
+POST /api/form-builder/forms/:formId/rules for "Rule2: Show Company Name if Corporate":
+triggerFormPageQuestionId: fpqId1
+conditionType: "is_selected_option_value"
+conditionValue: "Corporate"
+actionType: "show_question"
+targets: [{ targetType: "question", targetId: fpqId3 }]
+Test "Render Form" API:
+
+GET /api/form-builder/forms/basic_inquiry_v1/versions/1/render
+Assert:
+The response contains form F1, page P1.
+Page P1 contains three question instances (FPQ1, FPQ2, FPQ3) in the correct order.
+FPQ1 details match (dropdown, options, required).
+FPQ2 details match (time, initially hidden).
+FPQ3 details match (textbox, initially hidden, overridden display text).
+The response includes Rule1 and Rule2, correctly referencing the instance IDs (fpqId1, fpqId2, fpqId3) as triggers/targets.
+Test Case 2: Submitting Form Data with Validation
+
+Setup: Use the form "F1: Basic Inquiry Form V1" created above.
+
+Test Submission API - Valid Data (Wedding Path):
+
+POST /api/form-builder/forms/basic_inquiry_v1/versions/1/submit
+Request Body:
+JSON
+
+{
+  "answers": {
+    // Assuming fpqId1, fpqId2 are the runtime IDs from the render endpoint
+    "fpqId1_from_render": "Wedding", 
+    "fpqId2_from_render": "14:00" // Ceremony time, should be visible and possibly required now
+    // FPQ3 (Company Name) should not be submitted as it should be hidden
+  }
+  // Optional: clientId, opportunityId etc.
+}
+Assert:
+Response is 201 Created (or similar success).
+A new record exists in form_submissions linked to form F1, version 1.
+Two records exist in form_submission_answers for FPQ1 and FPQ2 with the correct values.
+Test Submission API - Invalid Data (Missing Required Field on Conditional Path):
+
+POST /api/form-builder/forms/basic_inquiry_v1/versions/1/submit
+Request Body:
+JSON
+
+{
+  "answers": {
+    "fpqId1_from_render": "Wedding"
+    // Missing FPQ2 (Ceremony Time), which should now be required based on Rule1
+  }
+}
+Assert:
+Response is 400 Bad Request (or appropriate validation error code).
+Response body contains a clear error message indicating "Ceremony Time" (or FPQ2) is required.
+No new records in form_submissions or form_submission_answers.
+Test Submission API - Valid Data (Corporate Path):
+
+POST /api/form-builder/forms/basic_inquiry_v1/versions/1/submit
+Request Body:
+JSON
+
+{
+  "answers": {
+    "fpqId1_from_render": "Corporate",
+    "fpqId3_from_render": "Awesome Corp Inc."
+  }
+}
+Assert:
+Successful submission, data saved for FPQ1 and FPQ3.

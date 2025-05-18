@@ -1479,20 +1479,111 @@ function validateAnswer(answer, question) {
       
       // We already validated options above, so we don't need this duplicate check
       
-      // Check min/max selected items if specified
-      if (metadata.minSelected && answer.length < metadata.minSelected) {
-        return `Please select at least ${metadata.minSelected} options`;
+      // We already checked min/max selections above with the metadata.minSelections property
+      break;
+      
+    case 'matrix':
+      // Matrix validation should check that values match the column input types
+      if (!question.matrixStructure) {
+        return "Invalid matrix structure";
       }
-      if (metadata.maxSelected && answer.length > metadata.maxSelected) {
-        return `Please select no more than ${metadata.maxSelected} options`;
+      
+      // Validate each answer against its column type
+      const { rows, columns } = question.matrixStructure;
+      
+      for (const [cellKey, cellValue] of Object.entries(answer)) {
+        // Format should be rowKey_columnKey
+        const [rowKey, columnKey] = cellKey.split('_');
+        
+        // Find the column to determine the cell input type
+        const column = columns.find(col => col.key === columnKey);
+        if (!column) {
+          return `Invalid column reference: ${columnKey}`;
+        }
+        
+        // Validate based on cell input type
+        switch (column.cellInputType) {
+          case 'text':
+            if (metadata.maxLength && cellValue.length > metadata.maxLength) {
+              return `Text in ${cellKey} exceeds maximum length of ${metadata.maxLength}`;
+            }
+            break;
+            
+          case 'number':
+            const numVal = Number(cellValue);
+            if (cellValue && isNaN(numVal)) {
+              return `Please enter a valid number in ${cellKey}`;
+            }
+            if (metadata.min !== undefined && numVal < metadata.min) {
+              return `Value in ${cellKey} must be at least ${metadata.min}`;
+            }
+            if (metadata.max !== undefined && numVal > metadata.max) {
+              return `Value in ${cellKey} must be no more than ${metadata.max}`;
+            }
+            break;
+            
+          case 'select':
+            // This would require the column to specify allowed options for validation
+            const columnOptions = column.metadata?.options || [];
+            if (columnOptions.length > 0 && !columnOptions.includes(cellValue)) {
+              return `Invalid selection in ${cellKey}`;
+            }
+            break;
+            
+          case 'boolean':
+          case 'checkbox':
+            if (cellValue !== true && cellValue !== false && cellValue !== 'true' && cellValue !== 'false') {
+              return `Please provide a valid boolean value in ${cellKey}`;
+            }
+            break;
+        }
       }
       break;
       
+    case 'date':
     case 'datetime':
-      // Basic date validation
+      // Date validation
       const date = new Date(answer);
-      if (date.toString() === 'Invalid Date') {
+      if (isNaN(date.getTime())) {
         return "Please enter a valid date";
+      }
+      
+      // Min/max date validation
+      if (metadata.minDate) {
+        const minDate = new Date(metadata.minDate);
+        if (date < minDate) {
+          return `Date must be on or after ${minDate.toLocaleDateString()}`;
+        }
+      }
+      
+      if (metadata.maxDate) {
+        const maxDate = new Date(metadata.maxDate);
+        if (date > maxDate) {
+          return `Date must be on or before ${maxDate.toLocaleDateString()}`;
+        }
+      }
+      break;
+      
+    case 'address':
+      // Basic address validation
+      if (typeof answer !== 'object') {
+        return "Invalid address format";
+      }
+      
+      if (metadata.requireStreet && (!answer.street || answer.street.trim() === '')) {
+        return "Street address is required";
+      }
+      if (metadata.requireCity && (!answer.city || answer.city.trim() === '')) {
+        return "City is required";
+      }
+      if (metadata.requireState && (!answer.state || answer.state.trim() === '')) {
+        return "State/Province is required";
+      }
+      if (metadata.requireZip && (!answer.zipCode || answer.zipCode.trim() === '')) {
+        return "ZIP/Postal code is required";
+      }
+      if (metadata.requireCountry && (!answer.country || answer.country.trim() === '')) {
+        return "Country is required";
       }
       break;
       
