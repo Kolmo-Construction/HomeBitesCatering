@@ -25,10 +25,14 @@ import {
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
-import { vendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Adjust path as needed
+import express from 'express';
+import { vendorLeadIntakeService } from './services/VendorLeadIntakeService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post('/api/gmail/vendor-lead-webhook', express.json({ type: '*/*' }), async (req: Request, res: Response) => {
+  // Add middleware for webhook endpoint before session setup
+  const webhookParser = express.json({ type: '*/*' });
+  
+  app.post('/api/gmail/vendor-lead-webhook', webhookParser, async (req: Request, res: Response) => {
     try {
       console.log('Received POST on /api/gmail/vendor-lead-webhook');
       // Log raw body for debugging Pub/Sub messages if needed
