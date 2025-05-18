@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { GmailSyncService } from './services/emailSyncService'; // Ensure this path is correct
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
+import { vendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Import for Gmail watch
 
 const app = express();
 app.use(express.json());
@@ -85,6 +86,27 @@ app.use((req, res, next) => {
       app.set('gmailSyncService', gmailSyncService);
       app.set('leadGenService', leadGenService);
       app.set('commSyncService', commSyncService);
+      
+      // Set up VendorLeadIntakeService with Gmail watch if GOOGLE_CLOUD_PROJECT_ID is available
+      if (process.env.GOOGLE_CLOUD_PROJECT_ID) {
+        // Initialize and start the Gmail watch
+        // Ensure OAuth is ready before calling this. The service's initializeGmailClient handles it.
+        try {
+          await vendorLeadIntakeService.startOrRenewWatch(); // Initial watch setup
+          // Set up a periodic renewal (e.g., every day or every few days)
+          setInterval(() => {
+            vendorLeadIntakeService.ensureWatchIsActive().catch(err => 
+              console.error("Error during periodic watch renewal:", err));
+          }, 24 * 60 * 60 * 1000); // Check daily
+          console.log("VendorLeadIntakeService watch initiated and renewal scheduled.");
+        } catch (e) {
+          console.error("Failed to start initial Gmail watch:", e);
+        }
+
+        app.set('vendorLeadIntakeService', vendorLeadIntakeService); // If routes need direct access
+      } else {
+        console.warn("Gmail Pub/Sub Lead Intake: Missing GOOGLE_CLOUD_PROJECT_ID in env. Pub/Sub watch not started.");
+      }
     } else {
       console.warn("Email Services: Google Client ID or Sync Target Email missing in env. Services not started.");
       console.log("To authorize, ensure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, and SYNC_TARGET_EMAIL_ADDRESS are set, then have an admin visit: /api/auth/google/initiate");
