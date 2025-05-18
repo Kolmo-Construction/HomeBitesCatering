@@ -1,0 +1,146 @@
+1. Import queryClient:
+Make sure you have queryClient imported at the top of your file.
+
+TypeScript
+
+// client/src/pages/QuestionLibraryEdit.tsx
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from '@/lib/queryClient'; // <<< ADD OR ENSURE THIS IMPORT EXISTS
+// ... other imports
+2. Modify the onSuccess Callback of saveMutation:
+Inside the onSuccess callback, when isEditing is true, you need to invalidate the specific query that fetches the question you just edited.
+
+TypeScript
+
+// client/src/pages/QuestionLibraryEdit.tsx
+
+// ...
+const saveMutation = useMutation({
+  mutationFn: async (data: any) => {
+    const { id: currentQuestionId } = questionData || {}; // Get current id if editing
+    const isActuallyEditing = isEditing && (id || currentQuestionId); // Ensure id is available for editing
+
+    // Prepare submission data (ensure this uses camelCase for keys sent to server)
+    const submissionPayload = {
+      libraryQuestionKey: data.questionKey,
+      defaultText: data.defaultText,
+      questionType: data.questionType,
+      category: data.category || null,
+      defaultMetadata: {
+        validation: validationRules,
+        defaultRequired: data.defaultRequired,
+        helperText: data.helperText || null,
+        placeholder: data.placeholder || null,
+      },
+      defaultOptions: (['checkbox_group', 'radio_group', 'dropdown'].includes(data.questionType))
+        ? options.map(opt => ({
+            label: opt.label,
+            value: opt.value || opt.label.toLowerCase().replace(/\s+/g, '_')
+          }))
+        : null,
+      matrixRows: (data.questionType === 'matrix')
+        ? rows.map(row => ({
+            rowKey: row.rowKey || `row_${row.id || Date.now()}`, // Ensure unique key
+            label: row.label,
+            price: row.price || null,
+            defaultMetadata: row.defaultMetadata || {},
+            rowOrder: row.rowOrder
+          }))
+        : undefined,
+      matrixColumns: (data.questionType === 'matrix')
+        ? columns.map(col => ({
+            columnKey: col.columnKey || `col_${col.id || Date.now()}`, // Ensure unique key
+            header: col.label,
+            cellInputType: col.cellInputType || 'text',
+            defaultMetadata: col.defaultMetadata || {},
+            columnOrder: col.columnOrder
+          }))
+        : undefined,
+    };
+
+    console.log("Client Payload to Server:", JSON.stringify(submissionPayload, null, 2));
+
+    const url = isActuallyEditing
+      ? `/api/form-builder/library-questions/${id || currentQuestionId}`
+      : '/api/form-builder/library-questions';
+    const method = isActuallyEditing ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(submissionPayload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Server Error Response:", errorData);
+      throw new Error(errorData.message || `Failed to ${isActuallyEditing ? 'update' : 'create'} question`);
+    }
+    return await response.json();
+  },
+  onSuccess: (updatedQuestionData, submittedVariables) => {
+    const questionIdForCache = isEditing ? id : updatedQuestionData?.id;
+
+    toast({
+      title: `Question ${isEditing ? 'updated' : 'created'} successfully`,
+    });
+
+    if (isEditing && questionIdForCache) {
+      // Invalidate the specific query for the question that was just edited
+      // This will cause react-query to refetch it when it's next needed
+      console.log(`Invalidating cache for queryKey: ['/api/form-builder/library-questions', '${questionIdForCache}']`);
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/library-questions', questionIdForCache] });
+
+      // OPTIONAL: For an immediate UI update without waiting for refetch,
+      // if your PUT endpoint returns the updated question data:
+      // console.log("Setting query data for:", ['/api/form-builder/library-questions', questionIdForCache], "with", updatedQuestionData);
+      // queryClient.setQueryData(['/api/form-builder/library-questions', questionIdForCache], updatedQuestionData);
+
+    } else if (!isEditing) {
+      // If a new question was created, invalidate the list of questions
+      // so it appears if the user navigates back to the QuestionLibraryManager.
+      console.log("Invalidating cache for queryKey: ['/api/form-builder/library-questions'] (list)");
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/library-questions'] });
+      // Optionally navigate to the edit page of the newly created question
+      // if (updatedQuestionData?.id) {
+      //   navigate(`/admin/form-builder/question-library/${updatedQuestionData.id}/edit`);
+      // }
+    }
+
+    // Consider if redirect is needed or if user stays on page to make more edits
+    // if (!isEditing && updatedQuestionData?.id) {
+    //   setTimeout(() => {
+    //     navigate(`/admin/form-builder/question-library/${updatedQuestionData.id}/edit`);
+    //   }, 500); // Slight delay for toast
+    // } else if (!isEditing) {
+    //   setTimeout(() => {
+    //     navigate("/admin/form-builder/question-library");
+    //   }, 1500);
+    // }
+  },
+  onError: (error: Error) => {
+    toast({
+      variant: "destructive",
+      title: "Error saving question",
+      description: error.message || "An unexpected error occurred.",
+    });
+    console.error("Save Mutation Error:", error);
+  },
+});
+Explanation:
+
+queryClient.invalidateQueries({ queryKey: ['/api/form-builder/library-questions', questionIdForCache] }):
+
+This line is the key. queryClient is the instance of your React Query client.
+invalidateQueries tells React Query that any cached data associated with the provided queryKey is now stale.
+The queryKey ['/api/form-builder/library-questions', questionIdForCache] must exactly match the query key used by the useQuery hook that fetches the data for the edit page . The id variable (from useParams) is the ID of the question being edited.
+When this query is invalidated, React Query will automatically refetch the data from the server the next time the query is active and observed (e.g., when the component re-renders or if refetchOnWindowFocus or similar options are enabled). Since your useEffect depends on questionData, the refetched data will trigger the useEffect again, and form.reset() will populate the form with the fresh data.
+queryClient.setQueryData (Optional but Recommended for Smoother UX):
+
+If your PUT endpoint (/api/form-builder/library-questions/:id) returns the complete updated question object in its JSON response, you can use queryClient.setQueryData(['/api/form-builder/library-questions', questionIdForCache], updatedQuestionData) immediately in onSuccess.
+This directly updates the cache with the new data from the server's response, making the UI update instantly without needing a separate refetch. This often leads to a better user experience.
+Make sure the updatedQuestionData returned by your server after a PUT request matches the structure expected by your form.reset() and other state setters in the useEffect.
+Important Considerations for the submissionPayload during Update (PUT):
+
+Case Consistency: You mentioned in the previous step that the data was fetched with camelCase keys. Ensure that when you send data back to the server in the PUT request (the submissionPayload), the keys also match what the server expects for an update. If the server's PUT handler expects snake_case (which is common if it directly maps to database columns), you might need to transform your submissionPayload keys from camelCase (used in your form state) to snake_case before sending.
+The Zod schema questionLibrarySchema defined in server/questionLibraryRoutes.ts uses camelCase keys for validation. This suggests your server-side PUT handler will also expect camelCase in the req.body. If so, your current submissionPayload construction (using camelCase like libraryQuestionKey) should be correct for the server to parse. The crucial part is that the server's database update logic then correctly maps these camelCase fields to the snake_case database columns.

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from '@/lib/queryClient';
 import { useParams, useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -151,6 +152,9 @@ export default function QuestionLibraryEdit() {
   // Mutation for saving question
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      const { id: currentQuestionId } = questionData || {}; // Get current id if editing
+      const isActuallyEditing = isEditing && (id || currentQuestionId); // Ensure id is available for editing
+      
       // Prepare submission data - using the exact field names expected by the server
       const submission = {
         libraryQuestionKey: data.questionKey,
@@ -180,65 +184,71 @@ export default function QuestionLibraryEdit() {
       if (data.questionType === 'matrix') {
         Object.assign(submission, {
           matrixRows: rows.map(row => ({
-            rowKey: row.rowKey || row.id.replace('row-', 'row_'), // Use existing rowKey or generate from id
+            rowKey: row.rowKey || `row_${row.id || Date.now()}`, // Ensure unique key
             label: row.label,
-            price: null,
-            defaultMetadata: {},
-            rowOrder: parseInt(row.id.split('-')[1], 10) // Use id number as order
+            price: row.price || null,
+            defaultMetadata: row.defaultMetadata || {},
+            rowOrder: row.rowOrder || parseInt(row.id.split('-')[1], 10) // Use id number as order
           })),
           
           matrixColumns: columns.map(col => ({
-            columnKey: col.value || col.id.replace('col-', 'col_'), // Use existing value as columnKey or generate from id
+            columnKey: col.columnKey || `col_${col.id || Date.now()}`, // Ensure unique key
             header: col.label,
-            cellInputType: col.cellInputType || 'radio', // Use existing cellInputType or default to radio
-            defaultMetadata: {},
-            columnOrder: parseInt(col.id.split('-')[1], 10) // Use id number as order
+            cellInputType: col.cellInputType || 'text', // Default cell input type
+            defaultMetadata: col.defaultMetadata || {},
+            columnOrder: col.columnOrder || parseInt(col.id.split('-')[1], 10) // Use id number as order
           }))
         });
       }
 
       // Debug: Log the submission payload
-      console.log('Submitting question data:', submission);
+      console.log('Client Payload to Server:', JSON.stringify(submission, null, 2));
       
-      if (isEditing) {
-        // Update existing question
-        const response = await fetch(`/api/form-builder/library-questions/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submission),
-        });
+      const url = isActuallyEditing
+        ? `/api/form-builder/library-questions/${id || currentQuestionId}`
+        : '/api/form-builder/library-questions';
+      const method = isActuallyEditing ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submission),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update question');
-        }
-
-        return await response.json();
-      } else {
-        // Create new question
-        const response = await fetch('/api/form-builder/library-questions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submission),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to create question');
-        }
-
-        return await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server Error Response:", errorData);
+        throw new Error(errorData.message || `Failed to ${isActuallyEditing ? 'update' : 'create'} question`);
       }
+
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedQuestionData, submittedVariables) => {
+      const questionIdForCache = isEditing ? id : updatedQuestionData?.id;
+      
       toast({
         title: `Question ${isEditing ? 'updated' : 'created'} successfully`,
         description: "You will be redirected to the question library",
       });
+      
+      if (isEditing && questionIdForCache) {
+        // Invalidate the specific query for the question that was just edited
+        console.log(`Invalidating cache for queryKey: ['/api/form-builder/library-questions', '${questionIdForCache}']`);
+        queryClient.invalidateQueries({ queryKey: ['/api/form-builder/library-questions', questionIdForCache.toString()] });
+        
+        // Update the cache with the latest data immediately
+        console.log("Setting query data for:", ['/api/form-builder/library-questions', questionIdForCache], "with", updatedQuestionData);
+        queryClient.setQueryData(
+          ['/api/form-builder/library-questions', questionIdForCache.toString()], 
+          updatedQuestionData
+        );
+      } else if (!isEditing) {
+        // If a new question was created, invalidate the list of questions
+        console.log("Invalidating cache for queryKey: ['/api/form-builder/library-questions'] (list)");
+        queryClient.invalidateQueries({ queryKey: ['/api/form-builder/library-questions'] });
+      }
       
       // Navigate back to the question library list
       setTimeout(() => {
@@ -248,9 +258,10 @@ export default function QuestionLibraryEdit() {
     onError: (error) => {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Error saving question",
         description: error instanceof Error ? error.message : "Failed to save question",
       });
+      console.error("Save Mutation Error:", error);
     },
   });
 
