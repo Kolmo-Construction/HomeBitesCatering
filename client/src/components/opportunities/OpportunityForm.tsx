@@ -224,18 +224,91 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
         clientId: opportunityToEdit.clientId ? String(opportunityToEdit.clientId) : "",
       });
     } else if (rawLeadData && !isEditing) {
+      // Parse the prospect name into first and last name parts
+      let firstName = "";
+      let lastName = "";
+      
+      if (rawLeadData.extractedProspectName) {
+        const nameParts = rawLeadData.extractedProspectName.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          firstName = nameParts[0];
+          lastName = nameParts.slice(1).join(' ');
+        } else if (nameParts.length === 1) {
+          firstName = nameParts[0];
+        }
+      }
+      
+      // Generate comprehensive notes combining AI insights
+      let notes = "";
+      const noteParts = [];
+      
+      if (rawLeadData.extractedMessageSummary) {
+        noteParts.push(`Client Message: ${rawLeadData.extractedMessageSummary}`);
+      }
+      
+      if (rawLeadData.aiKeyRequirements) {
+        let requirements = "";
+        try {
+          // Handle both string and array formats
+          if (typeof rawLeadData.aiKeyRequirements === 'string') {
+            requirements = rawLeadData.aiKeyRequirements;
+          } else if (Array.isArray(rawLeadData.aiKeyRequirements)) {
+            requirements = rawLeadData.aiKeyRequirements.map(req => `• ${req}`).join('\n');
+          } else if (typeof rawLeadData.aiKeyRequirements === 'object') {
+            requirements = Object.values(rawLeadData.aiKeyRequirements).map(req => `• ${req}`).join('\n');
+          }
+          
+          if (requirements) {
+            noteParts.push(`Key Requirements:\n${requirements}`);
+          }
+        } catch (e) {
+          console.warn("Error formatting requirements:", e);
+        }
+      }
+      
+      if (rawLeadData.aiPotentialRedFlags) {
+        let redFlags = "";
+        try {
+          // Handle both string and array formats
+          if (typeof rawLeadData.aiPotentialRedFlags === 'string') {
+            redFlags = rawLeadData.aiPotentialRedFlags;
+          } else if (Array.isArray(rawLeadData.aiPotentialRedFlags)) {
+            redFlags = rawLeadData.aiPotentialRedFlags.map(flag => `• ${flag}`).join('\n');
+          } else if (typeof rawLeadData.aiPotentialRedFlags === 'object') {
+            redFlags = Object.values(rawLeadData.aiPotentialRedFlags).map(flag => `• ${flag}`).join('\n');
+          }
+          
+          if (redFlags) {
+            noteParts.push(`Potential Concerns:\n${redFlags}`);
+          }
+        } catch (e) {
+          console.warn("Error formatting red flags:", e);
+        }
+      }
+      
+      if (rawLeadData.aiCalendarConflictAssessment) {
+        noteParts.push(`Calendar Assessment: ${rawLeadData.aiCalendarConflictAssessment}`);
+      }
+      
+      if (rawLeadData.notes) {
+        noteParts.push(`Internal Notes: ${rawLeadData.notes}`);
+      }
+      
+      notes = noteParts.length > 0 ? noteParts.join('\n\n') : "";
+      
+      // Reset form with properly mapped fields
       form.reset({
-        firstName: rawLeadData.extractedName?.split(' ')[0] || "",
-        lastName: rawLeadData.extractedName?.split(' ').slice(1).join(' ') || "",
-        email: rawLeadData.extractedEmail || "",
-        phone: rawLeadData.extractedPhone || "",
+        firstName: firstName || "",
+        lastName: lastName || "",
+        email: rawLeadData.extractedProspectEmail || "",
+        phone: rawLeadData.extractedProspectPhone || "",
         eventType: rawLeadData.extractedEventType || "",
         eventDate: rawLeadData.extractedEventDate ? new Date(rawLeadData.extractedEventDate) : null,
         guestCount: rawLeadData.extractedGuestCount != null ? rawLeadData.extractedGuestCount : null,
         venue: rawLeadData.extractedVenue || "",
-        notes: rawLeadData.notes || rawLeadData.extractedMessageSummary || "",
-        opportunitySource: rawLeadData.source || "email",
-        status: rawLeadData.status === 'qualified' ? 'qualified' : 'new', // Set status based on raw lead status if qualified
+        notes: notes,
+        opportunitySource: rawLeadData.leadSourcePlatform || rawLeadData.source || "email",
+        status: rawLeadData.status === 'qualified' ? 'qualified' : 'new', // Set status based on raw lead status
         priority: rawLeadData.aiOverallLeadQuality || "medium", // Use AI quality for priority
         assignToExistingClient: false, // Default to not assigning to existing client immediately
         clientId: "",
