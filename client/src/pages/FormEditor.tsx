@@ -24,6 +24,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -906,7 +907,18 @@ export default function FormEditor() {
 
   // Mutations for questions
   const addQuestionMutation = useMutation({
-    mutationFn: async ({ pageId, libraryQuestionId, displayOrder }) => {
+    mutationFn: async ({ 
+      pageId, 
+      libraryQuestionId, 
+      displayOrder,
+      displayTextOverride,
+      isRequiredOverride,
+      isHiddenOverride,
+      helperTextOverride,
+      placeholderOverride,
+      metadataOverrides,
+      optionsOverrides
+    }) => {
       const response = await fetch(`/api/form-builder/pages/${pageId}/questions`, {
         method: 'POST',
         headers: {
@@ -915,6 +927,13 @@ export default function FormEditor() {
         body: JSON.stringify({
           library_question_id: libraryQuestionId,
           display_order: displayOrder,
+          display_text_override: displayTextOverride,
+          is_required_override: isRequiredOverride,
+          is_hidden_override: isHiddenOverride,
+          helper_text_override: helperTextOverride,
+          placeholder_override: placeholderOverride,
+          metadata_overrides: metadataOverrides || {},
+          options_overrides: optionsOverrides || []
         }),
       });
       
@@ -927,10 +946,7 @@ export default function FormEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
-      toast({
-        title: "Question added",
-        description: "The question has been added to the page.",
-      });
+      // We don't need a toast message here because we're adding one in the handleAddQuestionFromLibrary function
     },
     onError: (error) => {
       toast({
@@ -943,17 +959,20 @@ export default function FormEditor() {
 
   const updateQuestionMutation = useMutation({
     mutationFn: async ({ pageId, questionId, questionData }) => {
+      // Convert the field names from camelCase to snake_case for the API
       const response = await fetch(`/api/form-builder/pages/${pageId}/questions/${questionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          display_text_override: questionData.displayText,
-          is_required_override: questionData.isRequired,
-          is_hidden_override: questionData.isHidden,
-          helper_text_override: questionData.helperText,
-          placeholder_override: questionData.placeholder,
+          display_text_override: questionData.displayTextOverride,
+          is_required_override: questionData.isRequiredOverride,
+          is_hidden_override: questionData.isHiddenOverride,
+          helper_text_override: questionData.helperTextOverride,
+          placeholder_override: questionData.placeholderOverride,
+          metadata_overrides: questionData.metadataOverrides || {},
+          options_overrides: questionData.optionsOverrides || [],
         }),
       });
       
@@ -966,6 +985,12 @@ export default function FormEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+      toast({
+        title: "Question updated",
+        description: "The question settings have been updated successfully.",
+      });
+      // Deselect the question after updating
+      setSelectedQuestion(null);
     },
     onError: (error) => {
       toast({
@@ -1055,11 +1080,36 @@ export default function FormEditor() {
       ? Math.max(...questionsData.data.map(q => q.displayOrder || q.display_order)) + 1 
       : 1;
     
-    await addQuestionMutation.mutateAsync({
+    // Set up initial overrides based on library question
+    const initialOverrides = {
+      // Basic data to identify the question
       pageId: selectedPage.id,
       libraryQuestionId: libraryQuestion.id,
       displayOrder: nextOrder,
-    });
+      
+      // Initialize with empty overrides, letting the base library question values show through
+      displayTextOverride: null,
+      isRequiredOverride: null,
+      isHiddenOverride: null,
+      helperTextOverride: null,
+      placeholderOverride: null,
+      metadataOverrides: {},
+      optionsOverrides: []
+    };
+    
+    try {
+      await addQuestionMutation.mutateAsync(initialOverrides);
+      toast({
+        title: "Question added",
+        description: "Question has been added to the page successfully.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to add question to the page."
+      });
+    }
   };
 
   const handleUpdateQuestion = async (questionData) => {
