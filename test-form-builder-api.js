@@ -44,7 +44,7 @@ async function login() {
       url: `${baseURL}/api/auth/login`,
       data: {
         username: 'admin',
-        password: 'password'
+        password: 'admin'
       }
     });
     
