@@ -762,14 +762,6 @@ For more information on the Question Library API, please refer to the Question L
 Now that you have learned about the Form Builder API, you can use it to create dynamic questionnaires for your catering management system. The API allows for a fully customizable form building experience with conditional logic, a variety of question types, and a reusable question library.
 
 For testing these endpoints, you can use the included test scripts in the project root, such as `test-form-builder-api.js` and `test-form-submission.js`.
-              },
-              {
-                "id": 2,
-                "key": "rating_2",
-                "label": "2 - Fair",
-                "displayOrder": 1
-              },
-              {
                 "id": 3,
                 "key": "rating_3",
                 "label": "3 - Average",
