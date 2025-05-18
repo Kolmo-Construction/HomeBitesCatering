@@ -1,30 +1,36 @@
 // server/services/VendorLeadIntakeService.ts
 import { google, gmail_v1 } from 'googleapis';
 import { simpleParser, ParsedMail } from 'mailparser';
-import { storage } // Assuming your storage methods for gmailSyncState are added here
-from '../storage';
+import { storage } from '../storage';
 import { aiService } from './aiService';
 import { oauth2Client, tokenStore, setOAuthCredentials } from './googleAuth'; // Use shared Google Auth utilities
 import {
     InsertRawLead,
     rawLeadStatusEnum,
-    // ... other necessary types from shared/schema
-    GmailSyncState, // Assuming you've added this type
+    leadScoreEnum,
+    leadQualityCategoryEnum,
+    budgetIndicationEnum,
+    sentimentEnum,
     InsertGmailSyncState,
     InsertCommunication
 } from '@shared/schema';
-import { db } from '../db'; // For direct DB access if needed for gmailSyncState
-import { gmailSyncState as gmailSyncStateTable } from '@shared/schema'; // Drizzle table
+import { db } from '../db';
+import { gmailSyncState as gmailSyncStateTable } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 const GMAIL_WATCH_LABEL_ID = 'INBOX'; // Or a more specific label if vendors use one consistently
 const VENDOR_LEAD_PROCESSED_LABEL_NAME = 'PROCESSED_BY_VENDOR_INTAKE'; // New label for this service
 
+// Helper to format dates consistently
+function formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+}
+
 export class VendorLeadIntakeService {
     private gmail: gmail_v1.Gmail | null = null;
     public targetEmail: string = "";
     private project_id = process.env.GOOGLE_CLOUD_PROJECT_ID;
-    private pubsub_topic_name = process.env.GMAIL_PUBSUB_TOPIC_ID || 'homebites-vendor-lead-notifications'; // Set in .env
+    private pubsub_topic_name = process.env.GMAIL_PUBSUB_TOPIC_ID || 'homebites-vendor-lead-notifications';
     private topicName: string = `projects/${this.project_id}/topics/${this.pubsub_topic_name}`;
     private webhookProcessedLabelId: string | null = null;
 
@@ -84,10 +90,6 @@ export class VendorLeadIntakeService {
         const gmail = await this.initializeGmailClient();
 
         try {
-            // Optional: Fetch current user profile to get initial historyId if none exists
-            // const profile = await gmail.users.getProfile({ userId: 'me' });
-            // const initialHistoryId = profile.data.historyId;
-
             const request = {
                 userId: 'me',
                 requestBody: {
@@ -119,20 +121,15 @@ export class VendorLeadIntakeService {
         const syncState = await storage.getGmailSyncState(this.targetEmail);
         if (!syncState || !syncState.lastHistoryId) {
             console.warn(`VendorLeadIntakeService: No last known history ID for ${this.targetEmail}. Using notification history ID. Consider initial sync or re-watch if issues persist.`);
-            // If this happens, it might be good to call users.getProfile to get the current historyId
-            // and process messages since then, or simply use the newHistoryId and acknowledge some messages might be missed
-            // if the webhook was down for an extended period before the first successful watch.
-            // For now, we'll use the newHistoryId as the an_history_id for the history.list call,
-            // and update it after processing.
-            await storage.saveGmailSyncState({ // Save it so we have a baseline
+            await storage.saveGmailSyncState({
                 targetEmail: this.targetEmail,
-                lastHistoryId: newHistoryId, // Use the new one as a starting point
-                watchExpirationTimestamp: syncState?.watchExpirationTimestamp || new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // Default to 6 days if unknown
+                lastHistoryId: newHistoryId,
+                watchExpirationTimestamp: syncState?.watchExpirationTimestamp || new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
                 lastWatchAttemptTimestamp: new Date(),
             });
         }
 
-        const startHistoryId = syncState?.lastHistoryId || newHistoryId; // Fallback to newHistoryId if none stored
+        const startHistoryId = syncState?.lastHistoryId || newHistoryId;
 
         try {
             const response = await gmail.users.history.list({
@@ -147,7 +144,6 @@ export class VendorLeadIntakeService {
                     if (record.messagesAdded) {
                         for (const msgAdded of record.messagesAdded) {
                             if (msgAdded.message && msgAdded.message.id) {
-                                // Check if message has UNREAD label and NOT our PROCESSED_BY_VENDOR_INTAKE label
                                 const msgDetails = await gmail.users.messages.get({
                                     userId: 'me',
                                     id: msgAdded.message.id,
@@ -169,12 +165,11 @@ export class VendorLeadIntakeService {
                     }
                 }
             }
-            // Update the last known history ID to the one from this notification payload
             await storage.saveGmailSyncState({
                 targetEmail: this.targetEmail,
-                lastHistoryId: newHistoryId, // Use the historyId from the Pub/Sub notification
-                watchExpirationTimestamp: syncState?.watchExpirationTimestamp, // Keep existing expiration
-                lastWatchAttemptTimestamp: syncState?.lastWatchAttemptTimestamp // Keep existing attempt time
+                lastHistoryId: newHistoryId,
+                watchExpirationTimestamp: syncState?.watchExpirationTimestamp,
+                lastWatchAttemptTimestamp: syncState?.lastWatchAttemptTimestamp
             });
             console.log(`VendorLeadIntakeService: Successfully processed history up to ${newHistoryId} for ${this.targetEmail}.`);
 
@@ -182,7 +177,6 @@ export class VendorLeadIntakeService {
             console.error(`VendorLeadIntakeService: Error processing history records for ${this.targetEmail}:`, error);
             if (error.code === 404 && error.message?.includes("notFound") && error.message?.includes("historyId")) {
                 console.warn(`VendorLeadIntakeService: History ID ${startHistoryId} not found for ${this.targetEmail}. It might be too old. Attempting to re-establish watch and get current historyId.`);
-                // Attempt to get current historyId and re-watch.
                 try {
                     const profile = await gmail.users.getProfile({ userId: 'me' });
                     const currentMailboxHistoryId = profile.data.historyId;
@@ -190,13 +184,12 @@ export class VendorLeadIntakeService {
                         await storage.saveGmailSyncState({
                            targetEmail: this.targetEmail,
                            lastHistoryId: currentMailboxHistoryId,
-                           watchExpirationTimestamp: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // Default to 6 days
+                           watchExpirationTimestamp: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
                            lastWatchAttemptTimestamp: new Date()
                         });
                         console.log(`VendorLeadIntakeService: Reset lastHistoryId for ${this.targetEmail} to current mailbox historyId: ${currentMailboxHistoryId}. Please retry notification or wait for next one.`);
-                        // Optionally, re-trigger a history.list from this new ID if desired, or just wait for next pub/sub
                     }
-                    await this.startOrRenewWatch(); // Re-initiate watch
+                    await this.startOrRenewWatch();
                 } catch (profileError) {
                     console.error(`VendorLeadIntakeService: Failed to get profile or re-watch for ${this.targetEmail} after historyId notFound:`, profileError);
                 }
@@ -220,17 +213,38 @@ export class VendorLeadIntakeService {
             const messageIdHeader = parsedMail.headers.get('message-id') as string | undefined;
             const uniqueMessageId = messageIdHeader || parsedMail.messageId || `generated-${Date.now()}-${messageGmailId}`;
 
-            // 1. Robust Duplicate Check (against your central processed_emails table)
-            //    This checks if *any* service has touched this email.
-            const isAlreadyProcessedGlobally = await storage.isEmailProcessed(uniqueMessageId, null); // null means any service
+            // 1. Robust Duplicate Check
+            const isAlreadyProcessedGlobally = await storage.isEmailProcessed(uniqueMessageId, null);
             if (isAlreadyProcessedGlobally) {
                 console.log(`VendorLeadIntakeService: Email ${uniqueMessageId} (Gmail ID: ${messageGmailId}) already processed by another service. Marking and skipping.`);
-                await this.markEmailAsProcessedInGmail(messageGmailId); // Mark it by this service too
+                await this.markEmailAsProcessedInGmail(messageGmailId);
                 return;
             }
 
-            const fromAddress = parsedMail.from?.value[0]?.address?.toLowerCase();
-            const emailDate = parsedMail.date || new Date(internalDateMs); // Use Gmail's internalDate if mailparser fails
+            // Extract email addresses
+            const getAddressesFrom = (addressField: any): { address?: string; name?: string }[] => {
+                if (!addressField) return [];
+                if (Array.isArray(addressField)) return addressField;
+                if (addressField.value && Array.isArray(addressField.value)) return addressField.value;
+                return [addressField];
+            };
+
+            const fromAddresses = getAddressesFrom(parsedMail.from);
+            const fromHeader = fromAddresses[0];
+            const fromEmail = fromHeader?.address?.toLowerCase();
+            
+            if (!fromEmail) {
+                console.warn(`VendorLeadIntakeService: Cannot process email ID ${uniqueMessageId}, no sender email found.`);
+                return;
+            }
+
+            // Skip emails from our own address
+            if (fromEmail === this.targetEmail.toLowerCase()) {
+                console.log(`VendorLeadIntakeService: Skipping email from our own address: ${fromEmail}`);
+                return;
+            }
+
+            const emailDate = parsedMail.date || new Date(internalDateMs);
             const subject = parsedMail.subject || '(No Subject)';
             let bodyText = parsedMail.text || '';
             if (!bodyText && parsedMail.html) {
@@ -238,113 +252,139 @@ export class VendorLeadIntakeService {
             }
             if (!bodyText) bodyText = '(No Content)';
 
-            // 2. Calendar Conflict Data Retrieval
-            let calendarConflictContext = "No potential event date found in email for calendar check.";
-            // Basic date extraction (can be improved or done by AI first pass)
-            // For simplicity, assume AI will extract the date needed for conflict check.
-            // In a more advanced flow, you might do a quick regex for dates here.
+            console.log(`VendorLeadIntakeService: Processing lead email - Subject: "${subject}", From: ${fromEmail}`);
 
-            // 3. Intelligent Parsing & Analysis (using aiService.ts)
-            const fullContentForAI = `Subject: ${subject}\nFrom: ${fromAddress}\nDate: ${emailDate.toISOString()}\n\n${bodyText}`;
+            // Check if this sender already exists in our system
+            const existingContact = await storage.findOpportunityOrClientByContactIdentifier(fromEmail, 'email');
+            
+            // Only create a lead if the email doesn't match an existing opportunity or client
+            if (!existingContact) {
+                console.log(`VendorLeadIntakeService: Creating new lead from email from ${fromEmail}`);
+                
+                // Calendar Conflict Data Retrieval preparation
+                let calendarConflictContext = "No potential event date found in email for calendar check.";
+                
+                // Intelligent Parsing & Analysis with AI
+                const extractedData = await this.extractLeadDataWithAI(bodyText, subject, fromEmail, emailDate);
 
-            // Simulating calendar context fetching - in reality, you'd query your DB
-            // For now, we'll pass a placeholder or make it part of the AI's job to identify event dates.
-            // A more robust way: AI extracts date first, then you query DB, then make a second AI call for full analysis + response suggestion.
-            // Or, provide recent bookings list to AI.
-            // For this example, let AI try to find date and then we'd manually check calendar after.
+                // After AI analysis, check for calendar conflicts
+                let calendarConflictDetails = "Calendar check not performed (no date from AI).";
+                if (extractedData.success && extractedData.extractedEventDate) {
+                    const eventsAroundDate = await storage.getEventsAroundDate(new Date(extractedData.extractedEventDate));
+                    if (eventsAroundDate.length > 0) {
+                        calendarConflictDetails = `Potential conflict: ${eventsAroundDate.length} event(s) near ${extractedData.extractedEventDate}. Example: ${eventsAroundDate[0].eventType} on ${formatDate(eventsAroundDate[0].eventDate)}`;
+                        (extractedData as any).aiCalendarConflictDetails = calendarConflictDetails;
+                    } else {
+                        calendarConflictDetails = `No immediate calendar conflicts found for ${extractedData.extractedEventDate}.`;
+                        (extractedData as any).aiCalendarConflictDetails = calendarConflictDetails;
+                    }
+                }
 
-            const aiAnalysisResults = await aiService.analyzeLeadMessage(fullContentForAI /*, calendarConflictContext - if fetched prior */);
+                // Create RawLead Record based on extractedData
+                if (!extractedData.success && fromEmail) {
+                    // Create a fallback lead with basic info if AI extraction failed
+                    const fallbackLeadData: InsertRawLead = {
+                        source: 'gmail_vendor_lead_fallback',
+                        extractedProspectName: fromHeader?.name || '',
+                        extractedProspectEmail: fromEmail,
+                        extractedProspectPhone: null,
+                        eventSummary: subject,
+                        status: 'needs_manual_review' as const,
+                        notes: `Lead creation with AI failed for email with subject: "${subject}"`,
+                        receivedAt: emailDate,
+                        rawData: { 
+                            error: extractedData.error, 
+                            emailSubject: subject, 
+                            fromAddress: fromEmail, 
+                            bodyPreview: bodyText.substring(0, 500),
+                            gmailId: messageGmailId
+                        },
+                        leadSourcePlatform: 'email',
+                    };
+                    
+                    const rawLead = await storage.createRawLead(fallbackLeadData);
+                    console.log(`VendorLeadIntakeService: Created minimal lead ID ${rawLead.id} due to AI failure.`);
+                } 
+                else if (extractedData.success) {
+                    // Create the lead with successfully extracted data
+                    const leadData: InsertRawLead = {
+                        source: extractedData.source || 'gmail_vendor_lead',
+                        extractedProspectName: extractedData.extractedProspectName || extractedData.extractedName || '',
+                        extractedProspectEmail: extractedData.extractedProspectEmail || extractedData.extractedEmail || fromEmail,
+                        extractedProspectPhone: extractedData.extractedProspectPhone || extractedData.extractedPhone || null,
+                        eventSummary: extractedData.eventSummary || subject,
+                        status: extractedData.status || 'under_review',
+                        notes: extractedData.notes || `AI-Analyzed Vendor Lead | Vendor: ${fromEmail} | Conflict Check: ${calendarConflictDetails}`,
+                        receivedAt: emailDate,
+                        rawData: {
+                            gmailId: messageGmailId,
+                            subject: subject,
+                            from: fromEmail,
+                            date: emailDate.toISOString(),
+                            bodyPreview: bodyText.substring(0, 500) + (bodyText.length > 500 ? '...' : ''),
+                            originalEmail: rawEmail.substring(0, 20000),
+                            aiAnalysis: extractedData
+                        },
+                        extractedEventType: extractedData.extractedEventType,
+                        extractedEventDate: extractedData.extractedEventDate,
+                        extractedEventTime: extractedData.extractedEventTime,
+                        extractedGuestCount: extractedData.extractedGuestCount,
+                        extractedVenue: extractedData.extractedVenue,
+                        extractedMessageSummary: extractedData.extractedMessageSummary,
+                        leadSourcePlatform: 'email',
+                        aiUrgencyScore: extractedData.aiUrgencyScore,
+                        aiBudgetIndication: extractedData.aiBudgetIndication,
+                        aiBudgetValue: extractedData.aiBudgetValue,
+                        aiClarityOfRequestScore: extractedData.aiClarityOfRequestScore,
+                        aiDecisionMakerLikelihood: extractedData.aiDecisionMakerLikelihood,
+                        aiKeyRequirements: extractedData.aiKeyRequirements || [],
+                        aiPotentialRedFlags: extractedData.aiPotentialRedFlags || [],
+                        aiOverallLeadQuality: extractedData.aiOverallLeadQuality,
+                        aiSuggestedNextStep: extractedData.aiSuggestedNextStep,
+                        aiSentiment: extractedData.aiSentiment,
+                        aiConfidenceScore: extractedData.aiConfidenceScore
+                    };
 
-            // After AI analysis, if aiAnalysisResults.extractedEventDate is present, THEN perform calendar check:
-            let calendarConflictDetails = "Calendar check not performed (no date from AI).";
-            if (aiAnalysisResults.extractedEventDate) {
-                const eventsAroundDate = await storage.getEventsAroundDate(new Date(aiAnalysisResults.extractedEventDate)); // You'll need to implement getEventsAroundDate
-                if (eventsAroundDate.length > 0) {
-                    calendarConflictDetails = `Potential conflict: ${eventsAroundDate.length} event(s) near ${aiAnalysisResults.extractedEventDate}. Example: ${eventsAroundDate[0].eventType} on ${formatDate(eventsAroundDate[0].eventDate)}`;
-                    // Update AI results or add to raw lead data
-                    (aiAnalysisResults as any).aiCalendarConflictDetails = calendarConflictDetails; // Cast to add temp field or ensure it's in schema
-                } else {
-                    calendarConflictDetails = `No immediate calendar conflicts found for ${aiAnalysisResults.extractedEventDate}.`;
-                     (aiAnalysisResults as any).aiCalendarConflictDetails = calendarConflictDetails;
+                    const newRawLead = await storage.createRawLead(leadData);
+                    console.log(`VendorLeadIntakeService: Created RawLead ID ${newRawLead.id} for email ${uniqueMessageId}`);
+
+                    // Record the email processing
+                    await storage.recordProcessedEmail({
+                        messageId: uniqueMessageId,
+                        gmailId: messageGmailId,
+                        service: 'vendor_lead_intake',
+                        email: fromEmail,
+                        subject: subject,
+                        labelApplied: false
+                    });
+
+                    // Log this initial email as a communication
+                    const communicationData: InsertCommunication = {
+                        rawLeadId: newRawLead.id,
+                        type: 'email',
+                        direction: 'incoming',
+                        timestamp: emailDate,
+                        source: 'vendor_lead_intake',
+                        externalId: uniqueMessageId,
+                        subject: subject,
+                        fromAddress: fromEmail,
+                        toAddress: this.targetEmail,
+                        bodyRaw: bodyText,
+                        bodySummary: extractedData.extractedMessageSummary || subject.substring(0, 255),
+                        metaData: { 
+                            gmailId: messageGmailId, 
+                            aiSentiment: extractedData.aiSentiment 
+                        }
+                    };
+                    await storage.createCommunication(communicationData);
                 }
             }
-
-
-            // 4. Create RawLead Record
-            const leadData: InsertRawLead = {
-                source: fromAddress || 'gmail_vendor_lead', // Or more specific based on vendor
-                rawData: {
-                    gmailId: messageGmailId,
-                    subject: subject,
-                    from: fromAddress,
-                    date: emailDate.toISOString(),
-                    bodyPreview: bodyText.substring(0, 500) + (bodyText.length > 500 ? '...' : ''),
-                    originalEmail: rawEmail.substring(0, 20000), // Store a large chunk if needed
-                    aiAnalysis: aiAnalysisResults // Store all AI results
-                },
-                extractedProspectName: aiAnalysisResults.extractedProspectName || aiAnalysisResults.extractedName || parsedMail.from?.value[0]?.name || '',
-                extractedProspectEmail: aiAnalysisResults.extractedProspectEmail || aiAnalysisResults.extractedEmail || fromAddress || '', // Prefer AI extracted prospect email
-                extractedProspectPhone: aiAnalysisResults.extractedProspectPhone || aiAnalysisResults.extractedPhone || null,
-                eventSummary: aiAnalysisResults.extractedMessageSummary || subject,
-                receivedAt: emailDate,
-                status: (aiAnalysisResults.aiOverallLeadQuality === 'hot' ? 'under_review' : 'new') as rawLeadStatusEnum,
-                // Populate all AI fields from aiAnalysisResults
-                extractedEventType: aiAnalysisResults.extractedEventType,
-                extractedEventDate: aiAnalysisResults.extractedEventDate,
-                extractedEventTime: aiAnalysisResults.extractedEventTime,
-                extractedGuestCount: aiAnalysisResults.extractedGuestCount,
-                extractedVenue: aiAnalysisResults.extractedVenue,
-                leadSourcePlatform: fromAddress, // Or parse from email content if vendor specifies
-                aiUrgencyScore: aiAnalysisResults.aiUrgencyScore as any, // Cast if enums don't match perfectly yet
-                aiBudgetIndication: aiAnalysisResults.aiBudgetIndication as any,
-                aiBudgetValue: aiAnalysisResults.aiBudgetValue,
-                aiClarityOfRequestScore: aiAnalysisResults.aiClarityOfRequestScore as any,
-                aiDecisionMakerLikelihood: aiAnalysisResults.aiDecisionMakerLikelihood as any,
-                aiKeyRequirements: aiAnalysisResults.aiKeyRequirements || [],
-                aiPotentialRedFlags: aiAnalysisResults.aiPotentialRedFlags || [],
-                aiOverallLeadQuality: aiAnalysisResults.aiOverallLeadQuality as any,
-                aiSuggestedNextStep: aiAnalysisResults.aiSuggestedNextStep,
-                aiSentiment: aiAnalysisResults.aiSentiment as any,
-                aiConfidenceScore: aiAnalysisResults.aiConfidenceScore,
-                internal_notes: calendarConflictDetails // Store calendar check result here or in a dedicated field
-            };
-
-            const newRawLead = await storage.createRawLead(leadData);
-            console.log(`VendorLeadIntakeService: Created RawLead ID ${newRawLead.id} for email ${uniqueMessageId}`);
-
-            // 5. Post-Processing
-            await storage.recordProcessedEmail({ // Record in your central processed_emails table
-                messageId: uniqueMessageId,
-                gmailId: messageGmailId,
-                service: 'vendor_lead_intake', // Specific service name
-                email: fromAddress || 'unknown',
-                subject: subject,
-                labelApplied: false // Will be updated by markAsProcessed
-            });
-
-            // Log this initial email as a communication linked to the new RawLead
-            const communicationData: InsertCommunication = {
-                rawLeadId: newRawLead.id, // Link to the new RawLead
-                type: 'email',
-                direction: 'incoming',
-                timestamp: emailDate,
-                source: 'vendor_lead_intake',
-                externalId: uniqueMessageId, // Gmail's Message-ID
-                subject: subject,
-                fromAddress: fromAddress,
-                toAddress: this.targetEmail, // Assuming it was sent to the target email
-                bodyRaw: bodyText,
-                bodySummary: aiAnalysisResults.extractedMessageSummary || subject.substring(0, 255),
-                metaData: { gmailId: messageGmailId, aiSentiment: aiAnalysisResults.aiSentiment }
-            };
-            await storage.createCommunication(communicationData);
-
+            
+            // Mark email as processed in Gmail
             await this.markEmailAsProcessedInGmail(messageGmailId, uniqueMessageId);
-
-
+            
         } catch (error) {
             console.error(`VendorLeadIntakeService: Error processing email ID ${messageGmailId}:`, error);
-            // Consider adding to a dead-letter queue or specific error logging
         }
     }
 
@@ -369,28 +409,173 @@ export class VendorLeadIntakeService {
         }
     }
 
-    // Method to be called periodically (e.g. by a cron job or an interval within server/index.ts)
-    public async ensureWatchIsActive(): Promise<void> {
-        console.log(`VendorLeadIntakeService: Checking watch status for ${this.targetEmail}...`);
+    // Method to renew watch periodically
+    public async scheduleRenewal(): Promise<void> {
         const syncState = await storage.getGmailSyncState(this.targetEmail);
-        let needsRenewal = true;
-        if (syncState && syncState.watchExpirationTimestamp) {
-            const expirationDate = new Date(syncState.watchExpirationTimestamp);
-            // Renew if expiring within, say, the next 24 hours
-            if (expirationDate.getTime() > Date.now() + 24 * 60 * 60 * 1000) {
-                needsRenewal = false;
-                console.log(`VendorLeadIntakeService: Watch for ${this.targetEmail} is still active, expires ${expirationDate.toISOString()}. No renewal needed now.`);
-            } else {
-                 console.log(`VendorLeadIntakeService: Watch for ${this.targetEmail} expires soon (${expirationDate.toISOString()}) or has expired. Renewing.`);
-            }
-        } else {
-            console.log(`VendorLeadIntakeService: No existing watch state found for ${this.targetEmail} or expiration unknown. Initiating watch.`);
-        }
-
-        if (needsRenewal) {
+        if (!syncState || !syncState.watchExpirationTimestamp) return;
+        
+        const expirationTime = syncState.watchExpirationTimestamp.getTime();
+        const nowTime = Date.now();
+        const timeUntilExpiration = expirationTime - nowTime;
+        
+        // Renew watch 12 hours before expiration
+        const renewalThreshold = 12 * 60 * 60 * 1000; // 12 hours in ms
+        
+        if (timeUntilExpiration < renewalThreshold) {
+            console.log(`VendorLeadIntakeService: Watch expires soon (${new Date(expirationTime).toISOString()}), renewing now.`);
             await this.startOrRenewWatch();
+        } else {
+            console.log(`VendorLeadIntakeService: Watch active until ${new Date(expirationTime).toISOString()}, no renewal needed yet.`);
+        }
+    }
+    
+    /**
+     * Ensures the Gmail watch is active and valid
+     * Called periodically to maintain Gmail watch
+     */
+    public async ensureWatchIsActive(): Promise<void> {
+        console.log(`VendorLeadIntakeService: Checking if Gmail watch is active for ${this.targetEmail}`);
+        
+        try {
+            const syncState = await storage.getGmailSyncState(this.targetEmail);
+            
+            // If we have no sync state or the watch is expired/will expire soon, renew it
+            if (!syncState || !syncState.watchExpirationTimestamp) {
+                console.log(`VendorLeadIntakeService: No existing watch found for ${this.targetEmail}. Starting new watch.`);
+                await this.startOrRenewWatch();
+                return;
+            }
+            
+            const now = new Date();
+            const expirationTime = syncState.watchExpirationTimestamp.getTime();
+            const timeRemaining = expirationTime - now.getTime();
+            
+            // Renew if less than 24 hours remaining
+            const renewalThreshold = 24 * 60 * 60 * 1000; // 24 hours in ms
+            
+            if (timeRemaining < renewalThreshold) {
+                console.log(`VendorLeadIntakeService: Watch expires soon (${syncState.watchExpirationTimestamp.toISOString()}). Renewing now.`);
+                await this.startOrRenewWatch();
+            } else {
+                console.log(`VendorLeadIntakeService: Watch is active until ${syncState.watchExpirationTimestamp.toISOString()}. No renewal needed.`);
+            }
+        } catch (error) {
+            console.error(`VendorLeadIntakeService: Error ensuring Gmail watch is active for ${this.targetEmail}:`, error);
+            throw error;
+        }
+    }
+
+    // Integrated AI lead data extraction
+    private async extractLeadDataWithAI(
+        emailContent: string,
+        emailSubject: string,
+        fromAddress?: string,
+        emailDate?: Date
+    ): Promise<Partial<InsertRawLead> & { success: boolean; error?: string }> {
+        console.log(`VendorLeadIntakeService: Extracting lead data with AI for email with subject "${emailSubject}"`);
+
+        try {
+            const fullContent = `
+Subject: ${emailSubject}
+${fromAddress ? `From: ${fromAddress}` : ''}
+
+${emailContent}
+            `.trim();
+
+            try {
+                const aiResults = await aiService.analyzeLeadMessage(fullContent);
+                console.log("VendorLeadIntakeService: Successfully processed with AI service");
+
+                // Helper function to validate score against enum values
+                const validateLeadScore = (score: string | undefined): typeof leadScoreEnum.enumValues[number] | undefined => {
+                    if (!score || !leadScoreEnum.enumValues.includes(score as any)) return undefined;
+                    return score as typeof leadScoreEnum.enumValues[number];
+                };
+
+                const validateLeadQuality = (quality: string | undefined): typeof leadQualityCategoryEnum.enumValues[number] | undefined => {
+                    if (!quality || !leadQualityCategoryEnum.enumValues.includes(quality as any)) return undefined;
+                    return quality as typeof leadQualityCategoryEnum.enumValues[number];
+                };
+
+                const validateBudgetIndication = (budget: string | undefined): typeof budgetIndicationEnum.enumValues[number] | undefined => {
+                    if (!budget || !budgetIndicationEnum.enumValues.includes(budget as any)) return undefined;
+                    return budget as typeof budgetIndicationEnum.enumValues[number];
+                };
+
+                const validateSentiment = (sentiment: string | undefined): typeof sentimentEnum.enumValues[number] | undefined => {
+                    if (!sentiment || !sentimentEnum.enumValues.includes(sentiment as any)) return undefined;
+                    return sentiment as typeof sentimentEnum.enumValues[number];
+                };
+
+                // Form the result object that aligns with InsertRawLead schema
+                return {
+                    success: true,
+                    source: 'email_ai_extraction',
+                    extractedProspectName: aiResults.extractedProspectName || aiResults.extractedName || '',
+                    extractedProspectEmail: aiResults.extractedProspectEmail || aiResults.extractedEmail || fromAddress || '',
+                    extractedProspectPhone: aiResults.extractedProspectPhone || aiResults.extractedPhone || null,
+                    eventSummary: emailSubject,
+                    status: 'under_review' as const,
+                    notes: `Auto-extracted from email with subject: "${emailSubject}"`,
+                    receivedAt: emailDate,
+
+                    // Add AI-extracted fields
+                    extractedEventType: aiResults.extractedEventType,
+                    extractedEventDate: aiResults.extractedEventDate,
+                    extractedEventTime: aiResults.extractedEventTime,
+                    extractedGuestCount: aiResults.extractedGuestCount,
+                    extractedVenue: aiResults.extractedVenue,
+                    extractedMessageSummary: aiResults.extractedMessageSummary,
+                    leadSourcePlatform: 'email',
+
+                    // Add AI assessment fields (with type validation)
+                    aiUrgencyScore: validateLeadScore(aiResults.aiUrgencyScore),
+                    aiBudgetIndication: validateBudgetIndication(aiResults.aiBudgetIndication),
+                    aiBudgetValue: aiResults.aiBudgetValue,
+                    aiClarityOfRequestScore: validateLeadScore(aiResults.aiClarityOfRequestScore),
+                    aiDecisionMakerLikelihood: validateLeadScore(aiResults.aiDecisionMakerLikelihood),
+                    aiKeyRequirements: aiResults.aiKeyRequirements || [],
+                    aiPotentialRedFlags: aiResults.aiPotentialRedFlags || [],
+                    aiOverallLeadQuality: validateLeadQuality(aiResults.aiOverallLeadQuality),
+                    aiSuggestedNextStep: aiResults.aiSuggestedNextStep,
+                    aiSentiment: validateSentiment(aiResults.aiSentiment),
+                    aiConfidenceScore: aiResults.aiConfidenceScore,
+
+                    // Store the raw AI output for debugging
+                    rawData: {
+                        emailSubject,
+                        emailPreview: emailContent.substring(0, 500) + (emailContent.length > 500 ? '...' : ''),
+                        fromAddress,
+                        aiProvider: 'AI Service',
+                        aiOutput: aiResults,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+            } catch (aiError: unknown) {
+                const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
+                console.error("VendorLeadIntakeService: AI service error:", aiError);
+                return {
+                    success: false,
+                    error: `AI service error: ${errorMessage}`,
+                    extractedProspectEmail: fromAddress,
+                    eventSummary: emailSubject,
+                    status: 'needs_manual_review' as const,
+                    notes: `AI extraction failed for email with subject: "${emailSubject}"`,
+                    receivedAt: emailDate,
+                };
+            }
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error("VendorLeadIntakeService: Unexpected error during lead extraction:", error);
+            return {
+                success: false,
+                error: `Unexpected error: ${errorMessage}`,
+                extractedProspectEmail: fromAddress,
+                eventSummary: emailSubject,
+                status: 'needs_manual_review' as const,
+                notes: `Failed to process email with subject: "${emailSubject}"`,
+                receivedAt: emailDate,
+            };
         }
     }
 }
-
-export const vendorLeadIntakeService = new VendorLeadIntakeService();

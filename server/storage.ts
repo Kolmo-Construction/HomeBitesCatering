@@ -135,17 +135,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveGmailSyncState(data: InsertGmailSyncState): Promise<void> {
-    await db.insert(gmailSyncState)
-        .values({
-            ...data,
-            lastWatchAttemptTimestamp: data.lastWatchAttemptTimestamp || new Date()
-        })
-        .onConflict(c => c.target(gmailSyncState.targetEmail))
-        .doUpdateSet({
+    try {
+      // First try to select to see if record exists
+      const existing = await this.getGmailSyncState(data.targetEmail);
+      
+      if (existing) {
+        // Update existing record
+        await db.update(gmailSyncState)
+          .set({
             lastHistoryId: data.lastHistoryId,
             watchExpirationTimestamp: data.watchExpirationTimestamp,
-            lastWatchAttemptTimestamp: new Date(),
-        });
+            lastWatchAttemptTimestamp: data.lastWatchAttemptTimestamp || new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(gmailSyncState.targetEmail, data.targetEmail));
+      } else {
+        // Insert new record
+        await db.insert(gmailSyncState)
+          .values({
+            targetEmail: data.targetEmail,
+            lastHistoryId: data.lastHistoryId,
+            watchExpirationTimestamp: data.watchExpirationTimestamp,
+            lastWatchAttemptTimestamp: data.lastWatchAttemptTimestamp || new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+      }
+    } catch (error) {
+      console.error(`Error saving Gmail sync state for ${data.targetEmail}:`, error);
+      throw error;
+    }
   }
   
   // Processed Emails methods
@@ -164,11 +183,31 @@ export class DatabaseStorage implements IStorage {
   async recordProcessedEmail(data: InsertProcessedEmail): Promise<void> {
     // Ensure you don't re-insert if somehow missed by isEmailProcessed
     try {
-      await db.insert(processedEmails).values(data)
-        .onConflict(c => c.column(processedEmails.messageId))
-        .doNothing(); // Or doUpdateSet if you want to update timestamp
+      // Check if the record already exists
+      const existing = await db.select({ id: processedEmails.id })
+                           .from(processedEmails)
+                           .where(eq(processedEmails.messageId, data.messageId))
+                           .limit(1);
+      
+      if (existing.length === 0) {
+        // Add processedAt as current date if not provided
+        await db.insert(processedEmails).values({
+          ...data,
+          processedAt: new Date()
+        });
+        console.log(`Recorded processed email with ID ${data.messageId}`);
+      } else {
+        // Update the existing record if desired
+        await db.update(processedEmails)
+          .set({ 
+            labelApplied: data.labelApplied,
+            processedAt: new Date() 
+          })
+          .where(eq(processedEmails.messageId, data.messageId));
+        console.log(`Updated processed email record for ${data.messageId}`);
+      }
     } catch (e) {
-      console.error("Error recording processed email, possibly duplicate:", e);
+      console.error("Error recording processed email:", e);
     }
   }
 

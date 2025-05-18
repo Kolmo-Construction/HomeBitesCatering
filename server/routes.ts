@@ -26,7 +26,12 @@ import {
 // GmailSyncService has been retired in favor of specialized services
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
-import { vendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Adjust path as needed
+import { VendorLeadIntakeService } from './services/VendorLeadIntakeService';
+
+// Initialize the service instances
+const leadGenerationService = new LeadGenerationService();
+const communicationSyncService = new CommunicationSyncService();
+const vendorLeadIntakeService = new VendorLeadIntakeService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/gmail/vendor-lead-webhook', express.json({ type: '*/*' }), async (req: Request, res: Response) => {

@@ -4,7 +4,12 @@ import { setupVite, serveStatic, log } from "./vite";
 // Gmail sync service has been retired in favor of more specialized services
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
-import { vendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Import for Gmail watch
+import { VendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Import for Gmail watch
+
+// Initialize service instances
+const leadGenerationService = new LeadGenerationService();
+const communicationSyncService = new CommunicationSyncService();
+const vendorLeadIntakeService = new VendorLeadIntakeService();
 
 const app = express();
 app.use(express.json());
