@@ -277,16 +277,22 @@ export default function QuestionLibraryEdit() {
   // Set up form values when question data is loaded
   useEffect(() => {
     if (questionData) {
+      // Log the data structure for debugging
+      console.log("Fetched questionData for edit:", questionData);
+      
       // Set form values based on the loaded question
+      // Extract metadata fields for easier access
+      const metadata = questionData.default_metadata || {};
+      
       form.reset({
         questionKey: questionData.library_question_key,
         defaultText: questionData.default_text,
         questionType: questionData.question_type,
         category: questionData.category || "",
-        defaultRequired: questionData.default_required || false,
-        helperText: questionData.helper_text || "",
-        placeholder: questionData.placeholder || "",
-        defaultMetadata: questionData.default_metadata || {},
+        defaultRequired: metadata.defaultRequired || false,
+        helperText: metadata.helperText || "",
+        placeholder: metadata.placeholder || "",
+        defaultMetadata: metadata,
       });
 
       // Set local state for specialized fields
