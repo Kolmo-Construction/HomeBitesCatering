@@ -706,18 +706,19 @@ router.post("/pages/:pageId/questions/reorder", async (req, res) => {
 // --- FORM SUBMISSION API ---
 
 // Submit a completed form
+// Handle form submissions
 router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) => {
   try {
     const formKey = req.params.formKey;
     const versionNumber = parseInt(req.params.versionNumber);
-    const { clientId, opportunityId, rawLeadId, answers } = req.body;
+    const { responses, submitterInfo, clientId, opportunityId, rawLeadId } = req.body;
     
     if (isNaN(versionNumber)) {
       return res.status(400).json({ message: "Invalid version number" });
     }
     
-    if (!answers || typeof answers !== 'object') {
-      return res.status(400).json({ message: "Invalid answers format" });
+    if (!responses || typeof responses !== 'object') {
+      return res.status(400).json({ message: "Invalid responses format. Expected object with question keys mapping to answers." });
     }
     
     // Get the form definition for validation
@@ -733,16 +734,46 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
     }
     
     // 1. Get the resolved form questions (similar to the render endpoint)
-    // We need this to validate the submitted answers
     const pages = await db.select()
       .from(formSchema.formPages)
       .where(eq(formSchema.formPages.formId, form.id))
       .orderBy(formSchema.formPages.pageOrder);
     
-    // Collect all questions from all pages
+    // Map to track which rules apply to each question
+    const questionRules = new Map();
+    
+    // Get all rules for this form to evaluate conditional logic
+    const rules = await db.select()
+      .from(formSchema.formRules)
+      .where(eq(formSchema.formRules.formId, form.id));
+      
+    for (const rule of rules) {
+      const targets = await db.select()
+        .from(formSchema.formRuleTargets)
+        .where(eq(formSchema.formRuleTargets.ruleId, rule.id));
+        
+      // Map targets to their questions
+      for (const target of targets) {
+        if (target.targetType === 'question') {
+          if (!questionRules.has(target.targetId)) {
+            questionRules.set(target.targetId, []);
+          }
+          questionRules.get(target.targetId).push({
+            rule,
+            target
+          });
+        }
+      }
+    }
+    
+    // Collect all questions from all pages and identify conditionally visible questions
     const resolvedQuestions = [];
+    const questionIdToPage = new Map(); // For tracking which page a question belongs to
+    const pageIdToQuestions = new Map(); // For tracking questions in each page
     
     for (const page of pages) {
+      const pageQuestions = [];
+      
       const questionInstances = await db.select()
         .from(formSchema.formPageQuestions)
         .where(eq(formSchema.formPageQuestions.formPageId, page.id))
@@ -761,43 +792,76 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
         // Create a resolved question object
         const resolvedQuestion = {
           questionInstanceId: instance.id,
+          questionKey: `${page.id}_${instance.id}`, // Create a consistent key
           libraryQuestionId: libraryQuestion.id,
+          libraryQuestionKey: libraryQuestion.libraryQuestionKey,
           questionType: libraryQuestion.questionType,
-          displayText: instance.displayTextOverride || libraryQuestion.displayText,
-          isRequired: instance.isRequiredOverride !== null ? instance.isRequiredOverride : libraryQuestion.isRequired,
-          isHidden: instance.isHiddenOverride !== null ? instance.isHiddenOverride : libraryQuestion.isHidden,
-          placeholder: instance.placeholderOverride || libraryQuestion.placeholder,
-          helperText: instance.helperTextOverride || libraryQuestion.helperText,
-          metadata: mergeMetadata(libraryQuestion.metadata, instance.metadataOverrides),
-          options: mergeOptions(libraryQuestion.options, instance.optionsOverrides)
+          displayText: instance.displayTextOverride || libraryQuestion.defaultText,
+          isRequired: instance.isRequiredOverride !== null ? 
+            instance.isRequiredOverride : 
+            (libraryQuestion.defaultMetadata?.isRequired || false),
+          isHidden: instance.isHiddenOverride !== null ? 
+            instance.isHiddenOverride : 
+            (libraryQuestion.defaultMetadata?.isHidden || false),
+          metadata: mergeMetadata(libraryQuestion.defaultMetadata, instance.metadataOverrides),
+          options: mergeOptions(libraryQuestion.defaultOptions, instance.optionsOverrides),
+          pageId: page.id,
+          // Track rules that affect this question
+          affectingRules: questionRules.get(instance.id) || []
         };
         
         if (libraryQuestion.questionType === 'matrix') {
           // Get matrix rows and columns for validation
           const matrixRows = await db.select()
             .from(formSchema.libraryMatrixRows)
-            .where(eq(formSchema.libraryMatrixRows.questionId, libraryQuestion.id))
-            .orderBy(formSchema.libraryMatrixRows.displayOrder);
+            .where(eq(formSchema.libraryMatrixRows.libraryQuestionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixRows.rowOrder);
           
           const matrixColumns = await db.select()
             .from(formSchema.libraryMatrixColumns)
-            .where(eq(formSchema.libraryMatrixColumns.questionId, libraryQuestion.id))
-            .orderBy(formSchema.libraryMatrixColumns.displayOrder);
+            .where(eq(formSchema.libraryMatrixColumns.libraryQuestionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixColumns.columnOrder);
           
-          resolvedQuestion.matrixRows = matrixRows;
-          resolvedQuestion.matrixColumns = matrixColumns;
+          // Add matrix structure to the question
+          resolvedQuestion.matrixStructure = {
+            rows: matrixRows.map(row => ({
+              id: row.id,
+              key: row.rowKey,
+              label: row.label,
+              displayOrder: row.rowOrder
+            })),
+            columns: matrixColumns.map(col => ({
+              id: col.id,
+              key: col.columnKey,
+              header: col.header,
+              cellInputType: col.cellInputType,
+              displayOrder: col.columnOrder
+            }))
+          };
         }
         
         resolvedQuestions.push(resolvedQuestion);
+        pageQuestions.push(resolvedQuestion);
+        questionIdToPage.set(instance.id, page);
       }
+      
+      pageIdToQuestions.set(page.id, pageQuestions);
     }
     
-    // 2. Validate the submitted answers
+    // 2. Determine visibility based on conditional logic
+    const visibility = calculateVisibility(resolvedQuestions, rules, responses);
+    
+    // 3. Validate the submitted answers
     const validationErrors = {};
     
     for (const question of resolvedQuestions) {
+      // Skip validation for questions that should be hidden
+      if (!visibility.visibleQuestions.has(question.questionInstanceId)) {
+        continue;
+      }
+      
       const questionId = question.questionInstanceId.toString();
-      const answer = answers[questionId];
+      const answer = responses[questionId];
       
       // Validate this answer
       const error = validateAnswer(answer, question);
@@ -814,17 +878,18 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
       });
     }
     
-    // 3. Store the submission in a transaction
+    // 4. Store the submission in a transaction
     const result = await db.transaction(async (tx) => {
       // Create form submission record
       const [submission] = await tx.insert(formSchema.formSubmissions)
         .values({
           formId: form.id,
           formVersion: versionNumber,
+          userId: req.user?.id || null, // Get from session if available
           clientId: clientId || null,
           opportunityId: opportunityId || null,
           rawLeadId: rawLeadId || null,
-          status: "completed",
+          status: "completed", 
           submittedAt: new Date()
         })
         .returning();
@@ -832,24 +897,43 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
       // Create answer records for each question
       const answerInserts = [];
       
-      for (const [questionIdStr, answerValue] of Object.entries(answers)) {
+      for (const [questionIdStr, answerValue] of Object.entries(responses)) {
         const questionId = parseInt(questionIdStr);
         if (isNaN(questionId)) continue;
         
-        answerInserts.push({
-          formSubmissionId: submission.id,
-          formPageQuestionId: questionId,
-          answerValue: answerValue,
-          answeredAt: new Date()
-        });
+        // Only store answers for visible questions
+        if (visibility.visibleQuestions.has(questionId)) {
+          answerInserts.push({
+            formSubmissionId: submission.id,
+            formPageQuestionId: questionId,
+            answerValue: answerValue,
+            answeredAt: new Date()
+          });
+        }
       }
       
       if (answerInserts.length > 0) {
         await tx.insert(formSchema.formSubmissionAnswers).values(answerInserts);
       }
       
+      // If submitter info was provided, store it
+      if (submitterInfo) {
+        await tx.update(formSchema.formSubmissions)
+          .set({
+            submitterInfo: JSON.stringify(submitterInfo)
+          })
+          .where(eq(formSchema.formSubmissions.id, submission.id));
+      }
+      
       return submission;
     });
+    
+    // 5. Implement any post-submission actions here
+    // For example: Send notifications, update CRM, create tasks, etc.
+    // These should be implemented as async operations that don't block the response
+    
+    // For now, just log the submission
+    console.log(`Form submission ${result.id} completed for form ${formKey} v${versionNumber}`);
     
     return res.status(201).json({
       message: "Form submitted successfully",
@@ -859,7 +943,10 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
     
   } catch (error) {
     console.error("Error submitting form:", error);
-    return res.status(500).json({ message: "Failed to submit form" });
+    return res.status(500).json({ 
+      message: "Failed to submit form", 
+      error: error.message 
+    });
   }
 });
 
