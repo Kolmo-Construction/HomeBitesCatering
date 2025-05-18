@@ -23,7 +23,7 @@ import {
   opportunityPriorityEnum,       // For priority filtering
   insertRawLeadSchema,           // For raw leads management
 } from "@shared/schema";
-import { GmailSyncService } from './services/emailSyncService'; // Import the service
+// GmailSyncService has been retired in favor of specialized services
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
 import { vendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Adjust path as needed
@@ -102,13 +102,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize email sync service, but don't start it yet
   // It's started manually by the admin via the /api/admin/email-sync/start endpoint
-  const gmailSyncService = new GmailSyncService();
+  // Email services are now initialized in server/index.ts and made available via req.app.get('serviceName')
   
-  // Initialize lead generation service
+  // Initialize and make lead generation service available to routes
   const leadGenService = new LeadGenerationService();
+  app.set('leadGenService', leadGenService);
   
-  // Initialize communication sync service
-  const communicationSyncService = new CommunicationSyncService();
+  // Initialize and make communication sync service available to routes
+  const commSyncService = new CommunicationSyncService();
+  app.set('commSyncService', commSyncService);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -1385,67 +1387,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== Email Sync Service Routes =====
+  // ===== Email Services Routes =====
   
-  // Start email sync service
-  app.post('/api/admin/email-sync/start', isAdmin, async (req: Request, res: Response) => {
+  // === Lead Generation Service Routes ===
+  
+  // Start lead generation service
+  app.post('/api/admin/lead-gen/start', isAdmin, async (req: Request, res: Response) => {
     try {
-      const { interval } = req.body;
+      const leadGenService = req.app.get('leadGenService');
       
-      // Start the service with an optional custom interval
-      const result = gmailSyncService.startSyncService(interval);
+      if (!leadGenService) {
+        return res.status(503).json({ message: 'Lead Generation Service not initialized' });
+      }
+      
+      // Start the service
+      leadGenService.start();
       
       res.status(200).json({
-        message: 'Email sync service started successfully',
-        status: result
+        message: 'Lead Generation service started successfully',
+        status: { isRunning: leadGenService.isRunning() }
       });
     } catch (error) {
-      console.error('Error starting email sync service:', error);
+      console.error('Error starting lead generation service:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Stop email sync service
-  app.post('/api/admin/email-sync/stop', isAdmin, async (req: Request, res: Response) => {
+  // Stop lead generation service
+  app.post('/api/admin/lead-gen/stop', isAdmin, async (req: Request, res: Response) => {
     try {
+      const leadGenService = req.app.get('leadGenService');
+      
+      if (!leadGenService) {
+        return res.status(503).json({ message: 'Lead Generation Service not initialized' });
+      }
+      
       // Stop the service
-      const result = gmailSyncService.stopSyncService();
+      leadGenService.stop();
       
       res.status(200).json({
-        message: 'Email sync service stopped successfully',
-        status: result
+        message: 'Lead Generation service stopped successfully',
+        status: { isRunning: leadGenService.isRunning() }
       });
     } catch (error) {
-      console.error('Error stopping email sync service:', error);
+      console.error('Error stopping lead generation service:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Manually trigger sync
-  app.post('/api/admin/email-sync/manual', isAdmin, async (req: Request, res: Response) => {
+  // Manually trigger Gmail OAuth
+  app.post('/api/admin/vendor-lead/manual-sync', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Trigger manual sync
-      const result = await gmailSyncService.manualSync();
+      // Trigger manual Gmail API check
+      await vendorLeadIntakeService.ensureWatchIsActive();
       
       res.status(200).json({
-        message: 'Manual sync executed successfully',
-        result
+        message: 'Manual Gmail check executed successfully',
+        success: true
       });
     } catch (error) {
-      console.error('Error executing manual sync:', error);
-      res.status(500).json({ message: 'Server error' });
+      console.error('Error executing manual Gmail check:', error);
+      res.status(500).json({ 
+        message: 'Server error', 
+        error: error.message,
+        success: false
+      });
     }
   });
   
-  // Get sync status
-  app.get('/api/admin/email-sync/status', isAdmin, async (req: Request, res: Response) => {
+  // Get vendor lead intake service status
+  app.get('/api/admin/vendor-lead/status', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Get service status
-      const status = gmailSyncService.getSyncStatus();
+      // Get basic status for vendor lead intake
+      const status = {
+        targetEmail: vendorLeadIntakeService.targetEmail,
+        isConfigured: !!vendorLeadIntakeService.targetEmail && !!process.env.GOOGLE_CLOUD_PROJECT_ID
+      };
       
-      res.status(200).json(status);
+      res.status(200).json({ status });
     } catch (error) {
-      console.error('Error getting sync status:', error);
+      console.error('Error getting vendor lead intake status:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
