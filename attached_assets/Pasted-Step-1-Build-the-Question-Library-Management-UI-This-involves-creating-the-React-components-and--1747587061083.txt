@@ -1,0 +1,52 @@
+Step 1: Build the "Question Library" Management UI
+
+This involves creating the React components and views necessary for administrators to perform CRUD operations on your question_library entries, including their matrix definitions. You'll be using your existing frontend stack (React, TypeScript, Vite, Tailwind CSS, shadcn/ui components) and interacting with the question_library APIs you built in Phase 1.
+
+Here are the detailed sub-steps:
+
+Setup Admin Area & Navigation:
+
+Ensure you have a dedicated section in your client application for administrators (e.g., /admin).
+Within this admin section, add navigation (e.g., in your client/src/components/layout/Sidebar.txt or a new admin-specific sidebar) to a new page, for example, /admin/form-builder/question-library.
+Develop the "List Library Questions" View:
+
+Component: Create a new React component (e.g., QuestionLibraryList.tsx) for the /admin/form-builder/question-library page.
+Data Fetching: Use TanStack Query (React Query) to fetch data from your GET /api/form-builder/library-questions endpoint.
+Display:
+Use the shadcn/ui Table component to display the library questions.
+Columns should include: libraryQuestionKey, defaultText, questionType, category, and "Actions."
+The "Actions" column for each row should have "Edit" and "Delete" buttons/icons.
+Functionality:
+A prominent "Create New Library Question" button that navigates to a creation form/modal.
+(Optional) Add filtering by category or searching by libraryQuestionKey or defaultText.
+Develop the "Create/Edit Library Question" Form/Modal:
+
+Component: Create a reusable React component (e.g., QuestionLibraryForm.tsx). This could be a separate page (e.g., /admin/form-builder/question-library/new or /admin/form-builder/question-library/:id/edit) or a shadcn/ui Dialog or Sheet component.
+State Management & Validation: Use React Hook Form to manage the form's state and Zod (with your insertQuestionLibrarySchema and potentially more detailed client-side validation schemas) for validation.
+Input Fields (using shadcn/ui components):
+libraryQuestionKey: <Input /> (text)
+defaultText: <Textarea /> or <Input />
+questionType: <Select /> (dropdown), populated with values from your formQuestionTypeEnum. The options could be hardcoded or fetched if you create an API endpoint for enums.
+category: <Input /> (text), or <Select /> if you want predefined categories.
+defaultMetadata (JSONB - Dynamic UI based on questionType):
+This is the most complex part of this form. When the questionType is selected, you need to dynamically render appropriate input fields to configure its defaultMetadata.
+Example for 'textbox': Show an <Input /> for "Placeholder Text."
+Example for 'number': Show <Input type="number" /> for "Min Value," "Max Value," "Default Value."
+Example for 'checkbox_group': Show <Input type="number" /> for "Min Selections," "Max Selections."
+You might have sub-components for each question type's metadata configuration.
+As a simpler fallback for less common or highly complex metadata, you could offer a raw JSON editor (<Textarea /> with validation that it's valid JSON).
+defaultOptions (JSONB - for 'checkbox_group', 'radio_group', 'dropdown'):
+A dynamic list interface (React Hook Form's useFieldArray is perfect here) where the admin can add, edit, remove, and reorder options. Each option would have fields for value and text.
+Matrix Definition UI (if questionType is 'matrix'):
+This will require a specialized section within the form.
+For libraryMatrixRows: Use useFieldArray to allow adding/editing/deleting rows. Each row would have inputs for rowKey, label, price, defaultMetadata (JSONB, potentially a simpler text area for now), and rowOrder.
+For libraryMatrixColumns: Use useFieldArray to allow adding/editing/deleting columns. Each column would have inputs for columnKey, header, cellInputType (could be a select with simple types like 'text', 'number', 'boolean_checkbox'), defaultMetadata (JSONB for cell-specific config, like options if cellInputType is 'dropdown'), and columnOrder.
+API Interaction:
+On submit, call POST /api/form-builder/library-questions (for new) or PUT /api/form-builder/library-questions/:id (for edit) using TanStack Query mutations. Pass the structured data, including arrays for matrix rows/columns if applicable.
+Handle success (e.g., show a toast notification, navigate back to the list) and errors (display validation messages).
+Implement "Delete Library Question" Functionality:
+
+The "Delete" button in the list view should trigger this.
+Use a shadcn/ui AlertDialog to confirm the deletion.
+On confirmation, call the DELETE /api/form-builder/library-questions/:id endpoint.
+Handle the API response (e.g., refetch the list, show success/error toast). Remember your backend has onDelete: 'restrict' if the question is in use by form_page_questions, so the API should return an appropriate error if deletion is not possible, and your UI should inform the user.
