@@ -200,7 +200,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
           <CardTitle>
-            {rawLead.extractedName || 'Unnamed Lead'}{' '}
+            {rawLead.extractedProspectName || 'Unnamed Lead'}{' '}
             <Badge>{rawLead.source}</Badge>
             {rawLead.createdOpportunityId && (
               <Badge className="ml-2 bg-green-500 hover:bg-green-600">Converted to Opportunity</Badge>
