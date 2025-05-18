@@ -10,7 +10,6 @@ import { eq } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import { generateQuestionnaireContent } from "./services/anthropic";
 import { generateSuggestion, getQuestionTypeHelp, analyzeFormData } from "./services/ai-suggestions";
-import { handleBuilderApi } from './routes/questionnaire-builder';
 import {
   insertUserSchema, 
   insertOpportunitySchema, 
@@ -3839,16 +3838,9 @@ Return ONLY the JSON object with endpoint, method, and json fields. The json fie
   
   // Smart JSON Endpoint - Unified API that detects operation from JSON structure
   // Unified Form Builder API - all operations through a single endpoint with action parameter
-  // Enhanced Questionnaire Builder - Flexible Architecture API
   app.post('/api/questionnaires/builder', isAdmin, async (req: Request, res: Response) => {
-    // Call our enhanced handler that supports sections, component types, and other new features
-    return handleBuilderApi(req, res);
-  });
-  
-  // Legacy Questionnaire Builder API - Maintained for backward compatibility
-  app.post('/api/questionnaires/builder/legacy', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Legacy Form Builder API received request with action:', req.body.action);
+      console.log('Form Builder API received request with action:', req.body.action);
       
       // Validate the request structure
       const { action, data } = formBuilderSchema.parse(req.body);
