@@ -1,281 +1,233 @@
-import { pgTable, serial, text, integer, boolean, timestamp, json, pgEnum } from 'drizzle-orm/pg-core';
-import { createInsertSchema } from 'drizzle-zod';
-import { z } from 'zod';
-import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm';
+import { pgTable, text, integer, boolean, timestamp, uuid, primaryKey, json } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
-// ----------------
-// Component Types
-// ----------------
-export const componentTypes = pgTable('questionnaire_component_types', {
-  id: serial('id').primaryKey(),
-  typeKey: text('type_key').notNull().unique(),
-  componentCategory: text('component_category'),
-  displayName: text('display_name').notNull(),
-  description: text('description'),
-  configSchema: json('config_schema'),
-  isActive: boolean('is_active').default(true),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Define component types for extensible question/component types
+export const componentTypes = pgTable("questionnaire_component_types", {
+  id: integer("id").primaryKey().notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  typeKey: text("type_key").notNull(),
+  componentCategory: text("component_category").notNull(),
+  displayName: text("display_name").notNull(),
+  configSchema: json("config_schema").$type<Record<string, any>>(),
+  isActive: boolean("is_active").default(true).notNull(),
+  configuration: json("configuration").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type ComponentType = InferSelectModel<typeof componentTypes>;
-export type InsertComponentType = InferInsertModel<typeof componentTypes>;
-export const insertComponentTypeSchema = createInsertSchema(componentTypes).omit({ id: true, createdAt: true, updatedAt: true });
-
-// ----------------
-// Questionnaire Definitions
-// ----------------
-export const eventTypeEnum = pgEnum('event_type', [
-  'corporate', 
-  'wedding', 
-  'engagement', 
-  'birthday', 
-  'private_party',
-  'food_truck'
-]);
-
-export const questionnaireDefinitions = pgTable('questionnaire_definitions', {
-  id: serial('id').primaryKey(),
-  name: text('name'),
-  description: text('description'),
-  versionName: text('version_name').notNull(),
-  eventType: eventTypeEnum('event_type'),
-  isActive: boolean('is_active').default(true),
-  isPublished: boolean('is_published').default(false),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Define questionnaire definitions
+export const questionnaireDefinitions = pgTable("questionnaire_definitions", {
+  id: integer("id").primaryKey().notNull(),
+  name: text("name").notNull(),
+  versionName: text("version_name").notNull(),
+  description: text("description"),
+  eventType: text("event_type").notNull(), // corporate, wedding, birthday, etc.
+  category: text("category"), // For backward compatibility
+  isActive: boolean("is_active").default(true).notNull(),
+  isPublished: boolean("is_published").default(false),
+  metadata: json("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type QuestionnaireDefinition = InferSelectModel<typeof questionnaireDefinitions>;
-export type InsertQuestionnaireDefinition = InferInsertModel<typeof questionnaireDefinitions>;
-export const insertQuestionnaireDefinitionSchema = createInsertSchema(questionnaireDefinitions).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+// Define questionnaire pages
+export const questionnairePages = pgTable("questionnaire_pages", {
+  id: integer("id").primaryKey().notNull(),
+  definitionId: integer("definition_id").notNull().references(() => questionnaireDefinitions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  order: integer("order").notNull(),
+  isConditional: boolean("is_conditional").default(false),
+  conditionLogic: json("condition_logic").$type<Record<string, any>>(),
+  metadata: json("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// ----------------
-// Pages
-// ----------------
-export const questionnairePages = pgTable('questionnaire_pages', {
-  id: serial('id').primaryKey(),
-  definitionId: integer('definition_id').notNull().references(() => questionnaireDefinitions.id),
-  title: text('title').notNull(),
-  order: integer('order').notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Define sections (reusable templates)
+export const questionnaireSections = pgTable("questionnaire_sections", {
+  id: integer("id").primaryKey().notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  isTemplate: boolean("is_template").default(false).notNull(),
+  templateKey: text("template_key"), // For identifying reusable templates
+  parentSectionId: integer("parent_section_id").references(() => questionnaireSections.id), // For section inheritance
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type QuestionnairePage = InferSelectModel<typeof questionnairePages>;
-export type InsertQuestionnairePage = InferInsertModel<typeof questionnairePages>;
-export const insertQuestionnairePageSchema = createInsertSchema(questionnairePages).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+// Link sections to pages
+export const pageSections = pgTable("questionnaire_page_sections", {
+  id: integer("id").primaryKey().notNull(),
+  pageId: integer("page_id").notNull().references(() => questionnairePages.id, { onDelete: "cascade" }),
+  sectionId: integer("section_id").notNull().references(() => questionnaireSections.id, { onDelete: "cascade" }),
+  order: integer("order").notNull(),
+  sectionOrder: integer("section_order").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// ----------------
-// Reusable Sections (Templates)
-// ----------------
-export const questionnaireSections = pgTable('questionnaire_sections', {
-  id: serial('id').primaryKey(),
-  title: text('title').notNull(),
-  description: text('description'),
-  templateKey: text('template_key').notNull().unique(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Link questions to sections
+export const sectionQuestions = pgTable("questionnaire_section_questions", {
+  id: integer("id").primaryKey().notNull(),
+  sectionId: integer("section_id").notNull().references(() => questionnaireSections.id, { onDelete: "cascade" }),
+  questionId: integer("question_id").notNull().references(() => questionnaireQuestions.id, { onDelete: "cascade" }),
+  questionOrder: integer("question_order").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type QuestionnaireSection = InferSelectModel<typeof questionnaireSections>;
-export type InsertQuestionnaireSection = InferInsertModel<typeof questionnaireSections>;
-export const insertQuestionnaireSectionSchema = createInsertSchema(questionnaireSections).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+// Define questions
+export const questionnaireQuestions = pgTable("questionnaire_questions", {
+  id: integer("id").primaryKey().notNull(),
+  text: text("text").notNull(),
+  questionText: text("question_text").notNull(),
+  questionKey: text("question_key").notNull(), // For identifying responses
+  questionType: text("question_type").notNull(), // text, radio, checkbox, etc.
+  componentTypeId: integer("component_type_id").references(() => componentTypes.id), // Reference to component type
+  isRequired: boolean("is_required").default(false).notNull(),
+  helpText: text("help_text"),
+  placeholderText: text("placeholder_text"),
+  order: integer("order").notNull(),
+  validationRules: json("validation_rules").$type<Record<string, any>>(), // JSON for flexible validation
+  defaultValue: json("default_value").$type<any>(),
+  metadata: json("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// ----------------
-// Page-Section Relationship (for reusing sections across pages)
-// ----------------
-export const pageSections = pgTable('questionnaire_page_sections', {
-  id: serial('id').primaryKey(),
-  pageId: integer('page_id').notNull().references(() => questionnairePages.id),
-  sectionId: integer('section_id').notNull().references(() => questionnaireSections.id),
-  sectionOrder: integer('section_order').notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Define question options (for radio, checkboxes, etc.)
+export const questionnaireQuestionOptions = pgTable("questionnaire_question_options", {
+  id: integer("id").primaryKey().notNull(),
+  questionId: integer("question_id").notNull().references(() => questionnaireQuestions.id, { onDelete: "cascade" }),
+  optionText: text("option_text").notNull(),
+  optionValue: text("option_value").notNull(),
+  order: integer("order").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type PageSection = InferSelectModel<typeof pageSections>;
-export type InsertPageSection = InferInsertModel<typeof pageSections>;
-export const insertPageSectionSchema = createInsertSchema(pageSections).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+// Alias for backward compatibility
+export const questionOptions = questionnaireQuestionOptions;
+
+// Define matrix columns (for matrix questions)
+export const matrixColumns = pgTable("questionnaire_matrix_columns", {
+  id: integer("id").primaryKey().notNull(),
+  questionId: integer("question_id").notNull().references(() => questionnaireQuestions.id, { onDelete: "cascade" }),
+  columnText: text("column_text").notNull(),
+  columnValue: text("column_value").notNull(),
+  order: integer("order").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// ----------------
-// Questions
-// ----------------
-export const questionTypeEnum = pgEnum('question_type', [
-  'text',
-  'textarea',
-  'select',
-  'radio',
-  'checkbox',
-  'checkbox_group',
-  'date',
-  'time',
-  'number',
-  'matrix_single',
-  'matrix_multi',
-  'info_text',
-  'name',
-  'address',
-  'phone',
-  'email',
-  'toggle',
-  'slider',
-  'time_picker',
-  'incrementer'
-]);
-
-export const questionnaireQuestions = pgTable('questionnaire_questions', {
-  id: serial('id').primaryKey(),
-  componentTypeId: integer('component_type_id'),
-  pageId: integer('page_id'),
-  questionType: questionTypeEnum('question_type'),
-  questionKey: text('question_key'),
-  text: text('question_text').notNull(),
-  helpText: text('help_text'),
-  placeholderText: text('placeholder_text'),
-  isRequired: boolean('is_required').default(false),
-  order: integer('order'),
-  validationRules: json('validation_rules'),
-  defaultValue: json('default_value'),
-  metadata: json('metadata'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Define conditional logic
+export const conditionalLogic = pgTable("questionnaire_conditional_logic", {
+  id: integer("id").primaryKey().notNull(),
+  targetQuestionId: integer("target_question_id").notNull().references(() => questionnaireQuestions.id, { onDelete: "cascade" }),
+  actionType: text("action_type").notNull(), // show_if_true, hide_if_true, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type QuestionnaireQuestion = InferSelectModel<typeof questionnaireQuestions>;
-export type InsertQuestionnaireQuestion = InferInsertModel<typeof questionnaireQuestions>;
-export const insertQuestionnaireQuestionSchema = createInsertSchema(questionnaireQuestions).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+// Define conditions (for conditional logic)
+export const conditions = pgTable("questionnaire_conditions", {
+  id: integer("id").primaryKey().notNull(),
+  conditionalLogicId: integer("conditional_logic_id").notNull().references(() => conditionalLogic.id, { onDelete: "cascade" }),
+  sourceQuestionId: integer("source_question_id").notNull().references(() => questionnaireQuestions.id, { onDelete: "cascade" }),
+  operator: text("operator").notNull(), // equals, contains, greater_than, etc.
+  value: text("value"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// ----------------
-// Question Options (for multi-choice questions)
-// ----------------
-export const questionnaireQuestionOptions = pgTable('questionnaire_question_options', {
-  id: serial('id').primaryKey(),
-  questionId: integer('question_id').notNull().references(() => questionnaireQuestions.id),
-  optionText: text('option_text').notNull(),
-  optionValue: text('option_value'),
-  order: integer('order').notNull(),
-  defaultSelectionIndicator: text('default_selection_indicator'),
-  relatedMenuItemId: integer('related_menu_item_id'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
+// Define questionnaire responses
+export const questionnaireResponses = pgTable("questionnaire_responses", {
+  id: integer("id").primaryKey().notNull(),
+  definitionId: integer("definition_id").notNull().references(() => questionnaireDefinitions.id),
+  respondentId: integer("respondent_id"), // Optional reference to a user or lead
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-export type QuestionOption = InferSelectModel<typeof questionnaireQuestionOptions>;
-export type InsertQuestionOption = InferInsertModel<typeof questionnaireQuestionOptions>;
-export const insertQuestionOptionSchema = createInsertSchema(questionnaireQuestionOptions).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+// Define response answers
+export const responseAnswers = pgTable("questionnaire_response_answers", {
+  id: integer("id").primaryKey().notNull(),
+  responseId: integer("response_id").notNull().references(() => questionnaireResponses.id, { onDelete: "cascade" }),
+  questionId: integer("question_id").notNull().references(() => questionnaireQuestions.id),
+  questionKey: text("question_key").notNull(), // Duplicated for direct access
+  answerValue: text("answer_value"), // For simple answers
+  answerValues: json("answer_values").$type<string[]>(), // For multiple selections
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// ----------------
-// Section Questions (link between sections and questions)
-// ----------------
-export const sectionQuestions = pgTable('questionnaire_section_questions', {
-  id: serial('id').primaryKey(),
-  sectionId: integer('section_id').notNull().references(() => questionnaireSections.id),
-  questionId: integer('question_id').notNull().references(() => questionnaireQuestions.id),
-  questionOrder: integer('question_order').notNull(),
-  isConditional: boolean('is_conditional').default(false),
-  conditionLogic: json('condition_logic'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
-});
+// Create Zod schemas for insert operations
+export const insertComponentTypeSchema = createInsertSchema(componentTypes);
+export const insertQuestionnaireDefinitionSchema = createInsertSchema(questionnaireDefinitions);
+export const insertQuestionnairePageSchema = createInsertSchema(questionnairePages);
+export const insertQuestionnaireSectionSchema = createInsertSchema(questionnaireSections);
+export const insertPageSectionSchema = createInsertSchema(pageSections);
+export const insertQuestionnaireQuestionSchema = createInsertSchema(questionnaireQuestions);
+export const insertQuestionOptionSchema = createInsertSchema(questionOptions);
+export const insertMatrixColumnSchema = createInsertSchema(matrixColumns);
+export const insertConditionalLogicSchema = createInsertSchema(conditionalLogic);
+export const insertConditionSchema = createInsertSchema(conditions);
+export const insertQuestionnaireResponseSchema = createInsertSchema(questionnaireResponses);
+export const insertResponseAnswerSchema = createInsertSchema(responseAnswers);
+export const insertSectionQuestionSchema = createInsertSchema(sectionQuestions);
 
-export type SectionQuestion = InferSelectModel<typeof sectionQuestions>;
-export type InsertSectionQuestion = InferInsertModel<typeof sectionQuestions>;
-export const insertSectionQuestionSchema = createInsertSchema(sectionQuestions).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
-});
+// Define TypeScript types for each table
+export type ComponentType = typeof componentTypes.$inferSelect;
+export type InsertComponentType = z.infer<typeof insertComponentTypeSchema>;
 
-// ----------------
-// Conditional Logic
-// ----------------
-export const conditionTypeEnum = pgEnum('condition_type', [
-  'equals', 
-  'not_equals', 
-  'contains', 
-  'greater_than',
-  'less_than',
-  'in_list',
-  'not_in_list',
-  'is_empty',
-  'is_not_empty',
-  'custom'
-]);
+export type QuestionnaireDefinition = typeof questionnaireDefinitions.$inferSelect;
+export type InsertQuestionnaireDefinition = z.infer<typeof insertQuestionnaireDefinitionSchema>;
 
-export const actionTypeEnum = pgEnum('action_type', [
-  'show', 
-  'hide', 
-  'require', 
-  'skip_to',
-  'set_value',
-  'custom'
-]);
+export type QuestionnairePage = typeof questionnairePages.$inferSelect;
+export type InsertQuestionnairePage = z.infer<typeof insertQuestionnairePageSchema>;
 
-export const conditionalLogic = pgTable('questionnaire_conditional_logic', {
-  id: serial('id').primaryKey(),
-  definitionId: integer('definition_id'),
-  triggerQuestionKey: text('trigger_question_key').notNull(),
-  targetQuestionKey: text('target_question_key').notNull(),
-  triggerCondition: conditionTypeEnum('trigger_condition').notNull(),
-  triggerValue: text('trigger_value'),
-  actionType: actionTypeEnum('action_type').notNull(),
-  targetOptionValue: text('target_option_value'),
-  targetPageId: integer('target_page_id'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
-});
+export type QuestionnaireSection = typeof questionnaireSections.$inferSelect;
+export type InsertQuestionnaireSection = z.infer<typeof insertQuestionnaireSectionSchema>;
 
-export type ConditionalLogic = InferSelectModel<typeof conditionalLogic>;
-export type InsertConditionalLogic = InferInsertModel<typeof conditionalLogic>;
-export const insertConditionalLogicSchema = createInsertSchema(conditionalLogic).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
-});
+export type PageSection = typeof pageSections.$inferSelect;
+export type InsertPageSection = z.infer<typeof insertPageSectionSchema>;
 
-// ----------------
-// Responses
-// ----------------
-export const questionnaireResponses = pgTable('questionnaire_responses', {
-  id: serial('id').primaryKey(),
-  definitionId: integer('definition_id').notNull().references(() => questionnaireDefinitions.id),
-  userId: integer('user_id'), // Optional, can be null for anonymous responses
-  responseData: json('response_data').notNull(),
-  metadata: json('metadata'),
-  submittedAt: timestamp('submitted_at'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow()
-});
+export type QuestionnaireQuestion = typeof questionnaireQuestions.$inferSelect;
+export type InsertQuestionnaireQuestion = z.infer<typeof insertQuestionnaireQuestionSchema>;
 
-export type QuestionnaireResponse = InferSelectModel<typeof questionnaireResponses>;
-export type InsertQuestionnaireResponse = InferInsertModel<typeof questionnaireResponses>;
-export const insertQuestionnaireResponseSchema = createInsertSchema(questionnaireResponses).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
-});
+export type QuestionOption = typeof questionOptions.$inferSelect;
+export type InsertQuestionOption = z.infer<typeof insertQuestionOptionSchema>;
+
+export type MatrixColumn = typeof matrixColumns.$inferSelect;
+export type InsertMatrixColumn = z.infer<typeof insertMatrixColumnSchema>;
+
+export type ConditionalLogic = typeof conditionalLogic.$inferSelect;
+export type InsertConditionalLogic = z.infer<typeof insertConditionalLogicSchema>;
+
+export type Condition = typeof conditions.$inferSelect;
+export type InsertCondition = z.infer<typeof insertConditionSchema>;
+
+export type QuestionnaireResponse = typeof questionnaireResponses.$inferSelect;
+export type InsertQuestionnaireResponse = z.infer<typeof insertQuestionnaireResponseSchema>;
+
+export type ResponseAnswer = typeof responseAnswers.$inferSelect;
+export type InsertResponseAnswer = z.infer<typeof insertResponseAnswerSchema>;
+
+// Extended types for API operations
+export type FullQuestionnaire = QuestionnaireDefinition & {
+  pages: (QuestionnairePage & {
+    sections: (QuestionnaireSection & {
+      questions: (QuestionnaireQuestion & {
+        options?: QuestionOption[];
+        matrixColumns?: MatrixColumn[];
+      })[];
+    })[];
+  })[];
+  conditionalLogic: (ConditionalLogic & {
+    conditions: Condition[];
+  })[];
+};
