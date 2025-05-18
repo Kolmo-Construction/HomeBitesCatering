@@ -270,30 +270,91 @@ const PageFormDialog = ({
   );
 };
 
-// Question Settings Panel
+// Enhanced Question Settings Panel for supporting all overrides
 const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
-  // Initialize form for question settings
-  const questionSettingsSchema = z.object({
-    displayText: z.string().min(1, "Question text is required"),
-    isRequired: z.boolean().optional(),
-    isHidden: z.boolean().optional(),
-    helperText: z.string().optional(),
-    placeholder: z.string().optional(),
+  // Get the library question data to show base properties
+  const { data: libraryQuestion, isLoading: isLibraryQuestionLoading } = useQuery({
+    queryKey: ['/api/form-builder/library-questions', question?.libraryQuestionId],
+    queryFn: async () => {
+      if (!question?.libraryQuestionId) return null;
+      const response = await fetch(`/api/form-builder/library-questions/${question.libraryQuestionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch library question details');
+      }
+      return await response.json();
+    },
+    enabled: !!question?.libraryQuestionId,
   });
 
+  // Initialize tabs for organizing the settings
+  const [activeTab, setActiveTab] = useState("basic");
+  
+  // Initialize form for question settings with all override fields
+  const questionSettingsSchema = z.object({
+    // Basic overrides
+    displayTextOverride: z.string().min(1, "Question text is required"),
+    isRequiredOverride: z.boolean().optional(),
+    isHiddenOverride: z.boolean().optional(),
+    helperTextOverride: z.string().optional(),
+    placeholderOverride: z.string().optional(),
+    // Advanced overrides - will be handled based on question type
+    metadataOverrides: z.any().optional(),
+    optionsOverrides: z.any().optional(),
+  });
+
+  // Extract question type for conditional fields
+  const questionType = question?.questionType || question?.question_type || 
+                      libraryQuestion?.questionType || libraryQuestion?.question_type;
+  
+  // Extract existing overrides or use defaults
+  const defaultOptionsOverrides = question?.optionsOverrides || question?.options_overrides || [];
+  const defaultMetadataOverrides = question?.metadataOverrides || question?.metadata_overrides || {};
+
+  // Initialize the form with existing overrides or library question defaults
   const form = useForm({
     resolver: zodResolver(questionSettingsSchema),
     defaultValues: {
-      displayText: question?.displayText || question?.display_text || "",
-      isRequired: question?.isRequired || question?.is_required || false,
-      isHidden: question?.isHidden || question?.is_hidden || false,
-      helperText: question?.helperText || question?.helper_text || "",
-      placeholder: question?.placeholder || "",
+      displayTextOverride: question?.displayTextOverride || question?.display_text_override || 
+                          libraryQuestion?.defaultText || libraryQuestion?.default_text || "",
+      isRequiredOverride: question?.isRequiredOverride || question?.is_required_override || false,
+      isHiddenOverride: question?.isHiddenOverride || question?.is_hidden_override || false,
+      helperTextOverride: question?.helperTextOverride || question?.helper_text_override || 
+                         libraryQuestion?.helperText || libraryQuestion?.helper_text || "",
+      placeholderOverride: question?.placeholderOverride || question?.placeholder_override || 
+                          libraryQuestion?.placeholder || "",
+      metadataOverrides: defaultMetadataOverrides,
+      optionsOverrides: defaultOptionsOverrides,
     }
   });
 
+  // Initialize state for choice-based question options
+  const [options, setOptions] = useState([]);
+  
+  // Load options for choice-based questions when library question data is available
+  useEffect(() => {
+    if (libraryQuestion && ['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
+      const libraryOptions = libraryQuestion.defaultOptions || libraryQuestion.default_options || [];
+      const existingOverrides = question?.optionsOverrides || question?.options_overrides || [];
+      
+      // Merge library options with any existing overrides
+      const mergedOptions = libraryOptions.map(option => {
+        const override = existingOverrides.find(o => o.value === option.value);
+        return override || option;
+      });
+      
+      setOptions(mergedOptions);
+      form.setValue('optionsOverrides', mergedOptions);
+    }
+  }, [libraryQuestion, questionType, form]);
+
+  // Handle form submission with all overrides
   const handleSubmit = async (data) => {
     try {
+      // If this is a choice-based question, add the options to the data
+      if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
+        data.optionsOverrides = options;
+      }
+      
       await onSave(data);
       toast({
         title: "Question updated",
@@ -308,6 +369,18 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     }
   };
 
+  // Show loading state when fetching library question
+  if (isLibraryQuestionLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="p-6 text-center">
+          <p className="text-muted-foreground">Loading question details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show placeholder when no question is selected
   if (!question) {
     return (
       <div className="flex h-full items-center justify-center text-center">
@@ -346,13 +419,30 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     return typeMap[type] || type;
   };
 
+  // Handle adding a new option for choice-based questions
+  const handleAddOption = () => {
+    const newOption = {
+      label: '',
+      value: `option_${options.length + 1}`,
+      isSelected: false
+    };
+    setOptions([...options, newOption]);
+  };
+
+  // Handle removing an option
+  const handleRemoveOption = (index) => {
+    const newOptions = [...options];
+    newOptions.splice(index, 1);
+    setOptions(newOptions);
+  };
+
   return (
-    <div className="p-4">
+    <div className="p-4 h-full overflow-y-auto">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Question Settings</h3>
           <p className="text-sm text-muted-foreground">
-            {getQuestionTypeLabel(question.questionType || question.question_type)}
+            {getQuestionTypeLabel(questionType)}
           </p>
         </div>
         <Button 
@@ -366,94 +456,268 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         </Button>
       </div>
       
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="displayText"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Question Text</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="isRequired"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Required</FormLabel>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+      {/* Original library question info for reference */}
+      {libraryQuestion && (
+        <div className="mb-4 p-3 bg-gray-50 border rounded-md">
+          <p className="text-sm font-medium">Library Question Reference</p>
+          <p className="text-xs text-muted-foreground mb-1">ID: {libraryQuestion.id}</p>
+          <p className="text-xs text-muted-foreground mb-1">Key: {libraryQuestion.libraryQuestionKey || libraryQuestion.library_question_key}</p>
+          <p className="text-xs text-muted-foreground">Default Text: {libraryQuestion.defaultText || libraryQuestion.default_text}</p>
+        </div>
+      )}
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="basic">Basic</TabsTrigger>
+          <TabsTrigger 
+            value="options" 
+            disabled={!['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)}
+          >
+            Options
+          </TabsTrigger>
+          <TabsTrigger 
+            value="advanced"
+            disabled={questionType === 'header' || questionType === 'text_display'}
+          >
+            Advanced
+          </TabsTrigger>
+        </TabsList>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Basic Tab Content */}
+            <TabsContent value="basic" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="displayTextOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Question Text Override</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Override the default question text from the library
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="isRequiredOverride"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Required</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="isHiddenOverride"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Hidden</FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="helperTextOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Helper Text Override</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Additional information to help users answer the question
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="placeholderOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Placeholder Override</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Text that appears in the field before the user enters a value
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
             
-            <FormField
-              control={form.control}
-              name="isHidden"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Hidden</FormLabel>
+            {/* Options Tab for choice-based questions */}
+            <TabsContent value="options" className="space-y-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-medium">Question Options</h3>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleAddOption}
+                >
+                  <PlusCircle className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {options.map((option, index) => (
+                  <div key={index} className="flex items-end gap-2 p-3 border rounded-md">
+                    <div className="flex-1">
+                      <FormLabel htmlFor={`option-label-${index}`} className="text-xs">Label</FormLabel>
+                      <Input
+                        id={`option-label-${index}`}
+                        value={option.label}
+                        onChange={(e) => {
+                          const newOptions = [...options];
+                          newOptions[index].label = e.target.value;
+                          setOptions(newOptions);
+                        }}
+                        className="mb-1"
+                        placeholder="Option Text"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <FormLabel htmlFor={`option-value-${index}`} className="text-xs">Value</FormLabel>
+                      <Input
+                        id={`option-value-${index}`}
+                        value={option.value}
+                        onChange={(e) => {
+                          const newOptions = [...options];
+                          newOptions[index].value = e.target.value;
+                          setOptions(newOptions);
+                        }}
+                        className="mb-1"
+                        placeholder="option_value"
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleRemoveOption(index)}
+                      className="text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <FormField
-            control={form.control}
-            name="helperText"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Helper Text</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="placeholder"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Placeholder</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button type="submit" className="w-full">
-            <Save className="h-4 w-4 mr-2" />
-            Save Changes
-          </Button>
-        </form>
-      </Form>
+                ))}
+                
+                {options.length === 0 && (
+                  <div className="text-center p-4 border border-dashed rounded-md">
+                    <p className="text-sm text-muted-foreground">No options defined yet</p>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAddOption}
+                      className="mt-2"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-1" />
+                      Add First Option
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            {/* Advanced Tab for metadata overrides */}
+            <TabsContent value="advanced" className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Advanced Settings</h3>
+                <p className="text-sm text-muted-foreground">
+                  These settings allow you to customize the behavior and appearance of this question instance.
+                </p>
+                
+                {/* Render different UI based on question type */}
+                {questionType === 'matrix' && (
+                  <div className="border rounded-md p-3">
+                    <p className="text-sm font-medium mb-2">Matrix Configuration</p>
+                    <p className="text-xs text-muted-foreground">
+                      Matrix configuration overrides will be available in a future update.
+                    </p>
+                  </div>
+                )}
+                
+                {['number', 'rating_scale', 'slider'].includes(questionType) && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Numeric Constraints</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <FormLabel className="text-xs">Minimum Value</FormLabel>
+                        <Input 
+                          type="number" 
+                          placeholder="Minimum"
+                          value={form.watch('metadataOverrides')?.min || ''}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              min: e.target.value ? Number(e.target.value) : undefined
+                            });
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <FormLabel className="text-xs">Maximum Value</FormLabel>
+                        <Input 
+                          type="number" 
+                          placeholder="Maximum"
+                          value={form.watch('metadataOverrides')?.max || ''}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              max: e.target.value ? Number(e.target.value) : undefined
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            <Button type="submit" className="w-full">
+              <Save className="h-4 w-4 mr-2" />
+              Save Changes
+            </Button>
+          </form>
+        </Form>
+      </Tabs>
     </div>
   );
 };
@@ -856,12 +1120,25 @@ export default function FormEditor() {
   const handleDragOver = (event) => {
     const { active, over } = event;
     
-    // Check if dragging a library question over the questions container
-    if (activeLibraryTab === "library" && over?.id === "questions-container" && active?.id) {
-      // Find the library question being dragged
-      const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
-      if (libraryQuestion) {
-        handleAddQuestionFromLibrary(libraryQuestion);
+    // Check if dragging a library question over the questions container or a specific position
+    if (activeLibraryTab === "library" && active?.id) {
+      // If dragging over the questions container (general drop area)
+      if (over?.id === "questions-container") {
+        // Find the library question being dragged
+        const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
+        if (libraryQuestion) {
+          handleAddQuestionFromLibrary(libraryQuestion);
+        }
+      } 
+      // If dragging over an existing question (for insertion between questions)
+      else if (over?.id && selectedPage) {
+        const overQuestion = questionsData?.data?.find(q => q.id === over.id);
+        const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
+        
+        if (overQuestion && libraryQuestion) {
+          // We don't add the question immediately on dragOver to avoid multiple additions
+          // This is just for visual feedback - the actual add happens on dragEnd
+        }
       }
     }
   };
