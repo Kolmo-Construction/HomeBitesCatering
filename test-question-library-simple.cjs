@@ -74,10 +74,13 @@ async function testQuestionLibraryAPI() {
   console.log('\n--- Testing Question Library API ---');
 
   try {
+    // Generate a unique timestamp key suffix
+    const timestamp = Date.now();
+    
     // 1. Create a text question
     console.log('\nCreating a text question...');
     const textQuestion = {
-      libraryQuestionKey: 'text_question_1',
+      libraryQuestionKey: `text_question_${timestamp}`,
       defaultText: 'What is your name?',
       questionType: 'textbox',
       category: 'personal'

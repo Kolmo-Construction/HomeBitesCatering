@@ -114,18 +114,21 @@ export const registerFormRoutes = (app: Express) => {
       const questions = await query;
       
       // Get total count for pagination
-      let countResult;
-      if (category) {
-        countResult = await db
-          .select({ count: db.sql`count(*)` })
-          .from(questionLibrary)
-          .where(eq(questionLibrary.category, category));
-      } else {
-        countResult = await db
-          .select({ count: db.sql`count(*)` })
-          .from(questionLibrary);
+      let count = 0;
+      try {
+        // Use SQL query to get count directly
+        const countQuery = category 
+          ? `SELECT COUNT(*) as count FROM question_library WHERE category = $1`
+          : `SELECT COUNT(*) as count FROM question_library`;
+        
+        const params = category ? [category] : [];
+        const countResult = await db.execute(countQuery, params);
+        count = parseInt(countResult.rows[0]?.count || '0', 10);
+      } catch (err) {
+        console.error('Error counting questions:', err);
+        // In case of error, use array length as fallback
+        count = questions.length;
       }
-      const count = countResult[0]?.count || 0;
       
       return res.status(200).json({
         data: questions,
