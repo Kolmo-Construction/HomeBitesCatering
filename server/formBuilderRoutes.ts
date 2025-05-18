@@ -849,7 +849,95 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
     }
     
     // 2. Determine visibility based on conditional logic
-    const visibility = calculateVisibility(resolvedQuestions, rules, responses);
+    const visibility = {
+      visibleQuestions: new Set(),
+      hiddenQuestions: new Set()
+    };
+    
+    // Initial visibility - all questions start as visible unless marked isHidden
+    for (const question of resolvedQuestions) {
+      if (question.isHidden) {
+        visibility.hiddenQuestions.add(question.questionInstanceId);
+      } else {
+        visibility.visibleQuestions.add(question.questionInstanceId);
+      }
+    }
+    
+    // Now apply all the rules to determine final visibility
+    for (const rule of rules) {
+      // Find the trigger question
+      const triggerQuestion = resolvedQuestions.find(q => q.questionInstanceId === rule.triggerFormPageQuestionId);
+      if (!triggerQuestion) continue;
+      
+      // Get the value for this question from the responses
+      const triggerValue = responses[rule.triggerFormPageQuestionId];
+      
+      // Skip rules where the trigger question itself is not visible
+      if (!visibility.visibleQuestions.has(triggerQuestion.questionInstanceId)) {
+        continue;
+      }
+      
+      // Check if the rule condition is met
+      let conditionMet = false;
+      
+      switch (rule.conditionType) {
+        case 'equals':
+          conditionMet = triggerValue === rule.conditionValue;
+          break;
+        case 'not_equals':
+          conditionMet = triggerValue !== rule.conditionValue;
+          break;
+        case 'contains':
+          if (Array.isArray(triggerValue)) {
+            conditionMet = triggerValue.includes(rule.conditionValue);
+          } else if (typeof triggerValue === 'string') {
+            conditionMet = triggerValue.includes(rule.conditionValue);
+          }
+          break;
+        case 'not_contains':
+          if (Array.isArray(triggerValue)) {
+            conditionMet = !triggerValue.includes(rule.conditionValue);
+          } else if (typeof triggerValue === 'string') {
+            conditionMet = !triggerValue.includes(rule.conditionValue);
+          }
+          break;
+        case 'greater_than':
+          conditionMet = Number(triggerValue) > Number(rule.conditionValue);
+          break;
+        case 'less_than':
+          conditionMet = Number(triggerValue) < Number(rule.conditionValue);
+          break;
+        case 'is_answered':
+          conditionMet = triggerValue !== undefined && triggerValue !== null && triggerValue !== '';
+          break;
+        case 'is_not_answered':
+          conditionMet = triggerValue === undefined || triggerValue === null || triggerValue === '';
+          break;
+        default:
+          console.warn(`Unknown condition type: ${rule.conditionType}`);
+      }
+      
+      // If condition is met, apply the rule action to all targets
+      if (conditionMet) {
+        const targets = await db.select()
+          .from(formSchema.formRuleTargets)
+          .where(eq(formSchema.formRuleTargets.ruleId, rule.id));
+        
+        for (const target of targets) {
+          if (target.targetType === 'question') {
+            // Apply the rule action to this question
+            if (rule.actionType === 'show') {
+              visibility.visibleQuestions.add(target.targetId);
+              visibility.hiddenQuestions.delete(target.targetId);
+            } else if (rule.actionType === 'hide') {
+              visibility.hiddenQuestions.add(target.targetId);
+              visibility.visibleQuestions.delete(target.targetId);
+            }
+          }
+          // Could add handling for page-level targets here
+        }
+      }
+    }
     
     // 3. Validate the submitted answers
     const validationErrors = {};
@@ -863,7 +951,7 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
       const questionId = question.questionInstanceId.toString();
       const answer = responses[questionId];
       
-      // Validate this answer
+      // Validate this answer with our robust validation function
       const error = validateAnswer(answer, question);
       
       if (error) {
@@ -1260,29 +1348,55 @@ function mergeOptions(baseOptions, overrides) {
 
 // Helper function to validate a single answer based on question type and rules
 function validateAnswer(answer, question) {
-  if (!answer && question.isRequired) {
-    return "This field is required";
+  // If the question is required and the answer is empty, return an error
+  if (question.isRequired) {
+    // For arrays/multiple choice, check if they selected at least one option
+    if (Array.isArray(answer)) {
+      if (answer.length === 0) {
+        return "This field is required";
+      }
+    } 
+    // For matrix questions, check if required cells have values
+    else if (question.questionType === 'matrix' && question.matrixStructure) {
+      // The answer format for matrix should be an object with keys corresponding to row_column combinations
+      if (!answer || typeof answer !== 'object' || Object.keys(answer).length === 0) {
+        return "This field requires at least one response";
+      }
+      
+      // Check if all required cells have values
+      const requiredCells = question.metadata?.requiredCells || [];
+      for (const cellKey of requiredCells) {
+        if (!answer[cellKey] || answer[cellKey].trim() === '') {
+          return `The cell ${cellKey} is required`;
+        }
+      }
+    }
+    // For other types, check if the value is empty
+    else if (answer === undefined || answer === null || answer === '') {
+      return "This field is required";
+    }
   }
   
-  // Skip further validation if answer is empty and not required
-  if (!answer && !question.isRequired) {
+  // Skip further validation if not required and empty
+  if ((answer === undefined || answer === null || answer === '') && !question.isRequired) {
     return null;
   }
   
+  // Type-specific validation
   const type = question.questionType;
   const metadata = question.metadata || {};
   
   switch (type) {
     case 'email':
-      // Simple email validation
+      // Email validation
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answer)) {
         return "Please enter a valid email address";
       }
       break;
       
     case 'phone':
-      // Basic phone validation (adjust based on your needs)
-      if (!/^[0-9+\-() ]{7,20}$/.test(answer)) {
+      // Phone validation with international format support
+      if (!/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(answer)) {
         return "Please enter a valid phone number";
       }
       break;
@@ -1292,21 +1406,41 @@ function validateAnswer(answer, question) {
       if (isNaN(num)) {
         return "Please enter a valid number";
       }
+      
+      // Check min/max constraints
       if (metadata.min !== undefined && num < metadata.min) {
         return `Value must be at least ${metadata.min}`;
       }
       if (metadata.max !== undefined && num > metadata.max) {
         return `Value must be no more than ${metadata.max}`;
       }
+      
+      // Check if integer is required
+      if (metadata.integer && !Number.isInteger(num)) {
+        return "Please enter a whole number";
+      }
       break;
       
     case 'textbox':
     case 'textarea':
+      // Text length validation
       if (metadata.minLength && answer.length < metadata.minLength) {
         return `Please enter at least ${metadata.minLength} characters`;
       }
       if (metadata.maxLength && answer.length > metadata.maxLength) {
         return `Please enter no more than ${metadata.maxLength} characters`;
+      }
+      
+      // Pattern validation if specified
+      if (metadata.pattern) {
+        try {
+          const regex = new RegExp(metadata.pattern);
+          if (!regex.test(answer)) {
+            return metadata.patternMessage || "Input doesn't match the required format";
+          }
+        } catch (e) {
+          console.error("Invalid regex pattern in metadata:", e);
+        }
       }
       break;
       
@@ -1319,15 +1453,31 @@ function validateAnswer(answer, question) {
       break;
       
     case 'checkbox':
+    case 'multiselect':
       // For checkboxes, answer should be an array
       if (!Array.isArray(answer)) {
-        return "Invalid checkbox selection format";
+        return "Invalid selection format";
       }
       
-      // Check if all selected values are valid options
-      if (question.options && answer.some(val => !question.options.some(opt => opt.value === val))) {
-        return "One or more selected options are invalid";
+      // Check if all selected options are in the allowed options
+      if (question.options) {
+        const optionValues = question.options.map(opt => opt.value);
+        for (const selected of answer) {
+          if (!optionValues.includes(selected)) {
+            return "One or more selected options are invalid";
+          }
+        }
       }
+      
+      // Check min/max selections if specified
+      if (metadata.minSelections && answer.length < metadata.minSelections) {
+        return `Please select at least ${metadata.minSelections} options`;
+      }
+      if (metadata.maxSelections && answer.length > metadata.maxSelections) {
+        return `Please select no more than ${metadata.maxSelections} options`;
+      }
+      
+      // We already validated options above, so we don't need this duplicate check
       
       // Check min/max selected items if specified
       if (metadata.minSelected && answer.length < metadata.minSelected) {
