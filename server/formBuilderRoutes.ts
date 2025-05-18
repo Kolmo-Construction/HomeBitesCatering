@@ -703,6 +703,190 @@ router.post("/pages/:pageId/questions/reorder", async (req, res) => {
   }
 });
 
+// --- RESOLVED FORM DEFINITION API ---
+
+// Get a complete resolved form definition for rendering
+router.get("/forms/:formKey/versions/:versionNumber/render", async (req, res) => {
+  try {
+    const formKey = req.params.formKey;
+    const versionNumber = parseInt(req.params.versionNumber);
+    
+    if (isNaN(versionNumber)) {
+      return res.status(400).json({ message: "Invalid version number" });
+    }
+    
+    // 1. Fetch the form definition
+    const [form] = await db.select()
+      .from(formSchema.forms)
+      .where(and(
+        eq(formSchema.forms.formKey, formKey),
+        eq(formSchema.forms.version, versionNumber),
+        eq(formSchema.forms.status, "published") // Only return published forms unless previewing
+      ));
+    
+    if (!form) {
+      return res.status(404).json({ message: "Form not found or not published" });
+    }
+    
+    // 2. Fetch all pages for this form, ordered by pageOrder
+    const pages = await db.select()
+      .from(formSchema.formPages)
+      .where(eq(formSchema.formPages.formId, form.id))
+      .orderBy(formSchema.formPages.pageOrder);
+    
+    // 3. Fetch and resolve all questions for each page
+    const resolvedPages = await Promise.all(pages.map(async (page) => {
+      // Get all question instances for this page
+      const questionInstances = await db.select()
+        .from(formSchema.formPageQuestions)
+        .where(eq(formSchema.formPageQuestions.formPageId, page.id))
+        .orderBy(formSchema.formPageQuestions.displayOrder);
+      
+      // Resolve each question instance by merging with its library question
+      const resolvedQuestions = await Promise.all(questionInstances.map(async (instance) => {
+        // Get the base question from library
+        const [libraryQuestion] = await db.select()
+          .from(formSchema.questionLibrary)
+          .where(eq(formSchema.questionLibrary.id, instance.libraryQuestionId));
+        
+        if (!libraryQuestion) {
+          console.error(`Library question ${instance.libraryQuestionId} not found for instance ${instance.id}`);
+          return null;
+        }
+        
+        // Handle matrix questions - fetch rows and columns if applicable
+        let matrixRows = [];
+        let matrixColumns = [];
+        
+        if (libraryQuestion.questionType === 'matrix') {
+          // Fetch matrix rows
+          matrixRows = await db.select()
+            .from(formSchema.libraryMatrixRows)
+            .where(eq(formSchema.libraryMatrixRows.questionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixRows.displayOrder);
+          
+          // Fetch matrix columns
+          matrixColumns = await db.select()
+            .from(formSchema.libraryMatrixColumns)
+            .where(eq(formSchema.libraryMatrixColumns.questionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixColumns.displayOrder);
+        }
+        
+        // Merge library question with instance overrides
+        const resolvedQuestion = {
+          questionInstanceId: instance.id,
+          libraryQuestionId: libraryQuestion.id,
+          questionType: libraryQuestion.questionType,
+          displayText: instance.displayTextOverride || libraryQuestion.displayText,
+          isRequired: instance.isRequiredOverride !== null ? instance.isRequiredOverride : libraryQuestion.isRequired,
+          isHidden: instance.isHiddenOverride !== null ? instance.isHiddenOverride : libraryQuestion.isHidden,
+          placeholder: instance.placeholderOverride || libraryQuestion.placeholder,
+          helperText: instance.helperTextOverride || libraryQuestion.helperText,
+          displayOrder: instance.displayOrder,
+          // Intelligently merge metadata
+          metadata: mergeMetadata(libraryQuestion.metadata, instance.metadataOverrides),
+          // Intelligently merge options
+          options: mergeOptions(libraryQuestion.options, instance.optionsOverrides)
+        };
+        
+        // Add matrix structure if applicable
+        if (libraryQuestion.questionType === 'matrix') {
+          // Apply any row/column overrides if they exist in metadataOverrides or optionsOverrides
+          resolvedQuestion.matrixStructure = {
+            rows: matrixRows.map(row => ({
+              id: row.id,
+              key: row.rowKey,
+              label: row.rowLabel,
+              displayOrder: row.displayOrder
+            })),
+            columns: matrixColumns.map(col => ({
+              id: col.id,
+              key: col.columnKey,
+              label: col.columnLabel,
+              displayOrder: col.displayOrder
+            }))
+          };
+        }
+        
+        return resolvedQuestion;
+      }));
+      
+      // Filter out any null questions (those that couldn't be resolved)
+      const validQuestions = resolvedQuestions.filter(q => q !== null);
+      
+      // Return the resolved page with its questions
+      return {
+        pageId: page.id,
+        pageTitle: page.pageTitle,
+        pageOrder: page.pageOrder,
+        description: page.description,
+        questions: validQuestions
+      };
+    }));
+    
+    // 4. Fetch all rules and their targets
+    const rules = await db.select()
+      .from(formSchema.formRules)
+      .where(eq(formSchema.formRules.formId, form.id))
+      .orderBy(formSchema.formRules.executionOrder);
+    
+    // Get targets for each rule
+    const rulesWithTargets = await Promise.all(rules.map(async (rule) => {
+      const targets = await db.select()
+        .from(formSchema.formRuleTargets)
+        .where(eq(formSchema.formRuleTargets.ruleId, rule.id));
+      
+      return {
+        ruleId: rule.id,
+        triggerFormPageQuestionId: rule.triggerFormPageQuestionId,
+        conditionType: rule.conditionType,
+        conditionValue: rule.conditionValue,
+        actionType: rule.actionType,
+        ruleDescription: rule.ruleDescription,
+        executionOrder: rule.executionOrder,
+        targets: targets.map(target => ({
+          targetId: target.targetId,
+          targetType: target.targetType
+        }))
+      };
+    }));
+    
+    // 5. Assemble and return the complete form definition
+    const formDefinition = {
+      formId: form.id,
+      formKey: form.formKey,
+      formTitle: form.formTitle,
+      description: form.description,
+      version: form.version,
+      pages: resolvedPages,
+      rules: rulesWithTargets
+    };
+    
+    return res.json(formDefinition);
+  } catch (error) {
+    console.error("Error getting resolved form definition:", error);
+    return res.status(500).json({ message: "Failed to get form definition" });
+  }
+});
+
+// Helper function to merge metadata
+function mergeMetadata(baseMetadata, overrides) {
+  if (!baseMetadata) return overrides || {};
+  if (!overrides) return baseMetadata;
+  
+  // Deep merge the metadata objects
+  return { ...baseMetadata, ...overrides };
+}
+
+// Helper function to merge options
+function mergeOptions(baseOptions, overrides) {
+  if (!baseOptions) return overrides || {};
+  if (!overrides) return baseOptions;
+  
+  // Deep merge the options objects
+  return { ...baseOptions, ...overrides };
+}
+
 // --- FORM RULES & TARGETS API ---
 
 // Create a new rule
