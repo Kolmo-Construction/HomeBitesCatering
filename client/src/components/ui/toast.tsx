@@ -1,4 +1,5 @@
 import { toast as sonnerToast, Toaster as SonnerToaster } from 'sonner';
+import React from 'react';
 
 export type ToastProps = {
   title?: string;
@@ -30,6 +31,15 @@ export function toast({
     duration,
   });
 }
+
+// Compatibility exports
+export const Toast = toast;
+export const ToastProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+export const ToastViewport = () => null;
+export const ToastAction = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+export const ToastClose = () => null;
+export const ToastTitle = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+export const ToastDescription = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 export function Toaster() {
   return (
