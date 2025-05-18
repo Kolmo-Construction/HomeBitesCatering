@@ -1883,6 +1883,14 @@ export default function FormEditor() {
         initialData={editPageData}
         onSave={handleSavePage}
       />
+      
+      {/* Form Preview */}
+      <FormPreview 
+        isOpen={showPreview} 
+        onClose={() => setShowPreview(false)}
+        formData={formData}
+        pages={pagesData?.data || []}
+      />
     </div>
   );
 }
