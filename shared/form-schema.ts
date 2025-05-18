@@ -317,14 +317,14 @@ export const formRuleTargetsRelations = relations(formRuleTargets, ({ one }) => 
     })
 }));
 
-export const formSubmissionsRelations = relations(formSubmissions, ({ one, many }) => ({
-  form: one(forms, { fields: [formSubmissions.formId], references: [forms.id] }),
-  user: one(users, { fields: [formSubmissions.userId], references: [users.id] }),
-  client: one(clients, { fields: [formSubmissions.clientId], references: [clients.id] }),
-  opportunity: one(opportunities, { fields: [formSubmissions.opportunityId], references: [opportunities.id] }),
-  rawLead: one(rawLeads, { fields: [formSubmissions.rawLeadId], references: [rawLeads.id] }),
-  answers: many(formSubmissionAnswers),
-}));
+export const formSubmissionsRelations = relations(formSubmissions, ({ one, many }) => {
+  const relations = {
+    form: one(forms, { fields: [formSubmissions.formId], references: [forms.id] }),
+    answers: many(formSubmissionAnswers)
+  };
+  
+  return relations;
+});
 
 export const formSubmissionAnswersRelations = relations(formSubmissionAnswers, ({ one }) => ({
   submission: one(formSubmissions, { fields: [formSubmissionAnswers.formSubmissionId], references: [formSubmissions.id] }),
