@@ -449,9 +449,9 @@ export class LeadGenerationService {
           // Create a fallback lead with basic info if AI extraction failed
           const fallbackLeadData: InsertRawLead = {
             source: 'gmail_lead_gen_fallback',
-            extractedName: fromHeader?.name || '',
-            extractedEmail: fromEmail,
-            extractedPhone: null,
+            extractedProspectName: fromHeader?.name || '',
+            extractedProspectEmail: fromEmail,
+            extractedProspectPhone: null,
             eventSummary: subject,
             status: 'needs_manual_review' as const,
             notes: `Lead creation with AI failed for email with subject: "${subject}"`,
@@ -472,9 +472,9 @@ export class LeadGenerationService {
           // Create the lead with successfully extracted data
           const leadData: InsertRawLead = {
             source: extractedData.source || 'gmail_lead_gen',
-            extractedName: extractedData.extractedName,
-            extractedEmail: extractedData.extractedEmail,
-            extractedPhone: extractedData.extractedPhone,
+            extractedProspectName: extractedData.extractedProspectName || extractedData.extractedName,
+            extractedProspectEmail: extractedData.extractedProspectEmail || extractedData.extractedEmail,
+            extractedProspectPhone: extractedData.extractedProspectPhone || extractedData.extractedPhone,
             eventSummary: extractedData.eventSummary,
             status: extractedData.status || 'under_review',
             notes: extractedData.notes,
@@ -562,9 +562,9 @@ ${emailContent}
         return {
           success: true,
           source: 'email_ai_extraction',
-          extractedName: aiResults.extractedName || '',
-          extractedEmail: aiResults.extractedEmail || fromAddress || '',
-          extractedPhone: aiResults.extractedPhone || null,
+          extractedProspectName: aiResults.extractedProspectName || aiResults.extractedName || '',
+          extractedProspectEmail: aiResults.extractedProspectEmail || aiResults.extractedEmail || fromAddress || '',
+          extractedProspectPhone: aiResults.extractedProspectPhone || aiResults.extractedPhone || null,
           eventSummary: emailSubject,
           status: 'under_review' as const,
           notes: `Auto-extracted from email with subject: "${emailSubject}"`,
