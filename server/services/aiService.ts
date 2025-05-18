@@ -259,20 +259,41 @@ export class AIService {
       }
 
       // Convert budget value to number if present
-      if (result.aiBudgetValue && typeof result.aiBudgetValue === 'string') {
-        const parsedBudget = parseInt(result.aiBudgetValue, 10);
+      if (result.extractedBudgetValue && typeof result.extractedBudgetValue === 'string') {
+        const parsedBudget = parseInt(result.extractedBudgetValue, 10);
         if (!isNaN(parsedBudget)) {
-          result.aiBudgetValue = parsedBudget;
+          result.extractedBudgetValue = parsedBudget;
         }
       }
 
       // Ensure arrays are actually arrays
-      if (!Array.isArray(result.aiKeyRequirements)) {
-        result.aiKeyRequirements = [];
+      if (!Array.isArray(result.extractedServicesNeeded)) {
+        result.extractedServicesNeeded = [];
       }
 
       if (!Array.isArray(result.aiPotentialRedFlags)) {
         result.aiPotentialRedFlags = [];
+      }
+
+      // Handle backward compatibility with previous field names
+      if (result.extractedName && !result.extractedProspectName) {
+        result.extractedProspectName = result.extractedName;
+      }
+      
+      if (result.extractedEmail && !result.extractedProspectEmail) {
+        result.extractedProspectEmail = result.extractedEmail;
+      }
+      
+      if (result.extractedPhone && !result.extractedProspectPhone) {
+        result.extractedProspectPhone = result.extractedPhone;
+      }
+      
+      if (result.aiBudgetIndication && !result.extractedBudgetIndication) {
+        result.extractedBudgetIndication = result.aiBudgetIndication;
+      }
+      
+      if (result.aiBudgetValue && !result.extractedBudgetValue) {
+        result.extractedBudgetValue = result.aiBudgetValue;
       }
 
       console.log("AI Lead Analysis: Analysis completed successfully.");
@@ -289,23 +310,26 @@ export class AIService {
 
   /**
    * Analyzes an email or message to extract structured information and insights
+   * @param message The email or message content to analyze
+   * @param calendarConflictContext Optional context about calendar conflicts for the potential event date
    */
-  async analyzeLeadMessage(message: string): Promise<{
-    extractedName?: string;
-    extractedEmail?: string;
-    extractedPhone?: string;
+  async analyzeLeadMessage(message: string, calendarConflictContext?: string): Promise<{
+    extractedProspectName?: string;
+    extractedProspectEmail?: string;
+    extractedProspectPhone?: string;
     extractedEventType?: string;
     extractedEventDate?: string;
     extractedEventTime?: string;
     extractedGuestCount?: number;
     extractedVenue?: string;
+    extractedBudgetIndication?: string;
+    extractedBudgetValue?: number;
+    extractedServicesNeeded?: string[];
     extractedMessageSummary?: string;
+    aiLeadTemperature?: string;
     aiUrgencyScore?: string;
-    aiBudgetIndication?: string;
-    aiBudgetValue?: number;
     aiClarityOfRequestScore?: string;
-    aiDecisionMakerLikelihood?: string;
-    aiKeyRequirements?: string[];
+    aiCalendarConflictAssessment?: string;
     aiPotentialRedFlags?: string[];
     aiOverallLeadQuality?: string;
     aiSuggestedNextStep?: string;
@@ -320,34 +344,40 @@ export class AIService {
       console.log(`AI Lead Analysis: Sending message of length ${message.length} to DeepSeek via OpenRouter...`);
 
       const prompt = `
-You are a lead analysis assistant for a catering business.
-Extract all relevant information from this message and analyze its quality as a lead.
+You are an expert lead analysis assistant for 'Home Bites Catering'.
+Your task is to meticulously extract all relevant information from vendor lead emails and assess the lead's quality.
+The email provided might be from a vendor (e.g., Zola, WeddingWire) forwarding a prospect's inquiry.
 
-Provide your output in the following JSON format ONLY, with empty or null values for fields you can't detect:
+Priority: Extract the actual PROSPECT'S details (name, email, phone) from the email body/content, NOT the vendor's.
+
+Calendar Context: ${calendarConflictContext || "No specific calendar conflicts provided for the proposed date."} 
+
+Provide your output ONLY in the following JSON format. Fill fields with null if not found or not applicable.
 {
-  "extractedName": "Full name of the sender if available",
-  "extractedEmail": "Email address if present",
-  "extractedPhone": "Phone number if present",
-  "extractedEventType": "Type of event mentioned (wedding, corporate, etc.)",
-  "extractedEventDate": "Event date in any format mentioned",
+  "extractedProspectName": "Full name of the inquiring prospect (e.g., Jane Doe)",
+  "extractedProspectEmail": "Direct email address of the prospect, if found in the body",
+  "extractedProspectPhone": "Direct phone number of the prospect, if found in the body",
+  "extractedEventType": "Type of event (e.g., Wedding, Corporate Dinner, Birthday Party)",
+  "extractedEventDate": "Event date (YYYY-MM-DD if possible, otherwise as mentioned)",
   "extractedEventTime": "Event time if mentioned",
-  "extractedGuestCount": number of guests if mentioned (return as number, not string),
-  "extractedVenue": "Venue name or location if mentioned",
-  "extractedMessageSummary": "2-3 sentence summary of the message",
-  "aiUrgencyScore": one of "1", "2", "3", "4", "5" (5 being most urgent),
-  "aiBudgetIndication": one of "not_mentioned", "low", "medium", "high", "specific_amount",
-  "aiBudgetValue": exact budget amount if mentioned (in whole dollar amount, numeric only),
-  "aiClarityOfRequestScore": one of "1", "2", "3", "4", "5" (5 being very clear),
-  "aiDecisionMakerLikelihood": one of "1", "2", "3", "4", "5" (5 being definitely a decision maker),
-  "aiKeyRequirements": [array of key requirements mentioned],
-  "aiPotentialRedFlags": [array of potential concerns or red flags],
-  "aiOverallLeadQuality": one of "hot", "warm", "cold", "nurture",
-  "aiSuggestedNextStep": "Your recommendation for how to follow up with this lead",
-  "aiSentiment": one of "positive", "neutral", "negative", "urgent",
-  "aiConfidenceScore": confidence in your analysis from 0.0 to 1.0
+  "extractedGuestCount": "Number of guests (numeric), if mentioned",
+  "extractedVenue": "Venue name or location, if mentioned",
+  "extractedBudgetIndication": "one of 'not_mentioned', 'low', 'medium', 'high', 'specific_amount'",
+  "extractedBudgetValue": "Exact budget amount (numeric, in dollars), if specified",
+  "extractedServicesNeeded": ["Specific services prospect is asking for (e.g., 'Full Catering', 'Taco Truck Option', 'Buffet Style')"],
+  "extractedMessageSummary": "A 2-3 sentence summary of the PROSPECT'S core request or message.",
+  "aiLeadTemperature": "one of 'hot', 'warm', 'cold' (based on urgency, specificity, budget, clarity)",
+  "aiUrgencyScore": "one of '1' (low) to '5' (very urgent)",
+  "aiClarityOfRequestScore": "one of '1' (vague) to '5' (very clear)",
+  "aiCalendarConflictAssessment": "Brief assessment of calendar conflict based on provided context (e.g., 'No conflict', 'Potential conflict: Wedding on same day', 'Date flexible, check availability')",
+  "aiPotentialRedFlags": ["Array of potential concerns or red flags (e.g., 'Very low budget for guest count', 'Unrealistic expectations', 'Vague inquiry')"],
+  "aiOverallLeadQuality": "one of 'hot', 'warm', 'cold', 'nurture' (overall assessment)",
+  "aiSuggestedNextStep": "Your concise recommendation for the BEST immediate next step for Home Bites Catering (e.g., 'Reply asking for guest count', 'Send standard wedding package info', 'Propose a consultation call', 'Politely decline due to date conflict, offer alternatives')",
+  "aiSentiment": "one of 'positive', 'neutral', 'negative', 'urgent' (sentiment of the prospect's message)",
+  "aiConfidenceScore": "Confidence in your analysis from 0.0 to 1.0"
 }
 
-Here's the message to analyze:
+Email to analyze:
 ${message}`;
 
       // Try DeepSeek first (primary model)
