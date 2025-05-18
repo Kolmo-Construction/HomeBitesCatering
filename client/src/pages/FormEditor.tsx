@@ -942,6 +942,9 @@ export default function FormEditor() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   
+  // Preview state
+  const [showPreview, setShowPreview] = useState(false);
+  
   // Configure DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
