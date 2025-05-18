@@ -195,7 +195,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     resave: false,
     saveUninitialized: false,
     cookie: { 
-      secure: process.env.NODE_ENV === 'production',
+      // Allow cookies on both HTTP and HTTPS
+      secure: false,
+      // Allow cookies across subdomains
+      domain: process.env.REPLIT_DOMAINS ? 
+        process.env.REPLIT_DOMAINS.split(',')[0].trim() : undefined,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   }));
