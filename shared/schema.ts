@@ -351,44 +351,6 @@ export const insertRawLeadSchema = createInsertSchema(rawLeads, {
 export type RawLead = typeof rawLeads.$inferSelect;
 export type InsertRawLead = z.infer<typeof insertRawLeadSchema>;
 
-// Gmail Sync State Table
-export const gmailSyncState = pgTable("gmail_sync_state", {
-  targetEmail: text("target_email").primaryKey().notNull(),
-  lastHistoryId: text("last_history_id").notNull(),
-  watchExpirationTimestamp: timestamp("watch_expiration_timestamp"),
-  lastWatchAttemptTimestamp: timestamp("last_watch_attempt_timestamp"),
-  lastSuccessfulSync: timestamp("last_successful_sync"),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const insertGmailSyncStateSchema = createInsertSchema(gmailSyncState).omit({
-  updatedAt: true,
-});
-
-// Processed Emails Table
-export const processedEmails = pgTable("processed_emails", {
-  id: serial("id").primaryKey(),
-  messageId: text("message_id").notNull().unique(),
-  service: text("service").notNull(), // e.g., 'gmail_sync', 'gmail_webhook'
-  receivedAt: timestamp("received_at").notNull(),
-  processed: boolean("processed").default(true).notNull(),
-  leadGenerated: boolean("lead_generated").default(false),
-  reason: text("reason"), // e.g., 'not_vendor_source', 'lead_generated', 'processing_failed'
-  labelApplied: boolean("label_applied").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertProcessedEmailSchema = createInsertSchema(processedEmails).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type GmailSyncState = typeof gmailSyncState.$inferSelect;
-export type InsertGmailSyncState = z.infer<typeof insertGmailSyncStateSchema>;
-
-export type ProcessedEmail = typeof processedEmails.$inferSelect;
-export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
-
 // Define the relationships between tables
 export const userRelations = relations(users, ({ many }) => ({
   opportunities: many(opportunities, { relationName: 'assignedOpportunities' }),
