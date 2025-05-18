@@ -1497,20 +1497,40 @@ export default function FormEditor() {
                 </div>
                 
                 <ScrollArea className="flex-1 p-4">
+                  {/* Search box for library questions */}
+                  <div className="mb-4 relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search questions..."
+                      className="pl-8 w-full"
+                      value={searchQuery || ""}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-2"
+                        onClick={() => setSearchQuery("")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
                   {isLibraryLoading ? (
                     <div className="flex justify-center p-4">
-                      <p>Loading questions...</p>
+                      <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
                   ) : libraryQuestions.length === 0 ? (
                     <div className="text-center p-4 border border-dashed rounded-md">
                       <p className="text-sm text-muted-foreground">No questions in library</p>
                     </div>
                   ) : (
-                    <div>
-                      {libraryQuestions.map(question => (
+                    <div className="space-y-2">
+                      {filteredLibraryQuestions.map(question => (
                         <div
                           key={question.id}
-                          className="p-3 mb-2 rounded-md border border-gray-200 bg-white cursor-move"
+                          className="p-3 rounded-md border border-gray-200 bg-white cursor-move hover:border-primary hover:shadow-sm transition-all"
                           draggable
                           onDragStart={() => {
                             setActiveDragId(question.id);
