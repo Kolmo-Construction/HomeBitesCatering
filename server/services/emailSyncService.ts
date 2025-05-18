@@ -146,9 +146,9 @@ ${emailContent}
       return {
         success: true,
         source: 'email_ai_extraction',
-        extractedName: aiResults.extractedName || '',
-        extractedEmail: aiResults.extractedEmail || fromAddress || '',
-        extractedPhone: aiResults.extractedPhone || null,
+        extractedProspectName: aiResults.extractedProspectName || aiResults.extractedName || '',
+        extractedProspectEmail: aiResults.extractedProspectEmail || aiResults.extractedEmail || fromAddress || '',
+        extractedProspectPhone: aiResults.extractedProspectPhone || aiResults.extractedPhone || null,
         eventSummary: emailSubject,
         status: 'under_review' as const,
         notes: `Auto-extracted from email with subject: "${emailSubject}"`,
@@ -288,9 +288,9 @@ ${fullContent}`;
         return {
           success: true,
           source: 'email_direct_api',
-          extractedName: aiResults.extractedName || '',
-          extractedEmail: aiResults.extractedEmail || fromAddress || '',
-          extractedPhone: aiResults.extractedPhone || null,
+          extractedProspectName: aiResults.extractedProspectName || aiResults.extractedName || '',
+          extractedProspectEmail: aiResults.extractedProspectEmail || aiResults.extractedEmail || fromAddress || '',
+          extractedProspectPhone: aiResults.extractedProspectPhone || aiResults.extractedPhone || null,
           eventSummary: emailSubject,
           status: 'under_review' as const,
           notes: `Auto-extracted from email with subject: "${emailSubject}" (direct API)`,
@@ -339,7 +339,7 @@ ${fullContent}`;
           success: false,
           error: "JSON parsing error in AI response",
           source: 'email_ai_failed',
-          extractedEmail: fromAddress || '',
+          extractedProspectEmail: fromAddress || '',
           eventSummary: emailSubject,
           status: 'parsing_failed' as const,
           notes: `AI parsing failed for email with subject: "${emailSubject}". Error: ${jsonParseError.message}`,
@@ -911,9 +911,9 @@ export class GmailSyncService {
               : {
                   success: true, // Even without AI, consider it successful extraction of basic info
                   source: 'gmail_sync',
-                  extractedName: fromHeader?.name || '',
-                  extractedEmail: fromEmail,
-                  extractedPhone: null, // Basic extraction doesn't get phone
+                  extractedProspectName: fromHeader?.name || '',
+                  extractedProspectEmail: fromEmail,
+                  extractedProspectPhone: null, // Basic extraction doesn't get phone
                   eventSummary: subject,
                   status: 'new' as const,
                   notes: `Auto-created from incoming email with subject: ${subject} (AI disabled)`,
@@ -936,9 +936,9 @@ export class GmailSyncService {
                   // Create a fallback raw lead with basic info if AI extraction failed
                   const fallbackRawLeadData: InsertRawLead = {
                       source: extractedData.source || 'gmail_sync_failed',
-                      extractedName: extractedData.extractedName || fromHeader?.name || '',
-                      extractedEmail: extractedData.extractedEmail || fromEmail,
-                      extractedPhone: extractedData.extractedPhone || null,
+                      extractedProspectName: extractedData.extractedProspectName || extractedData.extractedName || fromHeader?.name || '',
+                      extractedProspectEmail: extractedData.extractedProspectEmail || extractedData.extractedEmail || fromEmail,
+                      extractedProspectPhone: extractedData.extractedProspectPhone || extractedData.extractedPhone || null,
                       eventSummary: extractedData.eventSummary || subject,
                       status: 'needs_manual_review' as const, // Mark for review if AI failed
                       notes: extractedData.notes || `Raw lead creation failed (AI error) for email with subject: "${subject}"`,
