@@ -430,9 +430,9 @@ export class LeadGenerationService {
           : {
               success: true,
               source: 'gmail_lead_gen',
-              extractedName: fromHeader?.name || '',
-              extractedEmail: fromEmail,
-              extractedPhone: null,
+              extractedProspectName: fromHeader?.name || '',
+              extractedProspectEmail: fromEmail,
+              extractedProspectPhone: null,
               eventSummary: subject,
               status: 'new' as const,
               notes: `Auto-created from lead email with subject: ${subject} (AI disabled)`,
@@ -608,7 +608,7 @@ ${emailContent}
         return {
           success: false,
           error: `AI service error: ${errorMessage}`,
-          extractedEmail: fromAddress,
+          extractedProspectEmail: fromAddress,
           eventSummary: emailSubject,
           status: 'needs_manual_review' as const,
           notes: `AI extraction failed for email with subject: "${emailSubject}"`,

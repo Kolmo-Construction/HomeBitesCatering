@@ -282,9 +282,9 @@ export class VendorLeadIntakeService {
                     originalEmail: rawEmail.substring(0, 20000), // Store a large chunk if needed
                     aiAnalysis: aiAnalysisResults // Store all AI results
                 },
-                extractedName: aiAnalysisResults.extractedName || parsedMail.from?.value[0]?.name || '',
-                extractedEmail: aiAnalysisResults.extractedEmail || fromAddress || '', // Prefer AI extracted prospect email
-                extractedPhone: aiAnalysisResults.extractedPhone || null,
+                extractedProspectName: aiAnalysisResults.extractedProspectName || aiAnalysisResults.extractedName || parsedMail.from?.value[0]?.name || '',
+                extractedProspectEmail: aiAnalysisResults.extractedProspectEmail || aiAnalysisResults.extractedEmail || fromAddress || '', // Prefer AI extracted prospect email
+                extractedProspectPhone: aiAnalysisResults.extractedProspectPhone || aiAnalysisResults.extractedPhone || null,
                 eventSummary: aiAnalysisResults.extractedMessageSummary || subject,
                 receivedAt: emailDate,
                 status: (aiAnalysisResults.aiOverallLeadQuality === 'hot' ? 'under_review' : 'new') as rawLeadStatusEnum,

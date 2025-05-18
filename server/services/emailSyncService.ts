@@ -973,9 +973,9 @@ export class GmailSyncService {
                  // Ensure required fields are set and properly typed
                  const leadData: InsertRawLead = {
                      source: extractedData.source || 'gmail_sync',
-                     extractedName: extractedData.extractedName,
-                     extractedEmail: extractedData.extractedEmail,
-                     extractedPhone: extractedData.extractedPhone,
+                     extractedProspectName: extractedData.extractedProspectName || extractedData.extractedName,
+                     extractedProspectEmail: extractedData.extractedProspectEmail || extractedData.extractedEmail,
+                     extractedProspectPhone: extractedData.extractedProspectPhone || extractedData.extractedPhone,
                      eventSummary: extractedData.eventSummary,
                      status: extractedData.status || 'under_review',
                      notes: extractedData.notes,
