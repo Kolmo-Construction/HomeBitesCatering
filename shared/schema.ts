@@ -453,3 +453,23 @@ export const rawLeadRelations = relations(rawLeads, ({ one }) => ({
     relationName: 'assignedRawLeads'
   }),
 }));
+
+// Gmail Sync State table to track the last known history ID and watch expiration
+export const gmailSyncState = pgTable("gmail_sync_state", {
+  targetEmail: text("target_email").primaryKey(), // The email address being watched
+  lastHistoryId: text("last_history_id").notNull(),
+  watchExpirationTimestamp: timestamp("watch_expiration_timestamp"), // Store when the current watch expires
+  lastWatchAttemptTimestamp: timestamp("last_watch_attempt_timestamp").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertGmailSyncStateSchema = createInsertSchema(gmailSyncState, {
+  watchExpirationTimestamp: z.coerce.date().nullable(),
+}).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type GmailSyncState = typeof gmailSyncState.$inferSelect;
+export type InsertGmailSyncState = z.infer<typeof insertGmailSyncStateSchema>;
