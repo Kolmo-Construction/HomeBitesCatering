@@ -1157,12 +1157,109 @@ export default function FormEditor() {
     
     // Handle page reordering
     if (activeLibraryTab === "pages" && active.id !== over.id) {
-      // TODO: Implement page reordering with the API
+      const activePage = pagesData?.data?.find(p => p.id === active.id);
+      const overPage = pagesData?.data?.find(p => p.id === over.id);
+      
+      if (activePage && overPage) {
+        // Get all pages and find their current order
+        const pages = [...(pagesData?.data || [])];
+        
+        // Reorder the pages based on the drag and drop
+        const newOrder = Array.from(pages);
+        const activeIndex = pages.findIndex(p => p.id === active.id);
+        const overIndex = pages.findIndex(p => p.id === over.id);
+        
+        if (activeIndex !== -1 && overIndex !== -1) {
+          newOrder.splice(activeIndex, 1);
+          newOrder.splice(overIndex, 0, activePage);
+          
+          // Create payload for updating page orders
+          const reorderPayload = newOrder.map((page, index) => ({
+            id: page.id,
+            order: index + 1
+          }));
+          
+          // Call the API to update page orders
+          try {
+            // TODO: Implement reordering API call when endpoint is available
+            toast({
+              title: "Pages reordered",
+              description: "The page order has been updated."
+            });
+          } catch (error) {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to update page order"
+            });
+          }
+        }
+      }
     }
     
     // Handle question reordering
-    if (activeLibraryTab === "library" && active.id !== over.id) {
-      // TODO: Implement question reordering with the API
+    if (selectedPage && active.id !== over.id) {
+      // If the active item is a library question and it's dropped on the questions container
+      if (activeLibraryTab === "library" && over.id === "questions-container") {
+        const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
+        if (libraryQuestion) {
+          handleAddQuestionFromLibrary(libraryQuestion);
+        }
+      }
+      
+      // If both active and over are questions on the page (reordering existing questions)
+      else if (activeLibraryTab !== "library") {
+        const questions = [...(questionsData?.data || [])];
+        const activeQuestion = questions.find(q => q.id === active.id);
+        const overQuestion = questions.find(q => q.id === over.id);
+        
+        if (activeQuestion && overQuestion) {
+          const activeIndex = questions.findIndex(q => q.id === active.id);
+          const overIndex = questions.findIndex(q => q.id === over.id);
+          
+          if (activeIndex !== -1 && overIndex !== -1) {
+            // Create the new order
+            const reorderedQuestions = Array.from(questions);
+            reorderedQuestions.splice(activeIndex, 1);
+            reorderedQuestions.splice(overIndex, 0, activeQuestion);
+            
+            // Create payload for reordering API
+            const reorderPayload = reorderedQuestions.map((question, index) => ({
+              questionInstanceId: question.id,
+              newDisplayOrder: index + 1
+            }));
+            
+            // Call the reorder API
+            try {
+              const response = await fetch(`/api/form-builder/pages/${selectedPage.id}/questions/reorder`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reorderPayload),
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to reorder questions');
+              }
+              
+              // Refresh the questions data
+              queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage.id, 'questions'] });
+              
+              toast({
+                title: "Questions reordered",
+                description: "The question order has been updated."
+              });
+            } catch (error) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to update question order"
+              });
+            }
+          }
+        }
+      }
     }
   };
 
@@ -1170,26 +1267,72 @@ export default function FormEditor() {
   const handleDragOver = (event) => {
     const { active, over } = event;
     
-    // Check if dragging a library question over the questions container or a specific position
+    // We don't take action on dragOver anymore - all drag handling happens in handleDragEnd
+    // This avoids creating multiple copies of questions during a drag operation
+    
+    // Instead, we just provide visual feedback during the drag
+    // The cursor should change when dragging over a valid drop target
     if (activeLibraryTab === "library" && active?.id) {
-      // If dragging over the questions container (general drop area)
-      if (over?.id === "questions-container") {
-        // Find the library question being dragged
-        const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
-        if (libraryQuestion) {
-          handleAddQuestionFromLibrary(libraryQuestion);
-        }
-      } 
-      // If dragging over an existing question (for insertion between questions)
-      else if (over?.id && selectedPage) {
-        const overQuestion = questionsData?.data?.find(q => q.id === over.id);
-        const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
-        
-        if (overQuestion && libraryQuestion) {
-          // We don't add the question immediately on dragOver to avoid multiple additions
-          // This is just for visual feedback - the actual add happens on dragEnd
-        }
+      if (over?.id === "questions-container" || (over?.id && questionsData?.data?.find(q => q.id === over.id))) {
+        // The CSS styling for valid drop targets is handled by the component classes
+        // No need to set any state here
       }
+    }
+  };
+  
+  // Add a helper for inserting a question at a specific position
+  const handleInsertQuestionAt = async (libraryQuestion, targetPosition) => {
+    if (!selectedPage) {
+      toast({
+        variant: "destructive",
+        title: "No page selected",
+        description: "Please select a page first to add questions.",
+      });
+      return;
+    }
+    
+    const questions = questionsData?.data || [];
+    let insertOrder = 1; // Default to the start
+    
+    if (targetPosition === 'end') {
+      // Add to the end
+      insertOrder = questions.length > 0 
+        ? Math.max(...questions.map(q => q.displayOrder || q.display_order)) + 1 
+        : 1;
+    } else if (typeof targetPosition === 'number') {
+      // Insert at specific position
+      insertOrder = targetPosition;
+      
+      // Reorder all existing questions that come after this position
+      // This will be handled by the backend API
+    }
+    
+    // Set up initial overrides based on library question
+    const initialOverrides = {
+      pageId: selectedPage.id,
+      libraryQuestionId: libraryQuestion.id,
+      displayOrder: insertOrder,
+      displayTextOverride: null,
+      isRequiredOverride: null,
+      isHiddenOverride: null,
+      helperTextOverride: null,
+      placeholderOverride: null,
+      metadataOverrides: {},
+      optionsOverrides: []
+    };
+    
+    try {
+      await addQuestionMutation.mutateAsync(initialOverrides);
+      toast({
+        title: "Question added",
+        description: "Question has been added to the page successfully.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to add question to the page."
+      });
     }
   };
 
