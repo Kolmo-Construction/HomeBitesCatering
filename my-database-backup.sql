@@ -1023,8 +1023,6 @@ COPY public.processed_emails (id, message_id, gmail_id, service, processed_at, e
 --
 
 COPY public.raw_leads (id, source, raw_data, extracted_name, extracted_email, extracted_phone, event_summary, received_at, status, created_opportunity_id, internal_notes, assigned_to_user_id, created_at, updated_at, extracted_event_type, extracted_event_date, extracted_event_time, extracted_guest_count, extracted_venue, extracted_message_summary, lead_source_platform, ai_urgency_score, ai_budget_indication, ai_budget_value, ai_clarity_of_request_score, ai_decision_maker_likelihood, ai_key_requirements, ai_potential_red_flags, ai_overall_lead_quality, ai_suggested_next_step, ai_sentiment, ai_confidence_score, questionnaire_submission_id, questionnaire_definition_id) FROM stdin;
-992	questionnaire	\N	\N	\N	\N	\N	2025-05-15 23:38:39.39	new	\N	\N	\N	2025-05-15 23:38:39.412058	2025-05-15 23:38:39.412058	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
-993	questionnaire	\N	\N	\N	\N	\N	2025-05-15 23:55:13.552	new	\N	\N	\N	2025-05-15 23:55:13.570807	2025-05-15 23:55:13.570807	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 \.
 
 
@@ -1033,7 +1031,7 @@ COPY public.raw_leads (id, source, raw_data, extracted_name, extracted_email, ex
 --
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
-FuN9u7VS3_Vt9vE6Gt41NoiNwOqDrBmL	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T01:22:41.786Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 03:07:36
+FuN9u7VS3_Vt9vE6Gt41NoiNwOqDrBmL	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T01:22:41.786Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 03:11:10
 \.
 
 
