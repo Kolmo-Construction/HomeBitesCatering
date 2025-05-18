@@ -277,8 +277,8 @@ export default function QuestionLibraryEdit() {
   // Set up form values when question data is loaded
   useEffect(() => {
     if (questionData) {
-      // Log the data structure for debugging
-      console.log("Fetched questionData for edit:", questionData);
+      // Log the raw data structure for debugging
+      console.log("RAW Fetched questionData for edit:", JSON.stringify(questionData, null, 2));
       
       // Set form values based on the loaded question
       // Extract metadata fields for easier access
