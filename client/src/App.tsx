@@ -14,7 +14,9 @@ import Calendar from "@/pages/calendar";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
-// Removed questionnaire test page import
+// Form Builder pages
+import QuestionLibraryManager from "@/pages/QuestionLibraryManager";
+import QuestionLibraryEdit from "@/pages/QuestionLibraryEdit";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -67,7 +69,11 @@ function AppContent() {
             <Route path="/raw-leads" component={RawLeadsPage} />
             <Route path="/raw-leads/new" component={RawLeadFormPage} />
             <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
-            {/* Removed conditional rendering test route */}
+            {/* Form Builder Routes */}
+            <Route path="/admin/form-builder/question-library" component={QuestionLibraryManager} />
+            <Route path="/admin/form-builder/question-library/new" component={QuestionLibraryEdit} />
+            <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
+            {/* Fallback Route */}
             <Route>
               <Dashboard />
             </Route>
