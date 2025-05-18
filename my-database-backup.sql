@@ -60,6 +60,93 @@ CREATE TYPE public.communication_type AS ENUM (
 ALTER TYPE public.communication_type OWNER TO neondb_owner;
 
 --
+-- Name: conditional_logic_action_type; Type: TYPE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TYPE public.conditional_logic_action_type AS ENUM (
+    'show_question',
+    'hide_question',
+    'require_question',
+    'unrequire_question',
+    'skip_to_page',
+    'enable_option',
+    'disable_option',
+    'set_value',
+    'show_page',
+    'hide_page'
+);
+
+
+ALTER TYPE public.conditional_logic_action_type OWNER TO neondb_owner;
+
+--
+-- Name: conditional_logic_condition_type; Type: TYPE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TYPE public.conditional_logic_condition_type AS ENUM (
+    'equals',
+    'not_equals',
+    'is_filled',
+    'is_not_filled',
+    'contains',
+    'does_not_contain',
+    'greater_than',
+    'less_than',
+    'is_selected_option_value',
+    'is_not_selected_option_value'
+);
+
+
+ALTER TYPE public.conditional_logic_condition_type OWNER TO neondb_owner;
+
+--
+-- Name: form_question_type; Type: TYPE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TYPE public.form_question_type AS ENUM (
+    'header',
+    'text_display',
+    'textbox',
+    'textarea',
+    'email',
+    'phone',
+    'number',
+    'datetime',
+    'time',
+    'checkbox_group',
+    'radio_group',
+    'dropdown',
+    'full_name',
+    'address',
+    'matrix',
+    'image_upload',
+    'file_upload',
+    'signature_pad',
+    'rating_scale',
+    'slider',
+    'toggle_switch',
+    'location_picker',
+    'tag_select',
+    'date_range_picker',
+    'stepper_input'
+);
+
+
+ALTER TYPE public.form_question_type OWNER TO neondb_owner;
+
+--
+-- Name: form_rule_target_type; Type: TYPE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TYPE public.form_rule_target_type AS ENUM (
+    'question',
+    'page'
+);
+
+
+ALTER TYPE public.form_rule_target_type OWNER TO neondb_owner;
+
+--
 -- Name: identifier_type; Type: TYPE; Schema: public; Owner: neondb_owner
 --
 
@@ -494,6 +581,289 @@ ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
 
 --
+-- Name: form_page_questions; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.form_page_questions (
+    id integer NOT NULL,
+    form_page_id integer NOT NULL,
+    library_question_id integer NOT NULL,
+    display_order integer NOT NULL,
+    display_text_override text,
+    is_required_override boolean,
+    is_hidden_override boolean,
+    placeholder_override text,
+    helper_text_override text,
+    metadata_overrides jsonb,
+    options_overrides jsonb,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.form_page_questions OWNER TO neondb_owner;
+
+--
+-- Name: form_page_questions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.form_page_questions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.form_page_questions_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: form_page_questions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.form_page_questions_id_seq OWNED BY public.form_page_questions.id;
+
+
+--
+-- Name: form_pages; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.form_pages (
+    id integer NOT NULL,
+    form_id integer NOT NULL,
+    page_title text,
+    page_order integer NOT NULL,
+    description text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.form_pages OWNER TO neondb_owner;
+
+--
+-- Name: form_pages_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.form_pages_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.form_pages_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: form_pages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.form_pages_id_seq OWNED BY public.form_pages.id;
+
+
+--
+-- Name: form_rule_targets; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.form_rule_targets (
+    id integer NOT NULL,
+    rule_id integer NOT NULL,
+    target_type public.form_rule_target_type NOT NULL,
+    target_id integer NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.form_rule_targets OWNER TO neondb_owner;
+
+--
+-- Name: form_rule_targets_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.form_rule_targets_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.form_rule_targets_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: form_rule_targets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.form_rule_targets_id_seq OWNED BY public.form_rule_targets.id;
+
+
+--
+-- Name: form_rules; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.form_rules (
+    id integer NOT NULL,
+    form_id integer NOT NULL,
+    trigger_form_page_question_id integer NOT NULL,
+    condition_type public.conditional_logic_condition_type NOT NULL,
+    condition_value text,
+    action_type public.conditional_logic_action_type NOT NULL,
+    rule_description text,
+    execution_order integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.form_rules OWNER TO neondb_owner;
+
+--
+-- Name: form_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.form_rules_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.form_rules_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: form_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.form_rules_id_seq OWNED BY public.form_rules.id;
+
+
+--
+-- Name: form_submission_answers; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.form_submission_answers (
+    id integer NOT NULL,
+    form_submission_id integer NOT NULL,
+    form_page_question_id integer NOT NULL,
+    answer_value jsonb,
+    answered_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.form_submission_answers OWNER TO neondb_owner;
+
+--
+-- Name: form_submission_answers_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.form_submission_answers_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.form_submission_answers_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: form_submission_answers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.form_submission_answers_id_seq OWNED BY public.form_submission_answers.id;
+
+
+--
+-- Name: form_submissions; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.form_submissions (
+    id integer NOT NULL,
+    form_id integer NOT NULL,
+    form_version integer NOT NULL,
+    user_id integer,
+    client_id integer,
+    opportunity_id integer,
+    raw_lead_id integer,
+    status text DEFAULT 'in_progress'::text NOT NULL,
+    submitted_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.form_submissions OWNER TO neondb_owner;
+
+--
+-- Name: form_submissions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.form_submissions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.form_submissions_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: form_submissions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.form_submissions_id_seq OWNED BY public.form_submissions.id;
+
+
+--
+-- Name: forms; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.forms (
+    id integer NOT NULL,
+    form_key text NOT NULL,
+    form_title text NOT NULL,
+    description text,
+    version integer DEFAULT 1 NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.forms OWNER TO neondb_owner;
+
+--
+-- Name: forms_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.forms_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.forms_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: forms_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.forms_id_seq OWNED BY public.forms.id;
+
+
+--
 -- Name: gmail_sync_state; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -558,6 +928,88 @@ ALTER SEQUENCE public.leads_id_seq OWNER TO neondb_owner;
 --
 
 ALTER SEQUENCE public.leads_id_seq OWNED BY public.opportunities.id;
+
+
+--
+-- Name: library_matrix_columns; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.library_matrix_columns (
+    id integer NOT NULL,
+    library_question_id integer NOT NULL,
+    column_key text NOT NULL,
+    header text NOT NULL,
+    cell_input_type text NOT NULL,
+    default_metadata jsonb,
+    column_order integer DEFAULT 0,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.library_matrix_columns OWNER TO neondb_owner;
+
+--
+-- Name: library_matrix_columns_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.library_matrix_columns_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.library_matrix_columns_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: library_matrix_columns_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.library_matrix_columns_id_seq OWNED BY public.library_matrix_columns.id;
+
+
+--
+-- Name: library_matrix_rows; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.library_matrix_rows (
+    id integer NOT NULL,
+    library_question_id integer NOT NULL,
+    row_key text NOT NULL,
+    label text NOT NULL,
+    price text,
+    default_metadata jsonb,
+    row_order integer DEFAULT 0,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.library_matrix_rows OWNER TO neondb_owner;
+
+--
+-- Name: library_matrix_rows_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.library_matrix_rows_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.library_matrix_rows_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: library_matrix_rows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.library_matrix_rows_id_seq OWNED BY public.library_matrix_rows.id;
 
 
 --
@@ -683,6 +1135,47 @@ ALTER SEQUENCE public.processed_emails_id_seq OWNER TO neondb_owner;
 --
 
 ALTER SEQUENCE public.processed_emails_id_seq OWNED BY public.processed_emails.id;
+
+
+--
+-- Name: question_library; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.question_library (
+    id integer NOT NULL,
+    library_question_key text NOT NULL,
+    default_text text NOT NULL,
+    question_type public.form_question_type NOT NULL,
+    default_metadata jsonb,
+    default_options jsonb,
+    category text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.question_library OWNER TO neondb_owner;
+
+--
+-- Name: question_library_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.question_library_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.question_library_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: question_library_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.question_library_id_seq OWNED BY public.question_library.id;
 
 
 --
@@ -842,6 +1335,69 @@ ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.event
 
 
 --
+-- Name: form_page_questions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_page_questions ALTER COLUMN id SET DEFAULT nextval('public.form_page_questions_id_seq'::regclass);
+
+
+--
+-- Name: form_pages id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_pages ALTER COLUMN id SET DEFAULT nextval('public.form_pages_id_seq'::regclass);
+
+
+--
+-- Name: form_rule_targets id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rule_targets ALTER COLUMN id SET DEFAULT nextval('public.form_rule_targets_id_seq'::regclass);
+
+
+--
+-- Name: form_rules id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rules ALTER COLUMN id SET DEFAULT nextval('public.form_rules_id_seq'::regclass);
+
+
+--
+-- Name: form_submission_answers id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submission_answers ALTER COLUMN id SET DEFAULT nextval('public.form_submission_answers_id_seq'::regclass);
+
+
+--
+-- Name: form_submissions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions ALTER COLUMN id SET DEFAULT nextval('public.form_submissions_id_seq'::regclass);
+
+
+--
+-- Name: forms id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.forms ALTER COLUMN id SET DEFAULT nextval('public.forms_id_seq'::regclass);
+
+
+--
+-- Name: library_matrix_columns id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_columns ALTER COLUMN id SET DEFAULT nextval('public.library_matrix_columns_id_seq'::regclass);
+
+
+--
+-- Name: library_matrix_rows id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_rows ALTER COLUMN id SET DEFAULT nextval('public.library_matrix_rows_id_seq'::regclass);
+
+
+--
 -- Name: menu_items id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
@@ -867,6 +1423,13 @@ ALTER TABLE ONLY public.opportunities ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.processed_emails ALTER COLUMN id SET DEFAULT nextval('public.processed_emails_id_seq'::regclass);
+
+
+--
+-- Name: question_library id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.question_library ALTER COLUMN id SET DEFAULT nextval('public.question_library_id_seq'::regclass);
 
 
 --
@@ -974,10 +1537,96 @@ COPY public.events (id, client_id, estimate_id, event_date, start_time, end_time
 
 
 --
+-- Data for Name: form_page_questions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.form_page_questions (id, form_page_id, library_question_id, display_order, display_text_override, is_required_override, is_hidden_override, placeholder_override, helper_text_override, metadata_overrides, options_overrides, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: form_pages; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.form_pages (id, form_id, page_title, page_order, description, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: form_rule_targets; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.form_rule_targets (id, rule_id, target_type, target_id, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: form_rules; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.form_rules (id, form_id, trigger_form_page_question_id, condition_type, condition_value, action_type, rule_description, execution_order, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: form_submission_answers; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.form_submission_answers (id, form_submission_id, form_page_question_id, answer_value, answered_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: form_submissions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.form_submissions (id, form_id, form_version, user_id, client_id, opportunity_id, raw_lead_id, status, submitted_at, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: forms; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.forms (id, form_key, form_title, description, version, status, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: gmail_sync_state; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 COPY public.gmail_sync_state (target_email, last_history_id, watch_expiration_timestamp, last_watch_attempt_timestamp, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: library_matrix_columns; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.library_matrix_columns (id, library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at) FROM stdin;
+2	2	poor	Poor	radio	\N	0	2025-05-18 15:33:25.016856	2025-05-18 15:33:25.016856
+1	2	fair	Fair	radio	\N	1	2025-05-18 15:33:25.017092	2025-05-18 15:33:25.017092
+3	2	good	Good	radio	\N	2	2025-05-18 15:33:25.016468	2025-05-18 15:33:25.016468
+4	2	excellent	Excellent	radio	\N	3	2025-05-18 15:33:25.165494	2025-05-18 15:33:25.165494
+6	6	good	Good	radio	\N	2	2025-05-18 15:37:22.390417	2025-05-18 15:37:22.390417
+5	6	poor	Poor	radio	\N	0	2025-05-18 15:37:22.390198	2025-05-18 15:37:22.390198
+7	6	fair	Fair	radio	\N	1	2025-05-18 15:37:22.390605	2025-05-18 15:37:22.390605
+8	6	excellent	Excellent	radio	\N	3	2025-05-18 15:37:22.541659	2025-05-18 15:37:22.541659
+\.
+
+
+--
+-- Data for Name: library_matrix_rows; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.library_matrix_rows (id, library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at) FROM stdin;
+1	2	service	Customer Service	\N	\N	0	2025-05-18 15:33:22.81381	2025-05-18 15:33:22.81381
+2	2	quality	Product Quality	\N	\N	1	2025-05-18 15:33:22.957726	2025-05-18 15:33:22.957726
+3	2	price	Pricing	\N	\N	2	2025-05-18 15:33:24.958774	2025-05-18 15:33:24.958774
+4	6	service	Customer Service	\N	\N	0	2025-05-18 15:37:22.189266	2025-05-18 15:37:22.189266
+5	6	quality	Product Quality	\N	\N	1	2025-05-18 15:37:22.33056	2025-05-18 15:37:22.33056
+6	6	price	Pricing	\N	\N	2	2025-05-18 15:37:22.334484	2025-05-18 15:37:22.334484
 \.
 
 
@@ -1045,6 +1694,17 @@ COPY public.processed_emails (id, message_id, gmail_id, service, processed_at, e
 
 
 --
+-- Data for Name: question_library; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.question_library (id, library_question_key, default_text, question_type, default_metadata, default_options, category, created_at, updated_at) FROM stdin;
+2	matrix_question_1	Please rate our services:	matrix	\N	\N	feedback	2025-05-18 15:33:22.76429	2025-05-18 15:33:22.76429
+3	text_question_1	What is your name?	textbox	\N	\N	personal	2025-05-18 15:35:52.789109	2025-05-18 15:35:52.789109
+6	matrix_question_1747582641867	Please rate our services:	matrix	\N	\N	feedback	2025-05-18 15:37:22.139228	2025-05-18 15:37:22.139228
+\.
+
+
+--
 -- Data for Name: raw_leads; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
@@ -1059,9 +1719,12 @@ COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
 YR_sQtbn1d-DYvLa8HSxhDHTH1dQbb-X	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:21:17.453Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:21:18
-RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:45:29
+v1vKQK59wOGdJV39atg1JxrpUYYPCtlH	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:37:21.815Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:37:24
 W5cOc0Fx0YMu0jxcPQe6zNqaJhXZ2I_b	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:44:19.324Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 06:44:21
 Gu7aqptXzodzEXmGz0BfoUFoY9MQb_m2	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T05:24:21.649Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 05:24:22
+BvoEC7TR59WqhNqPZof6GXg7MhfIcLN5	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:33:22.301Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:33:27
+RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 18:40:52
+bIOwPZzV2aDqnIu1le78V3wN1LW8lO-A	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:35:50.346Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:35:54
 \.
 
 
@@ -1110,10 +1773,73 @@ SELECT pg_catalog.setval('public.events_id_seq', 1, false);
 
 
 --
+-- Name: form_page_questions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.form_page_questions_id_seq', 1, false);
+
+
+--
+-- Name: form_pages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.form_pages_id_seq', 1, false);
+
+
+--
+-- Name: form_rule_targets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.form_rule_targets_id_seq', 1, false);
+
+
+--
+-- Name: form_rules_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.form_rules_id_seq', 1, false);
+
+
+--
+-- Name: form_submission_answers_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.form_submission_answers_id_seq', 1, false);
+
+
+--
+-- Name: form_submissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.form_submissions_id_seq', 1, false);
+
+
+--
+-- Name: forms_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.forms_id_seq', 1, false);
+
+
+--
 -- Name: leads_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.leads_id_seq', 5, true);
+
+
+--
+-- Name: library_matrix_columns_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.library_matrix_columns_id_seq', 8, true);
+
+
+--
+-- Name: library_matrix_rows_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.library_matrix_rows_id_seq', 6, true);
 
 
 --
@@ -1135,6 +1861,13 @@ SELECT pg_catalog.setval('public.menus_id_seq', 7, true);
 --
 
 SELECT pg_catalog.setval('public.processed_emails_id_seq', 1, false);
+
+
+--
+-- Name: question_library_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.question_library_id_seq', 6, true);
 
 
 --
@@ -1192,6 +1925,86 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: form_page_questions form_page_questions_form_page_id_display_order_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_page_questions
+    ADD CONSTRAINT form_page_questions_form_page_id_display_order_key UNIQUE (form_page_id, display_order);
+
+
+--
+-- Name: form_page_questions form_page_questions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_page_questions
+    ADD CONSTRAINT form_page_questions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_pages form_pages_form_id_page_order_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_pages
+    ADD CONSTRAINT form_pages_form_id_page_order_key UNIQUE (form_id, page_order);
+
+
+--
+-- Name: form_pages form_pages_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_pages
+    ADD CONSTRAINT form_pages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_rule_targets form_rule_targets_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rule_targets
+    ADD CONSTRAINT form_rule_targets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_rules form_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rules
+    ADD CONSTRAINT form_rules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_submission_answers form_submission_answers_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submission_answers
+    ADD CONSTRAINT form_submission_answers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_submissions form_submissions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: forms forms_form_key_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.forms
+    ADD CONSTRAINT forms_form_key_key UNIQUE (form_key);
+
+
+--
+-- Name: forms forms_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.forms
+    ADD CONSTRAINT forms_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: gmail_sync_state gmail_sync_state_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
@@ -1205,6 +2018,38 @@ ALTER TABLE ONLY public.gmail_sync_state
 
 ALTER TABLE ONLY public.opportunities
     ADD CONSTRAINT leads_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: library_matrix_columns library_matrix_columns_library_question_id_column_key_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_columns
+    ADD CONSTRAINT library_matrix_columns_library_question_id_column_key_key UNIQUE (library_question_id, column_key);
+
+
+--
+-- Name: library_matrix_columns library_matrix_columns_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_columns
+    ADD CONSTRAINT library_matrix_columns_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: library_matrix_rows library_matrix_rows_library_question_id_row_key_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_rows
+    ADD CONSTRAINT library_matrix_rows_library_question_id_row_key_key UNIQUE (library_question_id, row_key);
+
+
+--
+-- Name: library_matrix_rows library_matrix_rows_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_rows
+    ADD CONSTRAINT library_matrix_rows_pkey PRIMARY KEY (id);
 
 
 --
@@ -1253,6 +2098,22 @@ ALTER TABLE ONLY public.processed_emails
 
 ALTER TABLE ONLY public.processed_emails
     ADD CONSTRAINT processed_emails_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: question_library question_library_library_question_key_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.question_library
+    ADD CONSTRAINT question_library_library_question_key_key UNIQUE (library_question_key);
+
+
+--
+-- Name: question_library question_library_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.question_library
+    ADD CONSTRAINT question_library_pkey PRIMARY KEY (id);
 
 
 --
@@ -1405,6 +2266,126 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_menu_id_menus_id_fk FOREIGN KEY (menu_id) REFERENCES public.menus(id);
+
+
+--
+-- Name: form_page_questions form_page_questions_form_page_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_page_questions
+    ADD CONSTRAINT form_page_questions_form_page_id_fkey FOREIGN KEY (form_page_id) REFERENCES public.form_pages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_page_questions form_page_questions_library_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_page_questions
+    ADD CONSTRAINT form_page_questions_library_question_id_fkey FOREIGN KEY (library_question_id) REFERENCES public.question_library(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: form_pages form_pages_form_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_pages
+    ADD CONSTRAINT form_pages_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.forms(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_rule_targets form_rule_targets_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rule_targets
+    ADD CONSTRAINT form_rule_targets_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.form_rules(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_rules form_rules_form_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rules
+    ADD CONSTRAINT form_rules_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.forms(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_rules form_rules_trigger_form_page_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_rules
+    ADD CONSTRAINT form_rules_trigger_form_page_question_id_fkey FOREIGN KEY (trigger_form_page_question_id) REFERENCES public.form_page_questions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_submission_answers form_submission_answers_form_page_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submission_answers
+    ADD CONSTRAINT form_submission_answers_form_page_question_id_fkey FOREIGN KEY (form_page_question_id) REFERENCES public.form_page_questions(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: form_submission_answers form_submission_answers_form_submission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submission_answers
+    ADD CONSTRAINT form_submission_answers_form_submission_id_fkey FOREIGN KEY (form_submission_id) REFERENCES public.form_submissions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_submissions form_submissions_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE SET NULL;
+
+
+--
+-- Name: form_submissions form_submissions_form_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.forms(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: form_submissions form_submissions_opportunity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_opportunity_id_fkey FOREIGN KEY (opportunity_id) REFERENCES public.opportunities(id) ON DELETE SET NULL;
+
+
+--
+-- Name: form_submissions form_submissions_raw_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_raw_lead_id_fkey FOREIGN KEY (raw_lead_id) REFERENCES public.raw_leads(id) ON DELETE SET NULL;
+
+
+--
+-- Name: form_submissions form_submissions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.form_submissions
+    ADD CONSTRAINT form_submissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: library_matrix_columns library_matrix_columns_library_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_columns
+    ADD CONSTRAINT library_matrix_columns_library_question_id_fkey FOREIGN KEY (library_question_id) REFERENCES public.question_library(id) ON DELETE CASCADE;
+
+
+--
+-- Name: library_matrix_rows library_matrix_rows_library_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.library_matrix_rows
+    ADD CONSTRAINT library_matrix_rows_library_question_id_fkey FOREIGN KEY (library_question_id) REFERENCES public.question_library(id) ON DELETE CASCADE;
 
 
 --
