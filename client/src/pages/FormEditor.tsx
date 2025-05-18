@@ -53,7 +53,10 @@ import {
   Trash2, 
   Settings,
   Eye,
-  Save
+  Save,
+  Search,
+  X,
+  Loader2
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -493,12 +496,30 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                 name="displayTextOverride"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Question Text Override</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Question Text Override</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel htmlFor="override-display-text" className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
+                        <Switch 
+                          id="override-display-text" 
+                          checked={field.value !== libraryQuestion?.defaultText && field.value !== libraryQuestion?.default_text}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Reset to library value
+                              form.setValue("displayTextOverride", libraryQuestion?.defaultText || libraryQuestion?.default_text || "");
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormDescription>
-                      Override the default question text from the library
+                    <FormDescription className="flex items-center">
+                      <span className="text-xs text-muted-foreground mr-1">Original:</span> 
+                      <span className="text-xs font-medium">{libraryQuestion?.defaultText || libraryQuestion?.default_text}</span>
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -740,6 +761,9 @@ export default function FormEditor() {
   // DnD states
   const [activeDragId, setActiveDragId] = useState(null);
   const [activeEntity, setActiveEntity] = useState(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Configure DnD sensors
   const sensors = useSensors(
@@ -1340,6 +1364,21 @@ export default function FormEditor() {
   const pages = pagesData?.data || [];
   const questions = questionsData?.data || [];
   const libraryQuestions = libraryQuestionsData?.data || [];
+  
+  // Filter library questions based on search
+  const filteredLibraryQuestions = libraryQuestions.filter(question => {
+    if (!searchQuery) return true;
+    
+    const displayText = question.displayText || question.default_text || '';
+    const questionType = question.questionType || question.question_type || '';
+    const helperText = question.helperText || question.helper_text || '';
+    
+    const lowerSearchQuery = searchQuery.toLowerCase();
+    
+    return displayText.toLowerCase().includes(lowerSearchQuery) || 
+           questionType.toLowerCase().includes(lowerSearchQuery) ||
+           helperText.toLowerCase().includes(lowerSearchQuery);
+  });
   const formTitle = formData?.formTitle || formData?.form_title || "Form Editor";
 
   // If form is not found
@@ -1489,21 +1528,12 @@ export default function FormEditor() {
                 </div>
                 
                 <div className="px-4 pb-2">
-                  <Input 
-                    placeholder="Search questions..." 
-                    size="sm"
-                    className="text-sm"
-                  />
-                </div>
-                
-                <ScrollArea className="flex-1 p-4">
-                  {/* Search box for library questions */}
-                  <div className="mb-4 relative">
+                  <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search questions..."
-                      className="pl-8 w-full"
-                      value={searchQuery || ""}
+                    <Input 
+                      placeholder="Search questions..." 
+                      className="pl-8 text-sm"
+                      value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     {searchQuery && (
@@ -1516,7 +1546,9 @@ export default function FormEditor() {
                       </Button>
                     )}
                   </div>
-                  
+                </div>
+                
+                <ScrollArea className="flex-1 p-4">
                   {isLibraryLoading ? (
                     <div className="flex justify-center p-4">
                       <Loader2 className="h-6 w-6 animate-spin" />
@@ -1524,6 +1556,17 @@ export default function FormEditor() {
                   ) : libraryQuestions.length === 0 ? (
                     <div className="text-center p-4 border border-dashed rounded-md">
                       <p className="text-sm text-muted-foreground">No questions in library</p>
+                    </div>
+                  ) : filteredLibraryQuestions.length === 0 && searchQuery ? (
+                    <div className="text-center p-4 border border-dashed rounded-md">
+                      <p className="text-sm text-muted-foreground">No questions match your search</p>
+                      <Button 
+                        variant="link" 
+                        className="mt-2" 
+                        onClick={() => setSearchQuery("")}
+                      >
+                        Clear search
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1539,9 +1582,9 @@ export default function FormEditor() {
                           onClick={() => handleAddQuestionFromLibrary(question)}
                         >
                           <div className="flex justify-between items-center mb-1">
-                            <p className="font-medium text-sm">{question.defaultText || question.default_text}</p>
+                            <p className="font-medium text-sm">{question.displayText || question.default_text}</p>
                             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                              {getQuestionTypeLabel(question.questionType || question.question_type)}
+                              {question.questionType || question.question_type}
                             </span>
                           </div>
                           {(question.helperText || question.helper_text) && (
