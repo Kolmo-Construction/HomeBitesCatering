@@ -28,6 +28,112 @@ import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
 import { VendorLeadIntakeService } from './services/VendorLeadIntakeService';
 
+// Helper function to map lead quality to opportunity priority
+function mapLeadQualityToPriority(leadQuality?: string): 'high' | 'medium' | 'low' {
+  if (!leadQuality) return 'medium';
+  
+  switch (leadQuality) {
+    case 'hot':
+      return 'high';
+    case 'warm':
+      return 'medium';
+    case 'cold':
+    case 'nurture':
+      return 'low';
+    default:
+      return 'medium';
+  }
+}
+
+// Helper function to format notes from raw lead data including AI insights
+function formatNotes(lead: any): string | null {
+  const noteParts = [];
+  
+  // Add AI-extracted message summary if available
+  if (lead.extractedMessageSummary) {
+    noteParts.push(`Client Message: ${lead.extractedMessageSummary}`);
+  }
+  
+  // Add AI analysis if available
+  if (lead.aiKeyRequirements) {
+    let requirementsText = '';
+    try {
+      // Handle both string and JSON object formats
+      if (typeof lead.aiKeyRequirements === 'string') {
+        requirementsText = lead.aiKeyRequirements;
+      } else {
+        // Format requirements as bullet points if it's an array
+        const requirements = Array.isArray(lead.aiKeyRequirements) 
+          ? lead.aiKeyRequirements 
+          : Object.values(lead.aiKeyRequirements);
+        
+        if (requirements.length > 0) {
+          requirementsText = requirements.map(req => `• ${req}`).join('\n');
+        }
+      }
+      
+      if (requirementsText) {
+        noteParts.push(`Key Requirements:\n${requirementsText}`);
+      }
+    } catch (e) {
+      console.warn('Error formatting AI requirements:', e);
+    }
+  }
+  
+  // Add potential red flags if available
+  if (lead.aiPotentialRedFlags) {
+    let redFlagsText = '';
+    try {
+      // Handle both string and JSON object formats
+      if (typeof lead.aiPotentialRedFlags === 'string') {
+        redFlagsText = lead.aiPotentialRedFlags;
+      } else {
+        // Format red flags as bullet points if it's an array
+        const redFlags = Array.isArray(lead.aiPotentialRedFlags) 
+          ? lead.aiPotentialRedFlags 
+          : Object.values(lead.aiPotentialRedFlags);
+        
+        if (redFlags.length > 0) {
+          redFlagsText = redFlags.map(flag => `• ${flag}`).join('\n');
+        }
+      }
+      
+      if (redFlagsText) {
+        noteParts.push(`Potential Concerns:\n${redFlagsText}`);
+      }
+    } catch (e) {
+      console.warn('Error formatting AI red flags:', e);
+    }
+  }
+  
+  // Add budget information if available
+  if (lead.aiBudgetIndication || lead.aiBudgetValue) {
+    let budgetText = 'Budget: ';
+    
+    if (lead.aiBudgetValue) {
+      budgetText += `$${lead.aiBudgetValue}`;
+    }
+    
+    if (lead.aiBudgetIndication) {
+      budgetText += lead.aiBudgetValue ? ` (${lead.aiBudgetIndication})` : lead.aiBudgetIndication;
+    }
+    
+    noteParts.push(budgetText);
+  }
+  
+  // Add calendar conflict assessment if available
+  if (lead.aiCalendarConflictAssessment) {
+    noteParts.push(`Calendar Assessment: ${lead.aiCalendarConflictAssessment}`);
+  }
+  
+  // Add internal notes if available
+  if (lead.notes) {
+    noteParts.push(`Internal Notes: ${lead.notes}`);
+  }
+  
+  return noteParts.length > 0 ? noteParts.join('\n\n') : null;
+}
+
 // Initialize the service instances
 const leadGenerationService = new LeadGenerationService();
 const communicationSyncService = new CommunicationSyncService();
@@ -1209,22 +1315,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Raw lead not found' });
       }
       
-      // Create an opportunity from the lead
-      // Depending on the lead data structure, you'll need to map fields accordingly
+      // Create an opportunity from the lead using AI-enriched fields
+      // Split extracted name into first and last name if available
+      let firstName = '';
+      let lastName = '';
+      
+      if (lead.extractedProspectName) {
+        const nameParts = lead.extractedProspectName.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          firstName = nameParts[0];
+          lastName = nameParts.slice(1).join(' ');
+        } else if (nameParts.length === 1) {
+          firstName = nameParts[0];
+          lastName = ''; // Use empty string for lastName if only first name is available
+        }
+      }
+      
+      // Map AI-enriched fields to opportunity data
       const opportunityData = {
-        firstName: lead.firstName || '',
-        lastName: lead.lastName || '',
-        email: lead.email || '',
-        phone: lead.phone || null,
-        eventType: lead.eventType || '',
-        eventDate: lead.eventDate || null,
-        guestCount: lead.guestCount || null,
-        venue: lead.venue || null,
-        opportunitySource: 'raw_lead',
+        // Ensure NOT NULL fields are always populated with at least empty strings
+        firstName: firstName || 'Unknown',
+        lastName: lastName || 'Contact',
+        email: lead.extractedProspectEmail || 'unknown@example.com',
+        phone: lead.extractedProspectPhone || null,
+        eventType: lead.extractedEventType || 'Unspecified Event',
+        // Handle different date formats
+        eventDate: lead.extractedEventDate ? new Date(lead.extractedEventDate) : null,
+        guestCount: lead.extractedGuestCount || null,
+        venue: lead.extractedVenue || null,
+        // Use leadSourcePlatform if available, otherwise use source or default
+        opportunitySource: lead.leadSourcePlatform || lead.source || 'raw_lead',
         status: 'new',
-        notes: lead.notes || null,
-        budget: lead.budget || null
+        // Combine AI message summary with internal notes if both exist
+        notes: formatNotes(lead)
       };
+      
+      // Add priority based on AI lead quality if available
+      if (lead.aiOverallLeadQuality) {
+        opportunityData.priority = mapLeadQualityToPriority(lead.aiOverallLeadQuality);
+      }
       
       const opportunity = await storage.createOpportunity(opportunityData);
       
