@@ -707,12 +707,7 @@ async function handleGetFullQuestionnaire(res: Response, data: any) {
             // Get conditional logic for this question
             const logic = await db.select()
               .from(conditionalLogic)
-              .where(
-                and(
-                  eq(conditionalLogic.targetType, 'question'),
-                  eq(conditionalLogic.targetId, question.id)
-                )
-              );
+              .where(eq(conditionalLogic.targetQuestionKey, question.questionKey));
             
             questionsWithOptions.push({
               ...question,
@@ -722,39 +717,17 @@ async function handleGetFullQuestionnaire(res: Response, data: any) {
           }
         }
         
-        // Get conditional logic for this section
-        const sectionLogic = await db.select()
-          .from(conditionalLogic)
-          .where(
-            and(
-              eq(conditionalLogic.targetType, 'section'),
-              eq(conditionalLogic.targetId, section.id)
-            )
-          );
-        
         sectionsWithQuestions.push({
           ...section,
           relationDetails: relation,
-          questions: questionsWithOptions,
-          conditionalLogic: sectionLogic
+          questions: questionsWithOptions
         });
       }
     }
     
-    // Get conditional logic for this page
-    const pageLogic = await db.select()
-      .from(conditionalLogic)
-      .where(
-        and(
-          eq(conditionalLogic.targetType, 'page'),
-          eq(conditionalLogic.targetId, page.id)
-        )
-      );
-    
     pagesWithSections.push({
       ...page,
-      sections: sectionsWithQuestions,
-      conditionalLogic: pageLogic
+      sections: sectionsWithQuestions
     });
   }
   
