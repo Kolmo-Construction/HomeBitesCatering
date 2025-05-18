@@ -264,6 +264,8 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Opportunity = typeof opportunities.$inferSelect;
 export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>;
+// Backward compatibility alias for components still using the old name
+export const insertLeadSchema = insertOpportunitySchema;
 
 export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
