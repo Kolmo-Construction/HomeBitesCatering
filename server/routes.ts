@@ -1310,9 +1310,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sampleWeddingInquiryEmail } = await import('./testData');
       
       // Create the sample lead with the current time
+      // Create a lead data object that conforms to the expected schema
       const leadData = {
-        ...sampleWeddingInquiryEmail,
-        receivedAt: new Date()
+        source: sampleWeddingInquiryEmail.source,
+        rawData: sampleWeddingInquiryEmail.rawData,
+        status: sampleWeddingInquiryEmail.status,
+        notes: sampleWeddingInquiryEmail.notes,
+        receivedAt: new Date(),
+        extractedProspectName: sampleWeddingInquiryEmail.extractedProspectName,
+        extractedProspectEmail: sampleWeddingInquiryEmail.extractedProspectEmail,
+        extractedProspectPhone: sampleWeddingInquiryEmail.extractedProspectPhone,
+        eventSummary: sampleWeddingInquiryEmail.eventSummary,
+        extractedEventType: sampleWeddingInquiryEmail.extractedEventType,
+        extractedEventDate: sampleWeddingInquiryEmail.extractedEventDate,
+        extractedEventTime: sampleWeddingInquiryEmail.extractedEventTime,
+        extractedGuestCount: sampleWeddingInquiryEmail.extractedGuestCount,
+        extractedVenue: sampleWeddingInquiryEmail.extractedVenue,
+        extractedMessageSummary: sampleWeddingInquiryEmail.extractedMessageSummary,
+        aiBudgetIndication: sampleWeddingInquiryEmail.aiBudgetIndication,
+        aiBudgetValue: sampleWeddingInquiryEmail.aiBudgetValue,
+        aiOverallLeadQuality: sampleWeddingInquiryEmail.aiOverallLeadQuality,
+        aiUrgencyScore: sampleWeddingInquiryEmail.aiUrgencyScore,
+        aiClarityOfRequestScore: sampleWeddingInquiryEmail.aiClarityOfRequestScore,
+        aiDecisionMakerLikelihood: sampleWeddingInquiryEmail.aiDecisionMakerLikelihood,
+        aiKeyRequirements: sampleWeddingInquiryEmail.aiKeyRequirements,
+        aiPotentialRedFlags: sampleWeddingInquiryEmail.aiPotentialRedFlags,
+        aiCalendarConflictAssessment: sampleWeddingInquiryEmail.aiCalendarConflictAssessment
       };
       
       const newLead = await storage.createRawLead(leadData);

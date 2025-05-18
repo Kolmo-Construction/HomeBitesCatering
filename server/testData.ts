@@ -16,7 +16,7 @@ export const sampleWeddingInquiryEmail = {
   extractedVenue: 'The Overlook Venue, Seattle',
   extractedMessageSummary: 'Couple seeking Mediterranean/PNW fusion menu for wedding. Budget $8,500-$10,000. Need appetizers, plated dinner, and late-night snacks.',
   receivedAt: new Date(),
-  status: 'new',
+  status: 'new' as const,
   notes: 'This lead came through the website contact form',
   
   // AI-enriched fields
