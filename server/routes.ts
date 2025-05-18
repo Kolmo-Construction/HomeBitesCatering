@@ -25,8 +25,50 @@ import {
 import { GmailSyncService } from './services/emailSyncService'; // Import the service
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
+import { vendorLeadIntakeService } from './services/VendorLeadIntakeService'; // Adjust path as needed
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.post('/api/gmail/vendor-lead-webhook', express.json({ type: '*/*' }), async (req: Request, res: Response) => {
+    try {
+      console.log('Received POST on /api/gmail/vendor-lead-webhook');
+      // Log raw body for debugging Pub/Sub messages if needed
+      // console.log('Raw body:', req.body.toString());
+
+      if (!req.body || !req.body.message || !req.body.message.data) {
+        console.warn('Webhook: Invalid Pub/Sub message format.');
+        return res.status(400).send('Bad Request: Invalid Pub/Sub message format');
+      }
+
+      const pubsubMessage = req.body.message;
+      const gmailNotification = JSON.parse(Buffer.from(pubsubMessage.data, 'base64').toString('utf-8'));
+      const { emailAddress, historyId } = gmailNotification;
+
+      if (!emailAddress || !historyId) {
+        console.warn('Webhook: Missing emailAddress or historyId in Gmail notification.');
+        return res.status(400).send('Bad Request: Missing emailAddress or historyId');
+      }
+
+      // Verify this notification is for the email address we care about
+      const targetEmail = process.env.SYNC_TARGET_EMAIL_ADDRESS || '';
+      if (emailAddress.toLowerCase() !== targetEmail.toLowerCase()) {
+        console.warn(`Webhook: Notification for untracked email address: ${emailAddress}. Target: ${targetEmail}`);
+        return res.status(204).send(); // Acknowledge to Pub/Sub to prevent retries
+      }
+
+      // Asynchronously process the notification to ensure a quick response to Pub/Sub
+      vendorLeadIntakeService.processGmailNotification(historyId).catch(processingError => {
+        console.error('Webhook: Async error processing Gmail notification:', processingError);
+        // Error is logged, Pub/Sub already acknowledged. Consider further error tracking.
+      });
+
+      res.status(204).send(); // ACK Pub/Sub immediately
+
+    } catch (error: any) {
+      console.error('Webhook: Error in webhook handler:', error);
+      // If parsing req.body fails or another synchronous error occurs before async processing
+      res.status(500).send('Internal Server Error');
+    }
+  });
   // Configure PostgreSQL session store
   const PgStore = pgSession(session);
   
