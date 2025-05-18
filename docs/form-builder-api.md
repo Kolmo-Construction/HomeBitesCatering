@@ -674,34 +674,88 @@ GET /api/form-builder/forms/:formKey/versions/:versionNumber/render
 
 This endpoint assembles a complete form definition ready for client-side rendering.
 
+## 6. Form Submission API
+
+Submit and validate filled-out forms from clients.
+
+### Submit a Form
+
+```
+POST /api/form-builder/forms/:formKey/versions/:versionNumber/submit
+```
+
+This endpoint receives, validates, and stores a form submission from a client.
+
 **URL Parameters:**
 - `formKey` - The unique key identifier for the form (e.g., "wedding_questionnaire")
-- `versionNumber` - The version number of the form to render
+- `versionNumber` - The version number of the form to submit
+
+**Request Body:**
+```json
+{
+  "clientId": 5,             // Optional: ID of the client making the submission
+  "opportunityId": 12,       // Optional: ID of the related opportunity
+  "rawLeadId": null,         // Optional: ID of a raw lead this submission is for
+  "answers": {
+    "1": "John and Sarah",   // The key is the questionInstanceId, value varies by question type
+    "2": "email@example.com",
+    "3": ["option1", "option3"],  // For checkbox questions (multiple selections)
+    "4": "option2",         // For radio/select questions (single selection)
+    "5": 150,               // For number questions
+    "6": "2025-06-15",      // For date questions
+    "7": {                  // For matrix questions
+      "row1_col1": "value1",
+      "row1_col2": "value2",
+      "row2_col1": "value3"
+    }
+  }
+}
+```
 
 **Response:**
 ```json
 {
-  "formId": 1,
-  "formKey": "wedding_questionnaire",
-  "formTitle": "Wedding Questionnaire",
-  "description": "Form for gathering wedding details from clients",
-  "version": 1,
-  "pages": [
-    {
-      "pageId": 1,
-      "pageTitle": "Basic Information",
-      "pageOrder": 0,
-      "description": "Collect basic wedding information",
-      "questions": [
-        {
-          "questionInstanceId": 1,
-          "libraryQuestionId": 5,
-          "questionType": "textbox",
-          "displayText": "What is the couple's names?",
-          "isRequired": true,
-          "isHidden": false,
-          "placeholder": "Enter your full name",
-          "helperText": "Please provide both names",
+  "message": "Form submitted successfully",
+  "submissionId": 42,
+  "submission": {
+    "id": 42,
+    "formId": 1,
+    "formVersion": 3,
+    "clientId": 5,
+    "opportunityId": 12,
+    "rawLeadId": null,
+    "status": "completed",
+    "submittedAt": "2025-05-18T16:45:00.000Z",
+    "createdAt": "2025-05-18T16:45:00.000Z",
+    "updatedAt": "2025-05-18T16:45:00.000Z"
+  }
+}
+```
+
+**Error Response (Validation Failed):**
+```json
+{
+  "message": "Validation failed",
+  "errors": {
+    "1": "This field is required",
+    "3": "Please select at least 2 options",
+    "4": "Please select a valid option"
+  }
+}
+```
+
+**Notes:**
+- The endpoint first fetches the complete form definition to validate submitted answers.
+- Validation is performed for each answer based on question type and requirements.
+- All answers are stored in a transaction to ensure data integrity.
+- The response includes the created submission record with its ID.
+- Validation errors are returned with specific messages for each invalid field.
+
+## Question Library Integration
+
+The Form Builder API works closely with the Question Library API. You need to create questions in the question library first before you can add them to form pages.
+
+For more information on the Question Library API, please refer to the Question Library API documentation.
           "displayOrder": 0,
           "metadata": {
             "textType": "short"

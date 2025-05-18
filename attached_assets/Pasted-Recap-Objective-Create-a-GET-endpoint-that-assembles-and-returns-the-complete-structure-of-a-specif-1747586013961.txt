@@ -1,0 +1,32 @@
+Recap Objective: Create a GET endpoint that assembles and returns the complete structure of a specific form version, fully resolved with all question details (merged from library and instance overrides), page order, and all applicable rules, ready for the client-side rendering engine.
+Endpoint Signature (Example):
+GET /api/form-builder/forms/:formKey/versions/:versionNumber/render
+Or GET /api/form-builder/forms/:formId/render (if formId implies a specific version or latest published).
+Key Tasks (Backend Logic - using your form-schema (2).ts tables):
+Identify & Validate Form/Version:
+From the request parameters (formKey, versionNumber or formId), query the forms table.
+Ensure the form exists and its status is appropriate for rendering (e.g., 'published', or 'testing'/'draft' if this endpoint is also for admin preview). Return 404/403 if not.
+Fetch Form Pages:
+Get all form_pages linked to the form.id, ordered by pageOrder.
+Fetch and Resolve Question Instances (For each page):
+For each form_page record, get all its form_page_questions records, ordered by displayOrder.
+For each form_page_questions record:
+Fetch the base data from question_library using libraryQuestionId. This includes defaultText, questionType, defaultMetadata, defaultOptions.
+If question_library.questionType is 'matrix':
+Fetch all libraryMatrixRows (ordered by rowOrder) for this libraryQuestionId.
+Fetch all libraryMatrixColumns (ordered by columnOrder) for this libraryQuestionId.
+Merge & Override Logic (Critical):
+Construct a "resolved question instance" object.
+displayText: Use form_page_questions.displayTextOverride if it's not null/empty, otherwise use question_library.defaultText.
+isRequired: Use form_page_questions.isRequiredOverride if it's not null. If you decide question_library can have a default isRequired (e.g., in its defaultMetadata), then that would be the base.
+isHidden: Use form_page_questions.isHiddenOverride if not null.
+placeholder: form_page_questions.placeholderOverride or question_library.defaultMetadata.placeholder.
+helperText: form_page_questions.helperTextOverride or question_library.defaultMetadata.helperText.
+metadata: Start with question_library.defaultMetadata. Then, apply a deep merge with form_page_questions.metadataOverrides. The specifics of how array or nested object properties are merged need careful consideration (e.g., does an override replace an entire array or merge into it?).
+options (for select, radio, checkbox_group, tag_select): Start with question_library.defaultOptions. If form_page_questions.optionsOverrides exists, use it to filter, reorder, or modify these options for this specific instance. The optionsOverrides could be an array of optionValues to include, or an array of modified option objects.
+Matrix Structure for Client: For matrix questions, the resolved structure should clearly define the rows (from libraryMatrixRows, potentially filtered/customized via optionsOverrides or metadataOverrides on the form_page_questions instance) and columns (from libraryMatrixColumns, similarly customizable). The client needs to know the rowKey, label, price for each row, and the columnKey, header, cellInputType, and defaultMetadata for each column.
+The resolved question should include its form_page_questions.id (as questionInstanceId) so answers can be mapped back.
+Fetch Form Rules:
+Get all form_rules linked to the form.id.
+For each rule, get its associated form_rule_targets (each target having targetType and targetId which will be a form_page_questions.id or form_pages.id).
+Assemble & Return JSON Response: Structure this into a well-defined JSON object that the client can easily parse to render the form. (We discussed a sample structure previously).

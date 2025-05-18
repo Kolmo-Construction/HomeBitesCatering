@@ -763,7 +763,7 @@ router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) =
           questionInstanceId: instance.id,
           libraryQuestionId: libraryQuestion.id,
           questionType: libraryQuestion.questionType,
-          displayText: instance.displayTextOverride || libraryQuestion.defaultText,
+          displayText: instance.displayTextOverride || libraryQuestion.displayText,
           isRequired: instance.isRequiredOverride !== null ? instance.isRequiredOverride : libraryQuestion.isRequired,
           isHidden: instance.isHiddenOverride !== null ? instance.isHiddenOverride : libraryQuestion.isHidden,
           placeholder: instance.placeholderOverride || libraryQuestion.placeholder,
