@@ -880,12 +880,16 @@ router.get("/forms/:formKey/versions/:versionNumber/render", async (req, res) =>
       .from(formSchema.forms)
       .where(and(
         eq(formSchema.forms.formKey, formKey),
-        eq(formSchema.forms.version, versionNumber),
-        eq(formSchema.forms.status, "published") // Only return published forms unless previewing
+        eq(formSchema.forms.version, versionNumber)
       ));
     
     if (!form) {
-      return res.status(404).json({ message: "Form not found or not published" });
+      return res.status(404).json({ message: "Form not found" });
+    }
+    
+    // If not previewing, check if form is published
+    if (req.query.preview !== 'true' && form.status !== 'published') {
+      return res.status(403).json({ message: "Form is not published" });
     }
     
     // 2. Fetch all pages for this form, ordered by pageOrder
@@ -922,48 +926,64 @@ router.get("/forms/:formKey/versions/:versionNumber/render", async (req, res) =>
           // Fetch matrix rows
           matrixRows = await db.select()
             .from(formSchema.libraryMatrixRows)
-            .where(eq(formSchema.libraryMatrixRows.questionId, libraryQuestion.id))
-            .orderBy(formSchema.libraryMatrixRows.displayOrder);
+            .where(eq(formSchema.libraryMatrixRows.libraryQuestionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixRows.rowOrder);
           
           // Fetch matrix columns
           matrixColumns = await db.select()
             .from(formSchema.libraryMatrixColumns)
-            .where(eq(formSchema.libraryMatrixColumns.questionId, libraryQuestion.id))
-            .orderBy(formSchema.libraryMatrixColumns.displayOrder);
+            .where(eq(formSchema.libraryMatrixColumns.libraryQuestionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixColumns.columnOrder);
         }
         
         // Merge library question with instance overrides
         const resolvedQuestion = {
           questionInstanceId: instance.id,
+          questionKey: `${page.id}_${instance.id}`, // Create a unique key for this question instance
           libraryQuestionId: libraryQuestion.id,
+          libraryQuestionKey: libraryQuestion.libraryQuestionKey,
           questionType: libraryQuestion.questionType,
-          displayText: instance.displayTextOverride || libraryQuestion.displayText,
-          isRequired: instance.isRequiredOverride !== null ? instance.isRequiredOverride : libraryQuestion.isRequired,
-          isHidden: instance.isHiddenOverride !== null ? instance.isHiddenOverride : libraryQuestion.isHidden,
-          placeholder: instance.placeholderOverride || libraryQuestion.placeholder,
-          helperText: instance.helperTextOverride || libraryQuestion.helperText,
+          displayText: instance.displayTextOverride || libraryQuestion.defaultText,
+          isRequired: instance.isRequiredOverride !== null ? 
+            instance.isRequiredOverride : 
+            (libraryQuestion.defaultMetadata?.isRequired || false),
+          isHidden: instance.isHiddenOverride !== null ? 
+            instance.isHiddenOverride : 
+            (libraryQuestion.defaultMetadata?.isHidden || false),
+          placeholder: instance.placeholderOverride || 
+            (libraryQuestion.defaultMetadata?.placeholder || ""),
+          helperText: instance.helperTextOverride || 
+            (libraryQuestion.defaultMetadata?.helperText || ""),
           displayOrder: instance.displayOrder,
           // Intelligently merge metadata
-          metadata: mergeMetadata(libraryQuestion.metadata, instance.metadataOverrides),
+          metadata: mergeMetadata(libraryQuestion.defaultMetadata, instance.metadataOverrides),
           // Intelligently merge options
-          options: mergeOptions(libraryQuestion.options, instance.optionsOverrides)
+          options: mergeOptions(libraryQuestion.defaultOptions, instance.optionsOverrides)
         };
         
         // Add matrix structure if applicable
         if (libraryQuestion.questionType === 'matrix') {
-          // Apply any row/column overrides if they exist in metadataOverrides or optionsOverrides
+          // Get any row/column overrides from instance
+          const rowOverrides = instance.optionsOverrides?.matrixRows || {};
+          const columnOverrides = instance.optionsOverrides?.matrixColumns || {};
+          
+          // Build the matrix structure with overrides applied
           resolvedQuestion.matrixStructure = {
             rows: matrixRows.map(row => ({
               id: row.id,
               key: row.rowKey,
-              label: row.rowLabel,
-              displayOrder: row.displayOrder
+              label: rowOverrides[row.rowKey]?.label || row.label,
+              price: rowOverrides[row.rowKey]?.price || row.price,
+              displayOrder: row.rowOrder,
+              metadata: mergeMetadata(row.defaultMetadata, rowOverrides[row.rowKey]?.metadata)
             })),
             columns: matrixColumns.map(col => ({
               id: col.id,
               key: col.columnKey,
-              label: col.columnLabel,
-              displayOrder: col.displayOrder
+              header: columnOverrides[col.columnKey]?.header || col.header,
+              cellInputType: columnOverrides[col.columnKey]?.cellInputType || col.cellInputType,
+              displayOrder: col.columnOrder,
+              metadata: mergeMetadata(col.defaultMetadata, columnOverrides[col.columnKey]?.metadata)
             }))
           };
         }
@@ -996,17 +1016,53 @@ router.get("/forms/:formKey/versions/:versionNumber/render", async (req, res) =>
         .from(formSchema.formRuleTargets)
         .where(eq(formSchema.formRuleTargets.ruleId, rule.id));
       
+      // Get the question instance for this rule
+      const [triggerQuestion] = await db.select()
+        .from(formSchema.formPageQuestions)
+        .where(eq(formSchema.formPageQuestions.id, rule.triggerFormPageQuestionId));
+      
+      // Get the page for this trigger question to create a questionKey
+      const [triggerPage] = triggerQuestion ? await db.select()
+        .from(formSchema.formPages)
+        .where(eq(formSchema.formPages.id, triggerQuestion.formPageId)) : [null];
+        
+      const questionKey = triggerQuestion && triggerPage ? 
+        `${triggerPage.id}_${triggerQuestion.id}` : null;
+      
       return {
         ruleId: rule.id,
+        questionKey: questionKey, // Add the resolved questionKey for client-side use
         triggerFormPageQuestionId: rule.triggerFormPageQuestionId,
         conditionType: rule.conditionType,
         conditionValue: rule.conditionValue,
         actionType: rule.actionType,
         ruleDescription: rule.ruleDescription,
         executionOrder: rule.executionOrder,
-        targets: targets.map(target => ({
-          targetId: target.targetId,
-          targetType: target.targetType
+        targets: await Promise.all(targets.map(async target => {
+          let targetKey = null;
+          
+          if (target.targetType === 'question') {
+            // Resolve the target question key
+            const [targetQuestion] = await db.select()
+              .from(formSchema.formPageQuestions)
+              .where(eq(formSchema.formPageQuestions.id, target.targetId));
+              
+            if (targetQuestion) {
+              const [targetPage] = await db.select()
+                .from(formSchema.formPages)
+                .where(eq(formSchema.formPages.id, targetQuestion.formPageId));
+                
+              if (targetPage) {
+                targetKey = `${targetPage.id}_${targetQuestion.id}`;
+              }
+            }
+          }
+          
+          return {
+            targetId: target.targetId,
+            targetType: target.targetType,
+            targetKey: targetKey // Include resolved key for client-side use
+          };
         }))
       };
     }));
@@ -1018,6 +1074,7 @@ router.get("/forms/:formKey/versions/:versionNumber/render", async (req, res) =>
       formTitle: form.formTitle,
       description: form.description,
       version: form.version,
+      status: form.status,
       pages: resolvedPages,
       rules: rulesWithTargets
     };
@@ -1025,7 +1082,7 @@ router.get("/forms/:formKey/versions/:versionNumber/render", async (req, res) =>
     return res.json(formDefinition);
   } catch (error) {
     console.error("Error getting resolved form definition:", error);
-    return res.status(500).json({ message: "Failed to get form definition" });
+    return res.status(500).json({ message: "Failed to get form definition", error: error.message });
   }
 });
 
@@ -1035,7 +1092,32 @@ function mergeMetadata(baseMetadata, overrides) {
   if (!overrides) return baseMetadata;
   
   // Deep merge the metadata objects
-  return { ...baseMetadata, ...overrides };
+  // Handle nested objects properly
+  const result = { ...baseMetadata };
+  
+  for (const key in overrides) {
+    // If both base and override have an object at this key, merge them recursively
+    if (
+      typeof overrides[key] === 'object' && 
+      overrides[key] !== null &&
+      !Array.isArray(overrides[key]) && 
+      typeof result[key] === 'object' && 
+      result[key] !== null &&
+      !Array.isArray(result[key])
+    ) {
+      result[key] = mergeMetadata(result[key], overrides[key]);
+    }
+    // If override has an array that should replace the base array
+    else if (Array.isArray(overrides[key])) {
+      result[key] = [...overrides[key]];
+    }
+    // Otherwise just replace the value
+    else {
+      result[key] = overrides[key];
+    }
+  }
+  
+  return result;
 }
 
 // Helper function to merge options
@@ -1043,8 +1125,50 @@ function mergeOptions(baseOptions, overrides) {
   if (!baseOptions) return overrides || {};
   if (!overrides) return baseOptions;
   
-  // Deep merge the options objects
-  return { ...baseOptions, ...overrides };
+  // If options is an array of option items, then handle accordingly
+  if (Array.isArray(baseOptions)) {
+    // If overrides is also an array, it completely replaces the base options
+    if (Array.isArray(overrides)) {
+      return overrides;
+    }
+    
+    // If overrides is an object with specific modifications
+    if (typeof overrides === 'object' && overrides !== null) {
+      if (overrides.include) {
+        // Filter to only include options from include array
+        return baseOptions.filter(opt => overrides.include.includes(opt.key));
+      } else if (overrides.exclude) {
+        // Filter to exclude options from exclude array
+        return baseOptions.filter(opt => !overrides.exclude.includes(opt.key));
+      } else if (overrides.modify) {
+        // Apply modifications to specific options
+        return baseOptions.map(opt => {
+          const modification = overrides.modify.find(m => m.key === opt.key);
+          if (modification) {
+            return { ...opt, ...modification };
+          }
+          return opt;
+        });
+      } else if (overrides.reorder) {
+        // Reorder options based on the specified order
+        const reorderedOptions = [...baseOptions];
+        reorderedOptions.sort((a, b) => {
+          const aIndex = overrides.reorder.indexOf(a.key);
+          const bIndex = overrides.reorder.indexOf(b.key);
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        });
+        return reorderedOptions;
+      }
+    }
+    
+    // Default, return base options unchanged
+    return baseOptions;
+  }
+  
+  // If options is an object with properties (e.g., for matrix questions), do a deep merge
+  return mergeMetadata(baseOptions, overrides);
 }
 
 // Helper function to validate a single answer based on question type and rules
