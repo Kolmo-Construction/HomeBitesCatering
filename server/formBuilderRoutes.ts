@@ -703,6 +703,166 @@ router.post("/pages/:pageId/questions/reorder", async (req, res) => {
   }
 });
 
+// --- FORM SUBMISSION API ---
+
+// Submit a completed form
+router.post("/forms/:formKey/versions/:versionNumber/submit", async (req, res) => {
+  try {
+    const formKey = req.params.formKey;
+    const versionNumber = parseInt(req.params.versionNumber);
+    const { clientId, opportunityId, rawLeadId, answers } = req.body;
+    
+    if (isNaN(versionNumber)) {
+      return res.status(400).json({ message: "Invalid version number" });
+    }
+    
+    if (!answers || typeof answers !== 'object') {
+      return res.status(400).json({ message: "Invalid answers format" });
+    }
+    
+    // Get the form definition for validation
+    const [form] = await db.select()
+      .from(formSchema.forms)
+      .where(and(
+        eq(formSchema.forms.formKey, formKey),
+        eq(formSchema.forms.version, versionNumber)
+      ));
+    
+    if (!form) {
+      return res.status(404).json({ message: "Form not found" });
+    }
+    
+    // 1. Get the resolved form questions (similar to the render endpoint)
+    // We need this to validate the submitted answers
+    const pages = await db.select()
+      .from(formSchema.formPages)
+      .where(eq(formSchema.formPages.formId, form.id))
+      .orderBy(formSchema.formPages.pageOrder);
+    
+    // Collect all questions from all pages
+    const resolvedQuestions = [];
+    
+    for (const page of pages) {
+      const questionInstances = await db.select()
+        .from(formSchema.formPageQuestions)
+        .where(eq(formSchema.formPageQuestions.formPageId, page.id))
+        .orderBy(formSchema.formPageQuestions.displayOrder);
+      
+      for (const instance of questionInstances) {
+        const [libraryQuestion] = await db.select()
+          .from(formSchema.questionLibrary)
+          .where(eq(formSchema.questionLibrary.id, instance.libraryQuestionId));
+        
+        if (!libraryQuestion) {
+          console.error(`Library question ${instance.libraryQuestionId} not found for instance ${instance.id}`);
+          continue;
+        }
+        
+        // Create a resolved question object
+        const resolvedQuestion = {
+          questionInstanceId: instance.id,
+          libraryQuestionId: libraryQuestion.id,
+          questionType: libraryQuestion.questionType,
+          displayText: instance.displayTextOverride || libraryQuestion.defaultText,
+          isRequired: instance.isRequiredOverride !== null ? instance.isRequiredOverride : libraryQuestion.isRequired,
+          isHidden: instance.isHiddenOverride !== null ? instance.isHiddenOverride : libraryQuestion.isHidden,
+          placeholder: instance.placeholderOverride || libraryQuestion.placeholder,
+          helperText: instance.helperTextOverride || libraryQuestion.helperText,
+          metadata: mergeMetadata(libraryQuestion.metadata, instance.metadataOverrides),
+          options: mergeOptions(libraryQuestion.options, instance.optionsOverrides)
+        };
+        
+        if (libraryQuestion.questionType === 'matrix') {
+          // Get matrix rows and columns for validation
+          const matrixRows = await db.select()
+            .from(formSchema.libraryMatrixRows)
+            .where(eq(formSchema.libraryMatrixRows.questionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixRows.displayOrder);
+          
+          const matrixColumns = await db.select()
+            .from(formSchema.libraryMatrixColumns)
+            .where(eq(formSchema.libraryMatrixColumns.questionId, libraryQuestion.id))
+            .orderBy(formSchema.libraryMatrixColumns.displayOrder);
+          
+          resolvedQuestion.matrixRows = matrixRows;
+          resolvedQuestion.matrixColumns = matrixColumns;
+        }
+        
+        resolvedQuestions.push(resolvedQuestion);
+      }
+    }
+    
+    // 2. Validate the submitted answers
+    const validationErrors = {};
+    
+    for (const question of resolvedQuestions) {
+      const questionId = question.questionInstanceId.toString();
+      const answer = answers[questionId];
+      
+      // Validate this answer
+      const error = validateAnswer(answer, question);
+      
+      if (error) {
+        validationErrors[questionId] = error;
+      }
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: validationErrors
+      });
+    }
+    
+    // 3. Store the submission in a transaction
+    const result = await db.transaction(async (tx) => {
+      // Create form submission record
+      const [submission] = await tx.insert(formSchema.formSubmissions)
+        .values({
+          formId: form.id,
+          formVersion: versionNumber,
+          clientId: clientId || null,
+          opportunityId: opportunityId || null,
+          rawLeadId: rawLeadId || null,
+          status: "completed",
+          submittedAt: new Date()
+        })
+        .returning();
+      
+      // Create answer records for each question
+      const answerInserts = [];
+      
+      for (const [questionIdStr, answerValue] of Object.entries(answers)) {
+        const questionId = parseInt(questionIdStr);
+        if (isNaN(questionId)) continue;
+        
+        answerInserts.push({
+          formSubmissionId: submission.id,
+          formPageQuestionId: questionId,
+          answerValue: answerValue,
+          answeredAt: new Date()
+        });
+      }
+      
+      if (answerInserts.length > 0) {
+        await tx.insert(formSchema.formSubmissionAnswers).values(answerInserts);
+      }
+      
+      return submission;
+    });
+    
+    return res.status(201).json({
+      message: "Form submitted successfully",
+      submissionId: result.id,
+      submission: result
+    });
+    
+  } catch (error) {
+    console.error("Error submitting form:", error);
+    return res.status(500).json({ message: "Failed to submit form" });
+  }
+});
+
 // --- RESOLVED FORM DEFINITION API ---
 
 // Get a complete resolved form definition for rendering
@@ -885,6 +1045,107 @@ function mergeOptions(baseOptions, overrides) {
   
   // Deep merge the options objects
   return { ...baseOptions, ...overrides };
+}
+
+// Helper function to validate a single answer based on question type and rules
+function validateAnswer(answer, question) {
+  if (!answer && question.isRequired) {
+    return "This field is required";
+  }
+  
+  // Skip further validation if answer is empty and not required
+  if (!answer && !question.isRequired) {
+    return null;
+  }
+  
+  const type = question.questionType;
+  const metadata = question.metadata || {};
+  
+  switch (type) {
+    case 'email':
+      // Simple email validation
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answer)) {
+        return "Please enter a valid email address";
+      }
+      break;
+      
+    case 'phone':
+      // Basic phone validation (adjust based on your needs)
+      if (!/^[0-9+\-() ]{7,20}$/.test(answer)) {
+        return "Please enter a valid phone number";
+      }
+      break;
+      
+    case 'number':
+      const num = Number(answer);
+      if (isNaN(num)) {
+        return "Please enter a valid number";
+      }
+      if (metadata.min !== undefined && num < metadata.min) {
+        return `Value must be at least ${metadata.min}`;
+      }
+      if (metadata.max !== undefined && num > metadata.max) {
+        return `Value must be no more than ${metadata.max}`;
+      }
+      break;
+      
+    case 'textbox':
+    case 'textarea':
+      if (metadata.minLength && answer.length < metadata.minLength) {
+        return `Please enter at least ${metadata.minLength} characters`;
+      }
+      if (metadata.maxLength && answer.length > metadata.maxLength) {
+        return `Please enter no more than ${metadata.maxLength} characters`;
+      }
+      break;
+      
+    case 'select':
+    case 'radio':
+      // Validate that selected option is in available options
+      if (question.options && !question.options.some(opt => opt.value === answer)) {
+        return "Please select a valid option";
+      }
+      break;
+      
+    case 'checkbox':
+      // For checkboxes, answer should be an array
+      if (!Array.isArray(answer)) {
+        return "Invalid checkbox selection format";
+      }
+      
+      // Check if all selected values are valid options
+      if (question.options && answer.some(val => !question.options.some(opt => opt.value === val))) {
+        return "One or more selected options are invalid";
+      }
+      
+      // Check min/max selected items if specified
+      if (metadata.minSelected && answer.length < metadata.minSelected) {
+        return `Please select at least ${metadata.minSelected} options`;
+      }
+      if (metadata.maxSelected && answer.length > metadata.maxSelected) {
+        return `Please select no more than ${metadata.maxSelected} options`;
+      }
+      break;
+      
+    case 'datetime':
+      // Basic date validation
+      const date = new Date(answer);
+      if (date.toString() === 'Invalid Date') {
+        return "Please enter a valid date";
+      }
+      break;
+      
+    case 'matrix':
+      // Matrix answers should be objects with row_key x column_key format
+      if (typeof answer !== 'object' || answer === null) {
+        return "Invalid matrix answer format";
+      }
+      
+      // Could add more specific matrix validation here
+      break;
+  }
+  
+  return null; // No validation errors
 }
 
 // --- FORM RULES & TARGETS API ---

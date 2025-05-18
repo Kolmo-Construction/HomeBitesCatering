@@ -1,0 +1,45 @@
+Objective: Create a GET endpoint that assembles and returns the complete structure of a specific form version, fully resolved and ready for the client-side rendering engine to display to a user.
+Endpoint Signature (Example):
+GET /api/form-builder/forms/:formKey/versions/:versionNumber/render
+Or, if using IDs: GET /api/form-builder/forms/:formId/render (you'll need a strategy for how this interacts with the formVersion if multiple published versions could exist, perhaps it defaults to the latest published, or version is a query parameter).
+Key Backend Logic (using your form-schema (2).ts tables):
+Identify Form & Version:
+Receive formKey and versionNumber (or formId).
+Query the forms table to find the specific form version. Ensure it has a status of 'published' (or allow 'testing'/'draft' if this endpoint is also used for admin preview). If not found or not accessible, return a 404 or 403 error.
+Fetch Pages:
+Query form_pages for all pages linked to the forms.id, ordered by pageOrder.
+Fetch and Resolve Question Instances (Loop for each page):
+Query form_page_questions for all question instances on that form_pages.id, ordered by displayOrder.
+For each form_page_questions record:
+Fetch the base question details from question_library using libraryQuestionId. This includes defaultText, questionType, defaultMetadata, defaultOptions.
+If question_library.questionType is 'matrix':
+Fetch all associated libraryMatrixRows (ordered by rowOrder).
+Fetch all associated libraryMatrixColumns (ordered by columnOrder).
+Merge/Override Logic:
+displayText: Use form_page_questions.displayTextOverride if present, otherwise use question_library.defaultText.
+isRequired: Use form_page_questions.isRequiredOverride if present and not null, otherwise consider a default (e.g., from question_library.defaultMetadata if you store it there, or assume false).
+isHidden: Use form_page_questions.isHiddenOverride if present and not null.
+placeholder: Use form_page_questions.placeholderOverride if present, otherwise check question_library.defaultMetadata.placeholder.
+helperText: Use form_page_questions.helperTextOverride if present, otherwise check question_library.defaultMetadata.helperText.
+metadata: Start with question_library.defaultMetadata, then intelligently merge form_page_questions.metadataOverrides on top. The specifics of the merge (deep merge vs. shallow) depend on your needs.
+options (for select, radio, checkbox): Start with question_library.defaultOptions. Then, if form_page_questions.optionsOverrides exists, use it to filter, reorder, or modify these options for this specific instance.
+Matrix Structure for Client: For matrix questions, assemble a clear structure for the client that includes the final list of rows (from libraryMatrixRows, potentially filtered/reordered by optionsOverrides or metadataOverrides on the form_page_questions instance) and columns (from libraryMatrixColumns, also potentially filtered/customized).
+The goal is to produce a "resolved question instance" object containing all properties the frontend needs for rendering and initial validation hints.
+Fetch Form Rules:
+Query form_rules for all rules associated with the forms.id.
+For each rule, query form_rule_targets to get its list of targets (targetType and targetId).
+Assemble and Return JSON Response:
+Construct a comprehensive JSON object that includes:
+Form details (id, formKey, formTitle, version).
+An ordered array of pages.
+Each page object containing an ordered array of its resolved question_instances.
+An array of rules, with each rule containing its trigger information and an array of its targets.
+Implementation Considerations for the "Render Form" API:
+
+Drizzle Queries: You'll use Drizzle's query builder. For fetching related data (like library questions for each instance, or rules and targets), you can use:
+Multiple targeted queries within loops (often easier to manage the merge logic in code).
+Drizzle's relational queries if your relations are fully set up and your setReferenceTables logic is correctly invoked for cross-schema relations. For complex merges like applying overrides, doing it in your application code after fetching the base data and instance data might be more straightforward.
+Performance: For very large forms, consider the number of queries. You might optimize later if needed, but clarity and correctness are key first.
+Transaction: This is a read-only operation, so a transaction isn't strictly necessary unless you group multiple selects that must be consistent (unlikely here).
+Error Handling: Handle cases like form not found, version not found, etc.
+After the "Render Form" API is working and tested, the final backend API for Phase 1 is:
