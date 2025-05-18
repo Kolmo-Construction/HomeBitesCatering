@@ -425,19 +425,37 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   // Handle adding a new option for choice-based questions
   const handleAddOption = () => {
+    // Only allow adding if we have active overrides
+    if (!form.getValues("optionsOverrides")?.length) {
+      return;
+    }
+    
     const newOption = {
       label: '',
       value: `option_${options.length + 1}`,
       isSelected: false
     };
-    setOptions([...options, newOption]);
+    
+    const newOptions = [...options, newOption];
+    setOptions(newOptions);
+    
+    // Update form value
+    form.setValue("optionsOverrides", newOptions);
   };
 
   // Handle removing an option
   const handleRemoveOption = (index) => {
+    // Only allow removing if we have active overrides
+    if (!form.getValues("optionsOverrides")?.length) {
+      return;
+    }
+    
     const newOptions = [...options];
     newOptions.splice(index, 1);
     setOptions(newOptions);
+    
+    // Update form value
+    form.setValue("optionsOverrides", newOptions);
   };
 
   return (
@@ -768,9 +786,15 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                           const newOptions = [...options];
                           newOptions[index].value = e.target.value;
                           setOptions(newOptions);
+                          
+                          // Update form value if options overrides are active
+                          if (form.getValues("optionsOverrides")?.length > 0) {
+                            form.setValue("optionsOverrides", newOptions);
+                          }
                         }}
                         className="mb-1"
                         placeholder="option_value"
+                        disabled={!form.getValues("optionsOverrides")?.length}
                       />
                     </div>
                     <Button 
@@ -779,6 +803,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                       size="icon" 
                       onClick={() => handleRemoveOption(index)}
                       className="text-red-500"
+                      disabled={!form.getValues("optionsOverrides")?.length}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -794,6 +819,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                       size="sm" 
                       onClick={handleAddOption}
                       className="mt-2"
+                      disabled={!form.getValues("optionsOverrides")?.length}
                     >
                       <PlusCircle className="h-4 w-4 mr-1" />
                       Add First Option
