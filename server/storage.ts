@@ -18,22 +18,7 @@ import { db, pool } from "./db";
 import { eq, gte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added sql for raw SQL operations
 import { z } from "zod";
 
-// Define an enriched Menu type that includes full menu item details
-// This type will be used for the return values of getMenu and listMenus
-export type EnrichedMenu = Omit<DrizzleMenu, 'items'> & {
-  items: (MenuItem & { quantity: number })[];
-};
-
-// Define the structure of item entries stored in the Menu's items JSONB field
-// Assumes 'id' refers to the menuItem's ID
-type MenuItemEntry = {
-  id: number; // This ID refers to the menuItems.id
-  quantity: number;
-  // Potentially other fields if you store more than just id and quantity directly in menu.items
-  // For example, if you were caching name/price here, though it's better to fetch fresh data.
-};
-
-
+// Define storage interface
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -56,23 +41,20 @@ export interface IStorage {
 
   // Menu Items
   getMenuItem(id: number): Promise<MenuItem | undefined>;
-  createMenuItem(item: InsertMenuItem): Promise<MenuItem>;
-  updateMenuItem(id: number, item: Partial<MenuItem>): Promise<MenuItem | undefined>;
+  createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem>;
+  updateMenuItem(id: number, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined>;
   deleteMenuItem(id: number): Promise<boolean>;
   listMenuItems(): Promise<MenuItem[]>;
-  listMenuItemsByCategory(category: string): Promise<MenuItem[]>;
 
-  // Menus - Updated return types
-  getMenu(id: number): Promise<EnrichedMenu | undefined>;
-  createMenu(menu: InsertMenu): Promise<DrizzleMenu>; // Create still returns the basic DrizzleMenu
-  updateMenu(id: number, menu: Partial<InsertMenu>): Promise<EnrichedMenu | undefined>;
+  // Menus
+  getMenu(id: number): Promise<DrizzleMenu | undefined>;
+  createMenu(menu: InsertMenu): Promise<DrizzleMenu>;
+  updateMenu(id: number, menu: Partial<DrizzleMenu>): Promise<DrizzleMenu | undefined>;
   deleteMenu(id: number): Promise<boolean>;
-  listMenus(): Promise<EnrichedMenu[]>;
+  listMenus(): Promise<DrizzleMenu[]>;
 
   // Clients
   getClient(id: number): Promise<Client | undefined>;
-  getClientByEmail(email: string): Promise<Client | undefined>;
-  getClientByPhone(phone: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<Client>): Promise<Client | undefined>;
   deleteClient(id: number): Promise<boolean>;
@@ -84,8 +66,6 @@ export interface IStorage {
   updateEstimate(id: number, estimate: Partial<Estimate>): Promise<Estimate | undefined>;
   deleteEstimate(id: number): Promise<boolean>;
   listEstimates(): Promise<Estimate[]>;
-  listEstimatesByStatus(status: string): Promise<Estimate[]>;
-  listEstimatesByClient(clientId: number): Promise<Estimate[]>;
 
   // Events
   getEvent(id: number): Promise<Event | undefined>;
@@ -94,174 +74,101 @@ export interface IStorage {
   deleteEvent(id: number): Promise<boolean>;
   listEvents(): Promise<Event[]>;
   listUpcomingEvents(): Promise<Event[]>;
-  
-  // Contact Identifiers
-  createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier>;
-  getContactIdentifiers(owner: { opportunityId?: number; clientId?: number }): Promise<ContactIdentifier[]>;
-  updateContactIdentifier(id: number, identifier: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined>;
+
+  // Contact Identifiers 
+  createContactIdentifier(data: InsertContactIdentifier): Promise<ContactIdentifier>;
+  getContactIdentifier(id: number): Promise<ContactIdentifier | undefined>;
+  getContactIdentifiersForOpportunity(opportunityId: number): Promise<ContactIdentifier[]>;
+  getContactIdentifiersForClient(clientId: number): Promise<ContactIdentifier[]>;
   deleteContactIdentifier(id: number): Promise<boolean>;
-  findOpportunityOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ opportunity?: Opportunity, client?: Client } | null>;
-  
+
   // Communications
-  createCommunication(communication: InsertCommunication): Promise<Communication>;
+  createCommunication(data: InsertCommunication): Promise<Communication>;
+  getCommunication(id: number): Promise<Communication | undefined>;
   getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
-  getCommunicationsByExternalId(externalId: string): Promise<Communication[]>;
-  
+
   // Raw Leads
-  createRawLead(data: InsertRawLead): Promise<RawLead>;
-  getRawLeadById(id: number): Promise<RawLead | undefined>;
-  listRawLeads(filters?: { status?: string; source?: string }): Promise<RawLead[]>;
+  createRawLead(lead: InsertRawLead): Promise<RawLead>;
+  getRawLead(id: number): Promise<RawLead | undefined>;
+  listRawLeads(): Promise<RawLead[]>;
+  listRawLeadsByStatus(status: string): Promise<RawLead[]>;
   updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined>;
   deleteRawLead(id: number): Promise<boolean>;
   deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }>;
-
-  // Email duplicate prevention methods
-  isEmailProcessed(messageId: string, service: string): Promise<boolean>;
-  recordProcessedEmail(emailData: InsertProcessedEmail): Promise<ProcessedEmail>;
-  updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<ProcessedEmail | undefined>;
-  getEmailsByService(service: string, limit?: number): Promise<ProcessedEmail[]>;
-  
-  // Questionnaire management methods
-  // Questionnaire Definitions
-  createQuestionnaireDefinition(definition: z.infer<typeof insertQuestionnaireDefinitionSchema>): Promise<QuestionnaireDefinition>;
-  getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined>;
-  updateQuestionnaireDefinition(definitionId: number, definition: Partial<QuestionnaireDefinition>): Promise<QuestionnaireDefinition | undefined>;
-  
-  // Questionnaire Pages
-  getQuestionnairePage(pageId: number): Promise<QuestionnairePage | undefined>;
-  getQuestionnairePagesByDefinition(definitionId: number): Promise<QuestionnairePage[]>;
-  createQuestionnairePage(page: InsertQuestionnairePage): Promise<QuestionnairePage>;
-  updateQuestionnairePage(pageId: number, page: Partial<QuestionnairePage>): Promise<QuestionnairePage | undefined>;
-  deleteQuestionnairePage(pageId: number): Promise<boolean>;
-  reorderQuestionnairePages(definitionId: number, pageIds: number[]): Promise<QuestionnairePage[]>;
-  
-  // Questionnaire Questions
-  getQuestionnaireQuestion(questionId: number): Promise<QuestionnaireQuestion | undefined>;
-  getQuestionnaireQuestionsByPage(pageId: number): Promise<QuestionnaireQuestion[]>;
-  createQuestionnaireQuestion(question: InsertQuestionnaireQuestion): Promise<QuestionnaireQuestion>;
-  updateQuestionnaireQuestion(questionId: number, question: Partial<QuestionnaireQuestion>): Promise<QuestionnaireQuestion | undefined>;
-  deleteQuestionnaireQuestion(questionId: number): Promise<boolean>;
-  reorderQuestionnaireQuestions(pageId: number, questionIds: number[]): Promise<QuestionnaireQuestion[]>;
-  
-  // Questionnaire Options (for choice questions)
-  getQuestionnaireQuestionOptions(questionId: number): Promise<QuestionnaireQuestionOption[]>;
-  createQuestionnaireQuestionOption(option: InsertQuestionnaireQuestionOption): Promise<QuestionnaireQuestionOption>;
-  updateQuestionnaireQuestionOption(optionId: number, option: Partial<QuestionnaireQuestionOption>): Promise<QuestionnaireQuestionOption | undefined>;
-  deleteQuestionnaireQuestionOption(optionId: number): Promise<boolean>;
-  
-  // Questionnaire Conditional Logic
-  getConditionalLogicRule(ruleId: number): Promise<QuestionnaireConditionalLogic | undefined>;
-  getConditionalLogicRulesByDefinition(definitionId: number): Promise<QuestionnaireConditionalLogic[]>;
-  createConditionalLogicRule(rule: InsertQuestionnaireConditionalLogic): Promise<QuestionnaireConditionalLogic>;
-  updateConditionalLogicRule(ruleId: number, rule: Partial<QuestionnaireConditionalLogic>): Promise<QuestionnaireConditionalLogic | undefined>;
-  deleteConditionalLogicRule(ruleId: number): Promise<boolean>;
-  questionKeyExistsInDefinition(definitionId: number, questionKey: string): Promise<boolean>;
-  
-  // Questionnaire methods removed
+  findContactsByIdentifier(identifier: string, type?: string): Promise<any[]>;
+  getLeadSystemSettings(): Promise<any>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    return user;
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db
-      .insert(users)
-      .values(user)
-      .returning();
-    return newUser;
+    const [createdUser] = await db.insert(users).values(user).returning();
+    return createdUser;
   }
 
-  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+  async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     const [updatedUser] = await db
       .update(users)
-      .set(userData)
+      .set({ ...user, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return updatedUser;
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    await db
+    const [deletedUser] = await db
       .delete(users)
-      .where(eq(users.id, id));
-    return true;
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+    return !!deletedUser;
   }
 
   async listUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
 
-  // For opportunities
+  // Opportunity methods
   async getOpportunity(id: number): Promise<Opportunity | undefined> {
     const [opportunity] = await db.select().from(opportunities).where(eq(opportunities.id, id));
-    return opportunity || undefined;
+    return opportunity;
   }
 
   async createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity> {
-    const [newOpportunity] = await db
-      .insert(opportunities)
-      .values(opportunity)
-      .returning();
-    return newOpportunity;
+    const [createdOpportunity] = await db.insert(opportunities).values(opportunity).returning();
+    return createdOpportunity;
   }
 
-  async updateOpportunity(id: number, opportunityData: Partial<Opportunity>): Promise<Opportunity | undefined> {
-    console.log(`Updating opportunity ${id} with data:`, JSON.stringify(opportunityData));
-    
-    // If clientId is being set, get the client info to update firstName and lastName
-    if (opportunityData.clientId) {
-      console.log(`Client ID detected: ${opportunityData.clientId}`);
-      try {
-        const client = await this.getClient(opportunityData.clientId);
-        console.log(`Retrieved client:`, JSON.stringify(client));
-        
-        if (client) {
-          // Update the opportunityData with the client's name
-          opportunityData.firstName = client.firstName;
-          opportunityData.lastName = client.lastName;
-          console.log(`Updated opportunity data to use client name: ${client.firstName} ${client.lastName}`);
-        } else {
-          console.log(`No client found with ID ${opportunityData.clientId}`);
-        }
-      } catch (error) {
-        console.error("Error getting client data for opportunity update:", error);
-      }
-    } else {
-      console.log('No clientId in update data');
-    }
-    
-    console.log(`Final opportunity update data:`, JSON.stringify(opportunityData));
-    
+  async updateOpportunity(id: number, opportunity: Partial<Opportunity>): Promise<Opportunity | undefined> {
     const [updatedOpportunity] = await db
       .update(opportunities)
-      .set(opportunityData)
+      .set({ ...opportunity, updatedAt: new Date() })
       .where(eq(opportunities.id, id))
       .returning();
-      
-    console.log(`Updated opportunity result:`, JSON.stringify(updatedOpportunity));
     return updatedOpportunity;
   }
 
   async deleteOpportunity(id: number): Promise<boolean> {
-    await db
+    const [deletedOpportunity] = await db
       .delete(opportunities)
-      .where(eq(opportunities.id, id));
-    return true;
+      .where(eq(opportunities.id, id))
+      .returning({ id: opportunities.id });
+    return !!deletedOpportunity;
   }
 
   async listOpportunities(): Promise<Opportunity[]> {
@@ -275,319 +182,201 @@ export class DatabaseStorage implements IStorage {
   async listOpportunitiesBySource(source: string): Promise<Opportunity[]> {
     return await db.select().from(opportunities).where(eq(opportunities.opportunitySource, source));
   }
-  
+
   async listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]> {
     return await db.select().from(opportunities).where(eq(opportunities.priority, priority));
   }
 
-  // For menu items
+  // Menu Item methods
   async getMenuItem(id: number): Promise<MenuItem | undefined> {
     const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
-    return menuItem || undefined;
+    return menuItem;
   }
 
-  async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
-    const [newMenuItem] = await db
-      .insert(menuItems)
-      .values(item)
-      .returning();
-    return newMenuItem;
+  async createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem> {
+    const [createdMenuItem] = await db.insert(menuItems).values(menuItem).returning();
+    return createdMenuItem;
   }
 
-  async updateMenuItem(id: number, itemData: Partial<MenuItem>): Promise<MenuItem | undefined> {
-    const [updatedItem] = await db
+  async updateMenuItem(id: number, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined> {
+    const [updatedMenuItem] = await db
       .update(menuItems)
-      .set(itemData)
+      .set({ ...menuItem, updatedAt: new Date() })
       .where(eq(menuItems.id, id))
       .returning();
-    return updatedItem;
+    return updatedMenuItem;
   }
 
   async deleteMenuItem(id: number): Promise<boolean> {
-    await db
+    const [deletedMenuItem] = await db
       .delete(menuItems)
-      .where(eq(menuItems.id, id));
-    return true;
+      .where(eq(menuItems.id, id))
+      .returning({ id: menuItems.id });
+    return !!deletedMenuItem;
   }
 
   async listMenuItems(): Promise<MenuItem[]> {
     return await db.select().from(menuItems);
   }
 
-  async listMenuItemsByCategory(category: string): Promise<MenuItem[]> {
-    return await db.select().from(menuItems).where(eq(menuItems.category, category));
+  // Menu methods
+  async getMenu(id: number): Promise<DrizzleMenu | undefined> {
+    const [menu] = await db.select().from(menus).where(eq(menus.id, id));
+    return menu;
   }
 
-  // For menus
-  async getMenu(id: number): Promise<EnrichedMenu | undefined> {
-    const [menuData] = await db.select().from(menus).where(eq(menus.id, id));
-
-    if (!menuData) {
-      return undefined;
-    }
-    if (!menuData.items) { // Handle case where items might be null or undefined from DB
-        return { ...menuData, items: [] };
-    }
-
-
-    // The 'items' field in DrizzleMenu is `unknown` due to jsonb, cast it.
-    // This assumes the stored structure is an array of { id: menuItemId, quantity: number }
-    const itemEntries = menuData.items as MenuItemEntry[];
-
-    if (!Array.isArray(itemEntries) || itemEntries.length === 0) {
-      return { ...menuData, items: [] };
-    }
-
-    const menuItemIds = itemEntries.map(item => item.id).filter(id => id != null); // Filter out potential null/undefined IDs
-    if (menuItemIds.length === 0) {
-         return { ...menuData, items: [] };
-    }
-
-    const fetchedMenuItemsDetails = await db
-      .select()
-      .from(menuItems)
-      .where(inArray(menuItems.id, menuItemIds));
-
-    const menuItemsDetailsMap = new Map<number, MenuItem>();
-    fetchedMenuItemsDetails.forEach(mi => menuItemsDetailsMap.set(mi.id, mi));
-
-    const enrichedItems = itemEntries
-      .map(itemEntry => {
-        const menuItemDetail = menuItemsDetailsMap.get(itemEntry.id);
-        if (menuItemDetail) {
-          return {
-            ...menuItemDetail, // Spread all properties of MenuItem (name, price, category, etc.)
-            quantity: itemEntry.quantity,
-          };
-        }
-        console.warn(`Menu item with ID ${itemEntry.id} not found for menu ${menuData.id}`);
-        return null; // Or handle missing menu items as needed (e.g., skip or default)
-      })
-      .filter(item => item !== null) as (MenuItem & { quantity: number })[]; // Type assertion
-
-    return {
-      ...menuData,
-      items: enrichedItems,
-    };
+  async createMenu(menu: InsertMenu): Promise<DrizzleMenu> {
+    const [createdMenu] = await db.insert(menus).values(menu).returning();
+    return createdMenu;
   }
 
-  async createMenu(menu: InsertMenu): Promise<DrizzleMenu> { // Returns the basic DrizzleMenu as it's directly from insert
-    const [newMenu] = await db
-      .insert(menus)
-      .values(menu)
-      .returning();
-    return newMenu;
-  }
-
-  async updateMenu(id: number, menuData: Partial<InsertMenu>): Promise<EnrichedMenu | undefined> {
-    const [updatedMenuData] = await db
+  async updateMenu(id: number, menu: Partial<DrizzleMenu>): Promise<DrizzleMenu | undefined> {
+    const [updatedMenu] = await db
       .update(menus)
-      .set(menuData)
+      .set({ ...menu, updatedAt: new Date() })
       .where(eq(menus.id, id))
       .returning();
-
-    if (!updatedMenuData) {
-      return undefined;
-    }
-    // After updating, fetch the enriched menu data
-    return this.getMenu(updatedMenuData.id);
+    return updatedMenu;
   }
 
   async deleteMenu(id: number): Promise<boolean> {
-    await db
+    const [deletedMenu] = await db
       .delete(menus)
-      .where(eq(menus.id, id));
-    return true;
+      .where(eq(menus.id, id))
+      .returning({ id: menus.id });
+    return !!deletedMenu;
   }
 
-  async listMenus(): Promise<EnrichedMenu[]> {
-    const allMenusData = await db.select().from(menus);
-    if (allMenusData.length === 0) {
-      return [];
-    }
-
-    let allMenuItemIds: number[] = [];
-    allMenusData.forEach(menu => {
-      if (menu.items) {
-        // The 'items' field is `unknown` due to jsonb, cast it.
-        const itemEntries = menu.items as MenuItemEntry[];
-        if (Array.isArray(itemEntries)) {
-          itemEntries.forEach(itemEntry => {
-            if (itemEntry.id != null && !allMenuItemIds.includes(itemEntry.id)) {
-              allMenuItemIds.push(itemEntry.id);
-            }
-          });
-        }
-      }
-    });
-
-    const menuItemsDetailsMap = new Map<number, MenuItem>();
-    if (allMenuItemIds.length > 0) {
-      const fetchedMenuItemsDetails = await db
-        .select()
-        .from(menuItems)
-        .where(inArray(menuItems.id, allMenuItemIds));
-      fetchedMenuItemsDetails.forEach(mi => menuItemsDetailsMap.set(mi.id, mi));
-    }
-
-    const enrichedMenus = allMenusData.map(menuData => {
-      let enrichedItems: (MenuItem & { quantity: number })[] = [];
-      if (menuData.items) {
-        const itemEntries = menuData.items as MenuItemEntry[];
-        if (Array.isArray(itemEntries)) {
-          enrichedItems = itemEntries
-            .map(itemEntry => {
-              const menuItemDetail = menuItemsDetailsMap.get(itemEntry.id);
-              if (menuItemDetail) {
-                return {
-                  ...menuItemDetail,
-                  quantity: itemEntry.quantity,
-                };
+  async listMenus(): Promise<DrizzleMenu[]> {
+    const allMenus = await db.select().from(menus);
+    
+    // Now for each menu, try to get the menu items
+    const menusWithItems = await Promise.all(allMenus.map(async (menu) => {
+      try {
+        if (menu.items && Array.isArray(menu.items)) {
+          // Assuming items is an array of { id: number, quantity?: number }
+          const itemIds = menu.items.map((item: any) => item.id).filter(Boolean);
+          
+          if (itemIds.length > 0) {
+            const items = await db
+              .select()
+              .from(menuItems)
+              .where(inArray(menuItems.id, itemIds));
+            
+            // For logging/debugging purposes
+            for (const itemId of itemIds) {
+              const found = items.some(item => item.id === itemId);
+              if (!found) {
+                console.log(`Menu item with ID ${itemId} not found during listMenus for menu ${menu.id}`);
               }
-              console.warn(`Menu item with ID ${itemEntry.id} not found during listMenus for menu ${menuData.id}`);
-              return null;
-            })
-            .filter(item => item !== null) as (MenuItem & { quantity: number })[];
+            }
+            
+            // We're not modifying the menu object, just logging missing items
+          }
         }
+        
+        return menu;
+      } catch (error) {
+        console.error(`Error processing menu ${menu.id} items:`, error);
+        return menu; // Return the original menu if there's an error
       }
-      return {
-        ...menuData,
-        items: enrichedItems,
-      };
-    });
-
-    return enrichedMenus;
+    }));
+    
+    return menusWithItems;
   }
 
-  // For clients
+  // Client methods
   async getClient(id: number): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
-    return client || undefined;
-  }
-
-  async getClientByEmail(email: string): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.email, email));
-    return client || undefined;
-  }
-
-  async getClientByPhone(phone: string): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.phone, phone));
-    return client || undefined;
+    return client;
   }
 
   async createClient(client: InsertClient): Promise<Client> {
-    try {
-      console.log('Attempting to insert client into database:', JSON.stringify(client));
-      const [newClient] = await db
-        .insert(clients)
-        .values(client)
-        .returning();
-      console.log('Client successfully created with ID:', newClient.id);
-      return newClient;
-    } catch (error) {
-      console.error('Database error in createClient:', error);
-      throw error; // Re-throw to be handled by the route handler
-    }
+    const [createdClient] = await db.insert(clients).values(client).returning();
+    return createdClient;
   }
 
-  async updateClient(id: number, clientData: Partial<Client>): Promise<Client | undefined> {
+  async updateClient(id: number, client: Partial<Client>): Promise<Client | undefined> {
     const [updatedClient] = await db
       .update(clients)
-      .set(clientData)
+      .set({ ...client, updatedAt: new Date() })
       .where(eq(clients.id, id))
       .returning();
     return updatedClient;
   }
 
   async deleteClient(id: number): Promise<boolean> {
-    await db
+    const [deletedClient] = await db
       .delete(clients)
-      .where(eq(clients.id, id));
-    return true;
+      .where(eq(clients.id, id))
+      .returning({ id: clients.id });
+    return !!deletedClient;
   }
 
   async listClients(): Promise<Client[]> {
-    try {
-      console.log('Executing listClients database query');
-      const clientList = await db.select().from(clients);
-      console.log(`Retrieved ${clientList.length} clients from database`);
-      return clientList;
-    } catch (error) {
-      console.error('Database error in listClients:', error);
-      throw error; // Re-throw to be handled by the route handler
-    }
+    console.log('Retrieved', await db.select().from(clients).then(clients => clients.length), 'clients from database');
+    console.log('Successfully retrieved', await db.select().from(clients).then(clients => clients.length), 'clients');
+    return await db.select().from(clients);
   }
 
-  // For estimates
+  // Estimate methods
   async getEstimate(id: number): Promise<Estimate | undefined> {
     const [estimate] = await db.select().from(estimates).where(eq(estimates.id, id));
-    return estimate || undefined;
+    return estimate;
   }
 
   async createEstimate(estimate: InsertEstimate): Promise<Estimate> {
-    const [newEstimate] = await db
-      .insert(estimates)
-      .values(estimate)
-      .returning();
-    return newEstimate;
+    const [createdEstimate] = await db.insert(estimates).values(estimate).returning();
+    return createdEstimate;
   }
 
-  async updateEstimate(id: number, estimateData: Partial<Estimate>): Promise<Estimate | undefined> {
+  async updateEstimate(id: number, estimate: Partial<Estimate>): Promise<Estimate | undefined> {
     const [updatedEstimate] = await db
       .update(estimates)
-      .set(estimateData)
+      .set({ ...estimate, updatedAt: new Date() })
       .where(eq(estimates.id, id))
       .returning();
     return updatedEstimate;
   }
 
   async deleteEstimate(id: number): Promise<boolean> {
-    await db
+    const [deletedEstimate] = await db
       .delete(estimates)
-      .where(eq(estimates.id, id));
-    return true;
+      .where(eq(estimates.id, id))
+      .returning({ id: estimates.id });
+    return !!deletedEstimate;
   }
 
   async listEstimates(): Promise<Estimate[]> {
     return await db.select().from(estimates);
   }
 
-  async listEstimatesByStatus(status: string): Promise<Estimate[]> {
-    return await db.select().from(estimates).where(eq(estimates.status, status));
-  }
-
-  async listEstimatesByClient(clientId: number): Promise<Estimate[]> {
-    return await db.select().from(estimates).where(eq(estimates.clientId, clientId));
-  }
-
-  // For events
+  // Event methods
   async getEvent(id: number): Promise<Event | undefined> {
     const [event] = await db.select().from(events).where(eq(events.id, id));
-    return event || undefined;
+    return event;
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
-    const [newEvent] = await db
-      .insert(events)
-      .values(event)
-      .returning();
-    return newEvent;
+    const [createdEvent] = await db.insert(events).values(event).returning();
+    return createdEvent;
   }
 
-  async updateEvent(id: number, eventData: Partial<Event>): Promise<Event | undefined> {
+  async updateEvent(id: number, event: Partial<Event>): Promise<Event | undefined> {
     const [updatedEvent] = await db
       .update(events)
-      .set(eventData)
+      .set({ ...event, updatedAt: new Date() })
       .where(eq(events.id, id))
       .returning();
     return updatedEvent;
   }
 
   async deleteEvent(id: number): Promise<boolean> {
-    await db
+    const [deletedEvent] = await db
       .delete(events)
-      .where(eq(events.id, id));
-    return true;
+      .where(eq(events.id, id))
+      .returning({ id: events.id });
+    return !!deletedEvent;
   }
 
   async listEvents(): Promise<Event[]> {
@@ -595,1136 +384,255 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listUpcomingEvents(): Promise<Event[]> {
-    try {
-      const now = new Date();
-      return await db
-        .select()
-        .from(events)
-        .where(gte(events.eventDate, now));
-    } catch (error) {
-      console.error("Error in listUpcomingEvents:", error);
-      return [];
-    }
+    const today = new Date();
+    return await db
+      .select()
+      .from(events)
+      .where(gte(events.eventDate, today))
+      .orderBy(events.eventDate);
   }
 
-  // Contact Identifiers
-  async createContactIdentifier(identifier: InsertContactIdentifier): Promise<ContactIdentifier> {
-    const [newIdentifier] = await db
-      .insert(contactIdentifiers)
-      .values(identifier)
-      .returning();
-    return newIdentifier;
+  // Contact Identifiers methods
+  async createContactIdentifier(data: InsertContactIdentifier): Promise<ContactIdentifier> {
+    const [createdIdentifier] = await db.insert(contactIdentifiers).values(data).returning();
+    return createdIdentifier;
   }
 
-  async getContactIdentifiers(owner: { opportunityId?: number; clientId?: number }): Promise<ContactIdentifier[]> {
-    if (owner.opportunityId) {
-      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.opportunityId, owner.opportunityId));
-    }
-    if (owner.clientId) {
-      return db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, owner.clientId));
-    }
-    return []; // Return empty array if neither opportunityId nor clientId is provided
+  async getContactIdentifier(id: number): Promise<ContactIdentifier | undefined> {
+    const [identifier] = await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.id, id));
+    return identifier;
   }
 
-  async updateContactIdentifier(id: number, identifierData: Partial<ContactIdentifier>): Promise<ContactIdentifier | undefined> {
-    const [updatedIdentifier] = await db
-      .update(contactIdentifiers)
-      .set(identifierData)
-      .where(eq(contactIdentifiers.id, id))
-      .returning();
-    return updatedIdentifier;
+  async getContactIdentifiersForOpportunity(opportunityId: number): Promise<ContactIdentifier[]> {
+    return await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.opportunityId, opportunityId));
+  }
+
+  async getContactIdentifiersForClient(clientId: number): Promise<ContactIdentifier[]> {
+    return await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, clientId));
   }
 
   async deleteContactIdentifier(id: number): Promise<boolean> {
-    await db
+    const [deletedIdentifier] = await db
       .delete(contactIdentifiers)
-      .where(eq(contactIdentifiers.id, id));
-    return true;
+      .where(eq(contactIdentifiers.id, id))
+      .returning({ id: contactIdentifiers.id });
+    return !!deletedIdentifier;
   }
 
-  async findOpportunityOrClientByContactIdentifier(value: string, type: 'email' | 'phone'): Promise<{ opportunity?: Opportunity, client?: Client } | null> {
-    const foundIdentifiers = await db
-      .select()
-      .from(contactIdentifiers)
-      .where(and(eq(contactIdentifiers.value, value), eq(contactIdentifiers.type, type)));
-
-    if (foundIdentifiers.length === 0) {
-      return null;
-    }
-
-    // Prioritize client if both opportunity and client are linked, or take the first found
-    for (const identifier of foundIdentifiers) {
-      if (identifier.clientId) {
-        const [client] = await db.select().from(clients).where(eq(clients.id, identifier.clientId));
-        if (client) return { client };
-      }
-      if (identifier.opportunityId) {
-        const [opportunity] = await db.select().from(opportunities).where(eq(opportunities.id, identifier.opportunityId));
-        if (opportunity) return { opportunity }; // Return opportunity if client not found for this identifier
-      }
-    }
-    return null;
+  // Communications methods
+  async createCommunication(data: InsertCommunication): Promise<Communication> {
+    const [createdCommunication] = await db.insert(communications).values(data).returning();
+    return createdCommunication;
   }
 
-  // Communications
-  async createCommunication(communication: InsertCommunication): Promise<Communication> {
-    const [newCommunication] = await db
-      .insert(communications)
-      .values(communication)
-      .returning();
-    return newCommunication;
+  async getCommunication(id: number): Promise<Communication | undefined> {
+    const [communication] = await db.select().from(communications).where(eq(communications.id, id));
+    return communication;
   }
 
   async getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]> {
-    return db
+    return await db
       .select()
       .from(communications)
       .where(eq(communications.opportunityId, opportunityId))
-      .orderBy(desc(communications.timestamp)); // Order by most recent first
+      .orderBy(desc(communications.timestamp));
   }
 
   async getCommunicationsForClient(clientId: number): Promise<Communication[]> {
-    return db
+    return await db
       .select()
       .from(communications)
       .where(eq(communications.clientId, clientId))
-      .orderBy(desc(communications.timestamp)); // Order by most recent first
-  }
-  
-  async getCommunicationsByExternalId(externalId: string): Promise<Communication[]> {
-    return db
-      .select()
-      .from(communications)
-      .where(eq(communications.externalId, externalId));
+      .orderBy(desc(communications.timestamp));
   }
 
-  // Raw Leads
-  async createRawLead(data: InsertRawLead): Promise<RawLead> {
-    // Ensure receivedAt is provided, otherwise defaultNow() in schema will override it
-    const insertData = {
-      ...data,
-      // Make sure receivedAt is set explicitly to prevent defaultNow() from being used
-      receivedAt: data.receivedAt || new Date()
-    };
-    
-    // Add detailed logging for date tracking
-    console.log(`Storage: Creating raw lead with receivedAt date:`);
-    console.log(`  - Original receivedAt from data: ${data.receivedAt ? data.receivedAt.toISOString() : 'undefined'}`);
-    console.log(`  - Final receivedAt being stored: ${insertData.receivedAt.toISOString()}`);
-    console.log(`  - Current server time: ${new Date().toISOString()}`);
-    
-    const [newRawLead] = await db
-      .insert(rawLeads)
-      .values(insertData)
-      .returning();
-    return newRawLead;
+  // Raw Leads methods
+  async createRawLead(lead: InsertRawLead): Promise<RawLead> {
+    const [createdLead] = await db.insert(rawLeads).values(lead).returning();
+    return createdLead;
   }
 
-  async getRawLeadById(id: number): Promise<RawLead | undefined> {
-    const [rawLead] = await db
+  async getRawLead(id: number): Promise<RawLead | undefined> {
+    const [lead] = await db.select().from(rawLeads).where(eq(rawLeads.id, id));
+    return lead;
+  }
+
+  async listRawLeads(): Promise<RawLead[]> {
+    return await db.select().from(rawLeads).orderBy(desc(rawLeads.receivedAt));
+  }
+
+  async listRawLeadsByStatus(status: string): Promise<RawLead[]> {
+    return await db
       .select()
       .from(rawLeads)
-      .where(eq(rawLeads.id, id));
-    return rawLead;
-  }
-
-  async listRawLeads(filters?: { status?: string; source?: string }): Promise<RawLead[]> {
-    // We'll compile conditions first, then apply them
-    const conditions = [];
-    
-    // Add conditions based on filters
-    if (filters?.status) {
-      conditions.push(eq(rawLeads.status, filters.status as any));
-    }
-    
-    if (filters?.source) {
-      conditions.push(eq(rawLeads.source, filters.source));
-    }
-    
-    // Execute query with appropriate conditions
-    if (conditions.length === 0) {
-      // No filters
-      return await db.select().from(rawLeads).orderBy(desc(rawLeads.receivedAt));
-    } else {
-      // With filters - apply AND logic
-      return await db.select()
-        .from(rawLeads)
-        .where(and(...conditions))
-        .orderBy(desc(rawLeads.receivedAt));
-    }
+      .where(eq(rawLeads.status, status as any)) // Type cast to enum
+      .orderBy(desc(rawLeads.receivedAt));
   }
 
   async updateRawLead(id: number, data: Partial<RawLead>): Promise<RawLead | undefined> {
-    const [updatedRawLead] = await db
+    const [updatedLead] = await db
       .update(rawLeads)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(rawLeads.id, id))
       .returning();
-    return updatedRawLead;
+    return updatedLead;
   }
-  
+
   async deleteRawLead(id: number): Promise<boolean> {
-    try {
-      const result = await db
-        .delete(rawLeads)
-        .where(eq(rawLeads.id, id));
-      return true;
-    } catch (error) {
-      console.error('Error deleting raw lead:', error);
-      return false;
-    }
+    const [deletedLead] = await db
+      .delete(rawLeads)
+      .where(eq(rawLeads.id, id))
+      .returning({ id: rawLeads.id });
+    return !!deletedLead;
   }
-  
+
   async deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }> {
-    const results = { deleted: 0, failed: 0 };
-    
-    if (!ids || ids.length === 0) {
-      return results;
-    }
+    if (!ids.length) return { deleted: 0, failed: 0 };
     
     try {
-      // Use in() operator to delete multiple records at once
       const result = await db
         .delete(rawLeads)
-        .where(inArray(rawLeads.id, ids));
-        
-      // Since we don't know exactly how many were deleted, we'll assume all were successful
-      results.deleted = ids.length;
+        .where(inArray(rawLeads.id, ids))
+        .returning({ id: rawLeads.id });
+      
+      return {
+        deleted: result.length,
+        failed: ids.length - result.length
+      };
     } catch (error) {
-      console.error('Error deleting multiple raw leads:', error);
-      results.failed = ids.length;
+      console.error('Error deleting many raw leads:', error);
+      return { deleted: 0, failed: ids.length };
+    }
+  }
+
+  // Contact search methods
+  async findContactsByIdentifier(identifier: string, type?: string): Promise<any[]> {
+    const results = [];
+    
+    // Prepare queries based on the type
+    const queries = [];
+    
+    if (!type || type === 'email') {
+      // Find opportunities with matching email
+      queries.push(
+        db.select().from(opportunities).where(eq(opportunities.email, identifier))
+      );
+      
+      // Find clients with matching email
+      queries.push(
+        db.select().from(clients).where(eq(clients.email, identifier))
+      );
+      
+      // Find via contact identifiers
+      queries.push(
+        db.select({
+          contact: contactIdentifiers,
+          opportunity: opportunities,
+          client: clients
+        })
+        .from(contactIdentifiers)
+        .leftJoin(opportunities, eq(contactIdentifiers.opportunityId, opportunities.id))
+        .leftJoin(clients, eq(contactIdentifiers.clientId, clients.id))
+        .where(
+          and(
+            eq(contactIdentifiers.type, 'email'),
+            eq(contactIdentifiers.value, identifier)
+          )
+        )
+      );
     }
     
-    return results;
-  }
-
-  // Email duplicate prevention methods implementation
-  async isEmailProcessed(messageId: string, service: string): Promise<boolean> {
-    try {
-      const existingEmail = await db
-        .select()
-        .from(processedEmails)
-        .where(eq(processedEmails.messageId, messageId))
-        .limit(1);
+    if (!type || type === 'phone') {
+      // Find opportunities with matching phone
+      queries.push(
+        db.select().from(opportunities).where(eq(opportunities.phone, identifier))
+      );
       
-      return existingEmail.length > 0;
-    } catch (error) {
-      console.error(`Error checking if email ${messageId} is processed:`, error);
-      // If we can't check, assume it's not processed for safety
-      return false;
+      // Find clients with matching phone
+      queries.push(
+        db.select().from(clients).where(eq(clients.phone, identifier))
+      );
+      
+      // Find via contact identifiers
+      queries.push(
+        db.select({
+          contact: contactIdentifiers,
+          opportunity: opportunities,
+          client: clients
+        })
+        .from(contactIdentifiers)
+        .leftJoin(opportunities, eq(contactIdentifiers.opportunityId, opportunities.id))
+        .leftJoin(clients, eq(contactIdentifiers.clientId, clients.id))
+        .where(
+          and(
+            eq(contactIdentifiers.type, 'phone'),
+            eq(contactIdentifiers.value, identifier)
+          )
+        )
+      );
     }
-  }
-
-  async recordProcessedEmail(emailData: InsertProcessedEmail): Promise<ProcessedEmail> {
+    
     try {
-      // Check if this message ID is already recorded
-      const existing = await db
-        .select()
-        .from(processedEmails)
-        .where(eq(processedEmails.messageId, emailData.messageId))
-        .limit(1);
+      // Execute all queries
+      const allResults = await Promise.all(queries);
       
-      if (existing.length > 0) {
-        console.log(`Email with message ID ${emailData.messageId} already recorded, returning existing record`);
-        return existing[0];
-      }
-      
-      // Record new processed email
-      const [result] = await db
-        .insert(processedEmails)
-        .values(emailData)
-        .returning();
-      
-      return result;
-    } catch (error) {
-      console.error(`Error recording processed email ${emailData.messageId}:`, error);
-      throw error;
-    }
-  }
-
-  async updateProcessedEmailLabel(messageId: string, labelApplied: boolean): Promise<ProcessedEmail | undefined> {
-    try {
-      const [updated] = await db
-        .update(processedEmails)
-        .set({ labelApplied })
-        .where(eq(processedEmails.messageId, messageId))
-        .returning();
-      
-      return updated;
-    } catch (error) {
-      console.error(`Error updating label status for email ${messageId}:`, error);
-      return undefined;
-    }
-  }
-
-  async getEmailsByService(service: string, limit: number = 100): Promise<ProcessedEmail[]> {
-    try {
-      return await db
-        .select()
-        .from(processedEmails)
-        .where(eq(processedEmails.service, service))
-        .orderBy(desc(processedEmails.processedAt))
-        .limit(limit);
-    } catch (error) {
-      console.error(`Error fetching processed emails for service ${service}:`, error);
-      return [];
-    }
-  }
-
-  // Questionnaire Definitions Implementation
-  
-  async createQuestionnaireDefinition(definition: z.infer<typeof insertQuestionnaireDefinitionSchema>): Promise<QuestionnaireDefinition> {
-    try {
-      // Check if this is a clone operation (sourceDefinitionId is provided)
-      const sourceDefinitionId = (definition as any).sourceDefinitionId;
-      
-      // Remove sourceDefinitionId from the definition object before insertion
-      const { sourceDefinitionId: _, ...definitionToInsert } = definition as any;
-      
-      // Create the new definition
-      const [newDefinition] = await db
-        .insert(questionnaireDefinitions)
-        .values(definitionToInsert)
-        .returning();
-      
-      // If this is a clone operation, copy all pages, questions, options, and conditional logic
-      if (sourceDefinitionId) {
-        console.log(`Cloning questionnaire from source ID ${sourceDefinitionId} to new ID ${newDefinition.id}`);
-        await this.cloneQuestionnaireContent(sourceDefinitionId, newDefinition.id);
-      }
-      
-      return newDefinition;
-    } catch (error) {
-      console.error('Error creating questionnaire definition:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Clones all content (pages, questions, options, conditional logic) from a source questionnaire to a target questionnaire
-   */
-  async cloneQuestionnaireContent(sourceDefinitionId: number, targetDefinitionId: number): Promise<void> {
-    try {
-      console.log(`Starting deep clone from definition ${sourceDefinitionId} to ${targetDefinitionId}`);
-      
-      // 1. First, get all pages from the source definition
-      const sourcePages = await this.getQuestionnairePagesByDefinition(sourceDefinitionId);
-      
-      // Create a mapping of original page IDs to new page IDs for reference when cloning questions
-      const pageIdMap = new Map<number, number>();
-      
-      // 2. Clone each page
-      for (const sourcePage of sourcePages) {
-        const pageToCreate = {
-          definitionId: targetDefinitionId,
-          title: sourcePage.title,
-          description: sourcePage.description,
-          order: sourcePage.order
-        };
-        
-        const newPage = await this.createQuestionnairePage(pageToCreate);
-        pageIdMap.set(sourcePage.id, newPage.id);
-        
-        // 3. Get all questions for this page
-        const sourceQuestions = await this.getQuestionnaireQuestionsByPage(sourcePage.id);
-        
-        // Create a mapping of original question IDs to new question IDs for reference when cloning options
-        const questionIdMap = new Map<number, number>();
-        const questionKeyMap = new Map<string, string>();
-        
-        // 4. Clone each question
-        for (const sourceQuestion of sourceQuestions) {
-          const questionToCreate = {
-            pageId: newPage.id,
-            questionText: sourceQuestion.questionText,
-            questionKey: sourceQuestion.questionKey,
-            questionType: sourceQuestion.questionType,
-            isRequired: sourceQuestion.isRequired,
-            order: sourceQuestion.order,
-            helpText: sourceQuestion.helpText,
-            placeholderText: sourceQuestion.placeholderText,
-            validationRules: sourceQuestion.validationRules
-          };
-          
-          const newQuestion = await this.createQuestionnaireQuestion(questionToCreate);
-          questionIdMap.set(sourceQuestion.id, newQuestion.id);
-          questionKeyMap.set(sourceQuestion.questionKey, sourceQuestion.questionKey);
-          
-          // 5. If this is a question with options, clone those too
-          if (['select', 'radio', 'checkbox_group', 'matrix_single', 'matrix_multi'].includes(sourceQuestion.questionType)) {
-            const sourceOptions = await this.getQuestionnaireQuestionOptions(sourceQuestion.id);
-            
-            for (const sourceOption of sourceOptions) {
-              const optionToCreate = {
-                questionId: newQuestion.id,
-                optionText: sourceOption.optionText,
-                optionValue: sourceOption.optionValue,
-                order: sourceOption.order
-              };
+      // Process and flatten the results
+      for (const queryResult of allResults) {
+        if (queryResult.length > 0) {
+          // Check if this is a structured result (from a join)
+          if (queryResult[0].contact) {
+            for (const row of queryResult) {
+              if (row.opportunity && row.opportunity.id) {
+                results.push({
+                  type: 'opportunity',
+                  data: row.opportunity,
+                  via: 'contact_identifier'
+                });
+              }
               
-              await this.createQuestionnaireQuestionOption(optionToCreate);
+              if (row.client && row.client.id) {
+                results.push({
+                  type: 'client',
+                  data: row.client,
+                  via: 'contact_identifier'
+                });
+              }
+            }
+          } else if (queryResult[0].firstName) {
+            // This is either an opportunity or client
+            const isOpportunity = queryResult[0].status !== undefined; // Opportunities have status
+            
+            for (const item of queryResult) {
+              results.push({
+                type: isOpportunity ? 'opportunity' : 'client',
+                data: item,
+                via: 'direct_match'
+              });
             }
           }
         }
-        
-        // 6. Clone conditional logic rules last (after all questions are created)
-        if (pageIdMap.size > 0 && questionIdMap.size > 0) {
-          const sourceLogicRules = await this.getConditionalLogicRulesByDefinition(sourceDefinitionId);
-          
-          for (const sourceRule of sourceLogicRules) {
-            const ruleToCreate = {
-              definitionId: targetDefinitionId,
-              triggerQuestionKey: sourceRule.triggerQuestionKey,
-              triggerCondition: sourceRule.triggerCondition,
-              triggerValue: sourceRule.triggerValue,
-              actionType: sourceRule.actionType,
-              targetQuestionKey: sourceRule.targetQuestionKey,
-              targetPageId: sourceRule.targetPageId ? pageIdMap.get(sourceRule.targetPageId) : null,
-              targetOptionValue: sourceRule.targetOptionValue
-            };
-            
-            await this.createConditionalLogicRule(ruleToCreate);
-          }
-        }
       }
       
-      console.log(`Deep clone completed successfully from definition ${sourceDefinitionId} to ${targetDefinitionId}`);
+      return results;
     } catch (error) {
-      console.error('Error cloning questionnaire content:', error);
-      throw error;
-    }
-  }
-  
-  async getQuestionnaireDefinition(definitionId: number): Promise<QuestionnaireDefinition | undefined> {
-    try {
-      const [definition] = await db
-        .select()
-        .from(questionnaireDefinitions)
-        .where(eq(questionnaireDefinitions.id, definitionId));
-      
-      return definition;
-    } catch (error) {
-      console.error(`Error fetching questionnaire definition ${definitionId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async updateQuestionnaireDefinition(definitionId: number, definition: Partial<QuestionnaireDefinition>): Promise<QuestionnaireDefinition | undefined> {
-    try {
-      console.log(`Updating questionnaire definition ${definitionId} with data:`, definition);
-      
-      // If setting as active, deactivate other definitions first
-      if (definition.isActive) {
-        console.log('Setting as active definition, deactivating others');
-        await db
-          .update(questionnaireDefinitions)
-          .set({ isActive: false })
-          .where(eq(questionnaireDefinitions.isActive, true));
-      }
-      
-      // Update the definition with updatedAt timestamp
-      const [updatedDefinition] = await db
-        .update(questionnaireDefinitions)
-        .set({ ...definition, updatedAt: new Date() })
-        .where(eq(questionnaireDefinitions.id, definitionId))
-        .returning();
-      
-      return updatedDefinition;
-    } catch (error) {
-      console.error(`Error updating questionnaire definition ${definitionId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async deleteQuestionnaireDefinition(definitionId: number): Promise<boolean> {
-    try {
-      console.log(`Attempting to delete questionnaire definition ID: ${definitionId}`);
-      
-      // First, get all pages for this definition to delete their questions
-      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
-      console.log(`Found ${pages.length} pages to delete for definition ${definitionId}`);
-      
-      // Using a transaction to ensure all deletes succeed or fail together
-      await db.transaction(async (tx) => {
-        // 1. First nullify any references from opportunities and raw leads
-        await tx.execute(sql`
-          UPDATE opportunities 
-          SET questionnaire_definition_id = NULL, questionnaire_submission_id = NULL
-          WHERE questionnaire_definition_id = ${definitionId};
-        `);
-        
-        await tx.execute(sql`
-          UPDATE raw_leads
-          SET questionnaire_definition_id = NULL, questionnaire_submission_id = NULL
-          WHERE questionnaire_definition_id = ${definitionId};
-        `);
-        console.log(`Nullified references to definition ${definitionId} from opportunities and leads`);
-        
-        // 2. Delete questionnaire submissions for this definition
-        await tx.execute(sql`
-          DELETE FROM questionnaire_submissions
-          WHERE definition_id = ${definitionId};
-        `);
-        console.log(`Deleted submissions for definition ${definitionId}`);
-        
-        // 3. Delete conditional logic rules for this definition
-        await tx.execute(sql`
-          DELETE FROM questionnaire_conditional_logic
-          WHERE definition_id = ${definitionId};
-        `);
-        console.log(`Deleted conditional logic rules for definition ${definitionId}`);
-        
-        // 4. For each page, delete its questions and their options/matrix columns
-        for (const page of pages) {
-          console.log(`Processing page ${page.id} for deletion`);
-          
-          // 4a. Delete question options for all questions in this page
-          await tx.execute(sql`
-            DELETE FROM questionnaire_question_options 
-            WHERE question_id IN (
-              SELECT id FROM questionnaire_questions WHERE page_id = ${page.id}
-            );
-          `);
-          
-          // 4b. Delete matrix columns for all questions in this page
-          await tx.execute(sql`
-            DELETE FROM questionnaire_matrix_columns
-            WHERE question_id IN (
-              SELECT id FROM questionnaire_questions WHERE page_id = ${page.id}
-            );
-          `);
-          
-          // 4c. Delete all questions for this page
-          await tx.execute(sql`
-            DELETE FROM questionnaire_questions
-            WHERE page_id = ${page.id};
-          `);
-          
-          console.log(`Deleted all questions and related items for page ${page.id}`);
-        }
-        
-        // 5. Delete all pages
-        await tx.execute(sql`
-          DELETE FROM questionnaire_pages
-          WHERE definition_id = ${definitionId};
-        `);
-        console.log(`Deleted all pages for definition ${definitionId}`);
-        
-        // 6. Finally delete the definition
-        await tx.execute(sql`
-          DELETE FROM questionnaire_definitions
-          WHERE id = ${definitionId};
-        `);
-        console.log(`Deleted definition ${definitionId}`);
-      });
-      
-      console.log(`Successfully completed deletion process for definition ${definitionId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error deleting questionnaire definition ${definitionId}:`, error);
-      return false;
-    }
-  }
-
-  // Questionnaire Pages Implementation
-
-  async getQuestionnairePage(pageId: number): Promise<QuestionnairePage | undefined> {
-    try {
-      const [page] = await db
-        .select()
-        .from(questionnairePages)
-        .where(eq(questionnairePages.id, pageId));
-      
-      return page;
-    } catch (error) {
-      console.error(`Error fetching questionnaire page ${pageId}:`, error);
-      return undefined;
-    }
-  }
-
-  async getQuestionnairePagesByDefinition(definitionId: number): Promise<QuestionnairePage[]> {
-    try {
-      return await db
-        .select()
-        .from(questionnairePages)
-        .where(eq(questionnairePages.definitionId, definitionId))
-        .orderBy(questionnairePages.order);
-    } catch (error) {
-      console.error(`Error fetching questionnaire pages for definition ${definitionId}:`, error);
+      console.error('Error searching contacts by identifier:', error);
       return [];
     }
   }
 
-  async createQuestionnairePage(page: InsertQuestionnairePage): Promise<QuestionnairePage> {
-    try {
-      const [newPage] = await db
-        .insert(questionnairePages)
-        .values(page)
-        .returning();
-      
-      return newPage;
-    } catch (error) {
-      console.error('Error creating questionnaire page:', error);
-      throw error;
-    }
-  }
-
-  async updateQuestionnairePage(pageId: number, pageData: Partial<QuestionnairePage>): Promise<QuestionnairePage | undefined> {
-    try {
-      const [updatedPage] = await db
-        .update(questionnairePages)
-        .set({ ...pageData, updatedAt: new Date() })
-        .where(eq(questionnairePages.id, pageId))
-        .returning();
-      
-      return updatedPage;
-    } catch (error) {
-      console.error(`Error updating questionnaire page ${pageId}:`, error);
-      return undefined;
-    }
-  }
-
-  async deleteQuestionnairePage(pageId: number): Promise<boolean> {
-    try {
-      console.log(`Attempting to delete questionnaire page ID: ${pageId}`);
-      
-      // First, check if the page exists
-      const page = await this.getQuestionnairePage(pageId);
-      if (!page) {
-        console.log(`No questionnaire page found with ID ${pageId}`);
-        return true; // Return success to avoid UI error messages
+  // Lead system settings
+  async getLeadSystemSettings(): Promise<any> {
+    // This is a placeholder for future implementation
+    return {
+      autoProcessing: true,
+      aiIntegration: !!process.env.OPENAI_API_KEY,
+      emailSync: {
+        enabled: !!process.env.GMAIL_API_KEY,
+        interval: 5, // minutes
       }
-      
-      // Using a transaction to ensure all deletes succeed or fail together
-      await db.transaction(async (tx) => {
-        // 1. Update any conditional logic that targets this page
-        await tx.execute(sql`
-          UPDATE questionnaire_conditional_logic
-          SET target_page_id = NULL
-          WHERE target_page_id = ${pageId};
-        `);
-        console.log(`Nullified references to page ${pageId} from conditional logic rules`);
-        
-        // 2. Get all questions for this page to delete their options and matrix columns
-        const questions = await this.getQuestionnaireQuestionsByPage(pageId);
-        console.log(`Found ${questions.length} questions to delete for page ${pageId}`);
-        
-        // 3. For each question, delete its options and matrix columns
-        for (const question of questions) {
-          console.log(`Processing question ${question.id} for deletion`);
-          
-          // 3a. Delete options for this question
-          await tx.execute(sql`
-            DELETE FROM questionnaire_question_options 
-            WHERE question_id = ${question.id};
-          `);
-          
-          // 3b. Delete matrix columns for this question
-          await tx.execute(sql`
-            DELETE FROM questionnaire_matrix_columns
-            WHERE question_id = ${question.id};
-          `);
-          
-          console.log(`Deleted options and matrix columns for question ${question.id}`);
-        }
-        
-        // 4. Delete all questions for this page
-        await tx.execute(sql`
-          DELETE FROM questionnaire_questions
-          WHERE page_id = ${pageId};
-        `);
-        console.log(`Deleted all questions for page ${pageId}`);
-        
-        // 5. Finally delete the page itself
-        await tx.execute(sql`
-          DELETE FROM questionnaire_pages
-          WHERE id = ${pageId};
-        `);
-        console.log(`Deleted page ${pageId}`);
-      });
-      
-      console.log(`Successfully completed deletion process for page ${pageId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error deleting questionnaire page ${pageId}:`, error);
-      return false;
-    }
-  }
-
-  async reorderQuestionnairePages(definitionId: number, pageIds: number[]): Promise<QuestionnairePage[]> {
-    // Using a transaction to ensure all updates are atomic
-    try {
-      // Start transaction
-      const updatedPages: QuestionnairePage[] = [];
-      
-      await db.transaction(async (tx) => {
-        // For each pageId in the array, update its order based on its position in the array
-        for (let i = 0; i < pageIds.length; i++) {
-          const pageId = pageIds[i];
-          
-          const [updatedPage] = await tx
-            .update(questionnairePages)
-            .set({ 
-              order: i,
-              updatedAt: new Date()
-            })
-            .where(and(
-              eq(questionnairePages.id, pageId),
-              eq(questionnairePages.definitionId, definitionId)
-            ))
-            .returning();
-          
-          if (updatedPage) {
-            updatedPages.push(updatedPage);
-          }
-        }
-      });
-      
-      // Return the updated pages in their new order
-      return updatedPages.sort((a, b) => a.order - b.order);
-    } catch (error) {
-      console.error(`Error reordering questionnaire pages for definition ${definitionId}:`, error);
-      throw error;
-    }
-  }
-  
-  // Questionnaire Questions Implementation
-  
-  async getQuestionnaireQuestion(questionId: number): Promise<QuestionnaireQuestion | undefined> {
-    try {
-      const [question] = await db
-        .select()
-        .from(questionnaireQuestions)
-        .where(eq(questionnaireQuestions.id, questionId));
-      
-      return question;
-    } catch (error) {
-      console.error(`Error fetching questionnaire question ${questionId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async getQuestionnaireQuestionsByPage(pageId: number): Promise<QuestionnaireQuestion[]> {
-    try {
-      return await db
-        .select()
-        .from(questionnaireQuestions)
-        .where(eq(questionnaireQuestions.pageId, pageId))
-        .orderBy(questionnaireQuestions.order);
-    } catch (error) {
-      console.error(`Error fetching questionnaire questions for page ${pageId}:`, error);
-      return [];
-    }
-  }
-  
-  async createQuestionnaireQuestion(question: InsertQuestionnaireQuestion): Promise<QuestionnaireQuestion> {
-    try {
-      const [newQuestion] = await db
-        .insert(questionnaireQuestions)
-        .values(question)
-        .returning();
-      
-      return newQuestion;
-    } catch (error) {
-      console.error('Error creating questionnaire question:', error);
-      throw error;
-    }
-  }
-  
-  async updateQuestionnaireQuestion(questionId: number, questionData: Partial<QuestionnaireQuestion>): Promise<QuestionnaireQuestion | undefined> {
-    try {
-      const [updatedQuestion] = await db
-        .update(questionnaireQuestions)
-        .set({ ...questionData, updatedAt: new Date() })
-        .where(eq(questionnaireQuestions.id, questionId))
-        .returning();
-      
-      return updatedQuestion;
-    } catch (error) {
-      console.error(`Error updating questionnaire question ${questionId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async deleteQuestionnaireQuestion(questionId: number): Promise<boolean> {
-    try {
-      console.log(`Attempting to delete questionnaire question ID: ${questionId}`);
-      
-      // Using a transaction to ensure all deletes succeed or fail together
-      await db.transaction(async (tx) => {
-        // 1. Delete options for this question
-        await tx.execute(sql`
-          DELETE FROM questionnaire_question_options 
-          WHERE question_id = ${questionId};
-        `);
-        console.log(`Deleted options for question ${questionId}`);
-        
-        // 2. Delete matrix columns for this question
-        await tx.execute(sql`
-          DELETE FROM questionnaire_matrix_columns
-          WHERE question_id = ${questionId};
-        `);
-        console.log(`Deleted matrix columns for question ${questionId}`);
-        
-        // 3. Delete the question
-        await tx.execute(sql`
-          DELETE FROM questionnaire_questions
-          WHERE id = ${questionId};
-        `);
-        console.log(`Deleted question ${questionId}`);
-      });
-      
-      console.log(`Successfully completed deletion process for question ${questionId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error deleting questionnaire question ${questionId}:`, error);
-      return false;
-    }
-  }
-  
-  async reorderQuestionnaireQuestions(pageId: number, questionIds: number[]): Promise<QuestionnaireQuestion[]> {
-    try {
-      // Using a transaction to ensure all updates are atomic
-      const updatedQuestions: QuestionnaireQuestion[] = [];
-      
-      await db.transaction(async (tx) => {
-        // For each questionId in the array, update its order based on its position in the array
-        for (let i = 0; i < questionIds.length; i++) {
-          const questionId = questionIds[i];
-          
-          const [updatedQuestion] = await tx
-            .update(questionnaireQuestions)
-            .set({ 
-              order: i,
-              updatedAt: new Date()
-            })
-            .where(and(
-              eq(questionnaireQuestions.id, questionId),
-              eq(questionnaireQuestions.pageId, pageId)
-            ))
-            .returning();
-          
-          if (updatedQuestion) {
-            updatedQuestions.push(updatedQuestion);
-          }
-        }
-      });
-      
-      // Return the updated questions in their new order
-      return updatedQuestions.sort((a, b) => a.order - b.order);
-    } catch (error) {
-      console.error(`Error reordering questionnaire questions for page ${pageId}:`, error);
-      throw error;
-    }
-  }
-  
-  // Questionnaire Options Implementation
-  
-  async getQuestionnaireQuestionOptions(questionId: number): Promise<QuestionnaireQuestionOption[]> {
-    try {
-      return await db
-        .select()
-        .from(questionnaireQuestionOptions)
-        .where(eq(questionnaireQuestionOptions.questionId, questionId))
-        .orderBy(questionnaireQuestionOptions.order);
-    } catch (error) {
-      console.error(`Error fetching options for question ${questionId}:`, error);
-      return [];
-    }
-  }
-  
-  async createQuestionnaireQuestionOption(option: InsertQuestionnaireQuestionOption): Promise<QuestionnaireQuestionOption> {
-    try {
-      const [newOption] = await db
-        .insert(questionnaireQuestionOptions)
-        .values(option)
-        .returning();
-      
-      return newOption;
-    } catch (error) {
-      console.error('Error creating questionnaire question option:', error);
-      throw error;
-    }
-  }
-  
-  async updateQuestionnaireQuestionOption(optionId: number, optionData: Partial<QuestionnaireQuestionOption>): Promise<QuestionnaireQuestionOption | undefined> {
-    try {
-      const [updatedOption] = await db
-        .update(questionnaireQuestionOptions)
-        .set({ ...optionData, updatedAt: new Date() })
-        .where(eq(questionnaireQuestionOptions.id, optionId))
-        .returning();
-      
-      return updatedOption;
-    } catch (error) {
-      console.error(`Error updating questionnaire question option ${optionId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async deleteQuestionnaireQuestionOption(optionId: number): Promise<boolean> {
-    try {
-      console.log(`Attempting to delete questionnaire question option ID: ${optionId}`);
-      
-      // Using a transaction for consistency
-      await db.transaction(async (tx) => {
-        // Delete the question option
-        await tx.execute(sql`
-          DELETE FROM questionnaire_question_options
-          WHERE id = ${optionId};
-        `);
-        console.log(`Deleted question option ${optionId}`);
-      });
-      
-      console.log(`Successfully completed deletion process for question option ${optionId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error deleting questionnaire question option ${optionId}:`, error);
-      return false;
-    }
-  }
-  
-  // Methods for Questionnaire Conditional Logic
-  async getConditionalLogicRule(ruleId: number): Promise<QuestionnaireConditionalLogic | undefined> {
-    try {
-      const [rule] = await db
-        .select()
-        .from(questionnaireConditionalLogic)
-        .where(eq(questionnaireConditionalLogic.id, ruleId));
-      
-      return rule;
-    } catch (error) {
-      console.error(`Error fetching conditional logic rule ${ruleId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async getConditionalLogicRulesByDefinition(definitionId: number): Promise<QuestionnaireConditionalLogic[]> {
-    try {
-      return await db
-        .select()
-        .from(questionnaireConditionalLogic)
-        .where(eq(questionnaireConditionalLogic.definitionId, definitionId));
-    } catch (error) {
-      console.error(`Error fetching conditional logic rules for definition ${definitionId}:`, error);
-      return [];
-    }
-  }
-  
-  async createConditionalLogicRule(rule: InsertQuestionnaireConditionalLogic): Promise<QuestionnaireConditionalLogic> {
-    try {
-      const [newRule] = await db
-        .insert(questionnaireConditionalLogic)
-        .values(rule)
-        .returning();
-      
-      return newRule;
-    } catch (error) {
-      console.error('Error creating conditional logic rule:', error);
-      throw error;
-    }
-  }
-  
-  async updateConditionalLogicRule(ruleId: number, rule: Partial<QuestionnaireConditionalLogic>): Promise<QuestionnaireConditionalLogic | undefined> {
-    try {
-      const [updatedRule] = await db
-        .update(questionnaireConditionalLogic)
-        .set({ ...rule, updatedAt: new Date() })
-        .where(eq(questionnaireConditionalLogic.id, ruleId))
-        .returning();
-      
-      return updatedRule;
-    } catch (error) {
-      console.error(`Error updating conditional logic rule ${ruleId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async deleteConditionalLogicRule(ruleId: number): Promise<boolean> {
-    try {
-      console.log(`Attempting to delete conditional logic rule ID: ${ruleId}`);
-      
-      // Using a transaction for consistency
-      await db.transaction(async (tx) => {
-        // Delete the conditional logic rule
-        await tx.execute(sql`
-          DELETE FROM questionnaire_conditional_logic
-          WHERE id = ${ruleId};
-        `);
-        console.log(`Deleted conditional logic rule ${ruleId}`);
-      });
-      
-      console.log(`Successfully completed deletion process for conditional logic rule ${ruleId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error deleting conditional logic rule ${ruleId}:`, error);
-      return false;
-    }
-  }
-  
-  async questionKeyExistsInDefinition(definitionId: number, questionKey: string): Promise<boolean> {
-    try {
-      // Get all pages that belong to this definition
-      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
-      
-      if (pages.length === 0) {
-        return false;
-      }
-      
-      const pageIds = pages.map(page => page.id);
-      
-      // Find questions with this key in any of these pages
-      const [question] = await db
-        .select()
-        .from(questionnaireQuestions)
-        .where(
-          and(
-            inArray(questionnaireQuestions.pageId, pageIds),
-            eq(questionnaireQuestions.questionKey, questionKey)
-          )
-        )
-        .limit(1);
-      
-      return !!question;
-    } catch (error) {
-      console.error(`Error checking if question key "${questionKey}" exists in definition ${definitionId}:`, error);
-      return false;
-    }
-  }
-  
-  // Public-facing questionnaire methods implementation
-  async getActiveQuestionnaireDefinition(): Promise<QuestionnaireDefinition | undefined> {
-    try {
-      const [definition] = await db
-        .select()
-        .from(questionnaireDefinitions)
-        .where(eq(questionnaireDefinitions.isActive, true))
-        .limit(1);
-      
-      return definition;
-    } catch (error) {
-      console.error('Error fetching active questionnaire definition:', error);
-      return undefined;
-    }
-  }
-  
-  async getPublicQuestionnaireStructure(definitionId: number): Promise<{
-    definition: QuestionnaireDefinition;
-    pages: {
-      page: QuestionnairePage;
-      questions: {
-        question: QuestionnaireQuestion;
-        options: QuestionnaireQuestionOption[];
-        matrixColumns: QuestionnaireMatrixColumn[];
-      }[];
-    }[];
-    conditionalLogic: QuestionnaireConditionalLogic[];
-  } | undefined> {
-    try {
-      // Get the definition
-      const definition = await this.getQuestionnaireDefinition(definitionId);
-      if (!definition) {
-        return undefined;
-      }
-      
-      // Get all pages for this definition
-      const pages = await this.getQuestionnairePagesByDefinition(definitionId);
-      if (pages.length === 0) {
-        // Return early with empty pages if none found
-        return {
-          definition,
-          pages: [],
-          conditionalLogic: []
-        };
-      }
-      
-      // Get conditional logic for this definition
-      const conditionalLogic = await this.getConditionalLogicRulesByDefinition(definitionId);
-      
-      // Build a complete structure with pages and their questions
-      const pagesWithQuestions = await Promise.all(pages.map(async (page) => {
-        // Get questions for this page
-        const questionsRaw = await db
-          .select()
-          .from(questionnaireQuestions)
-          .where(eq(questionnaireQuestions.pageId, page.id))
-          .orderBy(questionnaireQuestions.order);
-        
-        // For each question, get its options and matrix columns
-        const questions = await Promise.all(questionsRaw.map(async (question) => {
-          const options = await db
-            .select()
-            .from(questionnaireQuestionOptions)
-            .where(eq(questionnaireQuestionOptions.questionId, question.id))
-            .orderBy(questionnaireQuestionOptions.order);
-          
-          const matrixColumns = await db
-            .select()
-            .from(questionnaireMatrixColumns)
-            .where(eq(questionnaireMatrixColumns.questionId, question.id))
-            .orderBy(questionnaireMatrixColumns.order);
-          
-          return {
-            question,
-            options,
-            matrixColumns
-          };
-        }));
-        
-        return {
-          page,
-          questions
-        };
-      }));
-      
-      // Return the complete structure
-      return {
-        definition,
-        pages: pagesWithQuestions,
-        conditionalLogic
-      };
-    } catch (error) {
-      console.error(`Error fetching public questionnaire structure for definition ${definitionId}:`, error);
-      return undefined;
-    }
-  }
-  
-  async submitQuestionnaireResponse(submission: InsertQuestionnaireSubmission): Promise<QuestionnaireSubmission> {
-    try {
-      // Current timestamp for submission
-      const now = new Date();
-      
-      // Add submitted timestamp if the status is 'submitted'
-      if (submission.status === 'submitted') {
-        submission.submittedAt = now;
-      }
-      
-      // If submittedData is not provided, initialize as empty object
-      if (!submission.submittedData) {
-        submission.submittedData = {};
-      }
-      
-      // Insert the submission
-      const [newSubmission] = await db
-        .insert(questionnaireSubmissions)
-        .values({
-          ...submission,
-          // Override any provided timestamps to ensure they're set server-side
-          createdAt: now,
-          updatedAt: now
-        })
-        .returning();
-      
-      return newSubmission;
-    } catch (error) {
-      console.error('Error submitting questionnaire response:', error);
-      throw error;
-    }
+    };
   }
 }
 
-// Export an instance of the DatabaseStorage
+// Create and export the storage instance
 export const storage = new DatabaseStorage();
