@@ -102,7 +102,7 @@ const SortablePage = ({ page, isSelected, onSelect }) => {
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
       <div className="flex-1 truncate">
-        <p className="font-medium text-sm">{page.title}</p>
+        <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
         {page.description && (
           <p className="text-xs text-gray-500 truncate">{page.description}</p>
         )}
@@ -199,10 +199,10 @@ const PageFormDialog = ({
   const form = useForm({
     resolver: zodResolver(formPageSchema),
     defaultValues: initialData ? {
-      title: initialData.title || "",
+      pageTitle: initialData.pageTitle || initialData.title || "",
       description: initialData.description || "",
     } : {
-      title: "",
+      pageTitle: "",
       description: "",
     }
   });
