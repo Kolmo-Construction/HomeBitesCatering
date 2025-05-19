@@ -1,40 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface PageTransitionProps {
-  children: React.ReactNode;
-  direction: 'next' | 'prev';
-  isActive: boolean;
+  children: ReactNode;
+  direction?: 'next' | 'prev';
+  isActive?: boolean;
 }
 
-// Animation variants for the page transitions
-const variants = {
-  enter: (direction: 'next' | 'prev') => ({
-    x: direction === 'next' ? 300 : -300,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (direction: 'next' | 'prev') => ({
-    x: direction === 'next' ? -300 : 300,
-    opacity: 0,
-  }),
-};
+export function PageTransition({ 
+  children, 
+  direction = 'next', 
+  isActive = true 
+}: PageTransitionProps) {
+  
+  const variants = {
+    enter: (direction: string) => ({
+      x: direction === 'next' ? 1000 : -1000,
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: string) => ({
+      x: direction === 'next' ? -1000 : 1000,
+      opacity: 0
+    })
+  };
 
-export function PageTransition({ children, direction, isActive }: PageTransitionProps) {
-  const [key, setKey] = useState(Date.now());
-  
-  // Update key when children change to force re-render
-  useEffect(() => {
-    setKey(Date.now());
-  }, [children]);
-  
+  if (!isActive) {
+    return null;
+  }
+
   return (
-    <AnimatePresence initial={false} mode="wait" custom={direction}>
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
-        key={key}
+        key={`page-transition-${Math.random()}`}
         custom={direction}
         variants={variants}
         initial="enter"
@@ -42,8 +43,9 @@ export function PageTransition({ children, direction, isActive }: PageTransition
         exit="exit"
         transition={{
           x: { type: 'spring', stiffness: 300, damping: 30 },
-          opacity: { duration: 0.2 },
+          opacity: { duration: 0.2 }
         }}
+        className="w-full"
       >
         {children}
       </motion.div>

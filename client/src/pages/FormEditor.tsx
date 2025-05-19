@@ -1,1123 +1,2039 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'wouter';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  DndContext, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors,
-  DragEndEvent
-} from '@dnd-kit/core';
-import { 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
-  verticalListSortingStrategy,
-  useSortable
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { apiRequest } from '@/lib/queryClient';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useMemo } from "react";
+import { useParams } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Pencil,
-  Trash2,
-  Plus,
-  GripVertical,
-  ArrowLeft,
-  ArrowRight,
-  Save,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/hooks/use-toast";
+import { 
+  PlusCircle, 
+  FileText, 
+  ArrowLeft, 
+  GripVertical, 
+  Trash2, 
+  Settings,
   Eye,
-  Copy,
+  Save,
+  Search,
   X,
-  ChevronUp,
-  ChevronDown,
-} from 'lucide-react';
+  Loader2
+} from "lucide-react";
+import FormPreview from "@/components/form-builder/FormPreview";
+import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { questionTypeLabels, getQuestionTypeLabel } from "@shared/form-utils";
 
-// Types for the form structure (similar to QuestionnaireWizard but with more editing capabilities)
-interface FormPage {
-  id: number;
-  title: string;
-  key: string;
-  pageOrder: number;
-  questions: Question[];
-}
+// Schema for form page definition
+const formPageSchema = z.object({
+  pageTitle: z.string().min(1, "Page title is required"),
+  description: z.string().optional(),
+  pageOrder: z.number().optional(),
+});
 
-interface Question {
-  id: number;
-  questionText: string;
-  questionType: string;
-  fieldKey: string;
-  isRequired: boolean;
-  metadata?: Record<string, any>;
-  options?: { label: string; value: string }[];
-}
+// Page Component for the sortable page list
+const SortablePage = ({ page, isSelected, onSelect }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: page.id || 'temp-id' });
 
-interface Option {
-  label: string;
-  value: string;
-}
-
-interface Rule {
-  id: number;
-  triggerQuestionId: number;
-  conditionType: string;
-  conditionValue: string;
-  actionType: string;
-  targets: {
-    targetType: string;
-    targetId: number;
-  }[];
-}
-
-interface FormDefinition {
-  form: {
-    id: number;
-    key: string;
-    title: string;
-    description: string;
-    version: number;
-  };
-  pages: FormPage[];
-  rules: Rule[];
-}
-
-// Question Types for the dropdown
-const QUESTION_TYPES = [
-  { value: 'header', label: 'Section Header' },
-  { value: 'text_display', label: 'Text Display' },
-  { value: 'textbox', label: 'Single Line Text' },
-  { value: 'textarea', label: 'Paragraph Text' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone Number' },
-  { value: 'number', label: 'Number' },
-  { value: 'date', label: 'Date' },
-  { value: 'datetime', label: 'Date & Time' },
-  { value: 'checkbox_group', label: 'Checkboxes' },
-  { value: 'radio_group', label: 'Radio Buttons' },
-  { value: 'dropdown', label: 'Dropdown' },
-];
-
-// Sortable Question Item
-function SortableQuestionItem({ question, onEdit, onDelete, isActive }: { 
-  question: Question;
-  onEdit: (question: Question) => void;
-  onDelete: (questionId: number) => void;
-  isActive?: boolean;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: question.id.toString(),
-  });
-  
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  
+
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       style={style}
-      className={`p-3 mb-2 border rounded-md ${isActive ? 'border-primary bg-primary/5' : 'border-gray-200'} hover:border-primary/50 relative group`}
+      className={`flex items-center p-2 mb-2 rounded-md cursor-pointer ${
+        isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200"
+      }`}
+      onClick={() => onSelect(page)}
     >
-      <div className="flex items-center">
-        <div 
-          className="cursor-move mr-2 text-gray-500 hover:text-gray-700 touch-none"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical size={18} />
+      <div className="mr-2 cursor-grab" {...attributes} {...listeners}>
+        <GripVertical className="h-5 w-5 text-gray-400" />
+      </div>
+      <div className="flex-1 truncate">
+        <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
+        {page.description && (
+          <p className="text-xs text-gray-500 truncate">{page.description}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Using shared question type labels imported from form-utils
+
+// Question Component for the sortable question list
+const SortableQuestion = ({ question, isSelected, onSelect }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: question.id || 'temp-question-id' });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  // Using the shared getQuestionTypeLabel utility function
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center p-3 mb-2 rounded-md cursor-pointer ${
+        isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200"
+      }`}
+      onClick={() => onSelect(question)}
+    >
+      <div className="mr-2 cursor-grab" {...attributes} {...listeners}>
+        <GripVertical className="h-5 w-5 text-gray-400" />
+      </div>
+      <div className="flex-1">
+        <div className="flex justify-between items-center mb-1">
+          <p className="font-medium text-sm">{question.displayText || question.display_text}</p>
+          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+            {getQuestionTypeLabel(question.questionType || question.question_type)}
+          </span>
         </div>
-        
-        <div className="flex-1 mr-2">
-          <div className="flex items-center">
-            <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded mr-2">
-              {QUESTION_TYPES.find(t => t.value === question.questionType)?.label || question.questionType}
-            </span>
-            <span className={`${question.isRequired ? 'text-red-500 mr-1' : 'hidden'}`}>*</span>
-            <p className="font-medium truncate flex-1">
-              {question.questionText || <span className="italic text-gray-400">No question text</span>}
-            </p>
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">Field key: {question.fieldKey}</p>
-        </div>
-        
-        <div className="flex space-x-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => onEdit(question)}
-            className="h-8 w-8 opacity-60 hover:opacity-100"
-          >
-            <Pencil size={16} />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => onDelete(question.id)}
-            className="h-8 w-8 text-red-500 opacity-60 hover:opacity-100"
-          >
-            <Trash2 size={16} />
-          </Button>
+        {question.helperText && (
+          <p className="text-xs text-gray-500">{question.helperText}</p>
+        )}
+        <div className="flex items-center mt-1 text-xs">
+          {(question.isRequired || question.is_required) && (
+            <span className="text-red-500 mr-2">Required</span>
+          )}
+          {(question.isHidden || question.is_hidden) && (
+            <span className="text-gray-500 mr-2">Hidden</span>
+          )}
         </div>
       </div>
     </div>
   );
-}
+};
 
-// Question Editor Component
-function QuestionEditor({ 
-  question, 
-  onSave, 
-  onCancel 
-}: { 
-  question: Question; 
-  onSave: (updatedQuestion: Question) => void; 
-  onCancel: () => void; 
-}) {
-  const [editedQuestion, setEditedQuestion] = useState<Question>({ ...question });
-  const [options, setOptions] = useState<Option[]>(question.options || []);
-  const [newOptionLabel, setNewOptionLabel] = useState('');
-  const [newOptionValue, setNewOptionValue] = useState('');
+// Page Form Dialog
+const PageFormDialog = ({ 
+  isOpen, 
+  onOpenChange, 
+  initialData = null, 
+  onSave 
+}) => {
+  const form = useForm({
+    resolver: zodResolver(formPageSchema),
+    defaultValues: initialData ? {
+      pageTitle: initialData.pageTitle || initialData.title || "",
+      description: initialData.description || "",
+    } : {
+      pageTitle: "",
+      description: "",
+    }
+  });
 
-  // Handle basic field changes
-  const handleChange = (field: keyof Question, value: any) => {
-    setEditedQuestion(prev => ({ ...prev, [field]: value }));
+  const handleSubmit = async (data) => {
+    try {
+      await onSave(data);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error saving page:", error);
+    }
   };
 
-  // Handle metadata changes
-  const handleMetadataChange = (field: string, value: any) => {
-    setEditedQuestion(prev => ({
-      ...prev,
-      metadata: {
-        ...(prev.metadata || {}),
-        [field]: value
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{initialData ? "Edit Page" : "Create New Page"}</DialogTitle>
+          <DialogDescription>
+            {initialData 
+              ? "Update the details for this page." 
+              : "Create a new page for your form."}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2">
+            <FormField
+              control={form.control}
+              name="pageTitle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Page Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="E.g., Basic Information" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="A brief description of this page..." 
+                      className="resize-none"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Enhanced Question Settings Panel for supporting all overrides
+const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
+  // Get the library question data to show base properties
+  const { data: libraryQuestion, isLoading: isLibraryQuestionLoading } = useQuery({
+    queryKey: ['/api/form-builder/library-questions', question?.libraryQuestionId],
+    queryFn: async () => {
+      if (!question?.libraryQuestionId) return null;
+      const response = await fetch(`/api/form-builder/library-questions/${question.libraryQuestionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch library question details');
       }
-    }));
+      return await response.json();
+    },
+    enabled: !!question?.libraryQuestionId,
+  });
+
+  // Initialize tabs for organizing the settings
+  const [activeTab, setActiveTab] = useState("basic");
+  
+  // Initialize form for question settings with all override fields
+  const questionSettingsSchema = z.object({
+    // Basic overrides
+    displayTextOverride: z.string().min(1, "Question text is required"),
+    isRequiredOverride: z.boolean().optional(),
+    isHiddenOverride: z.boolean().optional(),
+    helperTextOverride: z.string().optional(),
+    placeholderOverride: z.string().optional(),
+    // Advanced overrides - will be handled based on question type
+    metadataOverrides: z.any().optional(),
+    optionsOverrides: z.any().optional(),
+  });
+
+  // Extract question type for conditional fields
+  const questionType = question?.questionType || question?.question_type || 
+                      libraryQuestion?.questionType || libraryQuestion?.question_type;
+  
+  // Extract existing overrides or use defaults
+  const defaultOptionsOverrides = question?.optionsOverrides || question?.options_overrides || [];
+  const defaultMetadataOverrides = question?.metadataOverrides || question?.metadata_overrides || {};
+
+  // Initialize the form with existing overrides or library question defaults
+  const form = useForm({
+    resolver: zodResolver(questionSettingsSchema),
+    defaultValues: {
+      displayTextOverride: question?.displayTextOverride || question?.display_text_override || 
+                          libraryQuestion?.defaultText || libraryQuestion?.default_text || "",
+      isRequiredOverride: question?.isRequiredOverride || question?.is_required_override || false,
+      isHiddenOverride: question?.isHiddenOverride || question?.is_hidden_override || false,
+      helperTextOverride: question?.helperTextOverride || question?.helper_text_override || 
+                         libraryQuestion?.helperText || libraryQuestion?.helper_text || "",
+      placeholderOverride: question?.placeholderOverride || question?.placeholder_override || 
+                          libraryQuestion?.placeholder || "",
+      metadataOverrides: defaultMetadataOverrides,
+      optionsOverrides: defaultOptionsOverrides,
+    }
+  });
+
+  // Initialize state for choice-based question options
+  const [options, setOptions] = useState([]);
+  
+  // Load options for choice-based questions when library question data is available
+  useEffect(() => {
+    if (libraryQuestion && ['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
+      const libraryOptions = libraryQuestion.defaultOptions || libraryQuestion.default_options || [];
+      const existingOverrides = question?.optionsOverrides || question?.options_overrides || [];
+      
+      // If the question has overrides set, use them; otherwise use library options
+      const hasOverrides = existingOverrides && existingOverrides.length > 0;
+      
+      if (hasOverrides) {
+        // When we have overrides, we need to ensure all library options are represented
+        // First, include all existing overrides
+        let mergedOptions = [...existingOverrides];
+        
+        // Then add any library options that don't have an override
+        libraryOptions.forEach(libOption => {
+          if (!mergedOptions.some(override => override.value === libOption.value)) {
+            mergedOptions.push(libOption);
+          }
+        });
+        
+        setOptions(mergedOptions);
+        form.setValue('optionsOverrides', mergedOptions);
+      } else {
+        // No overrides, use library options directly
+        setOptions(libraryOptions);
+        form.setValue('optionsOverrides', []); // Empty array means no overrides
+      }
+    }
+  }, [libraryQuestion, questionType, form]);
+
+  // Handle form submission with all overrides
+  const handleSubmit = async (data) => {
+    try {
+      // Handle options overrides for choice-based questions
+      if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
+        // Only include options as overrides if they have been explicitly overridden
+        // An empty array means "no overrides", whereas undefined means "not applicable"
+        if (form.getValues("optionsOverrides")?.length > 0) {
+          data.optionsOverrides = options; // Use current options state
+        } else {
+          data.optionsOverrides = []; // Empty array to clear any existing overrides
+        }
+      }
+      
+      await onSave(data);
+      toast({
+        title: "Question updated",
+        description: "The question settings have been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem updating the question",
+      });
+    }
   };
 
-  // Add a new option
-  const handleAddOption = () => {
-    if (newOptionLabel.trim() === '') return;
-    
-    const newOption = {
-      label: newOptionLabel,
-      value: newOptionValue.trim() === '' ? newOptionLabel.toLowerCase().replace(/\s+/g, '_') : newOptionValue
+  // Show loading state when fetching library question
+  if (isLibraryQuestionLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="p-6 text-center">
+          <p className="text-muted-foreground">Loading question details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show placeholder when no question is selected
+  if (!question) {
+    return (
+      <div className="flex h-full items-center justify-center text-center">
+        <div className="p-6">
+          <p className="text-muted-foreground">Select a question to edit its settings</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getQuestionTypeLabel = (type) => {
+    const typeMap = {
+      'textbox': 'Text Field',
+      'textarea': 'Text Area',
+      'number': 'Number',
+      'email': 'Email',
+      'phone': 'Phone',
+      'checkbox_group': 'Checkboxes',
+      'radio_group': 'Radio Buttons',
+      'dropdown': 'Dropdown',
+      'date': 'Date',
+      'datetime': 'Date & Time',
+      'matrix': 'Matrix',
+      'address': 'Address',
+      'header': 'Header',
+      'text_display': 'Display Text',
+      'image_upload': 'Image Upload',
+      'file_upload': 'File Upload',
+      'signature_pad': 'Signature Pad',
+      'rating_scale': 'Rating Scale',
+      'slider': 'Slider',
+      'toggle_switch': 'Toggle Switch',
+      'full_name': 'Full Name',
     };
     
-    setOptions([...options, newOption]);
-    setNewOptionLabel('');
-    setNewOptionValue('');
+    return typeMap[type] || type;
   };
 
-  // Remove an option
-  const handleRemoveOption = (index: number) => {
-    setOptions(options.filter((_, i) => i !== index));
+  // Handle adding a new option for choice-based questions
+  const handleAddOption = () => {
+    // Only allow adding if we have active overrides
+    if (!form.getValues("optionsOverrides")?.length) {
+      return;
+    }
+    
+    const newOption = {
+      label: '',
+      value: `option_${options.length + 1}`,
+      isSelected: false
+    };
+    
+    const newOptions = [...options, newOption];
+    setOptions(newOptions);
+    
+    // Update form value
+    form.setValue("optionsOverrides", newOptions);
   };
 
-  // Move option up or down in the list
-  const handleMoveOption = (index: number, direction: 'up' | 'down') => {
-    if (
-      (direction === 'up' && index === 0) || 
-      (direction === 'down' && index === options.length - 1)
-    ) {
+  // Handle removing an option
+  const handleRemoveOption = (index) => {
+    // Only allow removing if we have active overrides
+    if (!form.getValues("optionsOverrides")?.length) {
       return;
     }
     
     const newOptions = [...options];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    [newOptions[index], newOptions[targetIndex]] = [newOptions[targetIndex], newOptions[index]];
-    
+    newOptions.splice(index, 1);
     setOptions(newOptions);
-  };
-
-  // Save the edited question
-  const handleSave = () => {
-    // Update the question with the latest options
-    const finalQuestion = {
-      ...editedQuestion,
-      options: ['checkbox_group', 'radio_group', 'dropdown'].includes(editedQuestion.questionType) ? options : undefined
-    };
     
-    onSave(finalQuestion);
+    // Update form value
+    form.setValue("optionsOverrides", newOptions);
   };
-
-  // Need options for these question types
-  const showOptions = ['checkbox_group', 'radio_group', 'dropdown'].includes(editedQuestion.questionType);
 
   return (
-    <div className="p-4 border rounded-lg bg-gray-50">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Edit Question</h3>
-        <Button variant="ghost" size="icon" onClick={onCancel}>
-          <X size={18} />
+    <div className="p-4 h-full overflow-y-auto">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Question Settings</h3>
+          <p className="text-sm text-muted-foreground">
+            {getQuestionTypeLabel(questionType)}
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="text-red-600"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Remove
         </Button>
       </div>
       
-      <div className="space-y-4">
-        {/* Question Type */}
-        <div>
-          <Label htmlFor="questionType">Question Type</Label>
-          <Select
-            value={editedQuestion.questionType}
-            onValueChange={(value) => handleChange('questionType', value)}
+      {/* Original library question info for reference */}
+      {libraryQuestion && (
+        <div className="mb-4 p-3 bg-gray-50 border rounded-md">
+          <p className="text-sm font-medium">Library Question Reference</p>
+          <p className="text-xs text-muted-foreground mb-1">ID: {libraryQuestion.id}</p>
+          <p className="text-xs text-muted-foreground mb-1">Key: {libraryQuestion.libraryQuestionKey || libraryQuestion.library_question_key}</p>
+          <p className="text-xs text-muted-foreground">Default Text: {libraryQuestion.defaultText || libraryQuestion.default_text}</p>
+        </div>
+      )}
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="basic">Basic</TabsTrigger>
+          <TabsTrigger 
+            value="options" 
+            disabled={!['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select question type" />
-            </SelectTrigger>
-            <SelectContent>
-              {QUESTION_TYPES.map(type => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            Options
+          </TabsTrigger>
+          <TabsTrigger 
+            value="advanced"
+            disabled={questionType === 'header' || questionType === 'text_display'}
+          >
+            Advanced
+          </TabsTrigger>
+        </TabsList>
         
-        {/* Question Text */}
-        <div>
-          <Label htmlFor="questionText">Question Text</Label>
-          <Textarea
-            id="questionText"
-            value={editedQuestion.questionText}
-            onChange={(e) => handleChange('questionText', e.target.value)}
-            placeholder="Enter your question"
-            rows={3}
-          />
-        </div>
-        
-        {/* Field Key */}
-        <div>
-          <Label htmlFor="fieldKey">Field Key</Label>
-          <Input
-            id="fieldKey"
-            value={editedQuestion.fieldKey}
-            onChange={(e) => handleChange('fieldKey', e.target.value)}
-            placeholder="e.g., first_name"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Used to identify this field in submissions. Use snake_case without spaces.
-          </p>
-        </div>
-        
-        {/* Required switch */}
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="isRequired"
-            checked={editedQuestion.isRequired}
-            onCheckedChange={(checked) => handleChange('isRequired', checked)}
-          />
-          <Label htmlFor="isRequired">Required Field</Label>
-        </div>
-        
-        {/* Placeholder text */}
-        {!['header', 'text_display', 'checkbox_group', 'radio_group'].includes(editedQuestion.questionType) && (
-          <div>
-            <Label htmlFor="placeholder">Placeholder Text</Label>
-            <Input
-              id="placeholder"
-              value={editedQuestion.metadata?.placeholder || ''}
-              onChange={(e) => handleMetadataChange('placeholder', e.target.value)}
-              placeholder="Enter placeholder text"
-            />
-          </div>
-        )}
-        
-        {/* Helper text */}
-        {!['header'].includes(editedQuestion.questionType) && (
-          <div>
-            <Label htmlFor="helperText">Helper Text</Label>
-            <Input
-              id="helperText"
-              value={editedQuestion.metadata?.helperText || ''}
-              onChange={(e) => handleMetadataChange('helperText', e.target.value)}
-              placeholder="Additional instructions for this question"
-            />
-          </div>
-        )}
-        
-        {/* Options for select-type questions */}
-        {showOptions && (
-          <div className="space-y-3 pt-2">
-            <Label>Options</Label>
-            
-            {/* Existing options */}
-            <div className="space-y-2">
-              {options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div className="flex-1 border rounded-md p-2 bg-white">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">{option.label}</p>
-                        <p className="text-xs text-gray-500">Value: {option.value}</p>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Basic Tab Content */}
+            <TabsContent value="basic" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="displayTextOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Question Text Override</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel htmlFor="override-display-text" className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
+                        <Switch 
+                          id="override-display-text" 
+                          checked={field.value !== libraryQuestion?.defaultText && field.value !== libraryQuestion?.default_text}
+                          onCheckedChange={(checked) => {
+                            if (!checked) {
+                              // Reset to library value
+                              form.setValue("displayTextOverride", libraryQuestion?.defaultText || libraryQuestion?.default_text || "");
+                            }
+                          }}
+                        />
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7"
-                          onClick={() => handleMoveOption(index, 'up')}
-                          disabled={index === 0}
-                        >
-                          <ChevronUp size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7"
-                          onClick={() => handleMoveOption(index, 'down')}
-                          disabled={index === options.length - 1}
-                        >
-                          <ChevronDown size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 text-red-500"
-                          onClick={() => handleRemoveOption(index)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                    </div>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription className="flex items-center">
+                      <span className="text-xs text-muted-foreground mr-1">Original:</span> 
+                      <span className="text-xs font-medium">{libraryQuestion?.defaultText || libraryQuestion?.default_text}</span>
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="isRequiredOverride"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Required</FormLabel>
+                        <FormDescription className="text-xs">
+                          Original: {libraryQuestion?.isRequired || libraryQuestion?.is_required ? "Yes" : "No"}
+                        </FormDescription>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <FormControl>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer"
+                              checked={field.value === true}
+                              onChange={() => form.setValue("isRequiredOverride", !field.value)}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </FormControl>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="isHiddenOverride"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Hidden</FormLabel>
+                        <FormDescription className="text-xs">
+                          Original: {libraryQuestion?.isHidden || libraryQuestion?.is_hidden ? "Yes" : "No"}
+                        </FormDescription>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <FormControl>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer"
+                              checked={field.value === true}
+                              onChange={() => form.setValue("isHiddenOverride", !field.value)}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </FormControl>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="helperTextOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Helper Text Override</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={field.value !== (libraryQuestion?.helperText || libraryQuestion?.helper_text)}
+                            onChange={(e) => {
+                              if (!e.target.checked) {
+                                // Reset to library value
+                                form.setValue("helperTextOverride", libraryQuestion?.helperText || libraryQuestion?.helper_text || "");
+                              }
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        disabled={!field.value && !field.value !== (libraryQuestion?.helperText || libraryQuestion?.helper_text)}
+                      />
+                    </FormControl>
+                    <FormDescription className="flex items-center">
+                      <span className="text-xs text-muted-foreground mr-1">Original:</span> 
+                      <span className="text-xs font-medium">{libraryQuestion?.helperText || libraryQuestion?.helper_text || "None"}</span>
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="placeholderOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Placeholder Override</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel className="text-xs text-muted-foreground">
+                          Override
+                        </FormLabel>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={field.value !== libraryQuestion?.placeholder}
+                            onChange={(e) => {
+                              if (!e.target.checked) {
+                                // Reset to library value
+                                form.setValue("placeholderOverride", libraryQuestion?.placeholder || "");
+                              }
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Input 
+                        {...field}
+                        disabled={!field.value && field.value === libraryQuestion?.placeholder}
+                      />
+                    </FormControl>
+                    <FormDescription className="flex items-center">
+                      <span className="text-xs text-muted-foreground mr-1">Original:</span> 
+                      <span className="text-xs font-medium">{libraryQuestion?.placeholder || "None"}</span>
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+            
+            {/* Options Tab for choice-based questions */}
+            <TabsContent value="options" className="space-y-4">
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-medium">Question Options</h3>
+                  <div className="flex items-center space-x-2">
+                    <FormLabel className="text-xs text-muted-foreground">
+                      Override Options
+                    </FormLabel>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer"
+                        disabled={libraryQuestion?.questionType === "matrix"}
+                        checked={form.getValues("optionsOverrides")?.length > 0}
+                        onChange={(e) => {
+                          if (!e.target.checked) {
+                            // Reset to library options
+                            const libraryOptions = libraryQuestion?.defaultOptions || 
+                                                 libraryQuestion?.default_options || [];
+                            setOptions([...libraryOptions]); // Create a new array to trigger state update
+                            form.setValue("optionsOverrides", []);
+                          } else {
+                            // When enabling overrides, use current options as a starting point
+                            // This preserves the order and any existing customizations
+                            const libraryOptions = libraryQuestion?.defaultOptions || 
+                                                 libraryQuestion?.default_options || [];
+                            form.setValue("optionsOverrides", [...libraryOptions]);
+                          }
+                        }}
+                      />
+                      <div className={`w-11 h-6 ${libraryQuestion?.questionType === "matrix" ? 'bg-gray-300' : 'bg-gray-200'} peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 ${libraryQuestion?.questionType === "matrix" ? 'opacity-50' : ''}`}></div>
+                    </label>
+                  </div>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleAddOption}
+                  disabled={!form.getValues("optionsOverrides")?.length > 0 || libraryQuestion?.questionType === "matrix"}
+                >
+                  <PlusCircle className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+              
+              {/* Original library options for reference */}
+              {libraryQuestion && (libraryQuestion?.defaultOptions || libraryQuestion?.default_options)?.length > 0 && (
+                <div className="mb-4 p-3 bg-gray-50 border rounded-md">
+                  <p className="text-sm font-medium mb-2">Original Library Options</p>
+                  <div className="space-y-1">
+                    {(libraryQuestion?.defaultOptions || libraryQuestion?.default_options || []).map((option, i) => (
+                      <div key={i} className="flex text-xs">
+                        <span className="font-medium mr-2">{i + 1}.</span>
+                        <span className="font-medium">{option.label}</span>
+                        <span className="mx-2 text-muted-foreground">→</span>
+                        <span className="text-muted-foreground">{option.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                {options.map((option, index) => (
+                  <div key={index} className="flex items-end gap-2 p-3 border rounded-md">
+                    <div className="flex-1">
+                      <FormLabel htmlFor={`option-label-${index}`} className="text-xs">Label</FormLabel>
+                      <Input
+                        id={`option-label-${index}`}
+                        value={option.label}
+                        onChange={(e) => {
+                          const newOptions = [...options];
+                          newOptions[index].label = e.target.value;
+                          setOptions(newOptions);
+                          
+                          // Update form value if options overrides are active
+                          if (form.getValues("optionsOverrides")?.length > 0) {
+                            form.setValue("optionsOverrides", newOptions);
+                          }
+                        }}
+                        className="mb-1"
+                        placeholder="Option Text"
+                        disabled={!form.getValues("optionsOverrides")?.length > 0}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <FormLabel htmlFor={`option-value-${index}`} className="text-xs">Value</FormLabel>
+                      <Input
+                        id={`option-value-${index}`}
+                        value={option.value}
+                        onChange={(e) => {
+                          const newOptions = [...options];
+                          newOptions[index].value = e.target.value;
+                          setOptions(newOptions);
+                          
+                          // Update form value if options overrides are active
+                          if (form.getValues("optionsOverrides")?.length > 0) {
+                            form.setValue("optionsOverrides", newOptions);
+                          }
+                        }}
+                        className="mb-1"
+                        placeholder="option_value"
+                        disabled={!form.getValues("optionsOverrides")?.length}
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleRemoveOption(index)}
+                      className="text-red-500"
+                      disabled={!form.getValues("optionsOverrides")?.length}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                {options.length === 0 && (
+                  <div className="text-center p-4 border border-dashed rounded-md">
+                    <p className="text-sm text-muted-foreground">No options defined yet</p>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAddOption}
+                      className="mt-2"
+                      disabled={!form.getValues("optionsOverrides")?.length}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-1" />
+                      Add First Option
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            {/* Advanced Tab for metadata overrides */}
+            <TabsContent value="advanced" className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Advanced Settings</h3>
+                <p className="text-sm text-muted-foreground">
+                  These settings allow you to customize the behavior and appearance of this question instance.
+                </p>
+                
+                {/* Render different UI based on question type */}
+                {questionType === 'matrix' && (
+                  <div className="border rounded-md p-3">
+                    <p className="text-sm font-medium mb-2">Matrix Configuration</p>
+                    <p className="text-xs text-muted-foreground">
+                      Matrix configuration overrides will be available in a future update.
+                    </p>
+                  </div>
+                )}
+                
+                {['number', 'rating_scale', 'slider'].includes(questionType) && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Numeric Constraints</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <FormLabel className="text-xs">Minimum Value</FormLabel>
+                        <Input 
+                          type="number" 
+                          placeholder="Minimum"
+                          value={form.watch('metadataOverrides')?.min || ''}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              min: e.target.value ? Number(e.target.value) : undefined
+                            });
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <FormLabel className="text-xs">Maximum Value</FormLabel>
+                        <Input 
+                          type="number" 
+                          placeholder="Maximum"
+                          value={form.watch('metadataOverrides')?.max || ''}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              max: e.target.value ? Number(e.target.value) : undefined
+                            });
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Add new option */}
-            <div className="space-y-2 border-t pt-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="newOptionLabel" className="text-xs">Label</Label>
-                  <Input
-                    id="newOptionLabel"
-                    value={newOptionLabel}
-                    onChange={(e) => setNewOptionLabel(e.target.value)}
-                    placeholder="Display text"
-                    size={1}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="newOptionValue" className="text-xs">Value</Label>
-                  <Input
-                    id="newOptionValue"
-                    value={newOptionValue}
-                    onChange={(e) => setNewOptionValue(e.target.value)}
-                    placeholder="Stored value (optional)"
-                    size={1}
-                  />
-                </div>
+                )}
               </div>
-              <Button 
-                onClick={handleAddOption} 
-                size="sm" 
-                className="w-full"
-                disabled={newOptionLabel.trim() === ''}
-              >
-                <Plus size={16} className="mr-1" /> Add Option
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {/* Display text for text_display type */}
-        {editedQuestion.questionType === 'text_display' && (
-          <div>
-            <Label htmlFor="displayText">Display Text</Label>
-            <Textarea
-              id="displayText"
-              value={editedQuestion.metadata?.displayText || ''}
-              onChange={(e) => handleMetadataChange('displayText', e.target.value)}
-              placeholder="Text to display (supports basic HTML)"
-              rows={5}
-            />
-          </div>
-        )}
-        
-        {/* Action buttons */}
-        <div className="flex justify-end space-x-2 pt-2">
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={handleSave}>Save Changes</Button>
-        </div>
-      </div>
+            </TabsContent>
+            
+            <Button type="submit" className="w-full">
+              <Save className="h-4 w-4 mr-2" />
+              Save Changes
+            </Button>
+          </form>
+        </Form>
+      </Tabs>
     </div>
   );
-}
+};
 
-// Form Editor Main Component
+// Main Form Editor Component
 export default function FormEditor() {
-  const [, setLocation] = useLocation();
-  const params = useParams<{ formKey: string }>();
-  const formKey = params.formKey || 'wedding'; // Default to wedding if not specified
+  const { formId } = useParams();
+  const [, navigate] = useLocation();
   
-  const [activeTab, setActiveTab] = useState('questions');
-  const [activePage, setActivePage] = useState<number | null>(null);
-  const [activePageIndex, setActivePageIndex] = useState(0);
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<FormDefinition | null>(null);
+  // State for panels
+  const [selectedPage, setSelectedPage] = useState(null);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [activeLibraryTab, setActiveLibraryTab] = useState("pages");
   
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  // Dialog states
+  const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [editPageData, setEditPageData] = useState(null);
   
-  // Set up sensors for drag and drop
+  // DnD states
+  const [activeDragId, setActiveDragId] = useState(null);
+  const [activeEntity, setActiveEntity] = useState(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Preview state
+  const [showPreview, setShowPreview] = useState(false);
+  
+  // Configure DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
       },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-  
-  // Fetch form data query
-  const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/form-builder/forms/${formKey}`],
-    retry: 1,
-  });
-  
-  // Update page order mutation
-  const updatePageOrderMutation = useMutation({
-    mutationFn: (newOrder: { id: number; pageOrder: number }[]) =>
-      apiRequest(`/api/form-builder/form-pages/reorder`, {
-        method: 'POST',
-        data: { pages: newOrder }
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/form-builder/forms/${formKey}`] });
-      toast({
-        title: 'Pages reordered',
-        description: 'The page order has been updated successfully.',
-      });
+
+  // Fetch form data
+  const { data: formData, isLoading: isFormLoading } = useQuery({
+    queryKey: ['/api/form-builder/forms', formId],
+    queryFn: async () => {
+      const response = await fetch(`/api/form-builder/forms/${formId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch form');
+      }
+      return await response.json();
     },
-    onError: (error) => {
-      toast({
-        title: 'Error reordering pages',
-        description: 'There was a problem updating the page order.',
-        variant: 'destructive',
-      });
-      console.error('Error reordering pages:', error);
-    }
   });
-  
-  // Update question order mutation
-  const updateQuestionOrderMutation = useMutation({
-    mutationFn: ({ pageId, questions }: { pageId: number, questions: { id: number; displayOrder: number }[] }) =>
-      apiRequest(`/api/form-builder/form-page-questions/reorder`, {
-        method: 'POST',
-        data: {
-          formPageId: pageId,
-          questions
-        }
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/form-builder/forms/${formKey}`] });
-      toast({
-        title: 'Questions reordered',
-        description: 'The question order has been updated successfully.',
-      });
+
+  // Fetch form pages
+  const { data: pagesData, isLoading: isPagesLoading } = useQuery({
+    queryKey: ['/api/form-builder/forms', formId, 'pages'],
+    queryFn: async () => {
+      const response = await fetch(`/api/form-builder/forms/${formId}/pages`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch pages');
+      }
+      const data = await response.json();
+      console.log(`CLIENT: useQuery for pages (formId: ${formId}) - Fetched data:`, JSON.stringify(data, null, 2));
+      return data;
     },
-    onError: (error) => {
-      toast({
-        title: 'Error reordering questions',
-        description: 'There was a problem updating the question order.',
-        variant: 'destructive',
-      });
-      console.error('Error reordering questions:', error);
-    }
   });
-  
-  // Add question mutation
-  const addQuestionMutation = useMutation({
-    mutationFn: (questionData: any) =>
-      apiRequest('/api/form-builder/form-page-questions', {
-        method: 'POST',
-        data: questionData
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/form-builder/forms/${formKey}`] });
-      setIsAddingQuestion(false);
-      toast({
-        title: 'Question added',
-        description: 'The question has been added successfully.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error adding question',
-        description: 'There was a problem adding the question.',
-        variant: 'destructive',
-      });
-      console.error('Error adding question:', error);
-    }
-  });
-  
-  // Update question mutation
-  const updateQuestionMutation = useMutation({
-    mutationFn: ({ questionId, questionData }: { questionId: number, questionData: any }) =>
-      apiRequest(`/api/form-builder/form-page-questions/${questionId}`, {
-        method: 'PATCH',
-        data: questionData
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/form-builder/forms/${formKey}`] });
-      setEditingQuestion(null);
-      toast({
-        title: 'Question updated',
-        description: 'The question has been updated successfully.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error updating question',
-        description: 'There was a problem updating the question.',
-        variant: 'destructive',
-      });
-      console.error('Error updating question:', error);
-    }
-  });
-  
-  // Delete question mutation
-  const deleteQuestionMutation = useMutation({
-    mutationFn: (questionId: number) =>
-      apiRequest(`/api/form-builder/form-page-questions/${questionId}`, {
-        method: 'DELETE'
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/form-builder/forms/${formKey}`] });
-      toast({
-        title: 'Question deleted',
-        description: 'The question has been deleted successfully.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error deleting question',
-        description: 'There was a problem deleting the question.',
-        variant: 'destructive',
-      });
-      console.error('Error deleting question:', error);
-    }
-  });
-  
-  // Update local form data when the API data changes
-  useEffect(() => {
-    if (data) {
-      setFormData(data);
+
+  // Fetch questions for the selected page
+  const { data: questionsData, isLoading: isQuestionsLoading, isFetching: isQuestionsFetching } = useQuery({
+    queryKey: ['pageQuestions', selectedPage?.id],
+    queryFn: async () => {
+      if (!selectedPage) return [];
       
-      // Set the first page as active if no active page is set
-      if (!activePage && data.pages && data.pages.length > 0) {
-        setActivePage(data.pages[0].id);
-        setActivePageIndex(0);
+      console.log(`CLIENT: Fetching questions for page ${selectedPage.id}...`);
+      const response = await fetch(`/api/form-builder/pages/${selectedPage.id}/questions`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch questions');
+      }
+      const fetchedQuestions = await response.json();
+      console.log(`CLIENT: Fetched questions for page ${selectedPage.id}:`, JSON.stringify(fetchedQuestions, null, 2));
+      return fetchedQuestions;
+    },
+    enabled: !!selectedPage,
+    staleTime: 1000 * 5, // Reduce staleTime for faster refetches during debugging
+  });
+  
+  // Add useEffect to log questionsData updates
+  useEffect(() => {
+    console.log('CLIENT: questionsData updated:', questionsData);
+    console.log('CLIENT: Type of questionsData:', typeof questionsData, Array.isArray(questionsData));
+  }, [questionsData]);
+  
+  // Create a consistent questions array for rendering
+  const questions = useMemo(() => {
+    if (!questionsData) return [];
+    if (Array.isArray(questionsData)) return questionsData;
+    return questionsData.data || [];
+  }, [questionsData]);
+
+  // Fetch library questions for adding to the form
+  const { data: libraryQuestionsData, isLoading: isLibraryLoading } = useQuery({
+    queryKey: ['/api/form-builder/library-questions'],
+    queryFn: async () => {
+      const response = await fetch('/api/form-builder/library-questions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch library questions');
+      }
+      const jsonData = await response.json();
+      console.log("CLIENT: Library Questions Raw API Response:", JSON.stringify(jsonData, null, 2));
+      return jsonData;
+    },
+  });
+
+  // Set first page as selected when pages are loaded
+  useEffect(() => {
+    console.log("CLIENT: useEffect for selecting first page - pagesData:", JSON.stringify(pagesData, null, 2));
+    
+    // If pagesData is directly the array (not nested in a 'data' property)
+    const pageArray = Array.isArray(pagesData) ? pagesData : pagesData?.data;
+    
+    if (pageArray && pageArray.length > 0 && !selectedPage) {
+      console.log("CLIENT: useEffect - Setting selected page to:", JSON.stringify(pageArray[0], null, 2));
+      setSelectedPage(pageArray[0]);
+    } else if (pageArray && pageArray.length === 0) {
+      console.log("CLIENT: useEffect - No pages available, clearing selectedPage.");
+      setSelectedPage(null);
+    }
+  }, [pagesData, selectedPage]);
+
+  // Mutations for pages
+  const createPageMutation = useMutation({
+    mutationFn: async (pageData) => {
+      const response = await fetch(`/api/form-builder/forms/${formId}/pages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pageData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create page');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
+      toast({
+        title: "Page created",
+        description: "The page has been created successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem creating the page",
+      });
+    }
+  });
+
+  const updatePageMutation = useMutation({
+    mutationFn: async ({ pageId, pageData }) => {
+      const response = await fetch(`/api/form-builder/pages/${pageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pageData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update page');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
+      toast({
+        title: "Page updated",
+        description: "The page has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem updating the page",
+      });
+    }
+  });
+
+  const deletePageMutation = useMutation({
+    mutationFn: async (pageId) => {
+      const response = await fetch(`/api/form-builder/pages/${pageId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete page');
+      }
+      
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
+      setSelectedPage(null);
+      toast({
+        title: "Page deleted",
+        description: "The page has been deleted successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem deleting the page",
+      });
+    }
+  });
+
+  // Mutations for questions
+  const addQuestionMutation = useMutation({
+    mutationFn: async ({ 
+      pageId, 
+      libraryQuestionId, 
+      displayOrder,
+      displayTextOverride,
+      isRequiredOverride,
+      isHiddenOverride,
+      helperTextOverride,
+      placeholderOverride,
+      metadataOverrides,
+      optionsOverrides
+    }) => {
+      const response = await fetch(`/api/form-builder/pages/${pageId}/questions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          library_question_id: libraryQuestionId,
+          display_order: displayOrder,
+          display_text_override: displayTextOverride,
+          is_required_override: isRequiredOverride,
+          is_hidden_override: isHiddenOverride,
+          helper_text_override: helperTextOverride,
+          placeholder_override: placeholderOverride,
+          metadata_overrides: metadataOverrides || {},
+          options_overrides: optionsOverrides || []
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to add question');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate both the questions query and the form data query
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId] });
+      // Also invalidate the page-specific questions query with the ['pageQuestions', pageId] format
+      queryClient.invalidateQueries({ queryKey: ['pageQuestions', variables.pageId] });
+      // We don't need a toast message here because we're adding one in the handleAddQuestionFromLibrary function
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem adding the question",
+      });
+    }
+  });
+
+  const updateQuestionMutation = useMutation({
+    mutationFn: async ({ pageId, questionId, questionData }) => {
+      // Convert the field names from camelCase to snake_case for the API
+      const response = await fetch(`/api/form-builder/pages/${pageId}/questions/${questionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          display_text_override: questionData.displayTextOverride,
+          is_required_override: questionData.isRequiredOverride,
+          is_hidden_override: questionData.isHiddenOverride,
+          helper_text_override: questionData.helperTextOverride,
+          placeholder_override: questionData.placeholderOverride,
+          metadata_overrides: questionData.metadataOverrides || {},
+          options_overrides: questionData.optionsOverrides || [],
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update question');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate both query key formats to ensure consistent UI updates
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage?.id] });
+      
+      toast({
+        title: "Question updated",
+        description: "The question settings have been updated successfully.",
+      });
+      // Deselect the question after updating
+      setSelectedQuestion(null);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem updating the question",
+      });
+    }
+  });
+
+  const deleteQuestionMutation = useMutation({
+    mutationFn: async ({ pageId, questionId }) => {
+      const response = await fetch(`/api/form-builder/pages/${pageId}/questions/${questionId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete question');
+      }
+      
+      return true;
+    },
+    onSuccess: () => {
+      // Update both query formats to ensure all caches are invalidated
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage?.id] });
+      setSelectedQuestion(null);
+      toast({
+        title: "Question removed",
+        description: "The question has been removed from the page.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "There was a problem removing the question",
+      });
+    }
+  });
+
+  // Handle page operations
+  const handleCreatePage = () => {
+    setEditPageData(null);
+    setPageDialogOpen(true);
+  };
+
+  const handleEditPage = (page) => {
+    setEditPageData(page);
+    setPageDialogOpen(true);
+  };
+
+  const handleSavePage = async (dataFromDialog) => {
+    if (editPageData) {
+      await updatePageMutation.mutateAsync({
+        pageId: editPageData.id,
+        pageData: dataFromDialog,
+      });
+    } else {
+      // For new pages, calculate the next pageOrder
+      const existingPages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+      let nextOrder;
+      
+      console.log("CLIENT: Calculating nextOrder for new page. Existing pages:", JSON.stringify(existingPages, null, 2));
+      
+      if (existingPages.length === 0) {
+        nextOrder = 1; // Start first page order at 1 to avoid conflicts
+      } else {
+        // Ensure all mapped values are numbers, default to 0 if not
+        const orders = existingPages.map(p => {
+          const order = p.pageOrder !== undefined ? p.pageOrder : (p.page_order !== undefined ? p.page_order : 0);
+          return typeof order === 'number' ? order : 0;
+        });
+        nextOrder = Math.max(0, ...orders) + 1; // Get highest existing order + 1
+      }
+      
+      console.log("CLIENT: Calculated nextOrder:", nextOrder);
+
+      const pageDataToSend = {
+        ...dataFromDialog,
+        pageOrder: nextOrder
+      };
+      
+      console.log("CLIENT: Sending for new page:", JSON.stringify(pageDataToSend, null, 2));
+
+      const newPage = await createPageMutation.mutateAsync(pageDataToSend);
+      if (newPage) {
+        setSelectedPage(newPage);
       }
     }
-  }, [data, activePage]);
-  
-  // Handle page tab change
-  const handlePageChange = (pageId: number) => {
-    const pageIndex = formData?.pages.findIndex(p => p.id === pageId) || 0;
-    setActivePage(pageId);
-    setActivePageIndex(pageIndex);
-    setEditingQuestion(null);
   };
-  
-  // Handle drag end for page reordering
-  const handlePageDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    if (!over || active.id === over.id || !formData) {
+
+  const handleDeletePage = async (pageId) => {
+    if (!window.confirm("Are you sure you want to delete this page? All questions on this page will also be removed.")) {
       return;
     }
     
-    const oldIndex = formData.pages.findIndex(p => p.id.toString() === active.id);
-    const newIndex = formData.pages.findIndex(p => p.id.toString() === over.id);
-    
-    if (oldIndex === -1 || newIndex === -1) {
-      return;
-    }
-    
-    // Create new order
-    const newPages = [...formData.pages];
-    const [movedPage] = newPages.splice(oldIndex, 1);
-    newPages.splice(newIndex, 0, movedPage);
-    
-    // Update local state
-    setFormData({
-      ...formData,
-      pages: newPages.map((page, index) => ({
-        ...page,
-        pageOrder: index
-      }))
-    });
-    
-    // Send update to server
-    updatePageOrderMutation.mutate(
-      newPages.map((page, index) => ({
-        id: page.id,
-        pageOrder: index
-      }))
-    );
+    await deletePageMutation.mutateAsync(pageId);
   };
-  
-  // Handle drag end for question reordering
-  const handleQuestionDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+
+  // Handle question operations
+  const handleAddQuestionFromLibrary = async (libraryQuestion) => {
+    console.log("ADD QUESTION - libraryQuestion:", JSON.stringify(libraryQuestion, null, 2));
+    console.log("ADD QUESTION - selectedPage at this moment:", JSON.stringify(selectedPage, null, 2));
     
-    if (!over || active.id === over.id || !formData || !activePage) {
+    if (!selectedPage) {
+      toast({
+        variant: "destructive",
+        title: "No page selected",
+        description: "Please select a page first to add questions.",
+      });
+      console.error("ADD QUESTION - ABORTING: No page selected!");
       return;
     }
     
-    const currentPage = formData.pages.find(p => p.id === activePage);
-    if (!currentPage) return;
+    console.log(`CLIENT: handleAddQuestionFromLibrary called. questionsData at start:`, JSON.stringify(questionsData, null, 2));
+    console.log(`CLIENT: isQuestionsLoading: ${isQuestionsLoading}, isQuestionsFetching: ${isQuestionsFetching}`);
     
-    const oldIndex = currentPage.questions.findIndex(q => q.id.toString() === active.id);
-    const newIndex = currentPage.questions.findIndex(q => q.id.toString() === over.id);
+    // Ensure we are using the array of questions correctly based on the structure of questionsData
+    const currentQuestionsOnPage = Array.isArray(questionsData) ? questionsData : (questionsData?.data || []);
     
-    if (oldIndex === -1 || newIndex === -1) {
-      return;
+    let nextOrder;
+    if (currentQuestionsOnPage.length === 0) {
+      nextOrder = 1;
+    } else {
+      const orders = currentQuestionsOnPage.map(q => {
+        const orderValue = q.displayOrder !== undefined ? q.displayOrder : 
+                          (q.display_order !== undefined ? q.display_order : 0);
+        return (typeof orderValue === 'number' && !isNaN(orderValue)) ? orderValue : 0;
+      });
+      console.log(`CLIENT: Existing orders on page:`, JSON.stringify(orders));
+      nextOrder = Math.max(0, ...orders) + 1;
     }
     
-    // Create new order
-    const newQuestions = [...currentPage.questions];
-    const [movedQuestion] = newQuestions.splice(oldIndex, 1);
-    newQuestions.splice(newIndex, 0, movedQuestion);
+    console.log(`CLIENT: Adding library question ID ${libraryQuestion.id}. Page ID: ${selectedPage.id}.`);
+    console.log(`CLIENT: currentQuestionsOnPage based on questionsData:`, JSON.stringify(currentQuestionsOnPage));
+    console.log(`CLIENT: Calculated nextOrder: ${nextOrder}`);
     
-    // Update local state
-    const updatedPages = formData.pages.map(page => {
-      if (page.id === activePage) {
-        return {
-          ...page,
-          questions: newQuestions
-        };
-      }
-      return page;
-    });
-    
-    setFormData({
-      ...formData,
-      pages: updatedPages
-    });
-    
-    // Send update to server
-    updateQuestionOrderMutation.mutate({
-      pageId: activePage,
-      questions: newQuestions.map((question, index) => ({
-        id: question.id,
-        displayOrder: index
-      }))
-    });
-  };
-  
-  // Handle adding a new question
-  const handleAddQuestion = () => {
-    if (!activePage) return;
-    
-    const newQuestion: Question = {
-      id: 0, // Will be assigned by the server
-      questionText: 'New Question',
-      questionType: 'textbox',
-      fieldKey: `question_${Date.now()}`,
-      isRequired: false,
+    // Set up initial overrides based on library question
+    const initialOverrides = {
+      // Basic data to identify the question
+      pageId: selectedPage.id,
+      libraryQuestionId: libraryQuestion.id,
+      displayOrder: nextOrder,
+      
+      // Initialize with values from the library question if available, otherwise with null
+      displayTextOverride: libraryQuestion.defaultText || libraryQuestion.default_text || null,
+      // Ensure these are booleans or explicit nulls based on what the server expects
+      isRequiredOverride: libraryQuestion.defaultMetadata?.isRequired !== undefined ?
+                            Boolean(libraryQuestion.defaultMetadata.isRequired) :
+                            (libraryQuestion.defaultMetadata?.is_required !== undefined ?
+                                Boolean(libraryQuestion.defaultMetadata.is_required) : null),
+      isHiddenOverride: libraryQuestion.defaultMetadata?.isHidden !== undefined ?
+                            Boolean(libraryQuestion.defaultMetadata.isHidden) :
+                            (libraryQuestion.defaultMetadata?.is_hidden !== undefined ?
+                                Boolean(libraryQuestion.defaultMetadata.is_hidden) : null),
+      helperTextOverride: libraryQuestion.defaultMetadata?.helperText || 
+                          libraryQuestion.defaultMetadata?.helper_text || null,
+      placeholderOverride: libraryQuestion.defaultMetadata?.placeholder || null,
+      metadataOverrides: libraryQuestion.defaultMetadata || {}, // Ensure this is an object
+      optionsOverrides: libraryQuestion.defaultOptions || []    // Ensure this is an array
     };
     
-    setEditingQuestion(newQuestion);
-    setIsAddingQuestion(true);
-  };
-  
-  // Handle editing a question
-  const handleEditQuestion = (question: Question) => {
-    setEditingQuestion({ ...question });
-    setIsAddingQuestion(false);
-  };
-  
-  // Handle deleting a question
-  const handleDeleteQuestion = (questionId: number) => {
-    if (confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
-      deleteQuestionMutation.mutate(questionId);
-    }
-  };
-  
-  // Handle saving question changes
-  const handleSaveQuestion = (updatedQuestion: Question) => {
-    if (!activePage) return;
+    console.log("CLIENT: Sending question with overrides:", JSON.stringify(initialOverrides, null, 2));
     
-    if (isAddingQuestion) {
-      // Adding a new question
-      const currentPage = formData?.pages.find(p => p.id === activePage);
-      if (!currentPage) return;
-      
-      const questionData = {
-        formPageId: activePage,
-        displayOrder: currentPage.questions.length,
-        displayTextOverride: updatedQuestion.questionText,
-        isRequiredOverride: updatedQuestion.isRequired,
-        questionData: {
-          questionText: updatedQuestion.questionText,
-          questionType: updatedQuestion.questionType,
-          fieldKey: updatedQuestion.fieldKey,
-          metadata: updatedQuestion.metadata || {},
-          options: updatedQuestion.options || []
-        }
-      };
-      
-      addQuestionMutation.mutate(questionData);
-    } else {
-      // Updating an existing question
-      if (!editingQuestion) return;
-      
-      const questionData = {
-        displayTextOverride: updatedQuestion.questionText,
-        isRequiredOverride: updatedQuestion.isRequired,
-        questionData: {
-          questionText: updatedQuestion.questionText,
-          questionType: updatedQuestion.questionType,
-          fieldKey: updatedQuestion.fieldKey,
-          metadata: updatedQuestion.metadata || {},
-          options: updatedQuestion.options || []
-        }
-      };
-      
-      updateQuestionMutation.mutate({
-        questionId: editingQuestion.id,
-        questionData
+    try {
+      await addQuestionMutation.mutateAsync(initialOverrides);
+      // Toast is now more specific with the question text
+      toast({
+        title: "Question Added",
+        description: `"${initialOverrides.displayTextOverride || 'New Question'}" added to page.`,
+      });
+    } catch (error) {
+      console.error("CLIENT: Error in handleAddQuestionFromLibrary:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to add question to the page."
       });
     }
   };
-  
-  // Handle canceling question editing
-  const handleCancelEdit = () => {
-    setEditingQuestion(null);
-    setIsAddingQuestion(false);
+
+  const handleUpdateQuestion = async (questionData) => {
+    if (!selectedPage || !selectedQuestion) return;
+    
+    await updateQuestionMutation.mutateAsync({
+      pageId: selectedPage.id,
+      questionId: selectedQuestion.id,
+      questionData,
+    });
   };
-  
-  // Navigation controls
-  const goToPreviousPage = () => {
-    if (activePageIndex > 0 && formData) {
-      const prevPageId = formData.pages[activePageIndex - 1].id;
-      handlePageChange(prevPageId);
+
+  const handleDeleteQuestion = async () => {
+    if (!selectedPage || !selectedQuestion) return;
+    
+    if (!window.confirm("Are you sure you want to remove this question from the page?")) {
+      return;
     }
+    
+    await deleteQuestionMutation.mutateAsync({
+      pageId: selectedPage.id,
+      questionId: selectedQuestion.id,
+    });
   };
-  
-  const goToNextPage = () => {
-    if (formData && activePageIndex < formData.pages.length - 1) {
-      const nextPageId = formData.pages[activePageIndex + 1].id;
-      handlePageChange(nextPageId);
+
+  // Handle drag and drop
+  const handleDragStart = (event) => {
+    const { active } = event;
+    setActiveDragId(active.id);
+    
+    // Determine what's being dragged
+    const pageArray = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+    const draggedItem = pageArray.find(p => p.id === active.id) || 
+                        questionsData?.find(q => q.id === active.id) ||
+                        libraryQuestionsData?.data?.find(q => q.id === active.id);
+    
+    console.log("CLIENT: Drag started, active ID:", active.id, "Found item:", draggedItem);
+    
+    setActiveEntity(draggedItem);
+  };
+
+  const handleDragEnd = async (event) => {
+    console.log("DRAG END - Current selectedPage:", JSON.stringify(selectedPage, null, 2));
+    console.log("DRAG END - Active Entity (dragged item):", JSON.stringify(activeEntity, null, 2));
+    
+    const { active, over } = event;
+    console.log("DRAG END - Over ID:", over?.id);
+    
+    if (!over) {
+      setActiveDragId(null);
+      setActiveEntity(null);
+      return;
     }
-  };
-  
-  // Go back to form list
-  const handleBack = () => {
-    setLocation('/form-builder');
-  };
-  
-  // If loading or error
-  if (isLoading) {
-    return (
-      <div className="container py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Loading form data...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (error || !formData) {
-    return (
-      <div className="container py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-3">Error Loading Form</h2>
-          <p className="mb-6">There was a problem loading the form data. Please try again.</p>
-          <Button onClick={handleBack}>Back to Form List</Button>
-        </div>
-      </div>
-    );
-  }
-  
-  // Main form editor UI
-  return (
-    <div className="container py-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleBack}
-              className="mr-2"
-            >
-              <ArrowLeft size={18} />
-            </Button>
-            <h1 className="text-2xl font-bold">{formData.form.title}</h1>
-          </div>
-          <p className="text-gray-500 mt-1">{formData.form.description}</p>
-        </div>
+    
+    // Handle page reordering
+    if (activeLibraryTab === "pages" && active.id !== over.id) {
+      // Find the active and target pages using the consistent array handling
+      const allPages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+      const activePage = allPages.find(p => p.id === active.id);
+      const overPage = allPages.find(p => p.id === over.id);
+      
+      if (activePage && overPage) {
+        // Get all pages and find their current order
+        const pages = Array.isArray(pagesData) ? [...pagesData] : [...(pagesData?.data || [])];
+        console.log("CLIENT: In handleDragEnd handler, using pages:", JSON.stringify(pages, null, 2));
         
-        <div className="flex space-x-2">
-          <Button variant="outline" className="flex items-center">
-            <Eye size={16} className="mr-2" />
-            Preview
+        // Reorder the pages based on the drag and drop
+        const newOrder = Array.from(pages);
+        const activeIndex = pages.findIndex(p => p.id === active.id);
+        const overIndex = pages.findIndex(p => p.id === over.id);
+        
+        if (activeIndex !== -1 && overIndex !== -1) {
+          newOrder.splice(activeIndex, 1);
+          newOrder.splice(overIndex, 0, activePage);
+          
+          // Create payload for updating page orders
+          const reorderPayload = newOrder.map((page, index) => ({
+            pageId: page.id,
+            newPageOrder: index + 1
+          }));
+          
+          // Call the API to update page orders
+          try {
+            const response = await fetch(`/api/form-builder/forms/${formId}/pages/reorder`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(reorderPayload),
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to reorder pages');
+            }
+            
+            // Refresh the form and pages data
+            queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId] });
+            queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
+            
+            toast({
+              title: "Pages reordered",
+              description: "The page order has been updated."
+            });
+          } catch (error) {
+            console.error("Error reordering pages:", error);
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to update page order"
+            });
+          }
+        }
+      }
+    }
+    
+    // Handle question reordering
+    if (selectedPage && active.id !== over.id) {
+      // If the active item is a library question and it's dropped on the questions container
+      if (activeLibraryTab === "library" && over.id === "questions-container") {
+        const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
+        if (libraryQuestion) {
+          await handleAddQuestionFromLibrary(libraryQuestion);
+        }
+      }
+      
+      // If both active and over are questions on the page (reordering existing questions)
+      else if (activeLibraryTab !== "library") {
+        const questions = Array.isArray(questionsData) ? questionsData : (questionsData || []);
+        const activeQuestion = questions.find(q => q.id === active.id);
+        const overQuestion = questions.find(q => q.id === over.id);
+        
+        if (activeQuestion && overQuestion) {
+          const activeIndex = questions.findIndex(q => q.id === active.id);
+          const overIndex = questions.findIndex(q => q.id === over.id);
+          
+          if (activeIndex !== -1 && overIndex !== -1) {
+            // Create the new order
+            const reorderedQuestions = Array.from(questions);
+            reorderedQuestions.splice(activeIndex, 1);
+            reorderedQuestions.splice(overIndex, 0, activeQuestion);
+            
+            // Create payload for reordering API
+            const reorderPayload = reorderedQuestions.map((question, index) => ({
+              questionInstanceId: question.id, // Changed from questionId to match backend expectation
+              newDisplayOrder: index + 1
+            }));
+            
+            console.log("Reordering questions with payload:", JSON.stringify(reorderPayload, null, 2));
+            
+            // Call the reorder API
+            try {
+              const response = await fetch(`/api/form-builder/pages/${selectedPage.id}/questions/reorder`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reorderPayload),
+              });
+              
+              if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Error from reorder API:", errorData);
+                throw new Error(errorData.message || 'Failed to reorder questions');
+              }
+              
+              // Refresh the questions data for all query formats
+              queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage.id, 'questions'] });
+              queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage.id] });
+              
+              // Refresh the form data as well to ensure everything is in sync
+              queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId] });
+              
+              toast({
+                title: "Questions reordered",
+                description: "The question order has been updated."
+              });
+            } catch (error) {
+              console.error("Error reordering questions:", error);
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.message || "Failed to update question order"
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    // Always reset drag state at the end
+    setActiveDragId(null);
+    setActiveEntity(null);
+  };
+
+  // Handle library question drop onto page
+  const handleDragOver = (event) => {
+    const { active, over } = event;
+    
+    // We don't take action on dragOver anymore - all drag handling happens in handleDragEnd
+    // This avoids creating multiple copies of questions during a drag operation
+    
+    // Instead, we just provide visual feedback during the drag
+    // The cursor should change when dragging over a valid drop target
+    if (activeLibraryTab === "library" && active?.id) {
+      if (over?.id === "questions-container" || (over?.id && questionsData?.data?.find(q => q.id === over.id))) {
+        // The CSS styling for valid drop targets is handled by the component classes
+        // No need to set any state here
+      }
+    }
+  };
+  
+  // Add a helper for inserting a question at a specific position
+  const handleInsertQuestionAt = async (libraryQuestion, targetPosition) => {
+    if (!selectedPage) {
+      toast({
+        variant: "destructive",
+        title: "No page selected",
+        description: "Please select a page first to add questions.",
+      });
+      return;
+    }
+    
+    const questions = questionsData?.data || [];
+    let insertOrder = 1; // Default to the start
+    
+    if (targetPosition === 'end') {
+      // Add to the end
+      insertOrder = questions.length > 0 
+        ? Math.max(...questions.map(q => q.displayOrder || q.display_order)) + 1 
+        : 1;
+    } else if (typeof targetPosition === 'number') {
+      // Insert at specific position
+      insertOrder = targetPosition;
+      
+      // Reorder all existing questions that come after this position
+      // This will be handled by the backend API
+    }
+    
+    // Set up initial overrides based on library question
+    const initialOverrides = {
+      pageId: selectedPage.id,
+      libraryQuestionId: libraryQuestion.id,
+      displayOrder: insertOrder,
+      displayTextOverride: null,
+      isRequiredOverride: null,
+      isHiddenOverride: null,
+      helperTextOverride: null,
+      placeholderOverride: null,
+      metadataOverrides: {},
+      optionsOverrides: []
+    };
+    
+    try {
+      await addQuestionMutation.mutateAsync(initialOverrides);
+      toast({
+        title: "Question added",
+        description: "Question has been added to the page successfully.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to add question to the page."
+      });
+    }
+  };
+
+  // Calculate display values
+  // Direct access to pagesData which is an array returned from the API
+  const pages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+  console.log("CLIENT: 'pages' variable before rendering:", JSON.stringify(pages, null, 2));
+  console.log("CLIENT: 'questions' variable before rendering:", JSON.stringify(questions, null, 2));
+  const libraryQuestions = libraryQuestionsData?.data || [];
+  
+  // Filter library questions based on search
+  const filteredLibraryQuestions = libraryQuestions.filter(question => {
+    if (!searchQuery) return true;
+    
+    const displayText = question.displayText || question.default_text || '';
+    const questionType = question.questionType || question.question_type || '';
+    const helperText = question.helperText || question.helper_text || '';
+    
+    const lowerSearchQuery = searchQuery.toLowerCase();
+    
+    return displayText.toLowerCase().includes(lowerSearchQuery) || 
+           questionType.toLowerCase().includes(lowerSearchQuery) ||
+           helperText.toLowerCase().includes(lowerSearchQuery);
+  });
+  const formTitle = formData?.formTitle || formData?.form_title || "Form Editor";
+
+  // If form is not found
+  if (!isFormLoading && !formData) {
+    return (
+      <div className="p-6">
+        <div className="mb-4">
+          <Button variant="ghost" onClick={() => navigate("/admin/form-builder/forms")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Forms
           </Button>
-          <Button 
-            variant="default" 
-            className="flex items-center"
-            disabled={isSaving}
-          >
-            <Save size={16} className="mr-2" />
-            {isSaving ? 'Saving...' : 'Save Form'}
+        </div>
+        <Card className="p-8 text-center">
+          <h2 className="text-xl font-bold mb-2">Form Not Found</h2>
+          <p className="text-muted-foreground mb-4">The form you're looking for doesn't exist or you don't have permission to view it.</p>
+          <Button onClick={() => navigate("/admin/form-builder/forms")}>
+            Go to Form Manager
           </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <div className="border-b bg-white p-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/admin/form-builder/forms")}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <h1 className="text-xl font-bold">{formTitle}</h1>
+            {formData?.status && (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                formData.status === "published" ? "bg-green-100 text-green-800" :
+                formData.status === "draft" ? "bg-amber-100 text-amber-800" :
+                formData.status === "template" ? "bg-blue-100 text-blue-800" :
+                "bg-gray-100 text-gray-800"
+              }`}>
+                {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowPreview(true)}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Preview
+            </Button>
+          </div>
         </div>
       </div>
       
-      {/* Main tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="questions">Questions</TabsTrigger>
-          <TabsTrigger value="logic">Conditional Logic</TabsTrigger>
-          <TabsTrigger value="settings">Form Settings</TabsTrigger>
-          <TabsTrigger value="validation">Validation</TabsTrigger>
-        </TabsList>
-        
-        {/* Questions Tab */}
-        <TabsContent value="questions" className="space-y-4">
-          <div className="grid grid-cols-5 gap-6">
-            {/* Pages sidebar */}
-            <div className="col-span-1">
-              <div className="bg-gray-50 border rounded-lg p-4">
-                <h3 className="font-semibold mb-3 flex justify-between items-center">
-                  <span>Pages</span>
-                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                    {formData.pages.length}
-                  </span>
-                </h3>
-                
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handlePageDragEnd}
-                >
-                  <SortableContext
-                    items={formData.pages.map(p => p.id.toString())}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-2">
-                      {formData.pages.map(page => {
-                        const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-                          id: page.id.toString(),
-                        });
-                        
-                        const style = {
-                          transform: CSS.Transform.toString(transform),
-                          transition,
-                        };
-                        
-                        const isActive = page.id === activePage;
-                        
-                        return (
-                          <div
-                            key={page.id}
-                            ref={setNodeRef}
-                            style={style}
-                            className={`p-2 border rounded flex items-center cursor-pointer
-                              ${isActive ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-gray-300'}
-                            `}
-                            onClick={() => handlePageChange(page.id)}
-                          >
-                            <div
-                              {...attributes}
-                              {...listeners}
-                              className="mr-2 text-gray-400 hover:text-gray-600 cursor-move touch-none"
-                            >
-                              <GripVertical size={16} />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium truncate">{page.title}</p>
-                              <p className="text-xs text-gray-500">
-                                {page.questions.length} question{page.questions.length !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-                
-                <div className="mt-4 pt-3 border-t">
-                  <Button variant="outline" className="w-full flex items-center justify-center">
-                    <Plus size={16} className="mr-1" /> Add Page
+      {/* Main Content - 3 panel layout */}
+      <DndContext 
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel - Pages & Library */}
+          <div className="w-72 border-r bg-gray-50 flex flex-col">
+            <Tabs value={activeLibraryTab} onValueChange={setActiveLibraryTab} className="flex-1 flex flex-col">
+              <div className="p-4 border-b">
+                <TabsList className="w-full">
+                  <TabsTrigger value="pages" className="flex-1">Pages</TabsTrigger>
+                  <TabsTrigger value="library" className="flex-1">Library</TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="pages" className="flex-1 flex flex-col">
+                <div className="flex justify-between items-center p-4 pb-2">
+                  <h3 className="font-medium">Form Pages</h3>
+                  <Button size="sm" variant="ghost" onClick={handleCreatePage}>
+                    <PlusCircle className="h-4 w-4 mr-1" />
+                    Add
                   </Button>
                 </div>
-              </div>
-            </div>
-            
-            {/* Questions area */}
-            <div className="col-span-4">
-              {activePage && (
-                <Card className="p-5">
-                  {/* Page header */}
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h2 className="text-xl font-semibold">
-                          {formData.pages.find(p => p.id === activePage)?.title}
-                        </h2>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <Pencil size={15} />
-                        </Button>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Page {activePageIndex + 1} of {formData.pages.length}
-                      </p>
+                
+                <ScrollArea className="flex-1 p-4">
+                  {console.log("CLIENT: Rendering pages section. pagesData:", JSON.stringify(pagesData, null, 2))}
+                  {isPagesLoading ? (
+                    <div className="flex justify-center p-4">
+                      <p>Loading pages...</p>
                     </div>
-                    
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={goToPreviousPage}
-                        disabled={activePageIndex === 0}
-                      >
-                        <ArrowLeft size={16} className="mr-1" /> Previous
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={goToNextPage}
-                        disabled={activePageIndex === formData.pages.length - 1}
-                      >
-                        Next <ArrowRight size={16} className="ml-1" />
+                  ) : pages.length === 0 ? (
+                    <div className="text-center p-4 border border-dashed rounded-md">
+                      <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground mb-2">No pages yet</p>
+                      <Button size="sm" onClick={handleCreatePage}>
+                        <PlusCircle className="h-4 w-4 mr-1" />
+                        Create First Page
                       </Button>
                     </div>
-                  </div>
-                  
-                  <Separator className="my-4" />
-                  
-                  {/* Questions list */}
-                  {editingQuestion ? (
-                    <QuestionEditor
-                      question={editingQuestion}
-                      onSave={handleSaveQuestion}
-                      onCancel={handleCancelEdit}
-                    />
                   ) : (
-                    <>
-                      <div className="mb-4">
-                        <Button onClick={handleAddQuestion}>
-                          <Plus size={16} className="mr-1" /> Add Question
-                        </Button>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        {formData.pages.find(p => p.id === activePage)?.questions.length === 0 ? (
-                          <div className="text-center py-10 border border-dashed rounded-md">
-                            <p className="text-gray-500 mb-4">This page has no questions yet.</p>
-                            <Button onClick={handleAddQuestion}>
-                              <Plus size={16} className="mr-1" /> Add First Question
+                    <SortableContext items={pages.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                      {pages.map(page => (
+                        <div key={page.id} className="relative group">
+                          <SortablePage
+                            page={page}
+                            isSelected={selectedPage?.id === page.id}
+                            onSelect={(pageData) => {
+                              console.log("PAGE CLICKED VIA onSelect. Page Data:", JSON.stringify(pageData, null, 2));
+                              setSelectedPage(pageData);
+                              setSelectedQuestion(null);
+                            }}
+                          />
+                          <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditPage(page);
+                              }}
+                            >
+                              <Settings className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 text-red-500" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePage(page.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
-                        ) : (
-                          <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={handleQuestionDragEnd}
-                          >
-                            <SortableContext
-                              items={formData.pages
-                                .find(p => p.id === activePage)
-                                ?.questions.map(q => q.id.toString()) || []}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              {formData.pages
-                                .find(p => p.id === activePage)
-                                ?.questions.map(question => (
-                                  <SortableQuestionItem
-                                    key={question.id}
-                                    question={question}
-                                    onEdit={handleEditQuestion}
-                                    onDelete={handleDeleteQuestion}
-                                  />
-                                ))}
-                            </SortableContext>
-                          </DndContext>
-                        )}
-                      </div>
-                    </>
+                        </div>
+                      ))}
+                    </SortableContext>
                   )}
-                </Card>
+                </ScrollArea>
+              </TabsContent>
+              
+              <TabsContent value="library" className="flex-1 flex flex-col">
+                <div className="flex justify-between items-center p-4 pb-2">
+                  <h3 className="font-medium">Question Library</h3>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => navigate("/admin/form-builder/question-library")}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Manage
+                  </Button>
+                </div>
+                
+                <div className="px-4 pb-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search questions..." 
+                      className="pl-8 text-sm"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-2"
+                        onClick={() => setSearchQuery("")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                <ScrollArea className="flex-1 p-4">
+                  {isLibraryLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : libraryQuestions.length === 0 ? (
+                    <div className="text-center p-4 border border-dashed rounded-md">
+                      <p className="text-sm text-muted-foreground">No questions in library</p>
+                    </div>
+                  ) : filteredLibraryQuestions.length === 0 && searchQuery ? (
+                    <div className="text-center p-4 border border-dashed rounded-md">
+                      <p className="text-sm text-muted-foreground">No questions match your search</p>
+                      <Button 
+                        variant="link" 
+                        className="mt-2" 
+                        onClick={() => setSearchQuery("")}
+                      >
+                        Clear search
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredLibraryQuestions.map(question => (
+                        <div
+                          key={question.id}
+                          className="p-3 rounded-md border border-gray-200 bg-white cursor-move hover:border-primary hover:shadow-sm transition-all"
+                          draggable
+                          onDragStart={() => {
+                            setActiveDragId(question.id);
+                            setActiveEntity(question);
+                          }}
+                          onClick={() => handleAddQuestionFromLibrary(question)}
+                        >
+                          <div className="flex justify-between items-center mb-1">
+                            <p className="font-medium text-sm">{question.displayText || question.defaultText || question.default_text}</p>
+                            <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                              {getQuestionTypeLabel(question.questionType || question.question_type)}
+                            </span>
+                          </div>
+                          {(question.helperText || question.helper_text) && (
+                            <p className="text-xs text-gray-500 truncate">{question.helperText || question.helper_text}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          {/* Center Panel - Current Page Canvas */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="border-b p-4">
+              <h2 className="font-semibold">
+                {selectedPage 
+                  ? `Editing: ${selectedPage.pageTitle || selectedPage.title || `Page ${selectedPage.pageOrder ?? selectedPage.id}`}` 
+                  : "Select a page to edit"
+                }
+              </h2>
+              {selectedPage?.description && (
+                <p className="text-sm text-muted-foreground">{selectedPage.description}</p>
+              )}
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6" id="questions-container">
+              {!selectedPage ? (
+                <div className="h-full flex items-center justify-center text-center">
+                  <div className="max-w-md p-6">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No page selected</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Select a page from the left panel or create a new one to start building your form.
+                    </p>
+                    <Button onClick={handleCreatePage}>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Create New Page
+                    </Button>
+                  </div>
+                </div>
+              ) : isQuestionsLoading ? (
+                <div className="flex justify-center p-8">
+                  <p>Loading questions...</p>
+                </div>
+              ) : questions.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-center">
+                  <div className="max-w-md p-6 border-2 border-dashed rounded-lg">
+                    <h3 className="text-lg font-semibold mb-2">No questions on this page yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Drag questions from the Question Library panel to add them to this page.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <SortableContext items={questions.map(q => q.id || `temp-${Math.random()}`)} strategy={verticalListSortingStrategy}>
+                  {questions.map(question => (
+                    <SortableQuestion
+                      key={question.id || `temp-${Math.random()}`}
+                      question={question}
+                      isSelected={selectedQuestion?.id === question.id}
+                      onSelect={() => setSelectedQuestion(question)}
+                    />
+                  ))}
+                </SortableContext>
               )}
             </div>
           </div>
-        </TabsContent>
-        
-        {/* Other tabs - implemented minimally to focus on question editor functionality */}
-        <TabsContent value="logic">
-          <Card className="p-6 text-center">
-            <h3 className="text-lg font-medium mb-4">Conditional Logic</h3>
-            <p className="text-gray-600 mb-4">
-              Set up rules to control what questions are shown based on previous answers.
-            </p>
-            <div className="border border-dashed rounded-md p-10">
-              <p className="text-gray-500 mb-4">
-                Conditional logic editor is under development.
-              </p>
-              <Button variant="outline">
-                Create New Rule
-              </Button>
-            </div>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <Card className="p-6 text-center">
-            <h3 className="text-lg font-medium mb-4">Form Settings</h3>
-            <p className="text-gray-600 mb-4">
-              Configure form behavior, appearance, and submission options.
-            </p>
-            <div className="border border-dashed rounded-md p-10">
-              <p className="text-gray-500 mb-4">
-                Form settings editor is under development.
-              </p>
-              <Button variant="outline">
-                Edit Form Settings
-              </Button>
-            </div>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="validation">
-          <Card className="p-6 text-center">
-            <h3 className="text-lg font-medium mb-4">Validation Rules</h3>
-            <p className="text-gray-600 mb-4">
-              Set up custom validation rules for your form fields.
-            </p>
-            <div className="border border-dashed rounded-md p-10">
-              <p className="text-gray-500 mb-4">
-                Validation rules editor is under development.
-              </p>
-              <Button variant="outline">
-                Add Validation Rule
-              </Button>
-            </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          
+          {/* Right Panel - Question Settings */}
+          <div className="w-80 border-l bg-gray-50">
+            <QuestionSettingsPanel
+              question={selectedQuestion}
+              onSave={handleUpdateQuestion}
+              onDelete={handleDeleteQuestion}
+            />
+          </div>
+          
+          {/* Drag Overlay */}
+          <DragOverlay>
+            {activeDragId && activeEntity && (
+              activeLibraryTab === "pages" ? (
+                <div className="p-2 mb-2 rounded-md bg-white border border-primary-500 shadow-md opacity-80">
+                  <p className="font-medium text-sm">{activeEntity.title}</p>
+                  {activeEntity.description && (
+                    <p className="text-xs text-gray-500 truncate">{activeEntity.description}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 mb-2 rounded-md bg-white border border-primary-500 shadow-md opacity-80">
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="font-medium text-sm">
+                      {activeEntity.displayText || activeEntity.display_text || activeEntity.defaultText || activeEntity.default_text}
+                    </p>
+                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                      {getQuestionTypeLabel(activeEntity.questionType || activeEntity.question_type)}
+                    </span>
+                  </div>
+                </div>
+              )
+            )}
+          </DragOverlay>
+        </div>
+      </DndContext>
+      
+      {/* Page Dialog */}
+      <PageFormDialog
+        isOpen={pageDialogOpen}
+        onOpenChange={setPageDialogOpen}
+        initialData={editPageData}
+        onSave={handleSavePage}
+      />
+      
+      {/* Form Preview */}
+      <FormPreview 
+        isOpen={showPreview} 
+        onClose={() => setShowPreview(false)}
+        formData={formData}
+        pages={Array.isArray(pagesData) ? pagesData : (pagesData?.data || [])}
+      />
     </div>
   );
 }
+
+// Switch Component - shadcn UI doesn't have a Switch component in the default setup, so we'll create a simple one
+const Switch = ({ checked, onCheckedChange }) => {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      data-state={checked ? "checked" : "unchecked"}
+      className={`peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${
+        checked ? "bg-primary" : "bg-input"
+      }`}
+      onClick={() => onCheckedChange(!checked)}
+    >
+      <span
+        data-state={checked ? "checked" : "unchecked"}
+        className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+};
