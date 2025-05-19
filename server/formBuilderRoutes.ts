@@ -500,38 +500,112 @@ router.post("/pages/:pageId/questions", async (req, res) => {
     
     console.log(`SERVER: Using display order ${nextDisplayOrder} for new question`);
     
-    // Transform request body to handle both camelCase and snake_case
+    // Transform request body with careful handling for booleans
+    const getBooleanOverride = (camelCaseKey: string, snakeCaseKey: string, defaultValue: boolean | null = null): boolean | null => {
+        if (req.body[camelCaseKey] !== undefined && req.body[camelCaseKey] !== null) {
+            return Boolean(req.body[camelCaseKey]);
+        }
+        if (req.body[snakeCaseKey] !== undefined && req.body[snakeCaseKey] !== null) {
+            return Boolean(req.body[snakeCaseKey]);
+        }
+        return defaultValue; // Return explicit null if not provided and no default, or the default
+    };
+
     const transformedBody = {
       formPageId: pageId,
       libraryQuestionId: libraryQuestionId,
       displayOrder: nextDisplayOrder,
       displayTextOverride: req.body.displayTextOverride || req.body.display_text_override || null,
-      isRequiredOverride: req.body.isRequiredOverride || req.body.is_required_override || null,
-      isHiddenOverride: req.body.isHiddenOverride || req.body.is_hidden_override || null,
+      // Explicitly handle boolean conversion or allow null if schema supports it
+      isRequiredOverride: getBooleanOverride('isRequiredOverride', 'is_required_override', null),
+      isHiddenOverride: getBooleanOverride('isHiddenOverride', 'is_hidden_override', null),
       helperTextOverride: req.body.helperTextOverride || req.body.helper_text_override || null,
       placeholderOverride: req.body.placeholderOverride || req.body.placeholder_override || null,
       metadataOverrides: req.body.metadataOverrides || req.body.metadata_overrides || {},
       optionsOverrides: req.body.optionsOverrides || req.body.options_overrides || []
     };
     
-    console.log("SERVER: Transformed question data:", JSON.stringify(transformedBody, null, 2));
+    console.log("SERVER: Transformed question data for DB:", JSON.stringify(transformedBody, null, 2));
 
-    // Parse and validate request body
+    // Parse and validate request body with explicit handling for nullable booleans
     const questionSchema = formSchema.insertFormPageQuestionSchema.extend({
       formPageId: z.number().int().positive(),
+      // Make boolean overrides explicitly optional and nullable if your DB allows it
+      isRequiredOverride: z.boolean().nullable().optional(),
+      isHiddenOverride: z.boolean().nullable().optional(),
     });
     
     const parsed = questionSchema.safeParse(transformedBody);
     
     if (!parsed.success) {
-      console.error("SERVER: Validation error:", JSON.stringify(parsed.error.format(), null, 2));
-      return res.status(400).json({ message: "Invalid question data", errors: parsed.error.format() });
+      console.error("SERVER: Validation error adding question to page:", JSON.stringify(parsed.error.format(), null, 2));
+      return res.status(400).json({ message: "Invalid question data for instance", errors: parsed.error.format() });
     }
     
     // Create the question
-    const [newQuestion] = await db.insert(formSchema.formPageQuestions)
+    const [newQuestionInstance] = await db.insert(formSchema.formPageQuestions)
       .values(parsed.data)
       .returning();
+      
+    // Fetch the fully resolved question to return to the client
+    const [resolvedNewQuestion] = await db
+      .select({
+        pageQuestionId: formSchema.formPageQuestions.id,
+        formPageId: formSchema.formPageQuestions.formPageId,
+        displayOrder: formSchema.formPageQuestions.displayOrder,
+        displayTextOverride: formSchema.formPageQuestions.displayTextOverride,
+        isRequiredOverride: formSchema.formPageQuestions.isRequiredOverride,
+        isHiddenOverride: formSchema.formPageQuestions.isHiddenOverride,
+        placeholderOverride: formSchema.formPageQuestions.placeholderOverride,
+        helperTextOverride: formSchema.formPageQuestions.helperTextOverride,
+        metadataOverrides: formSchema.formPageQuestions.metadataOverrides,
+        optionsOverrides: formSchema.formPageQuestions.optionsOverrides,
+        libraryQuestionId: formSchema.questionLibrary.id,
+        questionType: formSchema.questionLibrary.questionType,
+        libraryDefaultText: formSchema.questionLibrary.defaultText,
+        libraryDefaultMetadata: formSchema.questionLibrary.defaultMetadata,
+        libraryDefaultOptions: formSchema.questionLibrary.defaultOptions,
+      })
+      .from(formSchema.formPageQuestions)
+      .innerJoin(
+        formSchema.questionLibrary,
+        eq(formSchema.formPageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
+      )
+      .where(eq(formSchema.formPageQuestions.id, newQuestionInstance.id));
+
+    if (!resolvedNewQuestion) {
+      // Handle error: newly inserted question not found (should not happen)
+      return res.status(500).json({ message: "Error retrieving newly added question" });
+    }
+    
+    // Construct the final object with combined data from library and overrides
+    const finalQuestionObject = {
+      id: resolvedNewQuestion.pageQuestionId,
+      formPageId: resolvedNewQuestion.formPageId,
+      libraryQuestionId: resolvedNewQuestion.libraryQuestionId,
+      displayOrder: resolvedNewQuestion.displayOrder,
+      questionType: resolvedNewQuestion.questionType,
+      displayText: resolvedNewQuestion.displayTextOverride ?? resolvedNewQuestion.libraryDefaultText,
+      isRequired: resolvedNewQuestion.isRequiredOverride ?? (resolvedNewQuestion.libraryDefaultMetadata?.isRequired ?? false),
+      isHidden: resolvedNewQuestion.isHiddenOverride ?? (resolvedNewQuestion.libraryDefaultMetadata?.isHidden ?? false),
+      placeholder: resolvedNewQuestion.placeholderOverride ?? (resolvedNewQuestion.libraryDefaultMetadata?.placeholder ?? ""),
+      helperText: resolvedNewQuestion.helperTextOverride ?? (resolvedNewQuestion.libraryDefaultMetadata?.helperText ?? ""),
+      metadata: { ...(resolvedNewQuestion.libraryDefaultMetadata || {}), ...(resolvedNewQuestion.metadataOverrides || {}) },
+      options: resolvedNewQuestion.optionsOverrides?.length ? resolvedNewQuestion.optionsOverrides : (resolvedNewQuestion.libraryDefaultOptions || []),
+      // Include the raw overrides for the client's settings panel
+      overrides: {
+        displayTextOverride: resolvedNewQuestion.displayTextOverride,
+        isRequiredOverride: resolvedNewQuestion.isRequiredOverride,
+        isHiddenOverride: resolvedNewQuestion.isHiddenOverride,
+        placeholderOverride: resolvedNewQuestion.placeholderOverride,
+        helperTextOverride: resolvedNewQuestion.helperTextOverride,
+        metadataOverrides: resolvedNewQuestion.metadataOverrides,
+        optionsOverrides: resolvedNewQuestion.optionsOverrides,
+      }
+    };
+    
+    // Return the constructed question with 201 Created status
+    return res.status(201).json(finalQuestionObject);
   } catch (error) {
     console.error("Error adding question:", error);
     return res.status(500).json({ message: "Failed to add question" });
