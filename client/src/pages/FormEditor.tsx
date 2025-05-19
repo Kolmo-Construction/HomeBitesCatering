@@ -1820,7 +1820,7 @@ export default function FormEditor() {
                           onClick={() => handleAddQuestionFromLibrary(question)}
                         >
                           <div className="flex justify-between items-center mb-1">
-                            <p className="font-medium text-sm">{question.displayText || question.default_text}</p>
+                            <p className="font-medium text-sm">{question.displayText || question.defaultText || question.default_text}</p>
                             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
                               {getQuestionTypeLabel(question.questionType || question.question_type)}
                             </span>
