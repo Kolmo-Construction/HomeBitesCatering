@@ -982,16 +982,19 @@ export default function FormEditor() {
   });
 
   // Fetch questions for the selected page
-  const { data: questionsData, isLoading: isQuestionsLoading } = useQuery({
+  const { data: questionsData, isLoading: isQuestionsLoading, isFetching: isQuestionsFetching } = useQuery({
     queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'],
     queryFn: async () => {
       if (!selectedPage) return { data: [] };
       
+      console.log(`CLIENT: Fetching questions for page ${selectedPage.id}...`);
       const response = await fetch(`/api/form-builder/pages/${selectedPage.id}/questions`);
       if (!response.ok) {
         throw new Error('Failed to fetch questions');
       }
-      return await response.json();
+      const fetchedQuestions = await response.json();
+      console.log(`CLIENT: Fetched questions for page ${selectedPage.id}:`, JSON.stringify(fetchedQuestions, null, 2));
+      return fetchedQuestions;
     },
     enabled: !!selectedPage,
   });
@@ -1317,10 +1320,13 @@ export default function FormEditor() {
       return;
     }
     
-    // Use the current state of questionsData for calculating nextOrder
-    const currentQuestionsOnPage = questionsData?.data || [];
-    let nextOrder;
+    console.log(`CLIENT: handleAddQuestionFromLibrary called. questionsData at start:`, JSON.stringify(questionsData, null, 2));
+    console.log(`CLIENT: isQuestionsLoading: ${isQuestionsLoading}, isQuestionsFetching: ${isQuestionsFetching}`);
     
+    // Ensure we are using the array of questions correctly based on the structure of questionsData
+    const currentQuestionsOnPage = Array.isArray(questionsData) ? questionsData : (questionsData?.data || []);
+    
+    let nextOrder;
     if (currentQuestionsOnPage.length === 0) {
       nextOrder = 1;
     } else {
@@ -1329,11 +1335,13 @@ export default function FormEditor() {
                           (q.display_order !== undefined ? q.display_order : 0);
         return (typeof orderValue === 'number' && !isNaN(orderValue)) ? orderValue : 0;
       });
+      console.log(`CLIENT: Existing orders on page:`, JSON.stringify(orders));
       nextOrder = Math.max(0, ...orders) + 1;
     }
     
     console.log(`CLIENT: Adding library question ID ${libraryQuestion.id}. Page ID: ${selectedPage.id}.`);
-    console.log(`CLIENT: Current questions on page: ${currentQuestionsOnPage.length}. Calculated nextOrder: ${nextOrder}`);
+    console.log(`CLIENT: currentQuestionsOnPage based on questionsData:`, JSON.stringify(currentQuestionsOnPage));
+    console.log(`CLIENT: Calculated nextOrder: ${nextOrder}`);
     
     // Set up initial overrides based on library question
     const initialOverrides = {
