@@ -482,11 +482,29 @@ router.post("/pages/:pageId/questions", async (req, res) => {
       return res.status(404).json({ message: `Library question not found with ID: ${libraryQuestionId}` });
     }
     
+    // Get the existing questions to calculate the next display order
+    const existingQuestions = await db.select()
+      .from(formSchema.formPageQuestions)
+      .where(eq(formSchema.formPageQuestions.formPageId, pageId))
+      .orderBy(formSchema.formPageQuestions.displayOrder);
+    
+    console.log(`SERVER: Found ${existingQuestions.length} existing questions on page ${pageId}`);
+    
+    // Calculate the next available display order
+    let nextDisplayOrder = 1; // Default if no questions exist
+    
+    if (existingQuestions.length > 0) {
+      const maxOrder = Math.max(...existingQuestions.map(q => q.displayOrder));
+      nextDisplayOrder = maxOrder + 1;
+    }
+    
+    console.log(`SERVER: Using display order ${nextDisplayOrder} for new question`);
+    
     // Transform request body to handle both camelCase and snake_case
     const transformedBody = {
       formPageId: pageId,
       libraryQuestionId: libraryQuestionId,
-      displayOrder: req.body.displayOrder || req.body.display_order || 0,
+      displayOrder: nextDisplayOrder,
       displayTextOverride: req.body.displayTextOverride || req.body.display_text_override || null,
       isRequiredOverride: req.body.isRequiredOverride || req.body.is_required_override || null,
       isHiddenOverride: req.body.isHiddenOverride || req.body.is_hidden_override || null,
