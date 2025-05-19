@@ -1943,7 +1943,7 @@ export default function FormEditor() {
                       {activeEntity.displayText || activeEntity.display_text || activeEntity.defaultText || activeEntity.default_text}
                     </p>
                     <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                      {activeEntity.questionType || activeEntity.question_type}
+                      {getQuestionTypeLabel(activeEntity.questionType || activeEntity.question_type)}
                     </span>
                   </div>
                 </div>
