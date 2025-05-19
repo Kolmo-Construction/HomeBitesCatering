@@ -1,0 +1,67 @@
+Observations from the Screenshot and Code:
+
+The screenshot shows that the question.questionType || question.question_type (source 725) is being displayed (e.g., "matrix", "textbox").
+It seems the question.displayText || question.default_text (source 724) is not being displayed for these items. Instead, the question type itself (like "matrix", "textbox") is appearing where the primary display text should be. This is the main visual discrepancy.
+The helperText (source 726) is also not visible in the screenshot for these items, which might be expected if the displayText field is also missing or empty for those specific library questions.
+Potential Causes for Incorrect Display:
+
+Missing displayText or default_text in Library Question Data:
+
+The most likely cause is that the actual question objects fetched from /api/form-builder/library-questions and stored in libraryQuestionsData.data (source 699) do not have the displayText or default_text properties populated for the questions shown ("matrix", "textbox", etc.).
+The code question.displayText || question.default_text (source 724) tries to use displayText first, then falls back to default_text. If both are missing or empty for these specific library questions, the p tag would be empty or a falsy value, which might not render as expected or might be styled to be invisible if empty.
+However, the screenshot shows the question type ("matrix", "textbox") in the place where the displayText should be. This suggests that question.displayText might actually contain the question type string instead of the intended question text.
+Incorrect Data Mapping or Property Names:
+
+When library questions are created or fetched, there might be an issue with how displayText (or defaultText / default_text) is being stored or retrieved.
+The backend GET /api/form-builder/library-questions endpoint in formRoutes.ts (or questionLibraryRoutes.ts - there seem to be two files managing similar routes) should return objects where defaultText (or default_text in the database schema questionLibrary.defaultText (source in shared/form-schema.ts)) contains the actual question's text/label.
+In clea/server/questionLibraryRoutes.ts, the createQuestionSql (source in server/questionLibraryRoutes.ts) and updateSql (source in server/questionLibraryRoutes.ts) correctly use default_text for insertion/update, and getQuestionWithDetails (source in server/questionLibraryRoutes.ts) selects *. So the data should be available from the DB.
+In clea/server/formRoutes.ts, the create endpoint (source in server/formRoutes.ts) uses validatedData which comes from insertQuestionLibrarySchema.parse(req.body). The insertQuestionLibrarySchema (source in shared/form-schema.ts) is based on questionLibrary table which has defaultText. This seems correct.
+Data Transformation Issue:
+
+Somewhere between fetching from the database and rendering in the FormEditor.txt, the displayText or default_text property might be getting overwritten or lost for these specific questions.
+Debugging Steps to Pinpoint the Issue:
+
+Inspect libraryQuestionsData.data:
+
+In FormEditor.txt, right before the filteredLibraryQuestions calculation (source 700), add a log:
+JavaScript
+
+console.log("CLIENT: FormEditor - Raw libraryQuestionsData.data:", JSON.stringify(libraryQuestionsData?.data, null, 2));
+When the component loads, check your browser's developer console for this log. Examine the structure of the question objects, specifically for items like "matrix", "textbox".
+Do they have a displayText property?
+Do they have a default_text property?
+What are the values of these properties? Is displayText mistakenly holding the question type (e.g., "matrix") instead of the actual question like "Please rate the following items:"?
+Verify Backend Data Source (GET /api/form-builder/library-questions):
+
+In clea/server/questionLibraryRoutes.ts (which seems to be the active one based on server/index.ts registering questionLibraryRoutes), inside the GET /api/form-builder/library-questions route handler:
+TypeScript
+
+// ...
+const questions = questionsResult.rows;
+console.log("SERVER: GET /library-questions - questions from DB:", JSON.stringify(questions, null, 2)); // Add this log
+const totalCount = parseInt(countResult.rows[0].count, 10);
+
+return res.status(200).json({
+  data: questions, // This is what the client receives
+  pagination: { // ... }
+});
+Trigger this endpoint (e.g., by loading the Form Editor page or directly via a tool like Postman/curl). Check the server logs.
+Confirm that the default_text column (or defaultText if transformed) in the questions array has the correct question labels and not just the type.
+Check Database Directly:
+
+If possible, query your question_library table directly:
+SQL
+
+SELECT id, library_question_key, default_text, question_type, category FROM question_library;
+Verify the default_text for the problematic question types. Ensure they have meaningful question text and not just the type string.
+Likely Scenario:
+
+Based on the screenshot where the type ("matrix", "textbox") is displayed where the question text should be, it's highly probable that:
+
+The default_text field in the database for these specific library questions actually contains the question type string (e.g., default_text = "matrix").
+Or, if default_text is null or empty, the displayText property somehow gets assigned the questionType value before rendering. However, the rendering code question.displayText || question.default_text (source 724) doesn't show such logic.
+Solution (once confirmed):
+
+If the database has incorrect default_text values for these library questions, you'll need to update them in the database to reflect the actual question text (e.g., "Please enter your name" for a textbox, "Select your preferences" for a checkbox_group).
+Review the code where library questions are created (e.g., in QuestionLibraryEdit.txt (source 850) and the corresponding backend route POST /api/form-builder/library-questions (source in server/questionLibraryRoutes.ts or server/formRoutes.ts)) to ensure that the defaultText field is being correctly populated with the intended question label, not just its type. In QuestionLibraryEdit.txt, form.setValue('defaultText', ...) (source 804) is used, and the saveMutation sends defaultText: data.defaultText (source 780). This part seems fine, suggesting the issue might be with the data that was initially seeded or created for these specific library items.
+By inspecting the data at these different stages (DB, server response, client state), you should be able to find where the displayText or default_text is incorrect or missing.

@@ -464,13 +464,22 @@ router.post("/pages/:pageId/questions", async (req, res) => {
     }
     
     // Check if the library question exists
-    const libraryQuestionId = req.body.libraryQuestionId;
+    const libraryQuestionId = req.body.libraryQuestionId || req.body.library_question_id;
+    
+    // Log incoming question data for debugging
+    console.log("SERVER: Adding question to page, received data:", JSON.stringify(req.body, null, 2));
+    console.log("SERVER: Using libraryQuestionId:", libraryQuestionId);
+    
+    if (!libraryQuestionId) {
+      return res.status(400).json({ message: "Missing library question ID" });
+    }
+    
     const [libraryQuestion] = await db.select()
       .from(formSchema.questionLibrary)
       .where(eq(formSchema.questionLibrary.id, libraryQuestionId));
     
     if (!libraryQuestion) {
-      return res.status(404).json({ message: "Library question not found" });
+      return res.status(404).json({ message: `Library question not found with ID: ${libraryQuestionId}` });
     }
     
     // Parse and validate request body
