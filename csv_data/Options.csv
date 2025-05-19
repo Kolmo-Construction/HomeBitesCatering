@@ -1,0 +1,638 @@
+QuestionKey,OptionLabel,OptionValue,OptionOrder
+id_10,Corporate event,Corporate event,1
+id_10,Engagement,Engagement,2
+id_10,Wedding,Wedding,3
+id_10,Birthday,Birthday,4
+id_10,Other Private Party,Other Private Party,5
+id_10,Food Truck,Food Truck,6
+id_710,YES,YES,1
+id_710,NO,NO,2
+id_20,YES,YES,1
+id_20,NO,NO,2
+id_566,YES,YES,1
+id_566,NO,NO,2
+id_604,YES,YES,1
+id_604,NO,NO,2
+id_607,YES,YES,1
+id_607,NO,NO,2
+id_39,Drop-off,Drop-off,1
+id_39,Buffet Standard,Buffet Standard,2
+id_39,Buffet Full Service,Buffet Full Service,3
+id_39,Buffet Full Service no setup,Buffet Full Service no setup,4
+id_39,Family Style Service- (not available for Taco Fiesta),Family Style Service,5
+id_39,Plated Dinner,Plated Dinner,6
+id_39,Cocktail Party,Cocktail Party,7
+id_39,Food Truck,Food Truck,8
+id_23,Taco Fiesta,Taco Fiesta,1
+id_23,American BBQ,American BBQ,2
+id_23,A taste of Greece,A taste of Greece,3
+id_23,Kebab Party,Kebab Party,4
+id_23,A taste of Italy,A taste of Italy,5
+id_23,Custom Menu,Custom Menu,6
+id_23,Hor d' oeuvres only (Cocktail party),Hor d' oeuvres only (Cocktail party),7
+id_23,Food Truck (Menu Option),Food Truck Menu,8
+id_25,"Bronze - $28 per person 3 proteins, 2 sides, 3 salsas, 4 condiments",Bronze,1
+id_25,"Silver - $34 per person 4 proteins, 3 sides, 4 salsas, 6 condiments",Silver,2
+id_25,"Gold - $40 per person 4 proteins, 4 sides, 4 salsas, 5 condiments",Gold,3
+id_25,"Diamond - $46 per person 5 proteins, 5 sides, 5 salsas, 8 condiments",Diamond,4
+id_8,Barbacoa,barbacoa,1
+id_8,"Flank steak Fajitas upcharge of $2.00 pp",flank_steak_fajitas,2
+id_8,Ground Beef,ground_beef,3
+id_8,Pork Carnitas,pork_carnitas,4
+id_8,Pork Belly,pork_belly,5
+id_8,Chorizo,chorizo,6
+id_8,Beef Birria,beef_birria,7
+id_8,Mexican Chicken,mexican_chicken,8
+id_8,Cod -,cod,9
+id_8,Shrimp,shrimp,10
+id_8,Tofu,tofu,11
+id_8,Roasted Vegetables,roasted_vegetables,12
+id_8,"Escabeche - House-made picked vegetable medley",escabeche,13
+id_57,Barbacoa,barbacoa,1
+id_57,"Flank steak Fajitas upcharge of $2.00 pp",flank_steak_fajitas,2
+id_57,Ground Beef,ground_beef,3
+id_57,Pork Carnitas,pork_carnitas,4
+id_57,Pork Belly,pork_belly,5
+id_57,Chorizo,chorizo,6
+id_57,Beef Birria,beef_birria,7
+id_57,Mexican Chicken,mexican_chicken,8
+id_57,Cod -,cod,9
+id_57,Shrimp,shrimp,10
+id_57,Tofu,tofu,11
+id_57,Roasted Vegetables,roasted_vegetables,12
+id_57,"Escabeche - House-made picked vegetable medley",escabeche,13
+id_58,Barbacoa,barbacoa,1
+id_58,"Flank steak Fajitas upcharge of $2.00 pp",flank_steak_fajitas,2
+id_58,Ground Beef,ground_beef,3
+id_58,Pork Carnitas,pork_carnitas,4
+id_58,Pork Belly,pork_belly,5
+id_58,Chorizo,chorizo,6
+id_58,Beef Birria,beef_birria,7
+id_58,Mexican Chicken,mexican_chicken,8
+id_58,Cod -,cod,9
+id_58,Shrimp,shrimp,10
+id_58,Tofu,tofu,11
+id_58,Roasted Vegetables,roasted_vegetables,12
+id_58,"Escabeche - House-made picked vegetable medley",escabeche,13
+id_59,Barbacoa,barbacoa,1
+id_59,"Flank steak Fajitas upcharge of $2.00 pp",flank_steak_fajitas,2
+id_59,Ground Beef,ground_beef,3
+id_59,Pork Carnitas,pork_carnitas,4
+id_59,Pork Belly,pork_belly,5
+id_59,Chorizo,chorizo,6
+id_59,Beef Birria,beef_birria,7
+id_59,Mexican Chicken,mexican_chicken,8
+id_59,Cod -,cod,9
+id_59,Shrimp,shrimp,10
+id_59,Tofu,tofu,11
+id_59,Roasted Vegetables,roasted_vegetables,12
+id_59,"Escabeche - House-made picked vegetable medley",escabeche,13
+id_29,Refried Beans,refried_beans,1
+id_29,"Mexican Street corn (Elotes)",mexican_street_corn,2
+id_29,Queso Dip,queso_dip,3
+id_29,Chorizo Queso Dip,chorizo_queso_dip,4
+id_29,Stuffed Poblano peppers,stuffed_poblano_peppers,5
+id_29,Mexican Rice,mexican_rice,6
+id_29,Cilantro Lime Rice,cilantro_lime_rice,7
+id_29,Rice and Beans,rice_and_beans,8
+id_29,Jalapeno cornbread,jalapeno_cornbread,9
+id_29,Grilled Vegetables,grilled_vegetables,10
+id_29,Mexican Slaw with Mango,mexican_slaw_with_mango,11
+id_29,Vegetarian Empanadas,vegetarian_empanadas,12
+id_62,Refried Beans,refried_beans,1
+id_62,"Mexican Street corn (Elotes)",mexican_street_corn,2
+id_62,Queso Dip,queso_dip,3
+id_62,Chorizo Queso Dip,chorizo_queso_dip,4
+id_62,Stuffed Poblano peppers,stuffed_poblano_peppers,5
+id_62,Mexican Rice,mexican_rice,6
+id_62,Cilantro Lime Rice,cilantro_lime_rice,7
+id_62,Rice and Beans,rice_and_beans,8
+id_62,Jalapeno cornbread,jalapeno_cornbread,9
+id_62,Grilled Vegetables,grilled_vegetables,10
+id_62,Mexican Slaw with Mango,mexican_slaw_with_mango,11
+id_62,Vegetarian Empanadas,vegetarian_empanadas,12
+id_61,Refried Beans,refried_beans,1
+id_61,"Mexican Street corn (Elotes)",mexican_street_corn,2
+id_61,Queso Dip,queso_dip,3
+id_61,Chorizo Queso Dip,chorizo_queso_dip,4
+id_61,Stuffed Poblano peppers,stuffed_poblano_peppers,5
+id_61,Mexican Rice,mexican_rice,6
+id_61,Cilantro Lime Rice,cilantro_lime_rice,7
+id_61,Rice and Beans,rice_and_beans,8
+id_61,Jalapeno cornbread,jalapeno_cornbread,9
+id_61,Grilled Vegetables,grilled_vegetables,10
+id_61,Mexican Slaw with Mango,mexican_slaw_with_mango,11
+id_61,Vegetarian Empanadas,vegetarian_empanadas,12
+id_60,Refried Beans,refried_beans,1
+id_60,"Mexican Street corn (Elotes)",mexican_street_corn,2
+id_60,Queso Dip,queso_dip,3
+id_60,Chorizo Queso Dip,chorizo_queso_dip,4
+id_60,Stuffed Poblano peppers,stuffed_poblano_peppers,5
+id_60,Mexican Rice,mexican_rice,6
+id_60,Cilantro Lime Rice,cilantro_lime_rice,7
+id_60,Rice and Beans,rice_and_beans,8
+id_60,Jalapeno cornbread,jalapeno_cornbread,9
+id_60,Grilled Vegetables,grilled_vegetables,10
+id_60,Mexican Slaw with Mango,mexican_slaw_with_mango,11
+id_60,Vegetarian Empanadas,vegetarian_empanadas,12
+id_31,Classic Pico de Gallo,classic_pico_de_gallo,1
+id_31,Fresh Mango Salsa,fresh_mango_salsa,2
+id_31,Pineapple Habanero Salsa,pineapple_habanero_salsa,3
+id_31,"Cucumber & Apple Salsa","cucumber_apple_salsa",4
+id_31,Jicama and Papaya Salsa,jicama_papaya_salsa,5
+id_31,"Salsa Roja (red sauce)",salsa_roja,6
+id_31,"Salsa Verde (green sauce)",salsa_verde,7
+id_31,"Creamy Salsa Verde (green sauce)",creamy_salsa_verde,8
+id_31,"Salsa Macha -(contains peanuts and sesame seeds)",salsa_macha,9
+id_70,Classic Pico de Gallo,classic_pico_de_gallo,1
+id_70,Fresh Mango Salsa,fresh_mango_salsa,2
+id_70,Pineapple Habanero Salsa,pineapple_habanero_salsa,3
+id_70,"Cucumber & Apple Salsa","cucumber_apple_salsa",4
+id_70,Jicama and Papaya Salsa,jicama_papaya_salsa,5
+id_70,"Salsa Roja (red sauce)",salsa_roja,6
+id_70,"Salsa Verde (green sauce)",salsa_verde,7
+id_70,"Creamy Salsa Verde (green sauce)",creamy_salsa_verde,8
+id_70,"Salsa Macha -(contains peanuts and sesame seeds)",salsa_macha,9
+id_75,Classic Pico de Gallo,classic_pico_de_gallo,1
+id_75,Fresh Mango Salsa,fresh_mango_salsa,2
+id_75,Pineapple Habanero Salsa,pineapple_habanero_salsa,3
+id_75,"Cucumber & Apple Salsa","cucumber_apple_salsa",4
+id_75,Jicama and Papaya Salsa,jicama_papaya_salsa,5
+id_75,"Salsa Roja (red sauce)",salsa_roja,6
+id_75,"Salsa Verde (green sauce)",salsa_verde,7
+id_75,"Creamy Salsa Verde (green sauce)",creamy_salsa_verde,8
+id_75,"Salsa Macha -(contains peanuts and sesame seeds)",salsa_macha,9
+id_76,Classic Pico de Gallo,classic_pico_de_gallo,1
+id_76,Fresh Mango Salsa,fresh_mango_salsa,2
+id_76,Pineapple Habanero Salsa,pineapple_habanero_salsa,3
+id_76,"Cucumber & Apple Salsa","cucumber_apple_salsa",4
+id_76,Jicama and Papaya Salsa,jicama_papaya_salsa,5
+id_76,"Salsa Roja (red sauce)",salsa_roja,6
+id_76,"Salsa Verde (green sauce)",salsa_verde,7
+id_76,"Creamy Salsa Verde (green sauce)",creamy_salsa_verde,8
+id_76,"Salsa Macha -(contains peanuts and sesame seeds)",salsa_macha,9
+id_33,Shredded cheese,shredded_cheese,1
+id_33,Shredded vegan cheese,shredded_vegan_cheese,2
+id_33,Diced Onions,diced_onions,3
+id_33,Lime wedges,lime_wedges,4
+id_33,Jalapeños,jalapenos,5
+id_33,Sour Cream,sour_cream,6
+id_33,Diced bell peppers,diced_bell_peppers,7
+id_33,Guacamole,guacamole,8
+id_33,Fire roasted bell peppers,fire_roasted_bell_peppers,9
+id_33,Sliced radish,sliced_radish,10
+id_33,Cilantro,cilantro,11
+id_33,Pickled cabbage,pickled_cabbage,12
+id_33,"Escabeche - House-made picked vegetable medley",escabeche_condiment,13
+id_77,Shredded cheese,shredded_cheese,1
+id_77,Shredded vegan cheese,shredded_vegan_cheese,2
+id_77,Diced Onions,diced_onions,3
+id_77,Lime wedges,lime_wedges,4
+id_77,Jalapeños,jalapenos,5
+id_77,Sour Cream,sour_cream,6
+id_77,Diced bell peppers,diced_bell_peppers,7
+id_77,Guacamole,guacamole,8
+id_77,Fire roasted bell peppers,fire_roasted_bell_peppers,9
+id_77,Sliced radish,sliced_radish,10
+id_77,Cilantro,cilantro,11
+id_77,Pickled cabbage,pickled_cabbage,12
+id_77,"Escabeche - House-made picked vegetable medley",escabeche_condiment,13
+id_81,Shredded cheese,shredded_cheese,1
+id_81,Shredded vegan cheese,shredded_vegan_cheese,2
+id_81,Diced Onions,diced_onions,3
+id_81,Lime wedges,lime_wedges,4
+id_81,Jalapeños,jalapenos,5
+id_81,Sour Cream,sour_cream,6
+id_81,Diced bell peppers,diced_bell_peppers,7
+id_81,Guacamole,guacamole,8
+id_81,Fire roasted bell peppers,fire_roasted_bell_peppers,9
+id_81,Sliced radish,sliced_radish,10
+id_81,Cilantro,cilantro,11
+id_81,Pickled cabbage,pickled_cabbage,12
+id_81,"Escabeche - House-made picked vegetable medley",escabeche_condiment,13
+id_82,Shredded cheese,shredded_cheese,1
+id_82,Shredded vegan cheese,shredded_vegan_cheese,2
+id_82,Diced Onions,diced_onions,3
+id_82,Lime wedges,lime_wedges,4
+id_82,Jalapeños,jalapenos,5
+id_82,Sour Cream,sour_cream,6
+id_82,Diced bell peppers,diced_bell_peppers,7
+id_82,Guacamole,guacamole,8
+id_82,Fire roasted bell peppers,fire_roasted_bell_peppers,9
+id_82,Sliced radish,sliced_radish,10
+id_82,Cilantro,cilantro,11
+id_82,Pickled cabbage,pickled_cabbage,12
+id_82,"Escabeche - House-made picked vegetable medley",escabeche_condiment,13
+id_38,"Bronze - $30 per person",Bronze,1
+id_38,"Silver - $36 per person",Silver,2
+id_38,"Gold - $42 per person",Gold,3
+id_38,"Diamond - $48 per person",Diamond,4
+id_89,"Prime Rib - Boneless -Carving station (upcharge of $4.00 pp)",prime_rib_boneless,1
+id_89,"Smoked Brisket (upcharge $3.00 pp)",smoked_brisket,2
+id_89,"Beef Ribs (upcharge $4.00 pp)",beef_ribs,3
+id_89,"Guinness Braised Boneless Short Ribs (upcharge $2.00 pp)",guinness_braised_short_ribs,4
+id_89,"Bacon Wrapped Fillet Mingon - (upcharge of $4.00 pp) -",bacon_wrapped_fillet_mignon,5
+id_89,Flank Steak with Chimichurri,flank_steak_chimichurri,6
+id_89,Sausage Medley,sausage_medley,7
+id_89,"Hamburger Bar (upcharge of $2.50 pp)",hamburger_bar,8
+id_89,"Lamb Chops (upcharge of $4.00 pp)",lamb_chops,9
+id_89,"Smoked Leg of Lamb (Family Style only)",smoked_leg_of_lamb,10
+id_89,Pulled Pork,pulled_pork,11
+id_89,Smoked pork Belly,smoked_pork_belly,12
+id_89,Baby Back Ribs,baby_back_ribs,13
+id_89,"Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze",grilled_pork_chop_korean_bbq,14
+id_89,BBQ Guiness Chicken,bbq_guiness_chicken,15
+id_89,Carolina BBQ Chicken,carolina_bbq_chicken,16
+id_89,Rotisserie Chicken,rotisserie_chicken,17
+id_89,"BBQ Prawns (upcharge of $2.00 pp)",bbq_prawns,18
+id_89,"Salmon steak",salmon_steak,19
+id_89,Tofu (BBQ),tofu_bbq,20
+id_89,Vegetable kebabs,vegetable_kebabs_bbq,21
+id_89,"Grilled Cauliflower Steaks-",grilled_cauliflower_steaks,22
+id_118,Ham hock baked Beans,ham_hock_baked_beans,1
+id_118,Avocado deviled Eggs,avocado_deviled_eggs,2
+id_118,"Mac n' Cheese",mac_n_cheese,3
+id_118,Stuffed Poblano peppers (BBQ Side),stuffed_poblano_peppers_bbq_side,4
+id_118,"Baked Potato Bar (upcharge $1.50 pp)",baked_potato_bar,5
+id_118,Garlic Mashed Potatoes,garlic_mashed_potatoes,6
+id_118,Mini Smashed Potatoes,mini_smashed_potatoes,7
+id_118,"Twice Baked Potatoes (upcharge $0.75 pp)",twice_baked_potatoes,8
+id_118,Corn on the Cob,corn_on_the_cob,9
+id_118,Creamed Corn,creamed_corn,10
+id_118,Jalapeño Poppers,jalapeno_poppers,11
+id_118,Roasted Brussels Sprouts,roasted_brussels_sprouts,12
+id_118,Corn Bread,corn_bread,13
+id_118,Jalapeno cornbread (BBQ Side),jalapeno_cornbread_bbq_side,14
+id_118,Grilled Vegetables (BBQ Side),grilled_vegetables_bbq_side,15
+id_118,Grilled Asparagus,grilled_asparagus,16
+id_119,Caesar,caesar_salad,1
+id_119,Coleslaw,coleslaw,2
+id_119,Garden Salad,garden_salad,3
+id_119,Pasta Salad,pasta_salad,4
+id_119,Bacon Jalapeño Corn Salad,bacon_jalapeno_corn_salad,5
+id_119,Wedge Salad,wedge_salad,6
+id_119,German cucumber salad,german_cucumber_salad,7
+id_119,Crunchy Asian Slaw,crunchy_asian_slaw,8
+id_119,Tossed Cobb Salad,tossed_cobb_salad,9
+id_119,Classic Potato Salad,classic_potato_salad,10
+id_119,German Potato Salad,german_potato_salad,11
+id_119,Macaroni Salad,macaroni_salad,12
+id_119,Hawaiian Macaroni Salad,hawaiian_macaroni_salad,13
+id_119,Fruit Salad,fruit_salad,14
+id_120,Kansas City BBQ Sauce,kansas_city_bbq_sauce,1
+id_120,South Carolina Gold BBQ Sauce,south_carolina_gold_bbq_sauce,2
+id_120,North Carolina Vinegar based BBQ Sauce,north_carolina_vinegar_bbq_sauce,3
+id_120,Alabama White BBQ Sauce,alabama_white_bbq_sauce,4
+id_120,Texas BBQ Sauce,texas_bbq_sauce,5
+id_120,Very Berry BBQ Sauce,very_berry_bbq_sauce,6
+id_120,Smoky bourbon BBQ Sauce,smoky_bourbon_bbq_sauce,7
+id_121,Ketchup,ketchup,1
+id_121,Stone Ground Mustard,stone_ground_mustard,2
+id_121,Dijon Mustard,dijon_mustard,3
+id_121,Yellow Mustard,yellow_mustard,4
+id_121,Mayonnaise,mayonnaise,5
+id_121,Sweet pickle Chips,sweet_pickle_chips,6
+id_121,Dill pickle Chips,dill_pickle_chips,7
+id_121,Sliced radish (BBQ Condiment),sliced_radish_bbq_condiment,8
+id_121,Sweet Relish,sweet_relish,9
+id_121,Cranberry Relish,cranberry_relish,10
+id_121,Kimchi,kimchi,11
+id_121,"Mixed Pickled Vegetables - Giardiniera",giardiniera,12
+id_91,"Bronze - $32 per person",Bronze,1
+id_91,"Silver - $38 per person",Silver,2
+id_91,"Gold - $44 per person",Gold,3
+id_91,"Diamond - $50 per person",Diamond,4
+id_191,"Chicken Souvlaki Skewers",chicken_souvlaki_skewers,1
+id_191,"Pork Souvlaki Skewers",pork_souvlaki_skewers,2
+id_191,"Beef Kofta Kebabs",beef_kofta_kebabs,3
+id_191,"Lamb Gyro Meat (carved)",lamb_gyro_meat,4
+id_191,"Grilled Halloumi Cheese (Vegetarian)",grilled_halloumi,5
+id_191,"Spanakopita (Spinach Pie Slices)",spanakopita,6
+id_191,"Moussaka (Individual Portions)",moussaka,7
+id_191,"Grilled Octopus (upcharge $3.00 pp)",grilled_octopus,8
+id_191,"Lemon Herb Roasted Chicken Pieces",lemon_herb_roasted_chicken,9
+id_191,"Vegetable Moussaka (Vegetarian)",vegetable_moussaka,10
+id_92,"Greek Lemon Potatoes",greek_lemon_potatoes,1
+id_92,"Rice Pilaf with Orzo",rice_pilaf_with_orzo,2
+id_92,"Roasted Mediterranean Vegetables",roasted_mediterranean_vegetables,3
+id_92,"Pita Bread (Warm)",pita_bread,4
+id_92,"Tzatziki Sauce",tzatziki_sauce,5
+id_92,"Hummus",hummus_greek_side,6
+id_92,"Dolmades (Stuffed Grape Leaves)",dolmades,7
+id_92,"Gigantes Plaki (Baked Giant Beans)",gigantes_plaki,8
+id_194,"Classic Greek Salad (Horiatiki)",classic_greek_salad,1
+id_194,"Maroulosalata (Romaine Lettuce Salad)",maroulosalata,2
+id_194,"Cabbage Salad (Lahanosalata)",cabbage_salad,3
+id_194,"Beet Salad with Yogurt and Walnuts",beet_salad_yogurt_walnuts,4
+id_94,"Bronze - $30 per person",Bronze,1
+id_94,"Silver - $36 per person",Silver,2
+id_94,"Gold - $42 per person",Gold,3
+id_94,"Diamond - $48 per person",Diamond,4
+id_95,"Chicken Shish Kebab",chicken_shish_kebab,1
+id_95,"Beef Shish Kebab",beef_shish_kebab,2
+id_95,"Lamb Adana Kebab (Spicy Minced Lamb)",lamb_adana_kebab,3
+id_95,"Vegetable Kebab (Mushrooms, Peppers, Onions, Zucchini)",vegetable_kebab_kebab_party,4
+id_95,"Chicken Doner Kebab (Carved)",chicken_doner_kebab,5
+id_95,"Falafel (Vegetarian)",falafel_kebab_party,6
+id_95,"Kofta Kebab (Ground Meat with Herbs)",kofta_kebab_kebab_party,7
+id_95,"Salmon Kebab (upcharge $2.50 pp)",salmon_kebab,8
+id_211,"Bulgur Pilaf",bulgur_pilaf,1
+id_211,"Saffron Rice",saffron_rice,2
+id_211,"Grilled Tomatoes and Peppers",grilled_tomatoes_peppers,3
+id_211,"Pita Bread / Lavash",pita_lavash,4
+id_211,"Shepherd's Salad (Coban Salatasi)",shepherds_salad_side,5
+id_211,"Ezme Salatasi (Spicy Tomato Dip)",ezme_salatasi,6
+id_211,"Haydari (Yogurt Dip with Garlic and Mint)",haydari,7
+id_211,"Lentil Soup (Mercimek Çorbası - small cups)",lentil_soup_cups,8
+id_218,"Shepherd's Salad (Coban Salatasi)",shepherds_salad_kebab_salad,1
+id_218,"Green Salad with Lemon-Olive Oil Dressing",green_salad_lemon_olive_oil,2
+id_218,"Red Cabbage Slaw",red_cabbage_slaw,3
+id_218,"Tabouleh",tabouleh_kebab_salad,4
+id_418,"Bronze - $35 per person",Bronze,1
+id_418,"Silver - $42 per person",Silver,2
+id_418,"Gold - $49 per person",Gold,3
+id_418,"Diamond - $56 per person",Diamond,4
+id_398,"Chicken Parmesan",chicken_parmesan,1
+id_398,"Lasagna Bolognese (Individual Slices)",lasagna_bolognese,2
+id_398,"Eggplant Parmesan (Vegetarian)",eggplant_parmesan,3
+id_398,"Italian Sausage with Peppers and Onions",italian_sausage_peppers_onions,4
+id_398,"Veal Marsala (upcharge $3.50 pp)",veal_marsala,5
+id_398,"Shrimp Scampi (upcharge $3.00 pp)",shrimp_scampi,6
+id_398,"Meatballs in Marinara Sauce",meatballs_marinara,7
+id_398,"Chicken Piccata",chicken_piccata,8
+id_399,"Garlic Bread",garlic_bread,1
+id_399,"Roasted Rosemary Potatoes",roasted_rosemary_potatoes,2
+id_399,"Grilled Asparagus with Parmesan",grilled_asparagus_parmesan,3
+id_399,"Polenta with Mushroom Ragu",polenta_mushroom_ragu,4
+id_399,"Sautéed Spinach with Garlic",sauteed_spinach_garlic,5
+id_399,"Caprese Skewers",caprese_skewers_side,6
+id_399,"Arancini (Fried Risotto Balls)",arancini,7
+id_400,"Penne alla Vodka",penne_alla_vodka,1
+id_400,"Spaghetti Aglio e Olio",spaghetti_aglio_e_olio,2
+id_400,"Fettuccine Alfredo",fettuccine_alfredo,3
+id_400,"Ravioli with Sage Butter Sauce (Cheese or Spinach Filling)",ravioli_sage_butter,4
+id_400,"Gnocchi with Pesto",gnocchi_pesto,5
+id_401,"Caesar Salad (Italian Style)",caesar_salad_italian,1
+id_401,"Caprese Salad (Tomato, Mozzarella, Basil)",caprese_salad,2
+id_401,"Arugula Salad with Shaved Parmesan and Lemon Vinaigrette",arugula_salad_parmesan,3
+id_401,"Italian Mixed Green Salad with Red Wine Vinaigrette",italian_mixed_green_salad,4
+id_459,Taco Fiesta,Taco Fiesta,1
+id_459,American BBQ,American BBQ,2
+id_459,Taste of Greece,Taste of Greece,3
+id_459,Kebab Party,Kebab Party,4
+id_459,Taste of Italy,Taste of Italy,5
+id_459,Vegan Menu,Vegan Menu,6
+id_462,Barbacoa,barbacoa_custom,1
+id_462,"Flank steak Fajitas upcharge of $2.00 pp",flank_steak_fajitas_custom,2
+id_462,Ground Beef,ground_beef_custom,3
+id_462,Pork Carnitas,pork_carnitas_custom,4
+id_462,Pork Belly,pork_belly_custom,5
+id_462,Chorizo,chorizo_custom,6
+id_462,Beef Birria,beef_birria_custom,7
+id_462,Mexican Chicken,mexican_chicken_custom,8
+id_462,Cod -,cod_custom,9
+id_462,Shrimp,shrimp_custom,10
+id_462,Tofu,tofu_custom,11
+id_462,Roasted Vegetables,roasted_vegetables_custom,12
+id_462,"Escabeche - House-made picked vegetable medley",escabeche_custom,13
+id_463,Refried Beans,refried_beans_custom,1
+id_463,"Mexican Street corn (Elotes)",mexican_street_corn_custom,2
+id_463,Queso Dip,queso_dip_custom,3
+id_463,Chorizo Queso Dip,chorizo_queso_dip_custom,4
+id_463,Stuffed Poblano peppers,stuffed_poblano_peppers_custom,5
+id_463,Mexican Rice,mexican_rice_custom,6
+id_463,Cilantro Lime Rice,cilantro_lime_rice_custom,7
+id_463,Rice and Beans,rice_and_beans_custom,8
+id_463,Jalapeno cornbread,jalapeno_cornbread_custom,9
+id_463,Grilled Vegetables,grilled_vegetables_custom,10
+id_463,Mexican Slaw with Mango,mexican_slaw_with_mango_custom,11
+id_463,Vegetarian Empanadas,vegetarian_empanadas_custom,12
+id_464,Classic Pico de Gallo,classic_pico_de_gallo_custom,1
+id_464,Fresh Mango Salsa,fresh_mango_salsa_custom,2
+id_464,Pineapple Habanero Salsa,pineapple_habanero_salsa_custom,3
+id_464,"Cucumber & Apple Salsa","cucumber_apple_salsa_custom",4
+id_464,Jicama and Papaya Salsa,jicama_papaya_salsa_custom,5
+id_464,"Salsa Roja (red sauce)",salsa_roja_custom,6
+id_464,"Salsa Verde (green sauce)",salsa_verde_custom,7
+id_464,"Creamy Salsa Verde (green sauce)",creamy_salsa_verde_custom,8
+id_464,"Salsa Macha -(contains peanuts and sesame seeds)",salsa_macha_custom,9
+id_465,Shredded cheese,shredded_cheese_custom,1
+id_465,Shredded vegan cheese,shredded_vegan_cheese_custom,2
+id_465,Diced Onions,diced_onions_custom,3
+id_465,Lime wedges,lime_wedges_custom,4
+id_465,Jalapeños,jalapenos_custom,5
+id_465,Sour Cream,sour_cream_custom,6
+id_465,Diced bell peppers,diced_bell_peppers_custom,7
+id_465,Guacamole,guacamole_custom,8
+id_465,Fire roasted bell peppers,fire_roasted_bell_peppers_custom,9
+id_465,Sliced radish,sliced_radish_custom,10
+id_465,Cilantro,cilantro_custom,11
+id_465,Pickled cabbage,pickled_cabbage_custom,12
+id_465,"Escabeche - House-made picked vegetable medley",escabeche_condiment_custom,13
+id_466,Kebabs,Kebabs,1
+id_466,American BBQ,American BBQ,2
+id_466,Taste of Greece,Taste of Greece,3
+id_466,Taste of Italy,Taste of Italy,4
+id_466,Vegan Menu,Vegan Menu,5
+id_466,"I'm finished with my choices","I'm finished with my choices",6
+id_469,"Prime Rib - Boneless -Carving station (upcharge of $4.00 pp)",prime_rib_boneless_custom,1
+id_469,"Smoked Brisket (upcharge $3.00 pp)",smoked_brisket_custom,2
+id_469,"Beef Ribs (upcharge $4.00 pp)",beef_ribs_custom,3
+id_469,"Guinness Braised Boneless Short Ribs (upcharge $2.00 pp)",guinness_braised_short_ribs_custom,4
+id_469,"Bacon Wrapped Fillet Mingon - (upcharge of $4.00 pp) -",bacon_wrapped_fillet_mignon_custom,5
+id_469,Flank Steak with Chimichurri,flank_steak_chimichurri_custom,6
+id_469,Sausage Medley,sausage_medley_custom,7
+id_469,"Hamburger Bar (upcharge of $2.50 pp)",hamburger_bar_custom,8
+id_469,"Lamb Chops (upcharge of $4.00 pp)",lamb_chops_custom,9
+id_469,"Smoked Leg of Lamb (Family Style only)",smoked_leg_of_lamb_custom,10
+id_469,Pulled Pork,pulled_pork_custom,11
+id_469,Smoked pork Belly,smoked_pork_belly_custom,12
+id_469,Baby Back Ribs,baby_back_ribs_custom,13
+id_469,"Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze",grilled_pork_chop_korean_bbq_custom,14
+id_469,BBQ Guiness Chicken,bbq_guiness_chicken_custom,15
+id_469,Carolina BBQ Chicken,carolina_bbq_chicken_custom,16
+id_469,Rotisserie Chicken,rotisserie_chicken_custom,17
+id_469,"BBQ Prawns (upcharge of $2.00 pp)",bbq_prawns_custom,18
+id_469,"Salmon steak",salmon_steak_custom,19
+id_469,Tofu (BBQ),tofu_bbq_custom,20
+id_469,Vegetable kebabs,vegetable_kebabs_bbq_custom,21
+id_469,"Grilled Cauliflower Steaks-",grilled_cauliflower_steaks_custom,22
+id_601,Ham hock baked Beans,ham_hock_baked_beans_custom,1
+id_601,Avocado deviled Eggs,avocado_deviled_eggs_custom,2
+id_601,"Mac n' Cheese",mac_n_cheese_custom,3
+id_601,Stuffed Poblano peppers (BBQ Side),stuffed_poblano_peppers_bbq_side_custom,4
+id_601,"Baked Potato Bar (upcharge $1.50 pp)",baked_potato_bar_custom,5
+id_601,Garlic Mashed Potatoes,garlic_mashed_potatoes_custom,6
+id_601,Mini Smashed Potatoes,mini_smashed_potatoes_custom,7
+id_601,"Twice Baked Potatoes (upcharge $0.75 pp)",twice_baked_potatoes_custom,8
+id_601,Corn on the Cob,corn_on_the_cob_custom,9
+id_601,Creamed Corn,creamed_corn_custom,10
+id_601,Jalapeño Poppers,jalapeno_poppers_custom,11
+id_601,Roasted Brussels Sprouts,roasted_brussels_sprouts_custom,12
+id_601,Corn Bread,corn_bread_custom,13
+id_601,Jalapeno cornbread (BBQ Side),jalapeno_cornbread_bbq_side_custom,14
+id_601,Grilled Vegetables (BBQ Side),grilled_vegetables_bbq_side_custom,15
+id_601,Grilled Asparagus,grilled_asparagus_custom,16
+id_470,Caesar,caesar_salad_custom,1
+id_470,Coleslaw,coleslaw_custom,2
+id_470,Garden Salad,garden_salad_custom,3
+id_470,Pasta Salad,pasta_salad_custom,4
+id_470,Bacon Jalapeño Corn Salad,bacon_jalapeno_corn_salad_custom,5
+id_470,Wedge Salad,wedge_salad_custom,6
+id_470,German cucumber salad,german_cucumber_salad_custom,7
+id_470,Crunchy Asian Slaw,crunchy_asian_slaw_custom,8
+id_470,Tossed Cobb Salad,tossed_cobb_salad_custom,9
+id_470,Classic Potato Salad,classic_potato_salad_custom,10
+id_470,German Potato Salad,german_potato_salad_custom,11
+id_470,Macaroni Salad,macaroni_salad_custom,12
+id_470,Hawaiian Macaroni Salad,hawaiian_macaroni_salad_custom,13
+id_470,Fruit Salad,fruit_salad_custom,14
+id_471,Kansas City BBQ Sauce,kansas_city_bbq_sauce_custom,1
+id_471,South Carolina Gold BBQ Sauce,south_carolina_gold_bbq_sauce_custom,2
+id_471,North Carolina Vinegar based BBQ Sauce,north_carolina_vinegar_bbq_sauce_custom,3
+id_471,Alabama White BBQ Sauce,alabama_white_bbq_sauce_custom,4
+id_471,Texas BBQ Sauce,texas_bbq_sauce_custom,5
+id_471,Very Berry BBQ Sauce,very_berry_bbq_sauce_custom,6
+id_471,Smoky bourbon BBQ Sauce,smoky_bourbon_bbq_sauce_custom,7
+id_472,Ketchup,ketchup_custom,1
+id_472,Stone Ground Mustard,stone_ground_mustard_custom,2
+id_472,Dijon Mustard,dijon_mustard_custom,3
+id_472,Yellow Mustard,yellow_mustard_custom,4
+id_472,Mayonnaise,mayonnaise_custom,5
+id_472,Sweet pickle Chips,sweet_pickle_chips_custom,6
+id_472,Dill pickle Chips,dill_pickle_chips_custom,7
+id_472,Sliced radish (BBQ Condiment),sliced_radish_bbq_condiment_custom,8
+id_472,Sweet Relish,sweet_relish_custom,9
+id_472,Cranberry Relish,cranberry_relish_custom,10
+id_472,Kimchi,kimchi_custom,11
+id_472,"Mixed Pickled Vegetables - Giardiniera",giardiniera_custom,12
+id_473,Taco Fiesta,Taco Fiesta,1
+id_473,Taste of Greece,Taste of Greece,2
+id_473,Kebab Party,Kebab Party,3
+id_473,Taste of Italy,Taste of Italy,4
+id_473,"I'm finished with my choices","I'm finished with my choices",5
+id_473,Vegan Menu,Vegan Menu,6
+id_245,Stationary buffet,Stationary buffet,1
+id_245,Passed,Passed,2
+id_236,"Pate with pickled veg ($1.95 each)",pate_pickled_veg,1
+id_236,"Cream Cheese and Shrimp ($2.50 each)",cream_cheese_shrimp,2
+id_236,"BLT - (Bacon Lettuce & Tomato ($1.95 each)",blt_sandwich,3
+id_236,"Caprese (Mozzarella, Tomato, & Basil) ($1.95 each)",caprese_sandwich,4
+id_236,"Gravlax, Cream Cheese & Cucumber ($2.75 each)",gravlax_cream_cheese_cucumber,5
+id_236,"Prosciutto-Fig ($2.75 each)",prosciutto_fig,6
+id_236,"Crab Salad ($3.00 each)",crab_salad_sandwich,7
+id_236,"Chicken Cranberry ($2.00 each)",chicken_cranberry_sandwich,8
+id_236,"Miso egg salad ($2.25 each)",miso_egg_salad,9
+id_237,"Chicken Satay ($2.45 each)",chicken_satay_shooter,1
+id_237,"Beef Satay ($2.45 each)",beef_satay_shooter,2
+id_237,"Pork Satay ($2.45 each)",pork_satay_shooter,3
+id_237,"Gazpacho ($2.00 each)",gazpacho_shooter,4
+id_237,"Watermelon, feta and mint ($2.00 each)",watermelon_feta_mint_shooter,5
+id_237,"Shrimp Cocktail ($3.25 each)",shrimp_cocktail_shooter,6
+id_237,"Ahi Tuna ($3.75 each)",ahi_tuna_shooter,7
+id_237,"Ceviche ($3.75 each)",ceviche_shooter,8
+id_548,Tzatziki,tzatziki_spread,1
+id_548,Hummus,hummus_spread,2
+id_548,Melitzanosalata,melitzanosalata_spread,3
+id_548,Spicy Feta,spicy_feta_spread,4
+id_548,Taramasalata,taramasalata_spread,5
+id_548,Muhammara,muhammara_spread,6
+id_548,Beet Hummus,beet_hummus_spread,7
+id_548,Lebanese garlic dip,lebanese_garlic_dip_spread,8
+id_552,"24","24",1
+id_552,"36","36",2
+id_552,"48","48",3
+id_552,"96","96",4
+id_552,"144","144",5
+id_504,"Petit Fours ($2.25 each)",petit_fours,1
+id_504,"Macaroons ($2.25 each)",macaroons,2
+id_504,"Flourless Chocolate Cake ($4.75 each)",flourless_chocolate_cake,3
+id_504,"Mini Cheesecakes ($3.75 each)",mini_cheesecakes,4
+id_504,"Chocolate Mousse Cups ($3.75 each)",chocolate_mousse_cups,5
+id_504,"Tiramisu Cups ($3.75 each)",tiramisu_cups,6
+id_504,"Fruit Tarts ($3.75 each)",fruit_tarts,7
+id_504,"Cannoli ($3.25 each)",cannoli,8
+id_504,"Mini Eclairs with Crème Pâtissière ($3.25 each)",mini_eclairs,9
+id_504,"Baklava roll-ups ($ 3.75 ea)",baklava_roll_ups,10
+id_504,"Lemon Tartlets ($2.75 each)",lemon_tartlets,11
+id_504,"Mille feuille with cream and berries ($3.75 each)",mille_feuille,12
+id_567,Alcohlic,Alcohlic,1
+id_567,Non Alcoholic,Non Alcoholic,2
+id_567,Both,Both,3
+id_721,"DRY HIRE - YOU provide alcohol & mixers",DRY HIRE,1
+id_721,"WET HIRE - WE provide everything",WET HIRE,2
+id_582,Beer,Beer,1
+id_582,Wine,Wine,2
+id_582,"Cocktails X2",Cocktails X2,3
+id_582,Mocktails,Mocktails,4
+id_719,YES,YES,1
+id_719,NO,NO,2
+id_722,Beer,Beer,1
+id_722,Wine,Wine,2
+id_722,"Cocktails X 2",Cocktails X 2,3
+id_722,Mocktails,Mocktails,4
+id_722,OPEN BAR,OPEN BAR,5
+id_722,CASH BAR,CASH BAR,6
+id_724,YES,YES,1
+id_724,NO,NO,2
+id_726,"Well (Economical)",Well,1
+id_726,"Mid Shelf (Medium Pricing)",Mid Shelf,2
+id_726,"Top Shelf (Premium)",Top Shelf,3
+id_595,YES,YES,1
+id_595,NO,NO,2
+id_597,"Mobile Bar unit ($300.00)",mobile_bar_unit,1
+id_597,"Beer Glasses Disposable Plastic Basic ($.20)",beer_glasses_disposable_basic,2
+id_597,"Beer Glasses Disposable Plastic Premium ($1.05)",beer_glasses_disposable_premium,3
+id_597,"Beer Glasses Glass Pint ($2.05)",beer_glasses_glass_pint,4
+id_597,"Beer Glasses Glass Pilsner ($1.85)",beer_glasses_glass_pilsner,5
+id_597,"Wine Glasses Disposable Plastic Basic ($.05)",wine_glasses_disposable_basic,6
+id_597,"Wine Glasses Disposable Plastic Premium - with stem ($1.05)",wine_glasses_disposable_premium_stem,7
+id_597,"Wine Glasses Glass with stem ($1.15)",wine_glasses_glass_stem,8
+id_597,"Cocktail Glasses Disposable Plastic Basic ($.05)",cocktail_glasses_disposable_basic,9
+id_597,"Cocktail Glasses Disposable Plastic Premium ($1.05)",cocktail_glasses_disposable_premium,10
+id_594,YES,YES,1
+id_594,NO,NO,2
+id_353,"Assorted Soft Drinks (1pp)- $2.00",assorted_soft_drinks_1pp,1
+id_353,"Assorted Soft Drinks (unlimited)- $4.00",assorted_soft_drinks_unlimited,2
+id_353,"Assorted Snapple (1 pp) 2.75",assorted_snapple_1pp,3
+id_353,"Assorted Snapple (unlimited) $5.50",assorted_snapple_unlimited,4
+id_353,"Pellegrino Flavored sodas (1 pp) $3.35",pellegrino_sodas_1pp,5
+id_353,"Pellegrino Flavored sodas (unlimited) $7.00",pellegrino_sodas_unlimited,6
+id_353,"Self serve citrus infused water ($1.25)",self_serve_citrus_water,7
+id_353,"Bottled Water (1pp) $1.25",bottled_water_1pp,8
+id_353,"Bottled Water (unlimited) $2.50",bottled_water_unlimited,9
+id_353,"Iced tea- Free pour $ 2.25 pp",iced_tea_free_pour,10
+id_353,"Lemonade Free pour $2.25",lemonade_free_pour,11
+id_353,"Moctails Free Pour $ 3.50",mocktails_free_pour,12
+id_730,YES,YES,1
+id_730,NO,NO,2
+id_495,YES,YES,1
+id_495,NO,NO,2
+id_422,"Tables - 6' Rectangle ($25.00)",table_6_rect,1
+id_422,"Tables - 8' Rectangle ($25.00)",table_8_rect,2
+id_422,"Tables - Round 60"" ($24.00)",table_round_60,3
+id_422,"Tables - Cocktail ($25.00)",table_cocktail,4
+id_422,"Chairs ($7.50)",chairs,5
+id_422,"Bar Stools ($28.00)",bar_stools,6
+id_422,"Lounge Furniture - Sectional ($20.00)",lounge_furniture_sectional,7
+id_352,"Napkins - Cotton ($1.25)",napkins_cotton,1
+id_352,"Napkins - Linen ($2.25)",napkins_linen,2
+id_352,"Tablecloth - 90"" Round ($35.00)",tablecloth_90_round,3
+id_352,"Tablecloth - 120"" Round ($65.00)",tablecloth_120_round,4
+id_352,"Tablecloth - 6' Rectangle ($22.00)",tablecloth_6_rect,5
+id_352,"Tablecloth - 8' Rectangle ($45.00)",tablecloth_8_rect,6
+id_352,"Tablecloth - Cocktail ($22.00)",tablecloth_cocktail,7
+id_352,"Table Runner ($55.00)",table_runner,8
+id_352,"Chair Covers ($22.00)",chair_covers,9
+id_352,"Chair Sashes ($55.00)",chair_sashes,10
+id_269,"Disposable Plates ($2.25)",disposable_plates,1
+id_269,"Disposable Cutlery ($2.25)",disposable_cutlery,2
+id_269,"Disposable Napkins ($2.25)",disposable_napkins_serving,3
+id_269,"Disposable Cups ($4.00)",disposable_cups,4
+id_269,"Disposable Serving Utensils ($4.00)",disposable_serving_utensils,5
+id_269,"China Plates ($8.25)",china_plates,6
+id_269,"Silverware ($1.15)",silverware,7
+id_269,"Linen Napkins ($1.15)",linen_napkins_serving,8
+id_269,"Glassware - Water ($2.25)",glassware_water,9
+id_269,"Glassware - Wine ($2.25)",glassware_wine,10
+id_269,"Glassware - Champagne ($3.00)",glassware_champagne,11
