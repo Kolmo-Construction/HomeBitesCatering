@@ -95,6 +95,62 @@ router.get("/forms/:id", async (req, res) => {
   }
 });
 
+// Get a form with its pages and questions
+router.get("/forms/:formId", async (req, res) => {
+  const formId = parseInt(req.params.formId);
+  if (isNaN(formId)) {
+    return res.status(400).json({ message: "Invalid form ID" });
+  }
+
+  try {
+    const form = await db.query.forms.findFirst({
+      where: eq(formSchema.forms.id, formId),
+    });
+
+    if (!form) {
+      return res.status(404).json({ message: "Form not found" });
+    }
+
+    const pages = await db.query.formPages.findMany({
+      where: eq(formSchema.formPages.formId, formId),
+      orderBy: [asc(formSchema.formPages.pageOrder)],
+    });
+
+    // Add this log: Check what pages were fetched
+    console.log('Backend: Fetched pages:', pages);
+
+    const pageQuestionData = await db.query.pageQuestions.findMany({
+      where: inArray(formSchema.pageQuestions.pageId, pages.map(p => p.id)),
+      orderBy: [asc(formSchema.pageQuestions.displayOrder)],
+      with: {
+        questionLibraryQuestion: true
+      }
+    });
+
+    // Add this log: Check what page questions were fetched BEFORE filtering/mapping
+    console.log('Backend: Fetched page questions (before structuring):', pageQuestionData);
+
+    const formWithPagesAndQuestions = {
+      ...form,
+      pages: pages.map(page => {
+        const questionsForPage = pageQuestionData.filter(pq => pq.pageId === page.id);
+        return {
+          ...page,
+          questions: questionsForPage
+        };
+      })
+    };
+
+    // Add this log: Check the final structured data being sent
+    console.log('Backend: Structured form data (before sending):', formWithPagesAndQuestions);
+
+    return res.json(formWithPagesAndQuestions);
+  } catch (error) {
+    console.error('Error fetching form with pages and questions:', error);
+    return res.status(500).json({ message: "Failed to get form with pages and questions" });
+  }
+});
+
 // Get a form by key and version
 router.get("/forms/key/:formKey/version/:version", async (req, res) => {
   try {
