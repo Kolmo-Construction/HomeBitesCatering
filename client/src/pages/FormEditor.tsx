@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -960,9 +960,9 @@ export default function FormEditor() {
 
   // Fetch questions for the selected page
   const { data: questionsData, isLoading: isQuestionsLoading, isFetching: isQuestionsFetching } = useQuery({
-    queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'],
+    queryKey: ['pageQuestions', selectedPage?.id],
     queryFn: async () => {
-      if (!selectedPage) return { data: [] };
+      if (!selectedPage) return [];
       
       console.log(`CLIENT: Fetching questions for page ${selectedPage.id}...`);
       const response = await fetch(`/api/form-builder/pages/${selectedPage.id}/questions`);
@@ -974,7 +974,21 @@ export default function FormEditor() {
       return fetchedQuestions;
     },
     enabled: !!selectedPage,
+    staleTime: 1000 * 5, // Reduce staleTime for faster refetches during debugging
   });
+  
+  // Add useEffect to log questionsData updates
+  useEffect(() => {
+    console.log('CLIENT: questionsData updated:', questionsData);
+    console.log('CLIENT: Type of questionsData:', typeof questionsData, Array.isArray(questionsData));
+  }, [questionsData]);
+  
+  // Create a consistent questions array for rendering
+  const questions = useMemo(() => {
+    if (!questionsData) return [];
+    if (Array.isArray(questionsData)) return questionsData;
+    return questionsData.data || [];
+  }, [questionsData]);
 
   // Fetch library questions for adding to the form
   const { data: libraryQuestionsData, isLoading: isLibraryLoading } = useQuery({
@@ -1217,7 +1231,9 @@ export default function FormEditor() {
       return true;
     },
     onSuccess: () => {
+      // Update both query formats to ensure all caches are invalidated
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage?.id] });
       setSelectedQuestion(null);
       toast({
         title: "Question removed",
@@ -1643,7 +1659,7 @@ export default function FormEditor() {
   // Direct access to pagesData which is an array returned from the API
   const pages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
   console.log("CLIENT: 'pages' variable before rendering:", JSON.stringify(pages, null, 2));
-  const questions = questionsData?.data || [];
+  console.log("CLIENT: 'questions' variable before rendering:", JSON.stringify(questions, null, 2));
   const libraryQuestions = libraryQuestionsData?.data || [];
   
   // Filter library questions based on search
