@@ -1317,10 +1317,23 @@ export default function FormEditor() {
       return;
     }
     
-    // Get the next display order
-    const nextOrder = questionsData?.data?.length 
-      ? Math.max(...questionsData.data.map(q => q.displayOrder || q.display_order)) + 1 
-      : 1;
+    // Use the current state of questionsData for calculating nextOrder
+    const currentQuestionsOnPage = questionsData?.data || [];
+    let nextOrder;
+    
+    if (currentQuestionsOnPage.length === 0) {
+      nextOrder = 1;
+    } else {
+      const orders = currentQuestionsOnPage.map(q => {
+        const orderValue = q.displayOrder !== undefined ? q.displayOrder : 
+                          (q.display_order !== undefined ? q.display_order : 0);
+        return (typeof orderValue === 'number' && !isNaN(orderValue)) ? orderValue : 0;
+      });
+      nextOrder = Math.max(0, ...orders) + 1;
+    }
+    
+    console.log(`CLIENT: Adding library question ID ${libraryQuestion.id}. Page ID: ${selectedPage.id}.`);
+    console.log(`CLIENT: Current questions on page: ${currentQuestionsOnPage.length}. Calculated nextOrder: ${nextOrder}`);
     
     // Set up initial overrides based on library question
     const initialOverrides = {
@@ -1329,23 +1342,30 @@ export default function FormEditor() {
       libraryQuestionId: libraryQuestion.id,
       displayOrder: nextOrder,
       
-      // Initialize with empty overrides, letting the base library question values show through
-      displayTextOverride: null,
-      isRequiredOverride: null,
-      isHiddenOverride: null,
-      helperTextOverride: null,
-      placeholderOverride: null,
-      metadataOverrides: {},
-      optionsOverrides: []
+      // Initialize with values from the library question if available, otherwise with null
+      displayTextOverride: libraryQuestion.defaultText || libraryQuestion.default_text || null,
+      isRequiredOverride: libraryQuestion.defaultMetadata?.isRequired || 
+                          libraryQuestion.defaultMetadata?.is_required || null,
+      isHiddenOverride: libraryQuestion.defaultMetadata?.isHidden || 
+                        libraryQuestion.defaultMetadata?.is_hidden || null,
+      helperTextOverride: libraryQuestion.defaultMetadata?.helperText || 
+                          libraryQuestion.defaultMetadata?.helper_text || null,
+      placeholderOverride: libraryQuestion.defaultMetadata?.placeholder || null,
+      metadataOverrides: libraryQuestion.defaultMetadata || {},
+      optionsOverrides: libraryQuestion.defaultOptions || []
     };
+    
+    console.log("CLIENT: Sending question with overrides:", JSON.stringify(initialOverrides, null, 2));
     
     try {
       await addQuestionMutation.mutateAsync(initialOverrides);
+      // Toast is now more specific with the question text
       toast({
-        title: "Question added",
-        description: "Question has been added to the page successfully.",
+        title: "Question Added",
+        description: `"${initialOverrides.displayTextOverride || 'New Question'}" added to page.`,
       });
     } catch (error) {
+      console.error("CLIENT: Error in handleAddQuestionFromLibrary:", error);
       toast({
         variant: "destructive",
         title: "Error",

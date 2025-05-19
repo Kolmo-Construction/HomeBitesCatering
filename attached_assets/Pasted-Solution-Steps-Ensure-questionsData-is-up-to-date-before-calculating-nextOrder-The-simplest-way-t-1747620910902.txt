@@ -1,0 +1,181 @@
+Solution Steps:
+
+Ensure questionsData is up-to-date before calculating nextOrder:
+The simplest way to address this is to make the displayOrder calculation more robust by fetching the latest count directly or by ensuring the mutation waits for the query to be fresh. However, a more direct fix is to ensure the displayOrder is correctly derived from the current state of the questions on the client, if available, or by fetching count if not.
+
+A better approach for nextOrder calculation within handleAddQuestionFromLibrary:
+
+TypeScript
+
+const handleAddQuestionFromLibrary = async (libraryQuestion) => {
+  if (!selectedPage) {
+    toast({
+      variant: "destructive",
+      title: "No page selected",
+      description: "Please select a page first to add questions.",
+    });
+    return;
+  }
+
+  // It's better to rely on the most recent data.
+  // Attempt to get the latest questions count directly or from a reliable source.
+  // The queryClient.invalidateQueries should eventually update questionsData.
+  // For immediate consistency, you might need to await the refetch or manage the order more explicitly.
+
+  // A more robust way to get the current number of questions for the selected page:
+  // This relies on the 'questionsData' being correctly updated after each add.
+  const currentQuestionsOnPage = questionsData?.data || [];
+  let nextOrder;
+  if (currentQuestionsOnPage.length === 0) {
+    nextOrder = 1;
+  } else {
+    // Ensure all items in map have a numeric order, default to 0 if not
+    const orders = currentQuestionsOnPage.map(q => {
+        const orderValue = q.displayOrder !== undefined ? q.displayOrder : q.display_order;
+        return (typeof orderValue === 'number' && !isNaN(orderValue)) ? orderValue : 0;
+    });
+    nextOrder = Math.max(0, ...orders) + 1;
+  }
+
+  console.log(`CLIENT: Adding question. Current questions count: ${currentQuestionsOnPage.length}. Calculated nextOrder: ${nextOrder}`);
+
+
+  const initialOverrides = {
+    pageId: selectedPage.id,
+    libraryQuestionId: libraryQuestion.id,
+    displayOrder: nextOrder, // Use the newly calculated nextOrder
+    displayTextOverride: libraryQuestion.defaultText || libraryQuestion.default_text || null, // Pre-fill with library text
+    isRequiredOverride: (libraryQuestion.defaultMetadata?.isRequired) || false,
+    isHiddenOverride: (libraryQuestion.defaultMetadata?.isHidden) || false,
+    helperTextOverride: libraryQuestion.defaultMetadata?.helperText || null,
+    placeholderOverride: libraryQuestion.defaultMetadata?.placeholder || null,
+    metadataOverrides: libraryQuestion.defaultMetadata || {}, // Start with library metadata
+    optionsOverrides: libraryQuestion.defaultOptions || []    // Start with library options
+  };
+
+  try {
+    // When the mutation is successful, tanstack-query will refetch 'questionsData'.
+    // The UI should then update with the new question.
+    await addQuestionMutation.mutateAsync(initialOverrides);
+    toast({ // This toast is fine here, the one in onSuccess can be removed or made more generic
+      title: "Question added",
+      description: `${libraryQuestion.defaultText || libraryQuestion.default_text || 'New Question'} has been added to the page.`,
+    });
+  } catch (error) {
+    // Error toast is already handled by addQuestionMutation.onError
+    console.error("Error in handleAddQuestionFromLibrary:", error);
+  }
+};
+Modify Server-Side POST /api/form-builder/pages/:pageId/questions (Optional but good practice):
+While the client should send the correct displayOrder, the server could also be made more resilient. Instead of strictly relying on the client-sent displayOrder for new questions, it could calculate the next available displayOrder based on existing questions for that formPageId if the client doesn't provide one or if a conflict occurs. This makes the API more robust.
+
+In clea/server/formBuilderRoutes.ts, in the POST /pages/:pageId/questions route:
+
+TypeScript
+
+// ...
+// Before: const parsed = questionSchema.safeParse({ ...req.body, formPageId: pageId });
+// Modify to handle displayOrder calculation on the server
+
+const { displayOrder: clientDisplayOrder, ...otherBodyData } = req.body;
+let finalDisplayOrder = clientDisplayOrder;
+
+if (finalDisplayOrder == null) { // If client doesn't send displayOrder or it's explicitly null/undefined
+    const existingQuestions = await db.select({ displayOrder: formSchema.formPageQuestions.displayOrder })
+        .from(formSchema.formPageQuestions)
+        .where(eq(formSchema.formPageQuestions.formPageId, pageId))
+        .orderBy(desc(formSchema.formPageQuestions.displayOrder)) // Get the highest order
+        .limit(1);
+
+    if (existingQuestions.length > 0 && typeof existingQuestions[0].displayOrder === 'number') {
+        finalDisplayOrder = existingQuestions[0].displayOrder + 1;
+    } else {
+        finalDisplayOrder = 1; // First question
+    }
+    console.log(`SERVER: Calculated displayOrder on server: ${finalDisplayOrder}`);
+}
+
+const questionDataForParsing = {
+    ...otherBodyData,
+    formPageId: pageId,
+    displayOrder: finalDisplayOrder // Use the server-determined or client-provided order
+};
+
+const parsed = questionSchema.safeParse(questionDataForParsing);
+// ... rest of the route
+And ensure your insertFormPageQuestionSchema (source in shared/form-schema.ts) allows displayOrder to be optional if the server calculates it, or ensure the client always provides it. The current client logic does always provide it. The primary fix should be on the client's nextOrder calculation.
+
+Review addQuestionMutation.onSuccess (source 451-452):
+The current onSuccess only invalidates queries.
+
+TypeScript
+
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+  // toast({ // This toast was moved to handleAddQuestionFromLibrary
+  //   title: "Question added",
+  //   description: "Question has been added to the page successfully.",
+  // });
+},
+This is generally good. The invalidation should cause questionsData to update, and then the nextOrder calculation should use the fresh data. The main issue is the potential for multiple clicks before the first invalidation completes and questionsData updates.
+
+Immediate Next Steps for You:
+
+Apply the nextOrder fix in FormEditor.txt's handleAddQuestionFromLibrary function (source 475-482).
+The revised logic for nextOrder using currentQuestionsOnPage should be more reliable as it directly reflects the current state of questionsData.data.
+
+TypeScript
+
+const handleAddQuestionFromLibrary = async (libraryQuestion) => {
+  if (!selectedPage) {
+    toast({
+      variant: "destructive",
+      title: "No page selected",
+      description: "Please select a page first to add questions.",
+    });
+    return;
+  }
+
+  // Use the current state of questionsData for calculating nextOrder
+  const currentQuestionsOnPage = questionsData?.data || [];
+  let nextOrder;
+  if (currentQuestionsOnPage.length === 0) {
+    nextOrder = 1;
+  } else {
+    const orders = currentQuestionsOnPage.map(q => {
+        const orderValue = q.displayOrder !== undefined ? q.displayOrder : q.display_order; // Handle both camel/snake case
+        return (typeof orderValue === 'number' && !isNaN(orderValue)) ? orderValue : 0;
+    });
+    nextOrder = Math.max(0, ...orders) + 1; // Ensure Math.max doesn't get NaN if orders is empty
+  }
+
+  console.log(`CLIENT: Adding library question ID ${libraryQuestion.id}. Page ID: ${selectedPage.id}. Current questions on page: ${currentQuestionsOnPage.length}. Calculated nextOrder: ${nextOrder}`);
+
+  const initialOverrides = {
+    pageId: selectedPage.id,
+    libraryQuestionId: libraryQuestion.id,
+    displayOrder: nextOrder,
+    displayTextOverride: libraryQuestion.defaultText || libraryQuestion.default_text || null,
+    isRequiredOverride: libraryQuestion.defaultMetadata?.isRequired || libraryQuestion.defaultMetadata?.is_required || false,
+    isHiddenOverride: libraryQuestion.defaultMetadata?.isHidden || libraryQuestion.defaultMetadata?.is_hidden || false,
+    helperTextOverride: libraryQuestion.defaultMetadata?.helperText || libraryQuestion.defaultMetadata?.helper_text || null,
+    placeholderOverride: libraryQuestion.defaultMetadata?.placeholder || null,
+    metadataOverrides: libraryQuestion.defaultMetadata || {},
+    optionsOverrides: libraryQuestion.defaultOptions || []
+  };
+
+  try {
+    await addQuestionMutation.mutateAsync(initialOverrides);
+    // The toast is now more specific and located here
+    toast({
+      title: "Question Added",
+      description: `"${initialOverrides.displayTextOverride || 'New Question'}" added to page.`,
+    });
+  } catch (error) {
+    // Error is handled by mutation's onError
+    console.error("CLIENT: Error in handleAddQuestionFromLibrary:", error);
+  }
+};
+Test Thoroughly: After applying the fix, try adding multiple questions to a page rapidly. Observe the client console logs for Calculated nextOrder and the server logs for the display_order being received and inserted.
+
+The core problem is the race condition where the client calculates the next displayOrder based on stale data. Ensuring questionsData.data is accurately reflecting the current list of questions before calculating nextOrder is key. The invalidation mechanism of react-query is supposed to handle this, but rapid sequential additions might execute faster than the refetch and state update cycle. The direct use of questionsData.data as currentQuestionsOnPage at the moment of calculation should be correct if questionsData is indeed updated promptly by react-query after invalidation.
