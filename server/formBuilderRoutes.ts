@@ -2091,52 +2091,66 @@ router.get("/public/forms/:formKey", async (req, res) => {
   try {
     const formKey = req.params.formKey;
     
-    // Find the most recent published version of the form
-    const [form] = await db.select()
-      .from(formSchema.forms)
-      .where(and(
-        eq(formSchema.forms.formKey, formKey),
-        eq(formSchema.forms.status, "published")
-      ))
-      .orderBy(desc(formSchema.forms.version))
-      .limit(1);
+    // Find the most recent published version of the form using raw SQL
+    const formResult = await db.execute(sql`
+      SELECT 
+        id,
+        form_key AS "formKey",
+        form_title AS "formTitle",
+        description,
+        version_number AS "versionNumber",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+      FROM forms
+      WHERE form_key = ${formKey} AND status = 'published'
+      ORDER BY version_number DESC
+      LIMIT 1
+    `);
     
-    if (!form) {
+    if (!formResult.rows.length) {
       return res.status(404).json({ message: "Form not found or not published" });
     }
     
-    // Get all pages for this form, ordered by pageOrder
-    const pages = await db.select()
-      .from(formSchema.formPages)
-      .where(eq(formSchema.formPages.formId, form.id))
-      .orderBy(formSchema.formPages.pageOrder);
+    const form = formResult.rows[0];
     
-    // Get all questions for these pages
-    const pageQuestions = await db.select({
-      id: formSchema.formPageQuestions.id,
-      pageId: formSchema.formPageQuestions.formPageId,
-      questionId: formSchema.formPageQuestions.libraryQuestionId,
-      displayOrder: formSchema.formPageQuestions.displayOrder,
-      displayTextOverride: formSchema.formPageQuestions.displayTextOverride,
-      isRequiredOverride: formSchema.formPageQuestions.isRequiredOverride,
-      
-      // Join with question library to get question details
-      questionText: formSchema.questionLibrary.defaultText,
-      questionType: formSchema.questionLibrary.questionType,
-      questionKey: formSchema.questionLibrary.libraryKey,
-      defaultMetadata: formSchema.questionLibrary.defaultMetadata,
-      defaultOptions: formSchema.questionLibrary.defaultOptions,
-    })
-    .from(formSchema.formPageQuestions)
-    .innerJoin(
-      formSchema.questionLibrary,
-      eq(formSchema.formPageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
-    )
-    .where(inArray(
-      formSchema.formPageQuestions.formPageId,
-      pages.map(page => page.id)
-    ))
-    .orderBy(formSchema.formPageQuestions.displayOrder);
+    // Get all pages for this form, ordered by pageOrder - using raw SQL
+    const pagesResult = await db.execute(sql`
+      SELECT 
+        id,
+        form_id AS "formId", 
+        page_title AS "pageTitle",
+        page_key AS "pageKey",
+        page_order AS "pageOrder",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt" 
+      FROM form_pages
+      WHERE form_id = ${form.id}
+      ORDER BY page_order
+    `);
+    
+    const pages = pagesResult.rows;
+    
+    // Get all questions for these pages - Using a simpler query approach to avoid type issues
+    const pageQuestionsRaw = await db.execute(sql`
+      SELECT 
+        fpq.id, 
+        fpq.form_page_id as "pageId", 
+        fpq.library_question_id as "questionId",
+        fpq.display_order as "displayOrder",
+        fpq.display_text_override as "displayTextOverride",
+        fpq.is_required_override as "isRequiredOverride",
+        ql.default_text as "questionText",
+        ql.question_type as "questionType",
+        ql.library_key as "questionKey",
+        ql.default_metadata as "defaultMetadata",
+        ql.default_options as "defaultOptions"
+      FROM form_page_questions fpq
+      INNER JOIN question_library ql ON fpq.library_question_id = ql.id
+      WHERE fpq.form_page_id IN (${sql.join(pages.map(page => page.id))})
+      ORDER BY fpq.display_order
+    `);
+    
+    const pageQuestions = pageQuestionsRaw.rows;
     
     // Organize the questions by page
     const pagesWithQuestions = pages.map(page => {
@@ -2167,18 +2181,37 @@ router.get("/public/forms/:formKey", async (req, res) => {
       };
     });
     
-    // Get rules for conditional logic
-    const rules = await db.select()
-      .from(formSchema.formRules)
-      .where(eq(formSchema.formRules.formId, form.id));
+    // Get rules and targets using raw SQL for conditional logic
+    const rulesRaw = await db.execute(sql`
+      SELECT 
+        id, 
+        trigger_form_page_question_id as "triggerQuestionId",
+        condition_type as "conditionType",
+        condition_value as "conditionValue",
+        action_type as "actionType"
+      FROM form_rules
+      WHERE form_id = ${form.id}
+    `);
     
-    // Get rule targets
-    const ruleTargets = await db.select()
-      .from(formSchema.formRuleTargets)
-      .where(inArray(
-        formSchema.formRuleTargets.ruleId,
-        rules.map(rule => rule.id)
-      ));
+    const rules = rulesRaw.rows;
+    
+    // Get rule targets if we have rules
+    let ruleTargetsRaw;
+    if (rules.length > 0) {
+      const ruleIds = rules.map(rule => rule.id);
+      ruleTargetsRaw = await db.execute(sql`
+        SELECT 
+          rule_id as "ruleId",
+          target_type as "targetType",
+          target_id as "targetId"
+        FROM form_rule_targets
+        WHERE rule_id IN (${sql.join(ruleIds)})
+      `);
+    } else {
+      ruleTargetsRaw = { rows: [] };
+    }
+    
+    const ruleTargets = ruleTargetsRaw.rows;
     
     // Combine rules with their targets
     const rulesWithTargets = rules.map(rule => {
@@ -2191,7 +2224,7 @@ router.get("/public/forms/:formKey", async (req, res) => {
       
       return {
         id: rule.id,
-        triggerQuestionId: rule.triggerFormPageQuestionId,
+        triggerQuestionId: rule.triggerQuestionId,
         conditionType: rule.conditionType,
         conditionValue: rule.conditionValue,
         actionType: rule.actionType,
