@@ -2086,20 +2086,19 @@ router.delete("/forms/:formId/rules/:ruleId", async (req, res) => {
 
 // --- PUBLIC API ENDPOINTS ---
 
-// Simplified public endpoint to get a form by key (for customer-facing questionnaire)
+// Public endpoint to get a form by key (for customer-facing questionnaire)
 router.get("/public/forms/:formKey", async (req, res) => {
   try {
     const formKey = req.params.formKey;
     
-    // First check if the form exists - plain SQL query
+    // Get form data using a simpler approach with direct queries
     const formQuery = `
-      SELECT id, form_key, form_title, description, version
-      FROM forms
+      SELECT id, form_key, form_title, description, version FROM forms 
       WHERE form_key = $1 AND status = 'published'
-      ORDER BY version DESC
       LIMIT 1
     `;
     
+    // Use the imported db object directly for the query
     const formResult = await db.query(formQuery, [formKey]);
     
     if (formResult.rowCount === 0) {
@@ -2107,26 +2106,23 @@ router.get("/public/forms/:formKey", async (req, res) => {
     }
     
     const form = formResult.rows[0];
-    const formId = form.id;
     
-    // Get all pages with plain SQL
+    // Get pages for this form
     const pagesQuery = `
-      SELECT id, page_title, page_key, page_order
-      FROM form_pages
+      SELECT id, page_title, page_key, page_order FROM form_pages
       WHERE form_id = $1
       ORDER BY page_order
     `;
     
-    const pagesResult = await db.query(pagesQuery, [formId]);
+    const pagesResult = await db.query(pagesQuery, [form.id]);
     const pages = pagesResult.rows;
     
-    // Extract page IDs for question query
-    const pageIds = pages.map(page => page.id);
+    // Structure to hold all the page data with questions
+    const pagesWithQuestions = [];
     
-    // Get all questions if we have pages
-    let questionsResult = { rows: [] };
-    if (pageIds.length > 0) {
-      const pageIdsStr = pageIds.join(',');
+    // Process each page to get its questions
+    for (const page of pages) {
+      // Get questions for this specific page
       const questionsQuery = `
         SELECT 
           fpq.id, 
@@ -2142,100 +2138,103 @@ router.get("/public/forms/:formKey", async (req, res) => {
           ql.default_options
         FROM form_page_questions fpq
         JOIN question_library ql ON fpq.library_question_id = ql.id
-        WHERE fpq.form_page_id IN (${pageIdsStr})
+        WHERE fpq.form_page_id = $1
         ORDER BY fpq.display_order
       `;
       
-      questionsResult = await db.query(questionsQuery);
-    }
-    
-    // Structure pages with questions
-    const pagesWithQuestions = pages.map(page => {
-      const questionsForPage = questionsResult.rows
-        .filter(q => q.form_page_id === page.id)
-        .map(q => {
-          let metadata = {};
-          let options = [];
-          
-          // Safely parse JSON fields
-          try {
-            if (q.default_metadata) {
-              metadata = JSON.parse(q.default_metadata);
-            }
-            if (q.default_options) {
-              options = JSON.parse(q.default_options).map(opt => ({
-                label: opt.label,
-                value: opt.value
-              }));
-            }
-          } catch (e) {
-            console.warn('Error parsing JSON metadata or options for question', q.id);
-          }
-          
-          return {
-            id: q.id,
-            questionText: q.display_text_override || q.default_text,
-            questionType: q.question_type,
-            fieldKey: q.library_key,
-            isRequired: q.is_required_override !== null ? q.is_required_override : true,
-            metadata,
-            options
-          };
-        });
+      const questionsResult = await db.query(questionsQuery, [page.id]);
+      const questions = questionsResult.rows;
       
-      return {
+      // Format the questions with proper data structures
+      const formattedQuestions = questions.map(q => {
+        // Process metadata JSON
+        let metadata = {};
+        try {
+          if (q.default_metadata) {
+            metadata = typeof q.default_metadata === 'string' 
+              ? JSON.parse(q.default_metadata) 
+              : q.default_metadata;
+          }
+        } catch (e) {
+          console.warn('Error parsing metadata for question', q.id);
+        }
+        
+        // Process options JSON
+        let options = [];
+        try {
+          if (q.default_options) {
+            const parsedOptions = typeof q.default_options === 'string'
+              ? JSON.parse(q.default_options)
+              : q.default_options;
+              
+            options = Array.isArray(parsedOptions) 
+              ? parsedOptions.map(opt => ({
+                  label: opt.label || opt.text || '',
+                  value: opt.value || ''
+                }))
+              : [];
+          }
+        } catch (e) {
+          console.warn('Error parsing options for question', q.id);
+        }
+        
+        return {
+          id: q.id,
+          questionText: q.display_text_override || q.default_text,
+          questionType: q.question_type,
+          fieldKey: q.library_key,
+          isRequired: q.is_required_override !== null ? q.is_required_override : true,
+          metadata,
+          options
+        };
+      });
+      
+      // Add the formatted page with its questions
+      pagesWithQuestions.push({
         id: page.id,
         title: page.page_title,
         key: page.page_key,
         pageOrder: page.page_order,
-        questions: questionsForPage
-      };
-    });
+        questions: formattedQuestions
+      });
+    }
     
-    // Get conditional logic rules with plain SQL
+    // Get conditional logic rules
     const rulesQuery = `
       SELECT id, trigger_form_page_question_id, condition_type, condition_value, action_type
       FROM form_rules
       WHERE form_id = $1
     `;
     
-    const rulesResult = await db.query(rulesQuery, [formId]);
+    const rulesResult = await db.query(rulesQuery, [form.id]);
     const rules = rulesResult.rows;
     
-    // Get rule targets if we have rules
-    let ruleTargets = [];
-    if (rules.length > 0) {
-      const ruleIds = rules.map(rule => rule.id);
-      const ruleIdsStr = ruleIds.join(',');
-      
+    // Format rules with their targets
+    const formattedRules = [];
+    
+    for (const rule of rules) {
+      // Get targets for this rule
       const targetsQuery = `
-        SELECT rule_id, target_type, target_id
+        SELECT target_type, target_id
         FROM form_rule_targets
-        WHERE rule_id IN (${ruleIdsStr})
+        WHERE rule_id = $1
       `;
       
-      const targetsResult = await db.query(targetsQuery);
-      ruleTargets = targetsResult.rows;
-    }
-    
-    // Combine rules with their targets
-    const rulesWithTargets = rules.map(rule => {
-      const targetsForRule = ruleTargets
-        .filter(target => target.rule_id === rule.id)
-        .map(target => ({
-          targetType: target.target_type,
-          targetId: target.target_id
-        }));
+      const targetsResult = await db.query(targetsQuery, [rule.id]);
+      const targets = targetsResult.rows.map(t => ({
+        targetType: t.target_type,
+        targetId: t.target_id
+      }));
       
-      return {
+      formattedRules.push({
         id: rule.id,
         triggerQuestionId: rule.trigger_form_page_question_id,
         conditionType: rule.condition_type,
         conditionValue: rule.condition_value,
         actionType: rule.action_type,
-        targets: targetsForRule
-      };
-    });
+        targets
+      });
+    }
     
     // Return the complete form structure
     return res.json({
@@ -2247,11 +2246,12 @@ router.get("/public/forms/:formKey", async (req, res) => {
         version: form.version
       },
       pages: pagesWithQuestions,
-      rules: rulesWithTargets
+      rules: formattedRules
     });
     
   } catch (error) {
-    console.error("Error getting public form:", error, error.stack);
+    console.error("Error getting public form:", error);
+    console.error("Stack trace:", error.stack);
     return res.status(500).json({ message: "Failed to get form" });
   }
 });
