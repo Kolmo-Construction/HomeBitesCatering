@@ -19,6 +19,8 @@ import QuestionLibraryManager from "@/pages/QuestionLibraryManager";
 import QuestionLibraryEdit from "@/pages/QuestionLibraryEdit";
 import FormManager from "@/pages/FormManager";
 import FormEditor from "@/pages/FormEditor";
+// Public questionnaire page
+import QuestionnaireHome from "@/pages/public/QuestionnaireHome";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -40,50 +42,57 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
       <Toaster />
       
-      {!user ? (
-        <Login />
-      ) : (
-        <Layout>
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/opportunities" component={Opportunities} />
-            <Route path="/opportunities/new" component={Opportunities} />
-            <Route path="/opportunities/:id" component={Opportunities} />
-            <Route path="/opportunities/:id/edit" component={Opportunities} />
-            <Route path="/clients" component={Clients} />
-            <Route path="/clients/new" component={Clients} />
-            <Route path="/clients/:id" component={Clients} />
-            <Route path="/clients/:id/edit" component={Clients} />
-            <Route path="/estimates" component={Estimates} />
-            <Route path="/estimates/new" component={Estimates} />
-            <Route path="/estimates/:id/view" component={Estimates} />
-            <Route path="/estimates/:id/edit" component={Estimates} />
-            {/* Questionnaire routes removed */}
-            <Route path="/menu-items" component={MenuItems} />
-            <Route path="/menu-items/new" component={MenuItems} />
-            <Route path="/menu-items/:id" component={MenuItems} />
-            <Route path="/menu-items/:id/edit" component={MenuItems} />
-            <Route path="/menus" component={Menus} />
-            <Route path="/menus/new" component={Menus} />
-            <Route path="/menus/:id" component={Menus} />
-            <Route path="/menus/:id/edit" component={Menus} />
-            <Route path="/calendar" component={Calendar} />
-            <Route path="/raw-leads" component={RawLeadsPage} />
-            <Route path="/raw-leads/new" component={RawLeadFormPage} />
-            <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
-            {/* Form Builder Routes */}
-            <Route path="/admin/form-builder/question-library" component={QuestionLibraryManager} />
-            <Route path="/admin/form-builder/question-library/new" component={QuestionLibraryEdit} />
-            <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
-            <Route path="/admin/form-builder/forms" component={FormManager} />
-            <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
-            {/* Fallback Route */}
-            <Route>
-              <Dashboard />
-            </Route>
-          </Switch>
-        </Layout>
-      )}
+      <Switch>
+        {/* Public routes that don't require authentication */}
+        <Route path="/questionnaire" component={QuestionnaireHome} />
+        
+        {/* Routes that require authentication */}
+        <Route>
+          {!user ? (
+            <Login />
+          ) : (
+            <Layout>
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/opportunities" component={Opportunities} />
+                <Route path="/opportunities/new" component={Opportunities} />
+                <Route path="/opportunities/:id" component={Opportunities} />
+                <Route path="/opportunities/:id/edit" component={Opportunities} />
+                <Route path="/clients" component={Clients} />
+                <Route path="/clients/new" component={Clients} />
+                <Route path="/clients/:id" component={Clients} />
+                <Route path="/clients/:id/edit" component={Clients} />
+                <Route path="/estimates" component={Estimates} />
+                <Route path="/estimates/new" component={Estimates} />
+                <Route path="/estimates/:id/view" component={Estimates} />
+                <Route path="/estimates/:id/edit" component={Estimates} />
+                <Route path="/menu-items" component={MenuItems} />
+                <Route path="/menu-items/new" component={MenuItems} />
+                <Route path="/menu-items/:id" component={MenuItems} />
+                <Route path="/menu-items/:id/edit" component={MenuItems} />
+                <Route path="/menus" component={Menus} />
+                <Route path="/menus/new" component={Menus} />
+                <Route path="/menus/:id" component={Menus} />
+                <Route path="/menus/:id/edit" component={Menus} />
+                <Route path="/calendar" component={Calendar} />
+                <Route path="/raw-leads" component={RawLeadsPage} />
+                <Route path="/raw-leads/new" component={RawLeadFormPage} />
+                <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
+                {/* Form Builder Routes */}
+                <Route path="/admin/form-builder/question-library" component={QuestionLibraryManager} />
+                <Route path="/admin/form-builder/question-library/new" component={QuestionLibraryEdit} />
+                <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
+                <Route path="/admin/form-builder/forms" component={FormManager} />
+                <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
+                {/* Fallback Route */}
+                <Route>
+                  <Dashboard />
+                </Route>
+              </Switch>
+            </Layout>
+          )}
+        </Route>
+      </Switch>
     </div>
   );
 }

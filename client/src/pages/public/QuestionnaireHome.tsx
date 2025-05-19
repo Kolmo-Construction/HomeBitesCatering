@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Helmet } from 'react-helmet';
-import { QuestionnaireWizard } from '@/components/public/QuestionnaireWizard';
+
+// Import the QuestionnaireWizard component
+import { QuestionnaireWizard } from '../../components/public/QuestionnaireWizard';
 
 // Event type definition
 interface EventType {
@@ -49,7 +51,7 @@ export default function QuestionnaireHome() {
         {
           id: 'engagement',
           title: 'Engagement',
-          description: 'Elegant and romantic setups with tailored menus to celebrate the couple's commitment.',
+          description: 'Elegant and romantic setups with tailored menus to celebrate the couples commitment.',
           image: '/images/events/engagement.jpg',
           formKey: 'engagement'
         },
