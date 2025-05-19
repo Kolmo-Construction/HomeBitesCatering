@@ -1405,7 +1405,7 @@ export default function FormEditor() {
     // Determine what's being dragged
     const pageArray = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
     const draggedItem = pageArray.find(p => p.id === active.id) || 
-                        questionsData?.data?.find(q => q.id === active.id) ||
+                        questionsData?.find(q => q.id === active.id) ||
                         libraryQuestionsData?.data?.find(q => q.id === active.id);
     
     console.log("CLIENT: Drag started, active ID:", active.id, "Found item:", draggedItem);
@@ -1420,10 +1420,11 @@ export default function FormEditor() {
     const { active, over } = event;
     console.log("DRAG END - Over ID:", over?.id);
     
-    setActiveDragId(null);
-    setActiveEntity(null);
-    
-    if (!over) return;
+    if (!over) {
+      setActiveDragId(null);
+      setActiveEntity(null);
+      return;
+    }
     
     // Handle page reordering
     if (activeLibraryTab === "pages" && active.id !== over.id) {
@@ -1448,18 +1449,34 @@ export default function FormEditor() {
           
           // Create payload for updating page orders
           const reorderPayload = newOrder.map((page, index) => ({
-            id: page.id,
-            order: index + 1
+            pageId: page.id,
+            newPageOrder: index + 1
           }));
           
           // Call the API to update page orders
           try {
-            // TODO: Implement reordering API call when endpoint is available
+            const response = await fetch(`/api/form-builder/forms/${formId}/pages/reorder`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(reorderPayload),
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to reorder pages');
+            }
+            
+            // Refresh the form and pages data
+            queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId] });
+            queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
+            
             toast({
               title: "Pages reordered",
               description: "The page order has been updated."
             });
           } catch (error) {
+            console.error("Error reordering pages:", error);
             toast({
               variant: "destructive",
               title: "Error",
@@ -1476,13 +1493,13 @@ export default function FormEditor() {
       if (activeLibraryTab === "library" && over.id === "questions-container") {
         const libraryQuestion = libraryQuestionsData?.data?.find(q => q.id === active.id);
         if (libraryQuestion) {
-          handleAddQuestionFromLibrary(libraryQuestion);
+          await handleAddQuestionFromLibrary(libraryQuestion);
         }
       }
       
       // If both active and over are questions on the page (reordering existing questions)
       else if (activeLibraryTab !== "library") {
-        const questions = [...(questionsData?.data || [])];
+        const questions = Array.isArray(questionsData) ? questionsData : (questionsData || []);
         const activeQuestion = questions.find(q => q.id === active.id);
         const overQuestion = questions.find(q => q.id === over.id);
         
@@ -1498,9 +1515,11 @@ export default function FormEditor() {
             
             // Create payload for reordering API
             const reorderPayload = reorderedQuestions.map((question, index) => ({
-              questionInstanceId: question.id,
+              questionId: question.id,
               newDisplayOrder: index + 1
             }));
+            
+            console.log("Reordering questions with payload:", JSON.stringify(reorderPayload, null, 2));
             
             // Call the reorder API
             try {
@@ -1513,27 +1532,38 @@ export default function FormEditor() {
               });
               
               if (!response.ok) {
-                throw new Error('Failed to reorder questions');
+                const errorData = await response.json();
+                console.error("Error from reorder API:", errorData);
+                throw new Error(errorData.message || 'Failed to reorder questions');
               }
               
-              // Refresh the questions data
+              // Refresh the questions data for all query formats
               queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage.id, 'questions'] });
+              queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage.id] });
+              
+              // Refresh the form data as well to ensure everything is in sync
+              queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId] });
               
               toast({
                 title: "Questions reordered",
                 description: "The question order has been updated."
               });
             } catch (error) {
+              console.error("Error reordering questions:", error);
               toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Failed to update question order"
+                description: error.message || "Failed to update question order"
               });
             }
           }
         }
       }
     }
+    
+    // Always reset drag state at the end
+    setActiveDragId(null);
+    setActiveEntity(null);
   };
 
   // Handle library question drop onto page
