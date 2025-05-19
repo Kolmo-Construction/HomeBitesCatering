@@ -1266,8 +1266,10 @@ export default function FormEditor() {
       });
     } else {
       // For new pages, calculate the next pageOrder
-      const existingPages = pagesData || [];
+      const existingPages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
       let nextOrder;
+      
+      console.log("CLIENT: Calculating nextOrder for new page. Existing pages:", JSON.stringify(existingPages, null, 2));
       
       if (existingPages.length === 0) {
         nextOrder = 1; // Start first page order at 1 to avoid conflicts
@@ -1279,6 +1281,8 @@ export default function FormEditor() {
         });
         nextOrder = Math.max(0, ...orders) + 1; // Get highest existing order + 1
       }
+      
+      console.log("CLIENT: Calculated nextOrder:", nextOrder);
 
       const pageDataToSend = {
         ...dataFromDialog,
@@ -1395,12 +1399,15 @@ export default function FormEditor() {
     
     // Handle page reordering
     if (activeLibraryTab === "pages" && active.id !== over.id) {
-      const activePage = pagesData?.data?.find(p => p.id === active.id);
-      const overPage = pagesData?.data?.find(p => p.id === over.id);
+      // Find the active and target pages using the consistent array handling
+      const allPages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+      const activePage = allPages.find(p => p.id === active.id);
+      const overPage = allPages.find(p => p.id === over.id);
       
       if (activePage && overPage) {
         // Get all pages and find their current order
-        const pages = [...(pagesData?.data || [])];
+        const pages = Array.isArray(pagesData) ? [...pagesData] : [...(pagesData?.data || [])];
+        console.log("CLIENT: In handleDragEnd handler, using pages:", JSON.stringify(pages, null, 2));
         
         // Reorder the pages based on the drag and drop
         const newOrder = Array.from(pages);
@@ -1575,7 +1582,9 @@ export default function FormEditor() {
   };
 
   // Calculate display values
-  const pages = pagesData?.data || [];
+  // Direct access to pagesData which is an array returned from the API
+  const pages = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+  console.log("CLIENT: 'pages' variable before rendering:", JSON.stringify(pages, null, 2));
   const questions = questionsData?.data || [];
   const libraryQuestions = libraryQuestionsData?.data || [];
   
@@ -1679,6 +1688,7 @@ export default function FormEditor() {
                 </div>
                 
                 <ScrollArea className="flex-1 p-4">
+                  {console.log("CLIENT: Rendering pages section. pagesData:", JSON.stringify(pagesData, null, 2))}
                   {isPagesLoading ? (
                     <div className="flex justify-center p-4">
                       <p>Loading pages...</p>
