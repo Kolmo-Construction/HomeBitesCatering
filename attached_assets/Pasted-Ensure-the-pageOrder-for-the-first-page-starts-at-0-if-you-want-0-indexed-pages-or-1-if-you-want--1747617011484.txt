@@ -1,0 +1,50 @@
+Ensure the pageOrder for the first page starts at 0 (if you want 0-indexed pages) or 1 (if you want 1-indexed pages) consistently, and that this doesn't conflict with existing data.
+
+Change this line in clea/client/src/pages/FormEditor.tsx (around line 404):
+
+From:
+
+TypeScript
+
+        : 0; // THIS IS LIKELY THE BUG if you intended 1-based or if 0 can conflict
+To (if you want 1-based indexing, which is safer to avoid 0 having a special meaning or accidental defaults):
+
+TypeScript
+
+        : 1; // Start first page order at 1
+And ensure the Math.max part also correctly handles the base to avoid re-calculating 0 if pages 1, 2, 3 exist and you want the next to be 4, not 0.
+The Math.max(0, ... ) + 1 part is good for ensuring existing orders are respected and incremented.
+
+Corrected Logic for nextOrder:
+
+TypeScript
+
+// clea/client/src/pages/FormEditor.tsx
+// Inside handleSavePage, for a new page:
+    } else {
+      const existingPages = pagesData?.data || [];
+      let nextOrder;
+      if (existingPages.length === 0) {
+        nextOrder = 0; // Or 1, if you prefer 1-based indexing for pageOrder
+      } else {
+        // Ensure all mapped values are numbers, default to -1 if not (so Math.max doesn't break on non-numbers)
+        const orders = existingPages.map(p => {
+            const order = p.pageOrder !== undefined ? p.pageOrder : p.page_order;
+            return typeof order === 'number' ? order : -1;
+        });
+        nextOrder = Math.max(-1, ...orders) + 1; // Ensure Math.max has at least -1 to start if orders is empty or all -1
+      }
+
+      const pageDataToSend = {
+        ...dataFromDialog,
+        pageOrder: nextOrder
+      };
+      console.log("CLIENT: Sending for new page (corrected logic):", JSON.stringify(pageDataToSend, null, 2));
+      const newPage = await createPageMutation.mutateAsync(pageDataToSend);
+      // ...
+    }
+This revised logic for nextOrder:
+
+Starts the first page at 0 (or 1 if you change it).
+If pages exist, it finds the maximum existing pageOrder (safely, defaulting non-numeric/missing orders to -1 before Math.max) and adds 1.
+The Math.max(-1, ...orders) ensures that if orders is empty or all page orders were invalid, it starts from 0 (-1 + 1).

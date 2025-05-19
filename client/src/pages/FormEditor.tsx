@@ -1256,9 +1256,18 @@ export default function FormEditor() {
     } else {
       // For new pages, calculate the next pageOrder
       const existingPages = pagesData?.data || [];
-      const nextOrder = existingPages.length > 0
-        ? Math.max(...existingPages.map(p => p.pageOrder || 0)) + 1
-        : 0;
+      let nextOrder;
+      
+      if (existingPages.length === 0) {
+        nextOrder = 1; // Start first page order at 1 to avoid conflicts
+      } else {
+        // Ensure all mapped values are numbers, default to 0 if not
+        const orders = existingPages.map(p => {
+          const order = p.pageOrder !== undefined ? p.pageOrder : (p.page_order !== undefined ? p.page_order : 0);
+          return typeof order === 'number' ? order : 0;
+        });
+        nextOrder = Math.max(0, ...orders) + 1; // Get highest existing order + 1
+      }
 
       const pageDataToSend = {
         ...dataFromDialog,
