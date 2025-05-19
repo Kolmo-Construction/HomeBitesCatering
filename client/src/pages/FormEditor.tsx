@@ -975,7 +975,9 @@ export default function FormEditor() {
       if (!response.ok) {
         throw new Error('Failed to fetch pages');
       }
-      return await response.json();
+      const data = await response.json();
+      console.log(`CLIENT: useQuery for pages (formId: ${formId}) - Fetched data:`, JSON.stringify(data, null, 2));
+      return data;
     },
   });
 
@@ -1008,8 +1010,17 @@ export default function FormEditor() {
 
   // Set first page as selected when pages are loaded
   useEffect(() => {
-    if (pagesData?.data?.length > 0 && !selectedPage) {
-      setSelectedPage(pagesData.data[0]);
+    console.log("CLIENT: useEffect for selecting first page - pagesData:", JSON.stringify(pagesData, null, 2));
+    
+    // If pagesData is directly the array (not nested in a 'data' property)
+    const pageArray = Array.isArray(pagesData) ? pagesData : pagesData?.data;
+    
+    if (pageArray && pageArray.length > 0 && !selectedPage) {
+      console.log("CLIENT: useEffect - Setting selected page to:", JSON.stringify(pageArray[0], null, 2));
+      setSelectedPage(pageArray[0]);
+    } else if (pageArray && pageArray.length === 0) {
+      console.log("CLIENT: useEffect - No pages available, clearing selectedPage.");
+      setSelectedPage(null);
     }
   }, [pagesData, selectedPage]);
 
