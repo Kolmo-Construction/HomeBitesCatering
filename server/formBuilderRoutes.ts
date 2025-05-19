@@ -474,8 +474,26 @@ router.post("/forms/:formId/pages/reorder", async (req, res) => {
       return res.status(400).json({ message: "Invalid reorder data", errors: parsed.error.format() });
     }
     
-    // Start a transaction for reordering
-    for (const item of parsed.data) {
+    // We need to avoid constraint violations by using a temporary value first
+    // Get all pages that need to be updated
+    const pagesToUpdate = parsed.data;
+    
+    // First, update all pages to use negative order values to avoid conflicts
+    for (let i = 0; i < pagesToUpdate.length; i++) {
+      const item = pagesToUpdate[i];
+      // Use negative values temporarily to avoid conflicts
+      const tempOrder = -(i + 1000); // Use a large negative number to ensure it's unique
+      
+      await db.update(formSchema.formPages)
+        .set({ pageOrder: tempOrder, updatedAt: new Date() })
+        .where(and(
+          eq(formSchema.formPages.id, item.pageId),
+          eq(formSchema.formPages.formId, formId)
+        ));
+    }
+    
+    // Then update to the final values
+    for (const item of pagesToUpdate) {
       await db.update(formSchema.formPages)
         .set({ pageOrder: item.newPageOrder, updatedAt: new Date() })
         .where(and(
@@ -887,8 +905,26 @@ router.post("/pages/:pageId/questions/reorder", async (req, res) => {
       return res.status(400).json({ message: "Invalid reorder data", errors: parsed.error.format() });
     }
     
-    // Reorder questions
-    for (const item of parsed.data) {
+    // Reorder questions using the two-phase approach to avoid unique constraint violations
+    // Get questions that need to be updated
+    const questionsToUpdate = parsed.data;
+    
+    // First phase: update all questions to have temporary negative display orders
+    for (let i = 0; i < questionsToUpdate.length; i++) {
+      const item = questionsToUpdate[i];
+      // Use negative values temporarily to avoid conflicts
+      const tempOrder = -(i + 1000); // Use a large negative number to ensure it's unique
+      
+      await db.update(formSchema.formPageQuestions)
+        .set({ displayOrder: tempOrder, updatedAt: new Date() })
+        .where(and(
+          eq(formSchema.formPageQuestions.id, item.questionInstanceId),
+          eq(formSchema.formPageQuestions.formPageId, pageId)
+        ));
+    }
+    
+    // Second phase: update to the final display orders
+    for (const item of questionsToUpdate) {
       await db.update(formSchema.formPageQuestions)
         .set({ displayOrder: item.newDisplayOrder, updatedAt: new Date() })
         .where(and(
