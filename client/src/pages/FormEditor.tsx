@@ -555,37 +555,20 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                           Original: {libraryQuestion?.isRequired || libraryQuestion?.is_required ? "Yes" : "No"}
                         </FormDescription>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-end">
-                          <div className="flex items-center mb-2">
-                            <FormLabel htmlFor="override-required" className="text-xs text-muted-foreground mr-2">
-                              Override
-                            </FormLabel>
-                            <Switch
-                              id="override-required"
-                              checked={(field.value !== libraryQuestion?.isRequired && field.value !== libraryQuestion?.is_required) || false}
-                              onCheckedChange={(checked) => {
-                                if (!checked) {
-                                  // Reset to library value
-                                  form.setValue("isRequiredOverride", libraryQuestion?.isRequired || libraryQuestion?.is_required || false);
-                                }
+                      <div className="flex flex-col items-end">
+                        <FormControl>
+                          <div className="inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-primary">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={field.value === true}
+                              onChange={(e) => {
+                                form.setValue("isRequiredOverride", e.target.checked);
                               }}
                             />
+                            <div className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${field.value === true ? 'translate-x-5' : 'translate-x-0'}`} />
                           </div>
-                          {(field.value !== libraryQuestion?.isRequired && field.value !== libraryQuestion?.is_required) && (
-                            <div className="flex items-center">
-                              <FormLabel className="text-xs text-muted-foreground mr-2">
-                                Value
-                              </FormLabel>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value || false}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </div>
-                          )}
-                        </div>
+                        </FormControl>
                       </div>
                     </FormItem>
                   )}
@@ -602,36 +585,20 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                           Original: {libraryQuestion?.isHidden || libraryQuestion?.is_hidden ? "Yes" : "No"}
                         </FormDescription>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-end">
-                          <div className="flex items-center mb-2">
-                            <FormLabel htmlFor="override-hidden" className="text-xs text-muted-foreground mr-2">
-                              Override
-                            </FormLabel>
-                            <Switch
-                              checked={(field.value !== libraryQuestion?.isHidden && field.value !== libraryQuestion?.is_hidden) || false}
-                              onCheckedChange={(checked) => {
-                                if (!checked) {
-                                  // Reset to library value
-                                  form.setValue("isHiddenOverride", libraryQuestion?.isHidden || libraryQuestion?.is_hidden || false);
-                                }
+                      <div className="flex flex-col items-end">
+                        <FormControl>
+                          <div className="inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-primary">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={field.value === true}
+                              onChange={(e) => {
+                                form.setValue("isHiddenOverride", e.target.checked);
                               }}
                             />
+                            <div className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${field.value === true ? 'translate-x-5' : 'translate-x-0'}`} />
                           </div>
-                          {(field.value !== libraryQuestion?.isHidden && field.value !== libraryQuestion?.is_hidden) && (
-                            <div className="flex items-center">
-                              <FormLabel className="text-xs text-muted-foreground mr-2">
-                                Value
-                              </FormLabel>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value || false}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </div>
-                          )}
-                        </div>
+                        </FormControl>
                       </div>
                     </FormItem>
                   )}
