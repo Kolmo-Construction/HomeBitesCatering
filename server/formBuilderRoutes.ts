@@ -2091,82 +2091,76 @@ router.get("/public/forms/:formKey", async (req, res) => {
   try {
     const formKey = req.params.formKey;
     
-    // Get form data using a simpler approach with direct queries
-    const formQuery = `
-      SELECT id, form_key, form_title, description, version FROM forms 
-      WHERE form_key = $1 AND status = 'published'
-      LIMIT 1
-    `;
+    // Use Drizzle ORM to fetch the published form
+    const formResults = await db
+      .select()
+      .from(formSchema.forms)
+      .where(
+        and(
+          eq(formSchema.forms.formKey, formKey),
+          eq(formSchema.forms.status, "published")
+        )
+      )
+      .limit(1);
     
-    // Use the imported db object directly for the query
-    const formResult = await db.query(formQuery, [formKey]);
-    
-    if (formResult.rowCount === 0) {
+    if (formResults.length === 0) {
       return res.status(404).json({ message: "Form not found or not published" });
     }
     
-    const form = formResult.rows[0];
+    const form = formResults[0];
     
-    // Get pages for this form
-    const pagesQuery = `
-      SELECT id, page_title, page_key, page_order FROM form_pages
-      WHERE form_id = $1
-      ORDER BY page_order
-    `;
-    
-    const pagesResult = await db.query(pagesQuery, [form.id]);
-    const pages = pagesResult.rows;
+    // Get pages for this form using Drizzle ORM
+    const pages = await db
+      .select()
+      .from(formSchema.formPages)
+      .where(eq(formSchema.formPages.formId, form.id))
+      .orderBy(formSchema.formPages.pageOrder);
     
     // Structure to hold all the page data with questions
     const pagesWithQuestions = [];
     
     // Process each page to get its questions
     for (const page of pages) {
-      // Get questions for this specific page
-      const questionsQuery = `
-        SELECT 
-          fpq.id, 
-          fpq.form_page_id, 
-          fpq.display_order,
-          fpq.display_text_override,
-          fpq.is_required_override,
-          ql.id AS library_question_id,
-          ql.library_key,
-          ql.default_text,
-          ql.question_type,
-          ql.default_metadata,
-          ql.default_options
-        FROM form_page_questions fpq
-        JOIN question_library ql ON fpq.library_question_id = ql.id
-        WHERE fpq.form_page_id = $1
-        ORDER BY fpq.display_order
-      `;
-      
-      const questionsResult = await db.query(questionsQuery, [page.id]);
-      const questions = questionsResult.rows;
+      // Get questions for this specific page with joined question library data
+      const pageQuestions = await db
+        .select({
+          id: formSchema.formPageQuestions.id,
+          formPageId: formSchema.formPageQuestions.formPageId,
+          displayOrder: formSchema.formPageQuestions.displayOrder,
+          displayTextOverride: formSchema.formPageQuestions.displayTextOverride,
+          isRequiredOverride: formSchema.formPageQuestions.isRequiredOverride,
+          libraryQuestionId: formSchema.questionLibrary.id,
+          libraryKey: formSchema.questionLibrary.libraryQuestionKey,
+          defaultText: formSchema.questionLibrary.defaultText,
+          questionType: formSchema.questionLibrary.questionType,
+          defaultMetadata: formSchema.questionLibrary.defaultMetadata,
+          defaultOptions: formSchema.questionLibrary.defaultOptions
+        })
+        .from(formSchema.formPageQuestions)
+        .innerJoin(
+          formSchema.questionLibrary,
+          eq(formSchema.formPageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
+        )
+        .where(eq(formSchema.formPageQuestions.formPageId, page.id))
+        .orderBy(formSchema.formPageQuestions.displayOrder);
       
       // Format the questions with proper data structures
-      const formattedQuestions = questions.map(q => {
+      const formattedQuestions = pageQuestions.map(q => {
         // Process metadata JSON
         let metadata = {};
         try {
-          if (q.default_metadata) {
-            metadata = typeof q.default_metadata === 'string' 
-              ? JSON.parse(q.default_metadata) 
-              : q.default_metadata;
+          if (q.defaultMetadata) {
+            metadata = q.defaultMetadata;
           }
         } catch (e) {
-          console.warn('Error parsing metadata for question', q.id);
+          console.warn('Error processing metadata for question', q.id);
         }
         
         // Process options JSON
         let options = [];
         try {
-          if (q.default_options) {
-            const parsedOptions = typeof q.default_options === 'string'
-              ? JSON.parse(q.default_options)
-              : q.default_options;
-              
+          if (q.defaultOptions) {
+            const parsedOptions = q.defaultOptions;
             options = Array.isArray(parsedOptions) 
               ? parsedOptions.map(opt => ({
                   label: opt.label || opt.text || '',
@@ -2175,15 +2169,15 @@ router.get("/public/forms/:formKey", async (req, res) => {
               : [];
           }
         } catch (e) {
-          console.warn('Error parsing options for question', q.id);
+          console.warn('Error processing options for question', q.id);
         }
         
         return {
           id: q.id,
-          questionText: q.display_text_override || q.default_text,
-          questionType: q.question_type,
-          fieldKey: q.library_key,
-          isRequired: q.is_required_override !== null ? q.is_required_override : true,
+          questionText: q.displayTextOverride || q.defaultText,
+          questionType: q.questionType,
+          fieldKey: q.libraryKey,
+          isRequired: q.isRequiredOverride !== null ? q.isRequiredOverride : true,
           metadata,
           options
         };
@@ -2192,46 +2186,38 @@ router.get("/public/forms/:formKey", async (req, res) => {
       // Add the formatted page with its questions
       pagesWithQuestions.push({
         id: page.id,
-        title: page.page_title,
-        key: page.page_key,
-        pageOrder: page.page_order,
+        title: page.pageTitle,
+        key: page.pageKey,
+        pageOrder: page.pageOrder,
         questions: formattedQuestions
       });
     }
     
-    // Get conditional logic rules
-    const rulesQuery = `
-      SELECT id, trigger_form_page_question_id, condition_type, condition_value, action_type
-      FROM form_rules
-      WHERE form_id = $1
-    `;
-    
-    const rulesResult = await db.query(rulesQuery, [form.id]);
-    const rules = rulesResult.rows;
+    // Get conditional logic rules using Drizzle ORM
+    const rules = await db
+      .select()
+      .from(formSchema.formRules)
+      .where(eq(formSchema.formRules.formId, form.id));
     
     // Format rules with their targets
     const formattedRules = [];
     
     for (const rule of rules) {
-      // Get targets for this rule
-      const targetsQuery = `
-        SELECT target_type, target_id
-        FROM form_rule_targets
-        WHERE rule_id = $1
-      `;
-      
-      const targetsResult = await db.query(targetsQuery, [rule.id]);
-      const targets = targetsResult.rows.map(t => ({
-        targetType: t.target_type,
-        targetId: t.target_id
-      }));
+      // Get targets for this rule using Drizzle ORM
+      const targets = await db
+        .select({
+          targetType: formSchema.formRuleTargets.targetType,
+          targetId: formSchema.formRuleTargets.targetId
+        })
+        .from(formSchema.formRuleTargets)
+        .where(eq(formSchema.formRuleTargets.ruleId, rule.id));
       
       formattedRules.push({
         id: rule.id,
-        triggerQuestionId: rule.trigger_form_page_question_id,
-        conditionType: rule.condition_type,
-        conditionValue: rule.condition_value,
-        actionType: rule.action_type,
+        triggerQuestionId: rule.triggerFormPageQuestionId,
+        conditionType: rule.conditionType,
+        conditionValue: rule.conditionValue,
+        actionType: rule.actionType,
         targets
       });
     }
@@ -2240,8 +2226,8 @@ router.get("/public/forms/:formKey", async (req, res) => {
     return res.json({
       form: {
         id: form.id,
-        key: form.form_key,
-        title: form.form_title,
+        key: form.formKey,
+        title: form.formTitle,
         description: form.description,
         version: form.version
       },
