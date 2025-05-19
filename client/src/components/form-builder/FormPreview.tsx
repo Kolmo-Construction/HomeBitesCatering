@@ -200,9 +200,16 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
 
   // Render form fields based on question type
   const renderField = (question: any) => {
+    // Get all the possible field names based on API responses
     const { 
       questionKey, 
-      questionType, 
+      questionType,
+      // From the API response structure
+      displayTextOverride, 
+      helperTextOverride,
+      placeholderOverride,
+      isRequiredOverride,
+      // Legacy field names
       displayText, 
       display_text,
       helperText, 
@@ -210,28 +217,51 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
       placeholder, 
       isRequired, 
       is_required,
-      options = []
+      // Options can come from multiple places
+      options = [],
+      optionsOverrides = [],
+      libraryDefaultOptions = []
     } = question;
 
-    const questionText = displayText || display_text || '';
-    const helpText = helperText || helper_text || '';
-    const required = isRequired || is_required || false;
-    const value = formValues[questionKey] || '';
-    const error = errors[questionKey];
+    // Create a unique key for this question in form values
+    const fieldKey = questionKey || `question_${question.id || question.pageQuestionId}`;
+    
+    // Determine the correct text to display
+    const questionText = displayTextOverride || displayText || display_text || question.libraryDefaultText || 'Unnamed Question';
+    const helpText = helperTextOverride || helperText || helper_text || 
+                    (question.metadataOverrides?.helperText) || 
+                    (question.libraryDefaultMetadata?.helperText) || '';
+    const placeholderText = placeholderOverride || placeholder || 
+                          (question.metadataOverrides?.placeholder) || 
+                          (question.libraryDefaultMetadata?.placeholder) || '';
+    
+    // Determine if required
+    const required = isRequiredOverride !== null ? isRequiredOverride : 
+                   isRequired || is_required || 
+                   (question.metadataOverrides?.defaultRequired) || 
+                   (question.libraryDefaultMetadata?.defaultRequired) || false;
+    
+    // Get field value and error state                   
+    const value = formValues[fieldKey] || '';
+    const error = errors[fieldKey];
+    
+    // Determine the options to use
+    const fieldOptions = optionsOverrides.length > 0 ? optionsOverrides :
+                       (options.length > 0 ? options : libraryDefaultOptions || []);
     
     switch (questionType) {
       case 'textbox':
         return (
           <div className="mb-4">
-            <Label htmlFor={questionKey} className="block mb-1">
+            <Label htmlFor={fieldKey} className="block mb-1">
               {questionText} {required && <span className="text-red-500">*</span>}
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <Input
-              id={questionKey}
+              id={fieldKey}
               value={value}
-              placeholder={placeholder}
-              onChange={(e) => handleInputChange(questionKey, e.target.value)}
+              placeholder={placeholderText}
+              onChange={(e) => handleInputChange(fieldKey, e.target.value)}
               className={error ? 'border-red-500' : ''}
             />
             {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
@@ -241,15 +271,15 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
       case 'textarea':
         return (
           <div className="mb-4">
-            <Label htmlFor={questionKey} className="block mb-1">
+            <Label htmlFor={fieldKey} className="block mb-1">
               {questionText} {required && <span className="text-red-500">*</span>}
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <Textarea
-              id={questionKey}
+              id={fieldKey}
               value={value}
-              placeholder={placeholder}
-              onChange={(e) => handleInputChange(questionKey, e.target.value)}
+              placeholder={placeholderText}
+              onChange={(e) => handleInputChange(fieldKey, e.target.value)}
               className={error ? 'border-red-500' : ''}
             />
             {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
@@ -259,16 +289,16 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
       case 'number':
         return (
           <div className="mb-4">
-            <Label htmlFor={questionKey} className="block mb-1">
+            <Label htmlFor={fieldKey} className="block mb-1">
               {questionText} {required && <span className="text-red-500">*</span>}
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <Input
-              id={questionKey}
+              id={fieldKey}
               type="number"
               value={value}
-              placeholder={placeholder}
-              onChange={(e) => handleInputChange(questionKey, e.target.value ? Number(e.target.value) : '')}
+              placeholder={placeholderText}
+              onChange={(e) => handleInputChange(fieldKey, e.target.value ? Number(e.target.value) : '')}
               className={error ? 'border-red-500' : ''}
             />
             {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
@@ -283,24 +313,24 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <div className="space-y-2">
-              {(options || []).map((option: any, index: number) => (
+              {fieldOptions.map((option: any, index: number) => (
                 <div key={index} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`${questionKey}-${index}`}
-                    checked={Array.isArray(formValues[questionKey]) && formValues[questionKey].includes(option.value)}
+                    id={`${fieldKey}-${index}`}
+                    checked={Array.isArray(formValues[fieldKey]) && formValues[fieldKey].includes(option.value)}
                     onCheckedChange={(checked) => {
-                      const currentValue = Array.isArray(formValues[questionKey]) ? [...formValues[questionKey]] : [];
+                      const currentValue = Array.isArray(formValues[fieldKey]) ? [...formValues[fieldKey]] : [];
                       if (checked) {
-                        handleInputChange(questionKey, [...currentValue, option.value]);
+                        handleInputChange(fieldKey, [...currentValue, option.value]);
                       } else {
                         handleInputChange(
-                          questionKey, 
+                          fieldKey, 
                           currentValue.filter((v: string) => v !== option.value)
                         );
                       }
                     }}
                   />
-                  <Label htmlFor={`${questionKey}-${index}`} className="cursor-pointer">
+                  <Label htmlFor={`${fieldKey}-${index}`} className="cursor-pointer">
                     {option.label}
                   </Label>
                 </div>
@@ -319,13 +349,13 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <RadioGroup
               value={value}
-              onValueChange={(val) => handleInputChange(questionKey, val)}
+              onValueChange={(val) => handleInputChange(fieldKey, val)}
               className="space-y-2"
             >
-              {(options || []).map((option: any, index: number) => (
+              {fieldOptions.map((option: any, index: number) => (
                 <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option.value} id={`${questionKey}-${option.value}`} />
-                  <Label htmlFor={`${questionKey}-${option.value}`} className="cursor-pointer">
+                  <RadioGroupItem value={option.value} id={`${fieldKey}-${option.value}`} />
+                  <Label htmlFor={`${fieldKey}-${option.value}`} className="cursor-pointer">
                     {option.label}
                   </Label>
                 </div>
@@ -338,19 +368,19 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
       case 'dropdown':
         return (
           <div className="mb-4">
-            <Label htmlFor={questionKey} className="block mb-1">
+            <Label htmlFor={fieldKey} className="block mb-1">
               {questionText} {required && <span className="text-red-500">*</span>}
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <Select
               value={value}
-              onValueChange={(val) => handleInputChange(questionKey, val)}
+              onValueChange={(val) => handleInputChange(fieldKey, val)}
             >
               <SelectTrigger className={error ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
-                {(options || []).map((option: any, index: number) => (
+                {fieldOptions.map((option: any, index: number) => (
                   <SelectItem key={index} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -364,14 +394,14 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
       case 'date':
         return (
           <div className="mb-4">
-            <Label htmlFor={questionKey} className="block mb-1">
+            <Label htmlFor={fieldKey} className="block mb-1">
               {questionText} {required && <span className="text-red-500">*</span>}
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  id={questionKey}
+                  id={fieldKey}
                   variant="outline"
                   className={cn(
                     "w-full justify-start text-left font-normal",
@@ -387,7 +417,7 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
                 <Calendar
                   mode="single"
                   selected={value ? new Date(value) : undefined}
-                  onSelect={(date) => handleInputChange(questionKey, date ? format(date, 'yyyy-MM-dd') : null)}
+                  onSelect={(date) => handleInputChange(fieldKey, date ? format(date, 'yyyy-MM-dd') : null)}
                   initialFocus
                 />
               </PopoverContent>
@@ -395,13 +425,39 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
             {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
           </div>
         );
+
+      case 'matrix':
+        return (
+          <div className="mb-4">
+            <Label className="block mb-1">
+              {questionText} {required && <span className="text-red-500">*</span>}
+            </Label>
+            {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
+            <div className="p-3 border rounded-md bg-gray-50">
+              <p className="text-sm text-center text-muted-foreground mb-1">
+                Matrix questions will appear as a grid of options in the submitted form.
+              </p>
+              <p className="text-xs text-center text-muted-foreground">
+                (Matrix question preview not available in the form builder)
+              </p>
+            </div>
+            {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+          </div>
+        );
         
       default:
         return (
           <div className="mb-4">
-            <p className="text-sm text-gray-500">
-              Question type "{questionType}" is not supported in preview mode
-            </p>
+            <Label className="block mb-1">
+              {questionText} {required && <span className="text-red-500">*</span>}
+            </Label>
+            {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
+            <div className="p-3 border rounded-md bg-gray-50">
+              <p className="text-sm text-center text-muted-foreground">
+                Question type "{questionType}" is not fully supported in preview mode
+              </p>
+            </div>
+            {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
           </div>
         );
     }
