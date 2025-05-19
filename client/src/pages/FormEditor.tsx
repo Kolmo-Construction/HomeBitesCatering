@@ -1142,10 +1142,12 @@ export default function FormEditor() {
       
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Invalidate both the questions query and the form data query
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId] });
+      // Also invalidate the page-specific questions query with the ['pageQuestions', pageId] format
+      queryClient.invalidateQueries({ queryKey: ['pageQuestions', variables.pageId] });
       // We don't need a toast message here because we're adding one in the handleAddQuestionFromLibrary function
     },
     onError: (error) => {
