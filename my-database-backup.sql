@@ -597,7 +597,8 @@ CREATE TABLE public.form_page_questions (
     metadata_overrides jsonb,
     options_overrides jsonb,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    temp_display_order integer
 );
 
 
@@ -636,7 +637,8 @@ CREATE TABLE public.form_pages (
     page_order integer NOT NULL,
     description text,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    temp_new_order integer
 );
 
 
@@ -1540,7 +1542,14 @@ COPY public.events (id, client_id, estimate_id, event_date, start_time, end_time
 -- Data for Name: form_page_questions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.form_page_questions (id, form_page_id, library_question_id, display_order, display_text_override, is_required_override, is_hidden_override, placeholder_override, helper_text_override, metadata_overrides, options_overrides, created_at, updated_at) FROM stdin;
+COPY public.form_page_questions (id, form_page_id, library_question_id, display_order, display_text_override, is_required_override, is_hidden_override, placeholder_override, helper_text_override, metadata_overrides, options_overrides, created_at, updated_at, temp_display_order) FROM stdin;
+20	19	8	1	rand	\N	\N	\N	\N	{"helperText": null, "placeholder": null, "defaultRequired": true}	[{"label": "hi", "value": "0"}, {"label": "Hello", "value": "1"}]	2025-05-19 03:27:08.158474	2025-05-19 03:27:08.158474	\N
+21	19	7	2	asdf	\N	\N	asdf	\N	{"helperText": null, "placeholder": "asdf", "defaultRequired": true}	[{"label": "yes", "value": "1"}, {"label": "No", "value": "0"}]	2025-05-19 03:27:08.551488	2025-05-19 03:27:08.551488	\N
+22	19	6	3	Please rate our services:	\N	\N	\N	\N	{}	[]	2025-05-19 03:27:09.149906	2025-05-19 03:27:09.149906	\N
+28	19	3	5	What is your name?	\N	\N	\N	\N	{}	[]	2025-05-19 05:13:05.826092	2025-05-19 05:13:05.826092	\N
+10	18	3	1	What is your name?	\N	\N	\N	\N	{}	[]	2025-05-19 03:03:21.20028	2025-05-19 07:30:04.604248	\N
+50	18	2	2	Please rate our services:	\N	\N	\N	\N	{}	[]	2025-05-19 06:54:44.028992	2025-05-19 07:30:04.604248	\N
+25	18	11	3	to request information. It's a way to ask for	\N	\N	to request information. It's a way to ask for	to request information. It's a way to ask for	{"helperText": "to request information. It's a way to ask for", "validation": {"errorMessage": "what happened///"}, "placeholder": "to request information. It's a way to ask for", "defaultRequired": true}	[{"label": "hi", "value": "1"}, {"label": "no", "value": "0"}]	2025-05-19 03:45:23.957676	2025-05-19 07:30:04.604248	\N
 \.
 
 
@@ -1548,8 +1557,9 @@ COPY public.form_page_questions (id, form_page_id, library_question_id, display_
 -- Data for Name: form_pages; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.form_pages (id, form_id, page_title, page_order, description, created_at, updated_at) FROM stdin;
-1	1	\N	1	This is a test page for our form	2025-05-18 18:44:06.728193	2025-05-18 18:44:06.728193
+COPY public.form_pages (id, form_id, page_title, page_order, description, created_at, updated_at, temp_new_order) FROM stdin;
+18	9	Basic information 	1		2025-05-19 02:05:19.917927	2025-05-19 07:47:43.158606	\N
+19	9	second basic page	2		2025-05-19 03:24:57.84396	2025-05-19 07:47:43.158606	\N
 \.
 
 
@@ -1590,7 +1600,7 @@ COPY public.form_submissions (id, form_id, form_version, user_id, client_id, opp
 --
 
 COPY public.forms (id, form_key, form_title, description, version, status, created_at, updated_at) FROM stdin;
-1	test-questionnaire	Test Questionnaire	A test questionnaire to verify form editor features	1	draft	2025-05-18 18:43:50.293226	2025-05-18 18:43:50.293226
+9	wedding-questionnaire	Wedding questionnaire		1	draft	2025-05-19 02:04:56.903095	2025-05-19 02:04:56.903095
 \.
 
 
@@ -1703,6 +1713,10 @@ COPY public.question_library (id, library_question_key, default_text, question_t
 2	matrix_question_1	Please rate our services:	matrix	\N	\N	feedback	2025-05-18 15:33:22.76429	2025-05-18 15:33:22.76429
 3	text_question_1	What is your name?	textbox	\N	\N	personal	2025-05-18 15:35:52.789109	2025-05-18 15:35:52.789109
 6	matrix_question_1747582641867	Please rate our services:	matrix	\N	\N	feedback	2025-05-18 15:37:22.139228	2025-05-18 15:37:22.139228
+7	asdf	asdf	checkbox_group	{"helperText": null, "placeholder": "asdf", "defaultRequired": true}	[{"label": "yes", "value": "1"}, {"label": "No", "value": "0"}]	asdf	2025-05-18 22:32:21.272625	2025-05-18 22:32:21.272625
+8	randoonm	rand	radio_group	{"helperText": null, "placeholder": null, "defaultRequired": true}	[{"label": "hi", "value": "0"}, {"label": "Hello", "value": "1"}]	sf	2025-05-18 22:33:45.434406	2025-05-18 22:33:45.434406
+10	test-question	this is a supoer esay	datetime	{"helperText": "whatever works", "placeholder": "works", "defaultRequired": true}	\N	Seattle Remodeling	2025-05-19 03:19:06.453742	2025-05-19 03:19:06.453742
+11	ooooooooo	to request information. It's a way to ask for	radio_group	{"helperText": "to request information. It's a way to ask for", "validation": {"errorMessage": "what happened///"}, "placeholder": "to request information. It's a way to ask for", "defaultRequired": true}	[{"label": "hi", "value": "1"}, {"label": "no", "value": "0"}]	to request information. It's a way to ask for	2025-05-19 03:44:40.443784	2025-05-19 03:44:40.443784
 \.
 
 
@@ -1720,13 +1734,12 @@ COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_
 --
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
-YR_sQtbn1d-DYvLa8HSxhDHTH1dQbb-X	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:21:17.453Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 06:21:18
 v1vKQK59wOGdJV39atg1JxrpUYYPCtlH	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:37:21.815Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:37:24
-W5cOc0Fx0YMu0jxcPQe6zNqaJhXZ2I_b	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:44:19.324Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 06:44:21
-Gu7aqptXzodzEXmGz0BfoUFoY9MQb_m2	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T05:24:21.649Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 05:24:22
+CqhndxmWLZdv4KplScHzyLrscE7ZaTTb	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T14:14:52.952Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-20 14:14:53
+odqEPayEvCId8FtCjAayx37nYqS6Edxn	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T06:36:08.295Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-20 14:22:19
 BvoEC7TR59WqhNqPZof6GXg7MhfIcLN5	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:33:22.301Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:33:27
-RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-19 20:45:14
 bIOwPZzV2aDqnIu1le78V3wN1LW8lO-A	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:35:50.346Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:35:54
+RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-20 06:20:17
 \.
 
 
@@ -1778,14 +1791,14 @@ SELECT pg_catalog.setval('public.events_id_seq', 1, false);
 -- Name: form_page_questions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_page_questions_id_seq', 1, false);
+SELECT pg_catalog.setval('public.form_page_questions_id_seq', 60, true);
 
 
 --
 -- Name: form_pages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_pages_id_seq', 1, true);
+SELECT pg_catalog.setval('public.form_pages_id_seq', 19, true);
 
 
 --
@@ -1820,7 +1833,7 @@ SELECT pg_catalog.setval('public.form_submissions_id_seq', 1, false);
 -- Name: forms_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.forms_id_seq', 1, true);
+SELECT pg_catalog.setval('public.forms_id_seq', 9, true);
 
 
 --
@@ -1869,7 +1882,7 @@ SELECT pg_catalog.setval('public.processed_emails_id_seq', 1, false);
 -- Name: question_library_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.question_library_id_seq', 6, true);
+SELECT pg_catalog.setval('public.question_library_id_seq', 11, true);
 
 
 --
