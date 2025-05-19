@@ -612,15 +612,20 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                         <FormLabel className="text-xs text-muted-foreground">
                           Override
                         </FormLabel>
-                        <Switch 
-                          checked={field.value !== (libraryQuestion?.helperText || libraryQuestion?.helper_text)}
-                          onCheckedChange={(checked) => {
-                            if (!checked) {
-                              // Reset to library value
-                              form.setValue("helperTextOverride", libraryQuestion?.helperText || libraryQuestion?.helper_text || "");
-                            }
-                          }}
-                        />
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={field.value !== (libraryQuestion?.helperText || libraryQuestion?.helper_text)}
+                            onChange={(e) => {
+                              if (!e.target.checked) {
+                                // Reset to library value
+                                form.setValue("helperTextOverride", libraryQuestion?.helperText || libraryQuestion?.helper_text || "");
+                              }
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
                       </div>
                     </div>
                     <FormControl>
@@ -649,15 +654,20 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                         <FormLabel className="text-xs text-muted-foreground">
                           Override
                         </FormLabel>
-                        <Switch 
-                          checked={field.value !== libraryQuestion?.placeholder}
-                          onCheckedChange={(checked) => {
-                            if (!checked) {
-                              // Reset to library value
-                              form.setValue("placeholderOverride", libraryQuestion?.placeholder || "");
-                            }
-                          }}
-                        />
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={field.value !== libraryQuestion?.placeholder}
+                            onChange={(e) => {
+                              if (!e.target.checked) {
+                                // Reset to library value
+                                form.setValue("placeholderOverride", libraryQuestion?.placeholder || "");
+                              }
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
                       </div>
                     </div>
                     <FormControl>
