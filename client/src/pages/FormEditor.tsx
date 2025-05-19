@@ -1728,7 +1728,11 @@ export default function FormEditor() {
                           <SortablePage
                             page={page}
                             isSelected={selectedPage?.id === page.id}
-                            onSelect={() => setSelectedPage(page)}
+                            onSelect={(pageData) => {
+                              console.log("PAGE CLICKED VIA onSelect. Page Data:", JSON.stringify(pageData, null, 2));
+                              setSelectedPage(pageData);
+                              setSelectedQuestion(null);
+                            }}
                           />
                           <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button 
