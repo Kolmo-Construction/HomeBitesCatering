@@ -27,6 +27,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { toast } from "@/hooks/use-toast";
 import { Pencil, Trash2, MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import { useLocation } from "wouter";
+import { getQuestionTypeLabel } from "@shared/form-utils";
 
 export default function QuestionLibraryManager() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,36 +121,7 @@ export default function QuestionLibraryManager() {
     }
   };
 
-  // Get the question type display label
-  const getQuestionTypeLabel = (type) => {
-    if (!type) return 'Unknown';
-    
-    const typeMap = {
-      'textbox': 'Text Field',
-      'textarea': 'Text Area',
-      'number': 'Number',
-      'email': 'Email',
-      'phone': 'Phone',
-      'checkbox_group': 'Checkboxes',
-      'radio_group': 'Radio Buttons',
-      'dropdown': 'Dropdown',
-      'date': 'Date',
-      'datetime': 'Date & Time',
-      'matrix': 'Matrix',
-      'address': 'Address',
-      'header': 'Header',
-      'text_display': 'Display Text',
-      'image_upload': 'Image Upload',
-      'file_upload': 'File Upload',
-      'signature_pad': 'Signature Pad',
-      'rating_scale': 'Rating Scale',
-      'slider': 'Slider',
-      'toggle_switch': 'Toggle Switch',
-      'full_name': 'Full Name',
-    };
-    
-    return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
+  // Using the shared getQuestionTypeLabel function from form-utils
 
   if (isError) {
     return (
