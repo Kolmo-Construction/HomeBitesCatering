@@ -482,14 +482,31 @@ router.post("/pages/:pageId/questions", async (req, res) => {
       return res.status(404).json({ message: `Library question not found with ID: ${libraryQuestionId}` });
     }
     
+    // Transform request body to handle both camelCase and snake_case
+    const transformedBody = {
+      formPageId: pageId,
+      libraryQuestionId: libraryQuestionId,
+      displayOrder: req.body.displayOrder || req.body.display_order || 0,
+      displayTextOverride: req.body.displayTextOverride || req.body.display_text_override || null,
+      isRequiredOverride: req.body.isRequiredOverride || req.body.is_required_override || null,
+      isHiddenOverride: req.body.isHiddenOverride || req.body.is_hidden_override || null,
+      helperTextOverride: req.body.helperTextOverride || req.body.helper_text_override || null,
+      placeholderOverride: req.body.placeholderOverride || req.body.placeholder_override || null,
+      metadataOverrides: req.body.metadataOverrides || req.body.metadata_overrides || {},
+      optionsOverrides: req.body.optionsOverrides || req.body.options_overrides || []
+    };
+    
+    console.log("SERVER: Transformed question data:", JSON.stringify(transformedBody, null, 2));
+
     // Parse and validate request body
     const questionSchema = formSchema.insertFormPageQuestionSchema.extend({
       formPageId: z.number().int().positive(),
     });
     
-    const parsed = questionSchema.safeParse({ ...req.body, formPageId: pageId });
+    const parsed = questionSchema.safeParse(transformedBody);
     
     if (!parsed.success) {
+      console.error("SERVER: Validation error:", JSON.stringify(parsed.error.format(), null, 2));
       return res.status(400).json({ message: "Invalid question data", errors: parsed.error.format() });
     }
     
