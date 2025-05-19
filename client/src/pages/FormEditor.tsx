@@ -112,6 +112,31 @@ const SortablePage = ({ page, isSelected, onSelect }) => {
   );
 };
 
+// Define question type labels at the file scope for reuse
+const questionTypeLabels = {
+  'textbox': 'Text Field',
+  'textarea': 'Text Area',
+  'number': 'Number',
+  'email': 'Email',
+  'phone': 'Phone',
+  'checkbox_group': 'Checkboxes',
+  'radio_group': 'Radio Buttons',
+  'dropdown': 'Dropdown',
+  'date': 'Date',
+  'datetime': 'Date & Time',
+  'matrix': 'Matrix',
+  'address': 'Address',
+  'header': 'Header',
+  'text_display': 'Display Text',
+  'image_upload': 'Image Upload',
+  'file_upload': 'File Upload',
+  'signature_pad': 'Signature Pad',
+  'rating_scale': 'Rating Scale',
+  'slider': 'Slider',
+  'toggle_switch': 'Toggle Switch',
+  'full_name': 'Full Name',
+};
+
 // Question Component for the sortable question list
 const SortableQuestion = ({ question, isSelected, onSelect }) => {
   const {
@@ -128,31 +153,7 @@ const SortableQuestion = ({ question, isSelected, onSelect }) => {
   };
 
   const getQuestionTypeLabel = (type) => {
-    const typeMap = {
-      'textbox': 'Text Field',
-      'textarea': 'Text Area',
-      'number': 'Number',
-      'email': 'Email',
-      'phone': 'Phone',
-      'checkbox_group': 'Checkboxes',
-      'radio_group': 'Radio Buttons',
-      'dropdown': 'Dropdown',
-      'date': 'Date',
-      'datetime': 'Date & Time',
-      'matrix': 'Matrix',
-      'address': 'Address',
-      'header': 'Header',
-      'text_display': 'Display Text',
-      'image_upload': 'Image Upload',
-      'file_upload': 'File Upload',
-      'signature_pad': 'Signature Pad',
-      'rating_scale': 'Rating Scale',
-      'slider': 'Slider',
-      'toggle_switch': 'Toggle Switch',
-      'full_name': 'Full Name',
-    };
-    
-    return typeMap[type] || type;
+    return questionTypeLabels[type] || type;
   };
 
   return (
@@ -1845,7 +1846,7 @@ export default function FormEditor() {
                           <div className="flex justify-between items-center mb-1">
                             <p className="font-medium text-sm">{question.displayText || question.default_text}</p>
                             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                              {question.questionType || question.question_type}
+                              {questionTypeLabels[question.questionType || question.question_type] || (question.questionType || question.question_type)}
                             </span>
                           </div>
                           {(question.helperText || question.helper_text) && (
@@ -1943,7 +1944,7 @@ export default function FormEditor() {
                       {activeEntity.displayText || activeEntity.display_text || activeEntity.defaultText || activeEntity.default_text}
                     </p>
                     <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                      {getQuestionTypeLabel(activeEntity.questionType || activeEntity.question_type)}
+                      {questionTypeLabels[activeEntity.questionType || activeEntity.question_type] || (activeEntity.questionType || activeEntity.question_type)}
                     </span>
                   </div>
                 </div>
