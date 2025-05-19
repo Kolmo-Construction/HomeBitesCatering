@@ -1829,54 +1829,28 @@ export default function FormEditor() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {filteredLibraryQuestions.map(question => {
-                        // Check if a question operation is in progress
-                        const isProcessingQuestionAction = addQuestionMutation.isPending || isQuestionsFetching;
-                        
-                        return (
-                          <div
-                            key={question.id}
-                            className={`p-3 rounded-md border relative border-gray-200 bg-white ${
-                              isProcessingQuestionAction 
-                                ? 'opacity-70 cursor-not-allowed' 
-                                : 'cursor-move hover:border-primary hover:shadow-sm'
-                            } transition-all`}
-                            draggable={!isProcessingQuestionAction}
-                            onDragStart={() => {
-                              if (!isProcessingQuestionAction) {
-                                setActiveDragId(question.id);
-                                setActiveEntity(question);
-                              }
-                            }}
-                            onClick={() => {
-                              if (!isProcessingQuestionAction) {
-                                handleAddQuestionFromLibrary(question);
-                              } else {
-                                toast({
-                                  title: "Please wait",
-                                  description: "A question is currently being added",
-                                  duration: 2000,
-                                });
-                              }
-                            }}
-                          >
-                            <div className="flex justify-between items-center mb-1">
-                              <p className="font-medium text-sm">{question.displayText || question.default_text}</p>
-                              <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                                {question.questionType || question.question_type}
-                              </span>
-                            </div>
-                            {(question.helperText || question.helper_text) && (
-                              <p className="text-xs text-gray-500 truncate">{question.helperText || question.helper_text}</p>
-                            )}
-                            {isProcessingQuestionAction && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-white/10 rounded-md">
-                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                              </div>
-                            )}
+                      {filteredLibraryQuestions.map(question => (
+                        <div
+                          key={question.id}
+                          className="p-3 rounded-md border border-gray-200 bg-white cursor-move hover:border-primary hover:shadow-sm transition-all"
+                          draggable
+                          onDragStart={() => {
+                            setActiveDragId(question.id);
+                            setActiveEntity(question);
+                          }}
+                          onClick={() => handleAddQuestionFromLibrary(question)}
+                        >
+                          <div className="flex justify-between items-center mb-1">
+                            <p className="font-medium text-sm">{question.displayText || question.default_text}</p>
+                            <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                              {question.questionType || question.question_type}
+                            </span>
                           </div>
-                        );
-                      })}
+                          {(question.helperText || question.helper_text) && (
+                            <p className="text-xs text-gray-500 truncate">{question.helperText || question.helper_text}</p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </ScrollArea>
