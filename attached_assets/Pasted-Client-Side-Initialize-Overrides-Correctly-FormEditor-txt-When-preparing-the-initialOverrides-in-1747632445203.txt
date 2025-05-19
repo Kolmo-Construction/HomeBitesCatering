@@ -1,0 +1,32 @@
+Client-Side: Initialize Overrides Correctly (FormEditor.txt)
+
+When preparing the initialOverrides in handleAddQuestionFromLibrary:
+
+JavaScript
+
+// client/src/pages/FormEditor.txt
+// Inside handleAddQuestionFromLibrary (around line 1305)
+
+    const initialOverrides = {
+      pageId: selectedPage.id,
+      libraryQuestionId: libraryQuestion.id,
+      displayOrder: nextOrder,
+      displayTextOverride: libraryQuestion.defaultText || libraryQuestion.default_text || null,
+      // Ensure these are booleans or explicit nulls based on what the server expects
+      isRequiredOverride: libraryQuestion.defaultMetadata?.isRequired !== undefined ?
+                            Boolean(libraryQuestion.defaultMetadata.isRequired) :
+                            (libraryQuestion.defaultMetadata?.is_required !== undefined ?
+                                Boolean(libraryQuestion.defaultMetadata.is_required) : null), // Or false if not nullable
+      isHiddenOverride:   libraryQuestion.defaultMetadata?.isHidden !== undefined ?
+                            Boolean(libraryQuestion.defaultMetadata.isHidden) :
+                            (libraryQuestion.defaultMetadata?.is_hidden !== undefined ?
+                                Boolean(libraryQuestion.defaultMetadata.is_hidden) : null), // Or false if not nullable
+      helperTextOverride: libraryQuestion.defaultMetadata?.helperText || libraryQuestion.defaultMetadata?.helper_text || null,
+      placeholderOverride: libraryQuestion.defaultMetadata?.placeholder || null,
+      metadataOverrides: libraryQuestion.defaultMetadata || {}, // Ensure this is an object
+      optionsOverrides: libraryQuestion.defaultOptions || []    // Ensure this is an array
+    };
+Explanation of Change 2:
+
+This ensures that when a question is dragged from the library, its isRequiredOverride and isHiddenOverride are initialized based on the library question's defaultMetadata (e.g., defaultRequired).
+It explicitly converts them to booleans or sends null if the library doesn't specify, aligning better with what a strict backend might expect for boolean fields. If your server-side (Change 1) is set up to default these to false if null is received and the DB column is NOT NULL, this is okay. Otherwise, send false explicitly if the library metadata doesn't specify true.
