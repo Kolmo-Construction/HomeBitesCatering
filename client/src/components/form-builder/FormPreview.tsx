@@ -141,6 +141,8 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
   const visibleQuestions = (currentPage.questions || [])
     .filter(q => isQuestionVisible(q))
     .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    
+  console.log("PREVIEW: Current page questions:", currentPage.questions);
 
   // Handle input changes
   const handleInputChange = (questionKey: string, value: any) => {
@@ -245,9 +247,40 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
     const value = formValues[fieldKey] || '';
     const error = errors[fieldKey];
     
-    // Determine the options to use
-    const fieldOptions = optionsOverrides.length > 0 ? optionsOverrides :
-                       (options.length > 0 ? options : libraryDefaultOptions || []);
+    // Determine the options to use - ensure we always have options for radio/checkbox groups
+    let fieldOptions = [];
+    
+    // Try all possible places where options could be defined
+    if (optionsOverrides && optionsOverrides.length > 0) {
+      fieldOptions = optionsOverrides;
+    } else if (options && options.length > 0) {
+      fieldOptions = options;
+    } else if (libraryDefaultOptions && libraryDefaultOptions.length > 0) {
+      fieldOptions = libraryDefaultOptions;
+    } else if (question.optionsOverrides && question.optionsOverrides.length > 0) {
+      fieldOptions = question.optionsOverrides;
+    } else if (question.options && question.options.length > 0) {
+      fieldOptions = question.options;
+    } else if (question.libraryDefaultOptions && question.libraryDefaultOptions.length > 0) {
+      fieldOptions = question.libraryDefaultOptions;
+    }
+    
+    // Debug logging to help troubleshoot option rendering issues
+    if (questionType === 'radio_group' || questionType === 'checkbox_group') {
+      console.log(`PREVIEW: Field ${fieldKey} of type ${questionType}:`, {
+        questionId: question.id || question.pageQuestionId,
+        rawOptionsFields: {
+          optionsOverrides: optionsOverrides || [],
+          options: options || [],
+          libraryDefaultOptions: libraryDefaultOptions || [],
+          questionOptionsOverrides: question.optionsOverrides || [],
+          questionOptions: question.options || [],
+          questionLibraryDefaultOptions: question.libraryDefaultOptions || []
+        },
+        fieldOptions,
+        questionData: question
+      });
+    }
     
     switch (questionType) {
       case 'textbox':
