@@ -12,9 +12,14 @@ const router = Router();
 // Create a new form
 router.post("/forms", async (req, res) => {
   try {
+    // Log the exact body received by the server
+    console.log("SERVER /forms received body:", JSON.stringify(req.body, null, 2));
+
     const parsed = formSchema.insertFormSchema.safeParse(req.body);
     
     if (!parsed.success) {
+      // Log the detailed Zod error to the server console
+      console.error("SERVER ZOD VALIDATION ERROR for /forms:", JSON.stringify(parsed.error.format(), null, 2));
       return res.status(400).json({ message: "Invalid form data", errors: parsed.error.format() });
     }
     
@@ -24,8 +29,9 @@ router.post("/forms", async (req, res) => {
       
     return res.status(201).json(newForm);
   } catch (error) {
-    console.error("Error creating form:", error);
-    return res.status(500).json({ message: "Failed to create form" });
+    console.error("Error creating form in /forms route:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown server error";
+    return res.status(500).json({ message: "Failed to create form", errorDetail: errorMessage });
   }
 });
 
