@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Form Preview Component
@@ -31,10 +31,69 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [pagesWithQuestions, setPagesWithQuestions] = useState<any[]>([]);
+
+  // Add debugging logs to see what data is being received
+  console.log("PREVIEW: formData:", formData);
+  console.log("PREVIEW: pages:", pages);
+
+  // Fetch questions for each page
+  useEffect(() => {
+    if (!isOpen || !pages || pages.length === 0) {
+      setPagesWithQuestions([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchQuestionsForPages = async () => {
+      setIsLoading(true);
+      try {
+        const enrichedPages = await Promise.all(
+          pages.map(async (page) => {
+            // If the page already has questions, use them
+            if (page.questions && Array.isArray(page.questions)) {
+              return page;
+            }
+
+            // Otherwise fetch questions for this page
+            try {
+              const response = await fetch(`/api/form-builder/pages/${page.id}/questions`);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch questions for page ${page.id}`);
+              }
+              const questionsData = await response.json();
+              console.log(`PREVIEW: Fetched questions for page ${page.id}:`, questionsData);
+              
+              return {
+                ...page,
+                questions: questionsData
+              };
+            } catch (err) {
+              console.error(`Error fetching questions for page ${page.id}:`, err);
+              return {
+                ...page,
+                questions: []
+              };
+            }
+          })
+        );
+
+        setPagesWithQuestions(enrichedPages);
+      } catch (err) {
+        console.error("Error fetching questions for pages:", err);
+        setPagesWithQuestions(pages.map(page => ({ ...page, questions: [] })));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchQuestionsForPages();
+  }, [isOpen, pages]);
 
   // Group questions by conditional logic targets for evaluation
   const conditionalLogicTargets: Record<string, any[]> = {};
-  pages.forEach(page => {
+  pagesWithQuestions.forEach(page => {
     (page.questions || []).forEach(question => {
       if (question.conditionalLogic) {
         const targetKey = question.conditionalLogic.targetQuestionKey;
@@ -47,7 +106,7 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
   });
 
   // Sort pages by their display order
-  const sortedPages = [...pages].sort((a, b) => 
+  const sortedPages = [...pagesWithQuestions].sort((a, b) => 
     (a.pageOrder || a.displayOrder || 0) - (b.pageOrder || b.displayOrder || 0)
   );
 
@@ -358,7 +417,12 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
         </DialogHeader>
         
         <div className="p-4 border rounded-md bg-white">
-          {sortedPages.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-10">
+              <Loader2 className="h-10 w-10 animate-spin text-primary mb-2" />
+              <p>Loading form content...</p>
+            </div>
+          ) : sortedPages.length === 0 ? (
             <div className="text-center p-6">
               <p>This form has no pages or questions yet.</p>
             </div>
@@ -374,11 +438,17 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
               </div>
 
               <form onSubmit={(e) => e.preventDefault()}>
-                {visibleQuestions.map((question) => (
-                  <div key={question.id || question.questionKey} className="mb-6">
-                    {renderField(question)}
+                {currentPage.questions && currentPage.questions.length > 0 ? (
+                  visibleQuestions.map((question) => (
+                    <div key={question.id || question.pageQuestionId || question.questionKey} className="mb-6">
+                      {renderField(question)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center p-6 border border-dashed rounded-md">
+                    <p>No questions are available on this page.</p>
                   </div>
-                ))}
+                )}
 
                 <div className="flex justify-between mt-6">
                   <Button
