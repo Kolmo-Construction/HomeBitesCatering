@@ -1007,7 +1007,9 @@ export default function FormEditor() {
       if (!response.ok) {
         throw new Error('Failed to fetch library questions');
       }
-      return await response.json();
+      const jsonData = await response.json();
+      console.log("CLIENT: Library Questions Raw API Response:", JSON.stringify(jsonData, null, 2));
+      return jsonData;
     },
   });
 
