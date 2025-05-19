@@ -528,14 +528,10 @@ router.get("/pages/:pageId/questions", async (req, res) => {
       // Library question fields
       libraryQuestionId: formSchema.questionLibrary.id,
       questionType: formSchema.questionLibrary.questionType,
-      displayText: formSchema.questionLibrary.displayText,
-      isRequired: formSchema.questionLibrary.isRequired,
-      isHidden: formSchema.questionLibrary.isHidden,
-      placeholder: formSchema.questionLibrary.placeholder,
-      helperText: formSchema.questionLibrary.helperText,
-      metadata: formSchema.questionLibrary.metadata,
-      options: formSchema.questionLibrary.options,
-      validationRules: formSchema.questionLibrary.validationRules,
+      libraryKey: formSchema.questionLibrary.libraryQuestionKey,
+      libraryDefaultText: formSchema.questionLibrary.defaultText,
+      libraryDefaultMetadata: formSchema.questionLibrary.defaultMetadata,
+      libraryDefaultOptions: formSchema.questionLibrary.defaultOptions,
     })
     .from(formSchema.formPageQuestions)
     .innerJoin(
@@ -547,6 +543,16 @@ router.get("/pages/:pageId/questions", async (req, res) => {
     
     // Process questions to resolve overrides
     const resolvedQuestions = questions.map(q => {
+      // Extract base metadata fields from the default metadata (if it exists)
+      const baseMetadata = q.libraryDefaultMetadata || {};
+      
+      // Set defaults for common metadata fields
+      const defaultIsRequired = baseMetadata.isRequired || false;
+      const defaultIsHidden = baseMetadata.isHidden || false;
+      const defaultPlaceholder = baseMetadata.placeholder || '';
+      const defaultHelperText = baseMetadata.helperText || '';
+      const defaultValidationRules = baseMetadata.validationRules || {};
+      
       // Apply overrides if they exist
       return {
         id: q.pageQuestionId,
@@ -554,14 +560,18 @@ router.get("/pages/:pageId/questions", async (req, res) => {
         libraryQuestionId: q.libraryQuestionId,
         displayOrder: q.displayOrder,
         questionType: q.questionType,
-        displayText: q.displayTextOverride || q.displayText,
-        isRequired: q.isRequiredOverride !== null ? q.isRequiredOverride : q.isRequired,
-        isHidden: q.isHiddenOverride !== null ? q.isHiddenOverride : q.isHidden,
-        placeholder: q.placeholderOverride || q.placeholder,
-        helperText: q.helperTextOverride || q.helperText,
-        metadata: q.metadataOverrides ? { ...q.metadata, ...q.metadataOverrides } : q.metadata,
-        options: q.optionsOverrides ? { ...q.options, ...q.optionsOverrides } : q.options,
-        validationRules: q.validationRules,
+        displayText: q.displayTextOverride || q.libraryDefaultText || '',
+        isRequired: q.isRequiredOverride !== null ? q.isRequiredOverride : defaultIsRequired,
+        isHidden: q.isHiddenOverride !== null ? q.isHiddenOverride : defaultIsHidden, 
+        placeholder: q.placeholderOverride || defaultPlaceholder,
+        helperText: q.helperTextOverride || defaultHelperText,
+        metadata: q.metadataOverrides && baseMetadata ? 
+          { ...baseMetadata, ...q.metadataOverrides } : 
+          (baseMetadata || q.metadataOverrides || {}),
+        options: q.optionsOverrides && q.libraryDefaultOptions ? 
+          { ...q.libraryDefaultOptions, ...q.optionsOverrides } : 
+          (q.libraryDefaultOptions || q.optionsOverrides || {}),
+        validationRules: defaultValidationRules,
         // Include the overrides for reference
         overrides: {
           displayTextOverride: q.displayTextOverride,

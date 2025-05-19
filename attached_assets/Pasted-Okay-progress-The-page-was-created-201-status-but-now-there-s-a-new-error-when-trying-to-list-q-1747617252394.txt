@@ -1,0 +1,310 @@
+Okay, progress! The page was created (201 status), but now there's a new error when trying to list questions for that newly created page (ID 11).
+
+Log Analysis:
+
+Client Sends Correct Data for Page Creation:
+
+CLIENT: Sending for new page: {
+  "pageTitle": "Basic information",
+  "description": "",
+  "pageOrder": 1 // Or 0, depending on your corrected logic, but it's a number
+}
+This confirms the client is now sending a valid pageOrder.
+
+Server Creates Page Successfully:
+
+POST /api/form-builder/forms/8/pages 201 in 643ms :: {"id":11,"formId":8,"pageT...
+The page was created with ID 11.
+
+Client Refetches Pages and Selects New Page:
+The client invalidates the pages query and likely selects the new page (ID 11). This triggers a fetch for its questions.
+
+Server Fails to List Questions for the New Page:
+
+GET /api/form-builder/pages/11/questions 500 in 378ms :: {"message":"Failed to ...
+And the detailed server error:
+
+Error listing questions: TypeError: Cannot convert undefined or null to object
+    at Function.entries (<anonymous>)
+    at orderSelectedFields (/home/runner/workspace/node_modules/src/utils.ts:77:16)  // <--- Drizzle internal
+    at <anonymous> (/home/runner/workspace/node_modules/src/utils.ts:88:19)
+    at Array.reduce (<anonymous>)
+    at orderSelectedFields (/home/runner/workspace/node_modules/src/utils.ts:77:32)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:979:23) // <--- Drizzle internal
+    ...
+    at PgSelectBase.execute (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:1008:17)
+    at async <anonymous> (/home/runner/workspace/server/formBuilderRoutes.ts:518:23) // <--- Your route handler
+This error Cannot convert undefined or null to object in Function.entries within Drizzle's internal orderSelectedFields suggests that Drizzle is trying to process a field selection (the .select({...}) part of your query) where it expected an object for one of the selected fields but received undefined or null. This often happens with jsonb columns that might be null in the DB but are expected to be objects by Drizzle's mapping or your explicit selection.
+
+Relevant Server Code (formBuilderRoutes.ts - List Questions for a Page):
+
+The error originates around line 518 in your formBuilderRoutes.ts, which is within the GET /pages/:pageId/questions route. Let's look at the db.select() statement there:
+
+TypeScript
+
+// clea/server/formBuilderRoutes.ts (lines 468-502 approx.)
+router.get("/pages/:pageId/questions", async (req, res) => {
+  try {
+    // ... pageId parsing and page check ...
+
+    const questions = await db.select({ // This is where the Drizzle select happens
+      pageQuestionId: formSchema.formPageQuestions.id,
+      formPageId: formSchema.formPageQuestions.formPageId,
+      displayOrder: formSchema.formPageQuestions.displayOrder,
+      displayTextOverride: formSchema.formPageQuestions.displayTextOverride,
+      isRequiredOverride: formSchema.formPageQuestions.isRequiredOverride,
+      isHiddenOverride: formSchema.formPageQuestions.isHiddenOverride,
+      placeholderOverride: formSchema.formPageQuestions.placeholderOverride,
+      helperTextOverride: formSchema.formPageQuestions.helperTextOverride,
+      metadataOverrides: formSchema.formPageQuestions.metadataOverrides, // pgTable: jsonb("metadata_overrides")
+      optionsOverrides: formSchema.formPageQuestions.optionsOverrides,   // pgTable: jsonb("options_overrides")
+      // Library question fields
+      libraryQuestionId: formSchema.questionLibrary.id,
+      questionType: formSchema.questionLibrary.questionType,
+      displayText: formSchema.questionLibrary.displayText,
+      isRequired: formSchema.questionLibrary.isRequired, // This is NOT in questionLibrary table, it's in metadata
+      isHidden: formSchema.questionLibrary.isHidden,     // This is NOT in questionLibrary table, it's in metadata
+      placeholder: formSchema.questionLibrary.placeholder, // This is NOT in questionLibrary table, it's in metadata
+      helperText: formSchema.questionLibrary.helperText,   // This is NOT in questionLibrary table, it's in metadata
+      metadata: formSchema.questionLibrary.defaultMetadata, // pgTable: jsonb("default_metadata")
+      options: formSchema.questionLibrary.defaultOptions,     // pgTable: jsonb("default_options")
+      validationRules: formSchema.questionLibrary.validationRules, // This is NOT in questionLibrary, it's part of defaultMetadata
+    })
+    .from(formSchema.formPageQuestions)
+    .innerJoin(
+      formSchema.questionLibrary,
+      eq(formSchema.formPageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
+    )
+    .where(eq(formSchema.formPageQuestions.formPageId, pageId))
+    .orderBy(formSchema.formPageQuestions.displayOrder); // Line 518 is likely around here or in the map below
+
+    // Process questions to resolve overrides (lines 505-529)
+    const resolvedQuestions = questions.map(q => {
+      return {
+        // ...
+        // metadata: q.metadataOverrides ? { ...q.metadata, ...q.metadataOverrides } : q.metadata,
+        // The error is likely from here if q.metadata is null and you try to spread it
+        metadata: mergeMetadata(q.metadata, q.metadataOverrides), // Using your mergeMetadata helper
+        options: mergeOptions(q.options, q.optionsOverrides), // Using your mergeOptions helper
+        // ...
+      };
+    });
+    return res.json(resolvedQuestions);
+  } // ...
+});
+Identifying the Problem in the Select/Map:
+
+Incorrect Library Fields:
+In your db.select({...}):
+
+isRequired: formSchema.questionLibrary.isRequired
+isHidden: formSchema.questionLibrary.isHidden
+placeholder: formSchema.questionLibrary.placeholder
+helperText: formSchema.questionLibrary.helperText
+validationRules: formSchema.questionLibrary.validationRules
+The questionLibrary table schema in shared/form-schema.ts is:
+
+TypeScript
+
+export const questionLibrary = pgTable("question_library", {
+  id: serial("id").primaryKey(),
+  libraryQuestionKey: text("library_question_key").unique().notNull(),
+  defaultText: text("default_text").notNull(),
+  questionType: formQuestionTypeEnum("question_type").notNull(),
+  defaultMetadata: jsonb("default_metadata"), // isRequired, isHidden, placeholder, helperText, validationRules ARE HERE
+  defaultOptions: jsonb("default_options"),
+  category: text("category"),
+  // ...
+});
+Fields like isRequired, isHidden, placeholder, helperText, and validationRules are not direct columns on questionLibrary. They are typically part of the defaultMetadata JSONB column. Drizzle will not find these as top-level columns, and they will be undefined in the q object.
+
+Error in mergeMetadata or mergeOptions (or their usage):
+The stack trace points to orderSelectedFields which is Drizzle internal, but it's likely failing because it's trying to process one of the selected fields that turns out to be null or undefined when it expected an object (like a JSONB field that is NULL in the database).
+
+In resolvedQuestions.map(q => { ... }):
+
+TypeScript
+
+metadata: mergeMetadata(q.metadata, q.metadataOverrides),
+options: mergeOptions(q.options, q.optionsOverrides),
+q.metadata (which is formSchema.questionLibrary.defaultMetadata from the select) could be NULL in the database if a library question has no default metadata.
+q.options (which is formSchema.questionLibrary.defaultOptions) could also be NULL.
+Similarly, q.metadataOverrides or q.optionsOverrides from formPageQuestions could be NULL.
+If mergeMetadata(null, someObject) or mergeMetadata(someObject, null) is called, and your mergeMetadata function (lines 940-967 in formBuilderRoutes.ts) tries Object.entries(null) or tries to spread null ({ ...null }), it will cause the "Cannot convert undefined or null to object" error.
+
+Let's look at mergeMetadata:
+
+TypeScript
+
+// clea/server/formBuilderRoutes.ts
+function mergeMetadata(baseMetadata, overrides) {
+  if (!baseMetadata) return overrides || {}; // If base is null/undefined, returns overrides OR an empty object. This seems OK.
+  if (!overrides) return baseMetadata;     // If overrides is null/undefined, returns base. This seems OK.
+
+  const result = { ...baseMetadata }; // <--- If baseMetadata is null, this is an error!
+  // ... rest of the merge logic
+  for (const key in overrides) { // <--- If overrides is null, this loop won't run (good) or error if not checked (bad)
+    if (
+      typeof overrides[key] === 'object' && overrides[key] !== null && !Array.isArray(overrides[key]) &&
+      typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])
+    ) {
+      result[key] = mergeMetadata(result[key], overrides[key]);
+    } // ...
+  }
+  return result;
+}
+The line const result = { ...baseMetadata }; will indeed throw "TypeError: Cannot convert undefined or null to object" if baseMetadata is null or undefined. The same applies to mergeOptions if it has similar logic.
+
+Solution Steps:
+
+Correct the db.select for Library Question Fields:
+You should select defaultMetadata and defaultOptions as whole objects, then extract nested properties after the query.
+
+Modify GET /pages/:pageId/questions in formBuilderRoutes.ts (around line 478):
+
+TypeScript
+
+const questions = await db.select({
+  pageQuestionId: formSchema.formPageQuestions.id,
+  formPageId: formSchema.formPageQuestions.formPageId,
+  displayOrder: formSchema.formPageQuestions.displayOrder,
+  displayTextOverride: formSchema.formPageQuestions.displayTextOverride,
+  isRequiredOverride: formSchema.formPageQuestions.isRequiredOverride,
+  isHiddenOverride: formSchema.formPageQuestions.isHiddenOverride,
+  placeholderOverride: formSchema.formPageQuestions.placeholderOverride,
+  helperTextOverride: formSchema.formPageQuestions.helperTextOverride,
+  metadataOverrides: formSchema.formPageQuestions.metadataOverrides, // Correct: this is a jsonb column
+  optionsOverrides: formSchema.formPageQuestions.optionsOverrides,    // Correct: this is a jsonb column
+  // Library question fields
+  libraryQuestionId: formSchema.questionLibrary.id,
+  questionType: formSchema.questionLibrary.questionType,
+  libraryDefaultText: formSchema.questionLibrary.defaultText, // Give it a distinct name
+  libraryDefaultMetadata: formSchema.questionLibrary.defaultMetadata, // Select the whole object
+  libraryDefaultOptions: formSchema.questionLibrary.defaultOptions,   // Select the whole object
+  // Remove direct selection of non-existent columns like isRequired, placeholder, etc. from questionLibrary
+})
+// ... rest of the query
+Make mergeMetadata (and mergeOptions) Robust Against null Inputs:
+Modify your helper functions in formBuilderRoutes.ts:
+
+TypeScript
+
+// clea/server/formBuilderRoutes.ts
+
+function mergeMetadata(baseMetadata, overrides) {
+  const B = baseMetadata || {}; // Default to empty object if null/undefined
+  const O = overrides || {};   // Default to empty object if null/undefined
+
+  // If both are empty or effectively empty after defaulting, return an empty object or one of them
+  if (Object.keys(B).length === 0 && Object.keys(O).length === 0) return {};
+  if (Object.keys(B).length === 0) return O;
+  if (Object.keys(O).length === 0) return B;
+
+  const result = { ...B }; // Now B is guaranteed to be an object
+
+  for (const key in O) {
+    if (Object.prototype.hasOwnProperty.call(O, key)) { // Ensure it's an own property
+      if (
+        typeof O[key] === 'object' && O[key] !== null && !Array.isArray(O[key]) &&
+        typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])
+      ) {
+        result[key] = mergeMetadata(result[key], O[key]);
+      } else if (Array.isArray(O[key])) {
+        result[key] = [...O[key]];
+      } else {
+        result[key] = O[key];
+      }
+    }
+  }
+  return result;
+}
+
+function mergeOptions(baseOptions, overrides) {
+  // If baseOptions is an array (typical for select/radio/checkbox)
+  if (Array.isArray(baseOptions)) {
+    if (Array.isArray(overrides) && overrides.length > 0) { // If overrides is a non-empty array, it takes precedence
+      return [...overrides];
+    }
+    // Add more sophisticated array merging if needed, like by item 'key' or 'value'
+    return baseOptions; // Default to base if overrides are not a replacing array
+  }
+
+  // If options are an object (e.g., for matrix structure within optionsOverrides)
+  // Use the robust mergeMetadata logic
+  const B = baseOptions || {};
+  const O = overrides || {};
+
+  if (Object.keys(B).length === 0 && Object.keys(O).length === 0) return {};
+  if (Object.keys(B).length === 0) return O;
+  if (Object.keys(O).length === 0) return B;
+
+  return mergeMetadata(B, O); // Reuse robust object merging
+}
+Adjust resolvedQuestions.map Logic:
+Now that you select libraryDefaultText, libraryDefaultMetadata, etc., use these in the map.
+
+TypeScript
+
+// clea/server/formBuilderRoutes.ts (around line 505)
+const resolvedQuestions = questions.map(q => {
+  const libMeta = q.libraryDefaultMetadata || {}; // Ensure libMeta is an object
+  const libOpt = q.libraryDefaultOptions || []; // Ensure libOpt is an array or object as appropriate
+
+  // Resolve actual properties by checking overrides first, then library metadata
+  const displayText = q.displayTextOverride !== null && q.displayTextOverride !== undefined 
+                      ? q.displayTextOverride 
+                      : q.libraryDefaultText;
+
+  const isRequired = q.isRequiredOverride !== null && q.isRequiredOverride !== undefined 
+                     ? q.isRequiredOverride 
+                     : (libMeta.defaultRequired === true); // Check specific property in metadata
+
+  const isHidden = q.isHiddenOverride !== null && q.isHiddenOverride !== undefined 
+                   ? q.isHiddenOverride 
+                   : (libMeta.defaultHidden === true); // Assuming 'defaultHidden' in metadata
+
+  const placeholder = q.placeholderOverride !== null && q.placeholderOverride !== undefined
+                      ? q.placeholderOverride
+                      : libMeta.placeholder || "";
+
+  const helperText = q.helperTextOverride !== null && q.helperTextOverride !== undefined
+                     ? q.helperTextOverride
+                     : libMeta.helperText || "";
+
+  const validationRules = libMeta.validation || {}; // Assuming 'validation' object in metadata
+
+  return {
+    id: q.pageQuestionId,
+    formPageId: q.formPageId,
+    libraryQuestionId: q.libraryQuestionId,
+    displayOrder: q.displayOrder,
+    questionType: q.questionType,
+    displayText: displayText,
+    isRequired: isRequired,
+    isHidden: isHidden,
+    placeholder: placeholder,
+    helperText: helperText,
+    metadata: mergeMetadata(libMeta, q.metadataOverrides), // Pass potentially null libMeta safely
+    options: mergeOptions(libOpt, q.optionsOverrides),     // Pass potentially null/empty libOpt safely
+    validationRules: validationRules, // Extracted separately
+
+    // Include the raw overrides for reference if needed by the client UI
+    overrides: {
+      displayTextOverride: q.displayTextOverride,
+      isRequiredOverride: q.isRequiredOverride,
+      isHiddenOverride: q.isHiddenOverride,
+      placeholderOverride: q.placeholderOverride,
+      helperTextOverride: q.helperTextOverride,
+      metadataOverrides: q.metadataOverrides,
+      optionsOverrides: q.optionsOverrides,
+    }
+  };
+});
+You need to ensure your questionLibrary.defaultMetadata actually stores keys like defaultRequired, defaultHidden, placeholder, helperText, and validation if you want to access them this way.
+
+By making these changes, you ensure:
+
+You're selecting actual columns from questionLibrary.
+Your mergeMetadata and mergeOptions functions can handle null or undefined inputs gracefully, preventing the Object.entries(null) or {...null} errors.
+You correctly access nested properties from the libraryDefaultMetadata for default values.
+This should resolve the TypeError: Cannot convert undefined or null to object when listing questions for a newly created (and thus empty) page, or for pages with questions whose library counterparts might have NULL JSONB fields.
