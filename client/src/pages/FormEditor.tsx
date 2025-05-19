@@ -1264,6 +1264,8 @@ export default function FormEditor() {
         ...dataFromDialog,
         pageOrder: nextOrder
       };
+      
+      console.log("CLIENT: Sending for new page:", JSON.stringify(pageDataToSend, null, 2));
 
       const newPage = await createPageMutation.mutateAsync(pageDataToSend);
       if (newPage) {
