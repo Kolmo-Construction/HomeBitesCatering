@@ -1,0 +1,58 @@
+File to Change: client/src/pages/FormEditor.txt
+
+Code Change 1.1: Fix Page Title Display
+
+Locate this section (around line 1414):
+
+JavaScript
+
+            <div className="border-b p-4">
+              <h2 className="font-semibold">
+                {selectedPage
+                  ? `Editing: ${selectedPage.title}` // <--- PROBLEM HERE
+                  : "Select a page to edit"
+                }
+              </h2>
+              {selectedPage?.description && (
+                <p className="text-sm text-muted-foreground">{selectedPage.description}</p>
+              )}
+            </div>
+Change it to:
+
+JavaScript
+
+            <div className="border-b p-4">
+              <h2 className="font-semibold">
+                {selectedPage
+                  ? `Editing: ${selectedPage.pageTitle || selectedPage.title || `Page ${selectedPage.pageOrder ?? selectedPage.id}`}`
+                  : "Select a page to edit"
+                }
+              </h2>
+              {selectedPage?.description && (
+                <p className="text-sm text-muted-foreground">{selectedPage.description}</p>
+              )}
+            </div>
+Explanation:
+
+The form_pages table in your schema (shared/form-schema.ts) has a pageTitle column.
+The SortablePage component also correctly uses page.pageTitle || page.title [Source 1091].
+This change ensures that if selectedPage.title is undefined, it falls back to selectedPage.pageTitle (which should be populated from your database) or a generic identifier.
+Code Change 1.2: Ensure pageTitle is Set When Creating/Editing Pages
+
+In the PageFormDialog component within FormEditor.txt (around line 1098):
+
+The defaultValues for the form are:
+
+JavaScript
+
+    defaultValues: initialData ? {
+      pageTitle: initialData.pageTitle || initialData.title || "",
+      description: initialData.description || "",
+    } : {
+      pageTitle: "",
+      description: "",
+    }
+This is correct as it prioritizes pageTitle. The handleSavePage function [Source 1284-1292] uses dataFromDialog which comes from this form, so it should correctly include pageTitle.
+
+Check API:
+Ensure your API endpoint for creating (POST /api/form-builder/forms/:formId/pages) and updating pages (PUT /api/form-builder/pages/:pageId) in formBuilderRoutes.ts correctly saves and returns the pageTitle field. The current server code seems to handle pageTitle correctly.
