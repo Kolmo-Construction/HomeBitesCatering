@@ -380,20 +380,28 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
               {questionText} {required && <span className="text-red-500">*</span>}
             </Label>
             {helpText && <p className="text-sm text-gray-500 mb-1">{helpText}</p>}
-            <RadioGroup
-              value={value}
-              onValueChange={(val) => handleInputChange(fieldKey, val)}
-              className="space-y-2"
-            >
+            
+            {/* Custom implementation of radio buttons to ensure they display properly */}
+            <div className="space-y-2">
               {fieldOptions.map((option: any, index: number) => (
                 <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option.value} id={`${fieldKey}-${option.value}`} />
-                  <Label htmlFor={`${fieldKey}-${option.value}`} className="cursor-pointer">
+                  <div 
+                    className={`h-4 w-4 rounded-full border ${value === option.value ? 'border-primary bg-primary' : 'border-gray-400'}`}
+                    onClick={() => handleInputChange(fieldKey, option.value)}
+                  >
+                    {value === option.value && 
+                      <div className="h-2 w-2 mx-auto mt-0.5 rounded-full bg-white" />
+                    }
+                  </div>
+                  <span 
+                    className="text-sm cursor-pointer" 
+                    onClick={() => handleInputChange(fieldKey, option.value)}
+                  >
                     {option.label}
-                  </Label>
+                  </span>
                 </div>
               ))}
-            </RadioGroup>
+            </div>
             {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
           </div>
         );
