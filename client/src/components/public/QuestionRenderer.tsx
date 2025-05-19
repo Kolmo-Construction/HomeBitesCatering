@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Switch } from '@/components/ui/switch';
 import { 
   FormField, 
   FormItem, 
@@ -26,7 +25,7 @@ interface Question {
   questionType: string;
   isRequired: boolean;
   fieldKey: string;
-  description?: string;
+  metadata?: Record<string, any>;
   options?: QuestionOption[];
 }
 
@@ -37,10 +36,18 @@ interface QuestionRendererProps {
 export function QuestionRenderer({ question }: QuestionRendererProps) {
   const { control } = useFormContext();
 
+  const getPlaceholder = () => {
+    return question.metadata?.placeholder || 'Type here...';
+  };
+
+  const getHelperText = () => {
+    return question.metadata?.helper || '';
+  };
+
   // Render different input types based on question type
   const renderQuestionInput = () => {
     switch(question.questionType) {
-      case 'textbox':
+      case 'text':
         return (
           <FormField
             control={control}
@@ -50,9 +57,9 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               <FormItem>
                 <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Type here..." />
+                  <Input {...field} placeholder={getPlaceholder()} />
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -69,9 +76,9 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               <FormItem>
                 <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
                 <FormControl>
-                  <Textarea {...field} placeholder="Type here..." />
+                  <Textarea {...field} placeholder={getPlaceholder()} />
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -94,9 +101,9 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               <FormItem>
                 <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
                 <FormControl>
-                  <Input {...field} type="email" placeholder="your@email.com" />
+                  <Input {...field} type="email" placeholder={getPlaceholder()} />
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -113,9 +120,9 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               <FormItem>
                 <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
                 <FormControl>
-                  <Input {...field} type="tel" placeholder="(123) 456-7890" />
+                  <Input {...field} type="tel" placeholder={getPlaceholder()} />
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -139,10 +146,10 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                     ref={ref}
                     name={name}
                     type="number"
-                    placeholder="Enter a number"
+                    placeholder={getPlaceholder()}
                   />
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
@@ -161,14 +168,33 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                 <FormControl>
                   <Input {...field} type="datetime-local" />
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
           />
         );
         
-      case 'radio_group':
+      case 'date':
+        return (
+          <FormField
+            control={control}
+            name={question.fieldKey}
+            rules={{ required: question.isRequired }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
+                <FormControl>
+                  <Input {...field} type="date" />
+                </FormControl>
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+        
+      case 'radio':
         return (
           <FormField
             control={control}
@@ -191,14 +217,14 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                     ))}
                   </RadioGroup>
                 </FormControl>
-                {question.description && <FormDescription>{question.description}</FormDescription>}
+                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
           />
         );
         
-      case 'checkbox_group':
+      case 'checkbox':
         return (
           <div className="space-y-3">
             <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
@@ -224,7 +250,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                 )}
               />
             ))}
-            {question.description && <FormDescription>{question.description}</FormDescription>}
+            {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
           </div>
         );
         
@@ -232,19 +258,23 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
         return (
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900">{question.questionText}</h2>
-            {question.description && <p className="text-gray-600 mt-2">{question.description}</p>}
+            {getHelperText() && <p className="text-gray-600 mt-2">{getHelperText()}</p>}
           </div>
         );
         
-      case 'text_display':
+      case 'info_text':
         return (
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: question.questionText }} />
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
+            <div className="prose max-w-none">
+              <h3 className="text-xl font-semibold mb-2">{question.questionText}</h3>
+              {getHelperText() && <p className="text-gray-700">{getHelperText()}</p>}
+            </div>
           </div>
         );
         
       // Implement other question types as needed (full_name, address, etc.)
       case 'full_name':
+        const placeholders = getPlaceholder()?.split(';') || ['First name', 'Last name'];
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -255,7 +285,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                 <FormItem>
                   <FormLabel>First Name{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="First name" />
+                    <Input {...field} placeholder={placeholders[0]} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -269,7 +299,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                 <FormItem>
                   <FormLabel>Last Name{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Last name" />
+                    <Input {...field} placeholder={placeholders[1]} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -279,6 +309,10 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
         );
         
       case 'address':
+        const addressPlaceholders = getPlaceholder()?.split(';') || [
+          'Street Address', 'Street Address Line 2', 'City', 'State / Province', 'Postal / Zip Code'
+        ];
+        
         return (
           <div className="space-y-4">
             <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
@@ -290,7 +324,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input {...field} placeholder="Street Address" />
+                    <Input {...field} placeholder={addressPlaceholders[0]} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -303,7 +337,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input {...field} placeholder="Apt, Suite, Building (optional)" />
+                    <Input {...field} placeholder={addressPlaceholders[1]} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -318,7 +352,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input {...field} placeholder="City" />
+                      <Input {...field} placeholder={addressPlaceholders[2]} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -332,7 +366,7 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input {...field} placeholder="State" />
+                      <Input {...field} placeholder={addressPlaceholders[3]} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,12 +381,14 @@ export function QuestionRenderer({ question }: QuestionRendererProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input {...field} placeholder="ZIP Code" />
+                    <Input {...field} placeholder={addressPlaceholders[4]} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
           </div>
         );
         

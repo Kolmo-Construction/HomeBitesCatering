@@ -2084,4 +2084,136 @@ router.delete("/forms/:formId/rules/:ruleId", async (req, res) => {
   }
 });
 
+// --- PUBLIC API ENDPOINTS ---
+
+// Public endpoint to get a form by key (for customer-facing questionnaire)
+router.get("/public/forms/:formKey", async (req, res) => {
+  try {
+    const formKey = req.params.formKey;
+    
+    // Find the most recent published version of the form
+    const [form] = await db.select()
+      .from(formSchema.forms)
+      .where(and(
+        eq(formSchema.forms.formKey, formKey),
+        eq(formSchema.forms.status, "published")
+      ))
+      .orderBy(desc(formSchema.forms.version))
+      .limit(1);
+    
+    if (!form) {
+      return res.status(404).json({ message: "Form not found or not published" });
+    }
+    
+    // Get all pages for this form, ordered by pageOrder
+    const pages = await db.select()
+      .from(formSchema.formPages)
+      .where(eq(formSchema.formPages.formId, form.id))
+      .orderBy(formSchema.formPages.pageOrder);
+    
+    // Get all questions for these pages
+    const pageQuestions = await db.select({
+      id: formSchema.pageQuestions.id,
+      pageId: formSchema.pageQuestions.pageId,
+      questionId: formSchema.pageQuestions.libraryQuestionId,
+      displayOrder: formSchema.pageQuestions.displayOrder,
+      displayTextOverride: formSchema.pageQuestions.displayTextOverride,
+      isRequiredOverride: formSchema.pageQuestions.isRequiredOverride,
+      
+      // Join with question library to get question details
+      questionText: formSchema.questionLibrary.defaultText,
+      questionType: formSchema.questionLibrary.questionType,
+      questionKey: formSchema.questionLibrary.libraryKey,
+      defaultMetadata: formSchema.questionLibrary.defaultMetadata,
+      defaultOptions: formSchema.questionLibrary.defaultOptions,
+    })
+    .from(formSchema.pageQuestions)
+    .innerJoin(
+      formSchema.questionLibrary,
+      eq(formSchema.pageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
+    )
+    .where(inArray(
+      formSchema.pageQuestions.pageId,
+      pages.map(page => page.id)
+    ))
+    .orderBy(formSchema.pageQuestions.displayOrder);
+    
+    // Organize the questions by page
+    const pagesWithQuestions = pages.map(page => {
+      const questionsForPage = pageQuestions
+        .filter(q => q.pageId === page.id)
+        .map(q => {
+          // Transform question format for client consumption
+          return {
+            id: q.id,
+            questionText: q.displayTextOverride || q.questionText,
+            questionType: q.questionType,
+            fieldKey: q.questionKey,
+            isRequired: q.isRequiredOverride !== null ? q.isRequiredOverride : false,
+            metadata: q.defaultMetadata,
+            options: q.defaultOptions ? q.defaultOptions.map(opt => ({
+              label: opt.label,
+              value: opt.value
+            })) : []
+          };
+        });
+      
+      return {
+        id: page.id,
+        pageTitle: page.pageTitle,
+        pageOrder: page.pageOrder,
+        description: page.description,
+        questions: questionsForPage
+      };
+    });
+    
+    // Get rules for conditional logic
+    const rules = await db.select()
+      .from(formSchema.formRules)
+      .where(eq(formSchema.formRules.formId, form.id));
+    
+    // Get rule targets
+    const ruleTargets = await db.select()
+      .from(formSchema.formRuleTargets)
+      .where(inArray(
+        formSchema.formRuleTargets.ruleId,
+        rules.map(rule => rule.id)
+      ));
+    
+    // Combine rules with their targets
+    const rulesWithTargets = rules.map(rule => {
+      const targets = ruleTargets
+        .filter(target => target.ruleId === rule.id)
+        .map(target => ({
+          targetType: target.targetType,
+          targetId: target.targetId
+        }));
+      
+      return {
+        id: rule.id,
+        triggerQuestionId: rule.triggerFormPageQuestionId,
+        conditionType: rule.conditionType,
+        conditionValue: rule.conditionValue,
+        actionType: rule.actionType,
+        targets
+      };
+    });
+    
+    // Return the complete form structure
+    return res.json({ 
+      form: {
+        id: form.id,
+        formKey: form.formKey,
+        formTitle: form.formTitle,
+        version: form.version,
+        pages: pagesWithQuestions,
+        rules: rulesWithTargets
+      }
+    });
+  } catch (error) {
+    console.error("Error getting public form:", error);
+    return res.status(500).json({ message: "Failed to get form" });
+  }
+});
+
 export default router;

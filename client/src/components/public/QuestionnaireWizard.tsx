@@ -32,109 +32,15 @@ export function QuestionnaireWizard({ eventType, onBack }: WizardProps) {
   const { data: formDefinition, isLoading } = useQuery({
     queryKey: [`/api/form-builder/public/forms/${eventType.formKey}`],
     queryFn: async () => {
-      // This will be replaced with actual form API integration
-      // For now, returning a mock form structure
-      return {
-        id: 1,
-        formKey: eventType.formKey,
-        formTitle: `${eventType.title} Questionnaire`,
-        pages: [
-          {
-            id: 1,
-            pageTitle: 'Basic Information',
-            pageOrder: 1,
-            description: 'Let\'s start with some basic details about you and your event.',
-            questions: [
-              {
-                id: 1,
-                questionText: 'Your Name',
-                questionType: 'full_name',
-                isRequired: true,
-                fieldKey: 'client_name'
-              },
-              {
-                id: 2,
-                questionText: 'Email Address',
-                questionType: 'email',
-                isRequired: true,
-                fieldKey: 'email'
-              },
-              {
-                id: 3,
-                questionText: 'Phone Number',
-                questionType: 'phone',
-                isRequired: true,
-                fieldKey: 'phone'
-              }
-            ]
-          },
-          {
-            id: 2,
-            pageTitle: 'Event Details',
-            pageOrder: 2,
-            description: 'Tell us about your event.',
-            questions: [
-              {
-                id: 4,
-                questionText: 'Event Date',
-                questionType: 'datetime',
-                isRequired: true,
-                fieldKey: 'event_date'
-              },
-              {
-                id: 5,
-                questionText: 'Expected Number of Guests',
-                questionType: 'number',
-                isRequired: true,
-                fieldKey: 'guest_count'
-              },
-              {
-                id: 6,
-                questionText: 'Event Location',
-                questionType: 'address',
-                isRequired: true,
-                fieldKey: 'event_location'
-              }
-            ]
-          },
-          {
-            id: 3,
-            pageTitle: 'Catering Preferences',
-            pageOrder: 3,
-            description: 'Help us understand your catering needs.',
-            questions: [
-              {
-                id: 7,
-                questionText: 'Service Style',
-                questionType: 'radio_group',
-                isRequired: true,
-                fieldKey: 'service_style',
-                options: [
-                  { label: 'Buffet', value: 'buffet' },
-                  { label: 'Family Style', value: 'family' },
-                  { label: 'Plated Service', value: 'plated' },
-                  { label: 'Food Stations', value: 'stations' }
-                ]
-              },
-              {
-                id: 8,
-                questionText: 'Dietary Restrictions',
-                questionType: 'checkbox_group',
-                isRequired: false,
-                fieldKey: 'dietary_restrictions',
-                options: [
-                  { label: 'Vegetarian', value: 'vegetarian' },
-                  { label: 'Vegan', value: 'vegan' },
-                  { label: 'Gluten-Free', value: 'gluten_free' },
-                  { label: 'Dairy-Free', value: 'dairy_free' },
-                  { label: 'Nut Allergies', value: 'nut_allergies' },
-                  { label: 'Other (Please specify)', value: 'other' }
-                ]
-              }
-            ]
-          }
-        ]
-      };
+      // Fetch the actual form structure from our API
+      const response = await fetch(`/api/form-builder/public/forms/${eventType.formKey}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch form definition');
+      }
+      
+      const data = await response.json();
+      return data.form;
     }
   });
   
