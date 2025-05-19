@@ -1255,7 +1255,7 @@ export default function FormEditor() {
       });
     } else {
       // For new pages, calculate the next pageOrder
-      const existingPages = pagesData?.data || [];
+      const existingPages = pagesData || [];
       let nextOrder;
       
       if (existingPages.length === 0) {

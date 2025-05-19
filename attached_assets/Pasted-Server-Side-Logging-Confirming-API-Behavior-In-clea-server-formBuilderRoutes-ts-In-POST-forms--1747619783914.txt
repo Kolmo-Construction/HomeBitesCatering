@@ -1,0 +1,96 @@
+Server-Side Logging (Confirming API Behavior)
+
+In clea/server/formBuilderRoutes.ts:
+
+In POST /forms/:formId/pages:
+
+Right before return res.status(201).json(newPage);, add:
+TypeScript
+
+console.log(`SERVER: Created new page for form ${formId}:`, JSON.stringify(newPage, null, 2));
+This confirms the structure and content of the newPage object being sent back to the client.
+In GET /forms/:formId/pages:
+
+Right before return res.json(pages);, add:
+TypeScript
+
+console.log(`SERVER: Listing pages for form ${formId}:`, JSON.stringify(pages, null, 2));
+This will show us exactly what the server sends when the page list is refetched.
+Step 2: Client-Side Logging (Tracing Data and State)
+
+In clea/client/src/pages/FormEditor.txt:
+
+Inside createPageMutation's onSuccess callback (source 611):
+
+TypeScript
+
+onSuccess: (newPageDataFromServer) => { // Renamed to be clear
+  console.log("CLIENT: createPageMutation onSuccess - New page data from server:", JSON.stringify(newPageDataFromServer, null, 2));
+  queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
+  toast({
+    title: "Page created",
+    description: "The page has been created successfully.",
+  });
+  // Potentially delay this or ensure pagesData is updated before selecting
+  // setSelectedPage(newPageDataFromServer); // Let's see if the list update handles selection
+},
+This confirms what the client receives and that invalidation is triggered.
+Inside the useQuery for fetching pages (source 606):
+Modify the queryFn to log the fetched data:
+
+TypeScript
+
+queryFn: async () => {
+  const response = await fetch(`/api/form-builder/forms/${formId}/pages`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch pages');
+  }
+  const data = await response.json();
+  console.log(`CLIENT: useQuery for pages (formId: ${formId}) - Fetched data:`, JSON.stringify(data, null, 2));
+  return data;
+},
+This will show the data received after the invalidation and refetch.
+Before the return statement of the FormEditor component:
+
+TypeScript
+
+// ... other code ...
+const pages = pagesData || []; // Assuming pagesData is the direct array of pages
+                             // If pagesData is an object like { data: [...] }, adjust to:
+                             // const pages = pagesData?.data || []; (This is already done at source 699)
+
+console.log("CLIENT: FormEditor render - Current 'pages' state for UI:", JSON.stringify(pages, null, 2));
+console.log("CLIENT: FormEditor render - Selected page:", JSON.stringify(selectedPage, null, 2));
+// ... return statement ...
+This shows what's actually being passed to the rendering logic.
+In the useEffect hook that sets selectedPage (source 609):
+
+TypeScript
+
+useEffect(() => {
+  console.log("CLIENT: useEffect for selecting first page - pagesData:", JSON.stringify(pagesData, null, 2));
+  if (pagesData?.length > 0 && !selectedPage) { // Ensure pagesData is an array
+    console.log("CLIENT: useEffect - Setting selected page to:", JSON.stringify(pagesData[0], null, 2));
+    setSelectedPage(pagesData[0]);
+  } else if (pagesData?.length === 0) {
+    console.log("CLIENT: useEffect - No pages available, clearing selectedPage.");
+    setSelectedPage(null);
+  }
+}, [pagesData, selectedPage]);
+The pagesData used here (source 606) is directly the array from the query. Let's adjust the access if pagesData is an object:
+<!-- end list -->
+
+TypeScript
+
+useEffect(() => {
+  const actualPages = pagesData?.data || pagesData; // Handle if pagesData is {data: []} or just []
+  console.log("CLIENT: useEffect for selecting first page - actualPages:", JSON.stringify(actualPages, null, 2));
+  if (actualPages && actualPages.length > 0 && !selectedPage) {
+    console.log("CLIENT: useEffect - Setting selected page to:", JSON.stringify(actualPages[0], null, 2));
+    setSelectedPage(actualPages[0]);
+  } else if (actualPages && actualPages.length === 0) {
+    console.log("CLIENT: useEffect - No pages available, clearing selectedPage.");
+    setSelectedPage(null);
+  }
+}, [pagesData, selectedPage]);
+This helps understand how the selectedPage state is being managed when the page list updates.

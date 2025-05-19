@@ -272,6 +272,7 @@ router.post("/forms/:formId/pages", async (req, res) => {
       .values(parsed.data)
       .returning();
       
+    console.log(`SERVER: Created new page for form ${formId}:`, JSON.stringify(newPage, null, 2));
     return res.status(201).json(newPage);
   } catch (error) {
     console.error("Error creating page:", error);
@@ -303,6 +304,7 @@ router.get("/forms/:formId/pages", async (req, res) => {
       .where(eq(formSchema.formPages.formId, formId))
       .orderBy(formSchema.formPages.pageOrder);
       
+    console.log(`SERVER: Listing pages for form ${formId}:`, JSON.stringify(pages, null, 2));
     return res.json(pages);
   } catch (error) {
     console.error("Error listing pages:", error);
