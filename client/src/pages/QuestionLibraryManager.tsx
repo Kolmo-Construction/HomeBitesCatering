@@ -142,9 +142,9 @@ export default function QuestionLibraryManager() {
   const pagination = data?.pagination || { page: 1, pageSize, total: 0, totalPages: 1 };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto h-[calc(100vh-80px)] overflow-auto">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sticky top-0 bg-card z-10">
           <div>
             <CardTitle className="text-2xl font-bold">Question Library</CardTitle>
             <CardDescription>
