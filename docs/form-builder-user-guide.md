@@ -1,244 +1,191 @@
 # Form Builder User Guide
 
-Welcome to the Form Builder system! This guide will help you create, manage, and publish dynamic forms for your clients.
+## Introduction
 
-## Table of Contents
+Welcome to the Catering Management Platform's Form Builder! This powerful tool allows you to create custom forms with various question types, conditional logic, and dynamic options to collect exactly the information you need from your clients.
 
-1. [Getting Started](#getting-started)
-2. [Creating Your First Form](#creating-your-first-form)
-3. [Working with Pages](#working-with-pages)
-4. [Adding Questions](#adding-questions)
-5. [Customizing Questions](#customizing-questions)
-6. [Using the Question Library](#using-the-question-library)
-7. [Setting Up Conditional Logic](#setting-up-conditional-logic)
-8. [Previewing Your Form](#previewing-your-form)
-9. [Publishing and Sharing](#publishing-and-sharing)
-10. [Frequently Asked Questions](#frequently-asked-questions)
+This guide will walk you through:
+- Available question types
+- How to configure question settings
+- Setting up option selections
+- Creating rules and conditional logic
+- Managing pages and question order
 
-## Getting Started
+## Question Types
 
-### Accessing the Form Builder
+The Form Builder supports various question types to collect different kinds of information:
 
-1. Log in to your account
-2. From the dashboard, click on the "Forms" option in the sidebar
-3. This will take you to the Form Manager where you can see all your existing forms
+### Text Input Types
 
-### Understanding the Interface
+| Type | Description | Best Used For |
+|------|-------------|--------------|
+| **Textbox** | A single line of text | Names, short answers, product codes |
+| **Textarea** | Multiple lines of text | Comments, descriptions, detailed feedback |
+| **Email** | Validates email format | Contact information, account creation |
+| **Phone** | Formats and validates phone numbers | Contact information |
+| **Number** | Accepts only numerical values | Quantities, ratings, ages |
+| **Date** | Date picker with calendar | Event dates, birthdays, deadlines |
+| **Datetime** | Date and time picker | Appointment scheduling, event timing |
 
-The Form Builder has three main components:
+### Selection Types
 
-1. **Form Manager** - Where you can see and manage all your forms
-2. **Form Editor** - Where you design individual forms
-3. **Form Preview** - Where you can test how your form will look to clients
+| Type | Description | Best Used For |
+|------|-------------|--------------|
+| **Checkbox Group** | Multiple choice selection | "Select all that apply" questions |
+| **Radio Group** | Single choice from multiple options | Exclusive choices, preferences |
+| **Dropdown** | Space-saving single choice | Long lists of options, categories |
 
-## Creating Your First Form
+### Special Types
 
-### Step 1: Start a New Form
+| Type | Description | Best Used For |
+|------|-------------|--------------|
+| **Matrix** | Grid of questions with the same response options | Rating multiple items on the same scale |
+| **Address** | Structured address input | Location information, shipping details |
+| **File Upload** | Allows users to attach files | Documents, images, supporting materials |
+| **Full Name** | Structured name input with prefix, first, middle, last | Complete contact information |
 
-1. From the Form Manager, click the "+ New Form" button
-2. Fill in the basic details:
-   - **Form Key**: A unique identifier (no spaces, used in URLs)
-   - **Form Title**: The name clients will see
-   - **Description**: Optional details about the form's purpose
-   - **Status**: Start with "Draft" while building
+## Question Configuration
 
-### Step 2: Save Your Form
+Each question can be configured with several settings:
 
-Click "Create" to generate your new form. You'll be automatically taken to the Form Editor where you can start designing.
+### Basic Settings
 
-## Working with Pages
+| Setting | Description |
+|---------|-------------|
+| **Display Text** | The question text shown to users |
+| **Helper Text** | Additional instructions or context displayed below the question |
+| **Placeholder** | Example text that appears in the input field when empty |
+| **Required** | Toggles whether the question must be answered |
+| **Hidden** | Toggles whether the question is visible (useful with conditional logic) |
 
-Forms are divided into pages to make them easier for clients to complete. Think of pages as sections of your form.
+### Advanced Settings
 
-### Adding a New Page
+For specific question types, additional settings may be available:
 
-1. In the Form Editor, look at the left panel where pages are listed
-2. Click the "+ Add Page" button
-3. Enter:
-   - **Page Title**: What clients will see at the top of the page
-   - **Description**: Optional text explaining the page's purpose
-4. Click "Create" to add the page
+- **Checkbox Group / Radio Group / Dropdown**:
+  - Option labels and values
+  - Option ordering
+  - Maximum/minimum selections (for Checkbox Group)
+  
+- **Matrix**:
+  - Row labels (questions)
+  - Column labels (answer options)
+  - Scale type (e.g., 1-5, Yes/No, satisfaction scale)
 
-### Organizing Pages
+- **Number**:
+  - Minimum and maximum values
+  - Step size (increments)
 
-- **Reorder Pages**: Drag and drop pages in the left panel to change their order
-- **Edit a Page**: Click the page title, then click the edit (pencil) icon
-- **Delete a Page**: Click the trash icon next to a page (be careful - this will remove all questions on that page!)
+- **Date / Datetime**:
+  - Date range restrictions
+  - Format preferences
 
-## Adding Questions
+## Working with Option Selections
 
-Once you have created pages, you can add questions to each page.
+The Form Builder offers powerful tools for creating and managing option selections for Checkbox Groups, Radio Groups, and Dropdowns.
 
-### Adding Questions from the Library
+### Adding Options
 
-1. Select the page where you want to add a question
-2. In the left panel, switch to the "Question Library" tab
-3. Browse or search for questions by type or category
-4. Click a question to see its details
-5. Click "Add to Page" to place it on your current page
+1. Select a question that supports options (Checkbox Group, Radio Group, or Dropdown)
+2. Navigate to the "Options" tab in the question editor
+3. Toggle "Override Options" to customize the option list
+4. Click "Add Option" to add a new option
+5. Provide both a label (what the user sees) and a value (what gets stored in the database)
+
+### Modifying Options
+
+1. Edit the label or value for any option by clicking on the respective fields
+2. Delete an option by clicking the trash icon next to it
+3. Reorder options by dragging them into the desired sequence using the handle icon
+
+### Option Best Practices
+
+- **Labels vs. Values**: The label is what appears to the user, while the value is used for data processing. Values should be consistent and machine-friendly (e.g., no spaces, lowercase).
+- **Default Options**: Consider which option should be selected by default, if any
+- **Comprehensive Choices**: Ensure your option set covers all possible answers users might want to provide
+- **Other Option**: Consider adding an "Other" option with a text field for unanticipated responses
+
+### Matrix Question Configuration
+
+Matrix questions work differently than standard option questions:
+
+1. Define the matrix rows (the sub-questions)
+2. Define the matrix columns (the answer scale/options)
+3. The matrix options cannot be directly modified on a per-form basis
+4. To change a matrix, you need to modify it in the Question Library
+
+## Creating Form Rules and Conditional Logic
+
+Form rules allow you to create dynamic forms that change based on user responses.
+
+### Setting Up Conditional Logic
+
+1. Select the target question you want to show/hide
+2. Toggle the "Rules" tab in the question editor
+3. Click "Add Rule"
+4. Configure the rule components:
+   - **If**: Select the source question whose answer will trigger the rule
+   - **Operator**: Choose the condition (equals, not equals, contains, greater than, etc.)
+   - **Value**: Set the specific answer that triggers the rule
+   - **Then**: Choose the action (show or hide the target question)
+5. For multiple conditions, add additional rules and specify whether ALL or ANY conditions must be met
+
+### Rule Examples
+
+- Show address questions only if "Shipping required" is checked
+- Show allergy-related questions only if "Dietary restrictions" is selected
+- Hide payment method questions if "Invoice me later" is selected
+- Show additional details field if rating is below a certain threshold
+
+### Best Practices for Rules
+
+- Keep conditional logic simple and intuitive for users
+- Test your form thoroughly to ensure all rule combinations work as expected
+- Consider the user experience when questions appear or disappear
+- Use "defaulting" effectively to pre-populate common answers
+
+## Managing Pages and Question Order
+
+Forms can be organized into multiple pages for better user experience and logical grouping.
+
+### Creating and Managing Pages
+
+1. Click "Add Page" in the form editor to create a new page
+2. Give each page a descriptive title that indicates its purpose
+3. Add a page description to provide context for users
+4. Drag pages in the sidebar to reorder them
 
 ### Organizing Questions
 
-- **Reorder Questions**: Drag and drop questions on the canvas to change their order
-- **Remove a Question**: Click the trash icon on a question to remove it from the page (this does not delete it from the library)
+1. Add questions to a page by selecting from the library or creating new ones
+2. Drag questions within a page to reorder them
+3. Move questions between pages by dragging them to the desired page
 
-## Customizing Questions
+### Page and Question Ordering Best Practices
 
-One of the powerful features of the Form Builder is the ability to customize library questions for each form.
+- Group related questions together on the same page
+- Place simple, easy-to-answer questions at the beginning
+- Put more complex or sensitive questions later in the form
+- Consider the logical flow of information gathering
+- Limit the number of questions per page to prevent overwhelming users
+- Use page titles and descriptions to provide clear guidance
 
-### Question Overrides
+## Submitting and Testing Forms
 
-When you select a question on the canvas, the right panel shows settings you can override:
+Before publishing your form:
 
-1. **Basic Tab**:
-   - **Display Text**: Change the question wording
-   - **Required**: Make the question mandatory or optional
-   - **Hidden**: Hide the question initially (useful with conditional logic)
-   - **Placeholder**: Text that appears before the client enters an answer
-   - **Helper Text**: Additional instructions that appear below the question
+1. Use the Preview mode to see how your form will appear to users
+2. Test all conditional logic paths to ensure questions appear/hide correctly
+3. Submit test responses to verify data is being collected as expected
+4. Check the form on different devices (desktop, tablet, mobile) to ensure responsive design
+5. Get feedback from colleagues on the clarity and usability of your form
 
-2. **Options Tab** (for multiple choice questions):
-   - Modify the available choices
-   - Change option labels
-   - Add new options specific to this form
+## Tips for Effective Forms
 
-3. **Advanced Tab**:
-   - Validation rules
-   - Special formatting
-   - Question-specific settings
-
-### How Overrides Work
-
-When you customize a question for a specific form:
-- The original question in the library remains unchanged
-- Your customizations apply only to this specific form
-- If the library question is updated later, your overrides will be preserved
-
-## Using the Question Library
-
-The Question Library is a collection of pre-defined questions you can use across multiple forms.
-
-### Finding Questions
-
-1. In the left panel of the Form Editor, click the "Question Library" tab
-2. Use the search box to find questions by keyword
-3. Use the type filter to show only certain question types
-4. Use the category filter to show questions by category
-
-### Question Types
-
-The system supports many types of questions:
-
-- **Text Fields**: For names, email addresses, phone numbers, etc.
-- **Text Areas**: For longer responses
-- **Single Choice**: Radio buttons or dropdowns
-- **Multiple Choice**: Checkboxes
-- **Date and Time**: Calendar date pickers
-- **Numeric**: For number inputs with validation
-- **Matrix**: Grid-style questions with rows and columns
-- **File Upload**: Allow clients to upload documents or images
-- **Display Elements**: Headers, instructions, or images (not actual questions)
-
-## Setting Up Conditional Logic
-
-Conditional logic allows you to create dynamic forms that change based on how clients answer questions.
-
-### Creating a Rule
-
-1. Select a question on your form that will trigger the rule
-2. In the right panel, go to the "Logic" tab
-3. Click "Add Rule"
-4. Set up your rule:
-   - **Condition**: When the answer is equal to, contains, greater than, etc.
-   - **Value**: The specific answer that triggers the rule
-   - **Action**: What happens when the condition is met
-   - **Target**: Which question(s) or page(s) are affected
-
-### Example Rules
-
-- **Show/Hide**: "If 'Do you have pets?' is answered 'Yes', then show 'What kind of pets?'"
-- **Required/Optional**: "If 'Event Type' is 'Wedding', then make 'Wedding Date' required"
-- **Page Navigation**: "If 'Budget Range' is 'Over $5000', then show the premium options page"
-
-### Testing Logic
-
-Always use the Preview feature to test your conditional logic before publishing!
-
-## Previewing Your Form
-
-The Preview feature lets you see and test your form exactly as clients will experience it.
-
-### Using Preview Mode
-
-1. While in the Form Editor, click the "Preview" button in the top right
-2. A preview of your form will open in a new dialog
-3. Complete the form as if you were a client
-4. Test all pathways through your conditional logic
-5. Click "Close Preview" to return to editing
-
-### Preview Features
-
-- Navigate between pages using the "Next" and "Back" buttons
-- See validation messages for required fields
-- Experience conditional logic in real-time
-
-## Publishing and Sharing
-
-When your form is ready for clients to use, you'll need to publish it.
-
-### Publishing a Form
-
-1. From the Form Manager, find your form
-2. Click the "Publish" button (or update the status in the form settings)
-3. This creates a new version of your form that clients can access
-
-### Sharing with Clients
-
-Each published form has a unique link you can share:
-
-1. From the Form Manager, find your published form
-2. Click "Share" to see the public link
-3. Copy this link to send to clients or embed in emails
-
-### Tracking Submissions
-
-When clients complete your form:
-
-1. Go to the Form Manager
-2. Click on "Submissions" for the relevant form
-3. View all completed responses
-4. Export data as needed for further processing
-
-## Frequently Asked Questions
-
-### Can I edit a form after publishing it?
-
-Yes! You can make changes to a published form, but you'll need to publish a new version for those changes to be visible to clients. The system maintains version history so existing submissions remain associated with the correct version.
-
-### What happens if I delete a question from the library?
-
-If you delete a question from the library, it will remain in any forms where it's already being used, but you won't be able to add it to new forms.
-
-### Can clients save their progress and return later?
-
-Yes, the system supports saving progress if the client is logged in or provides an email address for a secure link.
-
-### How do I create a duplicated form?
-
-In the Form Manager, click the "Duplicate" button next to any form. This creates an exact copy that you can modify.
-
-### How many questions can I add to a single form?
-
-There's no strict limit, but for the best client experience, we recommend keeping forms concise and breaking longer forms into multiple pages.
-
-### What if I need a custom question type?
-
-Contact your system administrator to request additions to the Question Library.
-
-### Can I import questions from another form?
-
-Yes! When adding questions to a page, you can switch to the "Existing Forms" tab to import questions that you've used in other forms.
-
----
-
-For additional support, please contact your system administrator or the support team.
+- **Keep it concise**: Only ask for information you actually need
+- **Be clear**: Use simple language and specific questions
+- **Organize logically**: Group related questions together
+- **Provide context**: Use helper text to explain why you're asking for certain information
+- **Use appropriate question types**: Choose the best format for each piece of information
+- **Test thoroughly**: Ensure all paths through your form work as expected
+- **Consider accessibility**: Make sure your form can be used by people with disabilities
