@@ -1383,9 +1383,12 @@ export default function FormEditor() {
     setActiveDragId(active.id);
     
     // Determine what's being dragged
-    const draggedItem = pagesData?.data?.find(p => p.id === active.id) || 
+    const pageArray = Array.isArray(pagesData) ? pagesData : (pagesData?.data || []);
+    const draggedItem = pageArray.find(p => p.id === active.id) || 
                         questionsData?.data?.find(q => q.id === active.id) ||
                         libraryQuestionsData?.data?.find(q => q.id === active.id);
+    
+    console.log("CLIENT: Drag started, active ID:", active.id, "Found item:", draggedItem);
     
     setActiveEntity(draggedItem);
   };
@@ -1933,7 +1936,7 @@ export default function FormEditor() {
         isOpen={showPreview} 
         onClose={() => setShowPreview(false)}
         formData={formData}
-        pages={pagesData?.data || []}
+        pages={Array.isArray(pagesData) ? pagesData : (pagesData?.data || [])}
       />
     </div>
   );
