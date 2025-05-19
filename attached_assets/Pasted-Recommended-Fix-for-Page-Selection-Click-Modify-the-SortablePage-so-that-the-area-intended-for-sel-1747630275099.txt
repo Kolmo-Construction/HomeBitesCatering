@@ -1,0 +1,56 @@
+Recommended Fix for Page Selection Click:
+
+Modify the SortablePage so that the area intended for selection click is distinct from the drag handle and ensure its click is prioritized.
+
+Attempt 1: Make the text area clickable and not the drag handle div
+
+JavaScript
+
+const SortablePage = ({ page, isSelected, onSelect }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: page.id || 'temp-id' });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  // Prevent drag from starting on the main content, only on the handle
+  const handleContentClick = (e) => {
+    // Check if the click target is the drag handle or its child. If so, let dnd-kit handle it.
+    // This check might need to be more robust depending on your exact DOM structure.
+    let target = e.target;
+    while (target && target !== e.currentTarget) {
+      if (target.classList.contains('drag-handle-class')) { // Add a class to your drag handle div
+        return;
+      }
+      target = target.parentNode;
+    }
+    onSelect(page);
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center p-2 mb-2 rounded-md ${
+        isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200"
+      }`}
+      // Removed onClick from the main div to avoid conflict if listeners are too broad.
+      // The click is now on the content part.
+    >
+      <div 
+        className="mr-2 cursor-grab drag-handle-class" // Added a class for the check above
+        {...attributes} 
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5 text-gray-400" />
+      </div>
+      <div className="flex-1 truncate cursor-pointer" onClick={handleContentClick}> {/* Added cursor-pointer and onClick here */}
+        <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
+        {page.description && (
+          <p className="text-xs text-gray-500 truncate">{page.description}</p>
+        )}
+      </div>
+    </div>
+  );
+};

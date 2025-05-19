@@ -91,19 +91,32 @@ const SortablePage = ({ page, isSelected, onSelect }) => {
     transition,
   };
 
+  // Prevent drag from starting on the main content, only on the handle
+  const handleContentClick = (e) => {
+    // Check if the click target is the drag handle or its child
+    let target = e.target;
+    while (target && target !== e.currentTarget) {
+      if (target.classList.contains('drag-handle-class')) {
+        return;
+      }
+      target = target.parentNode;
+    }
+    onSelect(page);
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center p-2 mb-2 rounded-md cursor-pointer ${
+      className={`flex items-center p-2 mb-2 rounded-md ${
         isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200"
       }`}
-      onClick={() => onSelect(page)}
+      // Removed onClick from main div to avoid conflict with drag listeners
     >
-      <div className="mr-2 cursor-grab" {...attributes} {...listeners}>
+      <div className="mr-2 cursor-grab drag-handle-class" {...attributes} {...listeners}>
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
-      <div className="flex-1 truncate">
+      <div className="flex-1 truncate cursor-pointer" onClick={handleContentClick}>
         <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
         {page.description && (
           <p className="text-xs text-gray-500 truncate">{page.description}</p>
