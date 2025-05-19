@@ -1822,7 +1822,7 @@ export default function FormEditor() {
                           <div className="flex justify-between items-center mb-1">
                             <p className="font-medium text-sm">{question.displayText || question.default_text}</p>
                             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                              {questionTypeLabels[question.questionType || question.question_type] || (question.questionType || question.question_type)}
+                              {getQuestionTypeLabel(question.questionType || question.question_type)}
                             </span>
                           </div>
                           {(question.helperText || question.helper_text) && (
@@ -1920,7 +1920,7 @@ export default function FormEditor() {
                       {activeEntity.displayText || activeEntity.display_text || activeEntity.defaultText || activeEntity.default_text}
                     </p>
                     <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                      {questionTypeLabels[activeEntity.questionType || activeEntity.question_type] || (activeEntity.questionType || activeEntity.question_type)}
+                      {getQuestionTypeLabel(activeEntity.questionType || activeEntity.question_type)}
                     </span>
                   </div>
                 </div>
