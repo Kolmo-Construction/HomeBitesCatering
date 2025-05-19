@@ -1335,15 +1335,20 @@ export default function FormEditor() {
       
       // Initialize with values from the library question if available, otherwise with null
       displayTextOverride: libraryQuestion.defaultText || libraryQuestion.default_text || null,
-      isRequiredOverride: libraryQuestion.defaultMetadata?.isRequired || 
-                          libraryQuestion.defaultMetadata?.is_required || null,
-      isHiddenOverride: libraryQuestion.defaultMetadata?.isHidden || 
-                        libraryQuestion.defaultMetadata?.is_hidden || null,
+      // Ensure these are booleans or explicit nulls based on what the server expects
+      isRequiredOverride: libraryQuestion.defaultMetadata?.isRequired !== undefined ?
+                            Boolean(libraryQuestion.defaultMetadata.isRequired) :
+                            (libraryQuestion.defaultMetadata?.is_required !== undefined ?
+                                Boolean(libraryQuestion.defaultMetadata.is_required) : null),
+      isHiddenOverride: libraryQuestion.defaultMetadata?.isHidden !== undefined ?
+                            Boolean(libraryQuestion.defaultMetadata.isHidden) :
+                            (libraryQuestion.defaultMetadata?.is_hidden !== undefined ?
+                                Boolean(libraryQuestion.defaultMetadata.is_hidden) : null),
       helperTextOverride: libraryQuestion.defaultMetadata?.helperText || 
                           libraryQuestion.defaultMetadata?.helper_text || null,
       placeholderOverride: libraryQuestion.defaultMetadata?.placeholder || null,
-      metadataOverrides: libraryQuestion.defaultMetadata || {},
-      optionsOverrides: libraryQuestion.defaultOptions || []
+      metadataOverrides: libraryQuestion.defaultMetadata || {}, // Ensure this is an object
+      optionsOverrides: libraryQuestion.defaultOptions || []    // Ensure this is an array
     };
     
     console.log("CLIENT: Sending question with overrides:", JSON.stringify(initialOverrides, null, 2));
