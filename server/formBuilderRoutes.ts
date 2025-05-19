@@ -242,6 +242,9 @@ router.post("/forms/:formId/pages", async (req, res) => {
       return res.status(400).json({ message: "Invalid form ID" });
     }
     
+    // Log the exact body received by the server
+    console.log(`SERVER /forms/${formId}/pages received body:`, JSON.stringify(req.body, null, 2));
+    
     // Check if the form exists
     const [form] = await db.select()
       .from(formSchema.forms)
@@ -259,6 +262,8 @@ router.post("/forms/:formId/pages", async (req, res) => {
     const parsed = pageSchema.safeParse({ ...req.body, formId });
     
     if (!parsed.success) {
+      // Log the detailed Zod error
+      console.error(`SERVER ZOD VALIDATION ERROR for /forms/${formId}/pages:`, JSON.stringify(parsed.error.format(), null, 2));
       return res.status(400).json({ message: "Invalid page data", errors: parsed.error.format() });
     }
     

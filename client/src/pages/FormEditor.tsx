@@ -1247,14 +1247,25 @@ export default function FormEditor() {
     setPageDialogOpen(true);
   };
 
-  const handleSavePage = async (pageData) => {
+  const handleSavePage = async (dataFromDialog) => {
     if (editPageData) {
       await updatePageMutation.mutateAsync({
         pageId: editPageData.id,
-        pageData,
+        pageData: dataFromDialog,
       });
     } else {
-      const newPage = await createPageMutation.mutateAsync(pageData);
+      // For new pages, calculate the next pageOrder
+      const existingPages = pagesData?.data || [];
+      const nextOrder = existingPages.length > 0
+        ? Math.max(...existingPages.map(p => p.pageOrder || 0)) + 1
+        : 0;
+
+      const pageDataToSend = {
+        ...dataFromDialog,
+        pageOrder: nextOrder
+      };
+
+      const newPage = await createPageMutation.mutateAsync(pageDataToSend);
       if (newPage) {
         setSelectedPage(newPage);
       }
