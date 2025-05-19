@@ -67,6 +67,7 @@ import { z } from "zod";
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { questionTypeLabels, getQuestionTypeLabel } from "@shared/form-utils";
 
 // Schema for form page definition
 const formPageSchema = z.object({
@@ -112,30 +113,7 @@ const SortablePage = ({ page, isSelected, onSelect }) => {
   );
 };
 
-// Define question type labels at the file scope for reuse
-const questionTypeLabels = {
-  'textbox': 'Text Field',
-  'textarea': 'Text Area',
-  'number': 'Number',
-  'email': 'Email',
-  'phone': 'Phone',
-  'checkbox_group': 'Checkboxes',
-  'radio_group': 'Radio Buttons',
-  'dropdown': 'Dropdown',
-  'date': 'Date',
-  'datetime': 'Date & Time',
-  'matrix': 'Matrix',
-  'address': 'Address',
-  'header': 'Header',
-  'text_display': 'Display Text',
-  'image_upload': 'Image Upload',
-  'file_upload': 'File Upload',
-  'signature_pad': 'Signature Pad',
-  'rating_scale': 'Rating Scale',
-  'slider': 'Slider',
-  'toggle_switch': 'Toggle Switch',
-  'full_name': 'Full Name',
-};
+// Using shared question type labels imported from form-utils
 
 // Question Component for the sortable question list
 const SortableQuestion = ({ question, isSelected, onSelect }) => {
@@ -152,9 +130,7 @@ const SortableQuestion = ({ question, isSelected, onSelect }) => {
     transition,
   };
 
-  const getQuestionTypeLabel = (type) => {
-    return questionTypeLabels[type] || type;
-  };
+  // Using the shared getQuestionTypeLabel utility function
 
   return (
     <div
