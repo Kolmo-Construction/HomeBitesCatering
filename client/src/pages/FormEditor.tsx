@@ -572,10 +572,9 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                         />
                         <FormControl>
                           <Switch
-                            checked={field.value}
+                            checked={field.value || false}
                             onCheckedChange={field.onChange}
-                            disabled={(field.value === libraryQuestion?.isRequired || field.value === libraryQuestion?.is_required) && 
-                              !(field.value !== libraryQuestion?.isRequired && field.value !== libraryQuestion?.is_required)}
+                            disabled={(field.value !== libraryQuestion?.isRequired && field.value !== libraryQuestion?.is_required) ? false : true}
                           />
                         </FormControl>
                       </div>
@@ -610,10 +609,9 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                         />
                         <FormControl>
                           <Switch
-                            checked={field.value}
+                            checked={field.value || false}
                             onCheckedChange={field.onChange}
-                            disabled={(field.value === libraryQuestion?.isHidden || field.value === libraryQuestion?.is_hidden) && 
-                              !(field.value !== libraryQuestion?.isHidden && field.value !== libraryQuestion?.is_hidden)}
+                            disabled={(field.value !== libraryQuestion?.isHidden && field.value !== libraryQuestion?.is_hidden) ? false : true}
                           />
                         </FormControl>
                       </div>
