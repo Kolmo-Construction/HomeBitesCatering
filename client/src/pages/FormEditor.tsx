@@ -1290,12 +1290,16 @@ export default function FormEditor() {
 
   // Handle question operations
   const handleAddQuestionFromLibrary = async (libraryQuestion) => {
+    console.log("ADD QUESTION - libraryQuestion:", JSON.stringify(libraryQuestion, null, 2));
+    console.log("ADD QUESTION - selectedPage at this moment:", JSON.stringify(selectedPage, null, 2));
+    
     if (!selectedPage) {
       toast({
         variant: "destructive",
         title: "No page selected",
         description: "Please select a page first to add questions.",
       });
+      console.error("ADD QUESTION - ABORTING: No page selected!");
       return;
     }
     
@@ -1401,7 +1405,12 @@ export default function FormEditor() {
   };
 
   const handleDragEnd = async (event) => {
+    console.log("DRAG END - Current selectedPage:", JSON.stringify(selectedPage, null, 2));
+    console.log("DRAG END - Active Entity (dragged item):", JSON.stringify(activeEntity, null, 2));
+    
     const { active, over } = event;
+    console.log("DRAG END - Over ID:", over?.id);
+    
     setActiveDragId(null);
     setActiveEntity(null);
     
