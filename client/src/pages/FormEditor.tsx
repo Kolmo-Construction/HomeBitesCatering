@@ -1855,7 +1855,7 @@ export default function FormEditor() {
             <div className="border-b p-4">
               <h2 className="font-semibold">
                 {selectedPage 
-                  ? `Editing: ${selectedPage.title}` 
+                  ? `Editing: ${selectedPage.pageTitle || selectedPage.title || `Page ${selectedPage.pageOrder ?? selectedPage.id}`}` 
                   : "Select a page to edit"
                 }
               </h2>
