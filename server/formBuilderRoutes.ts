@@ -1,3 +1,5 @@
+console.log("--- formBuilderRoutes.ts loaded ---"); // First line to verify this file is loaded
+
 import { Router } from "express";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -670,10 +672,14 @@ router.post("/pages/:pageId/questions", async (req, res) => {
 
 // List all questions for a page
 router.get("/pages/:pageId/questions", async (req, res) => {
+  console.log("--- GET /pages/:pageId/questions handler entered ---");
+  console.log(`Backend: Received request for questions on page ID: ${req.params.pageId}`);
+  
   try {
     const pageId = parseInt(req.params.pageId);
     
     if (isNaN(pageId)) {
+      console.log(`Backend: Invalid page ID: ${req.params.pageId}`);
       return res.status(400).json({ message: "Invalid page ID" });
     }
     
@@ -682,9 +688,14 @@ router.get("/pages/:pageId/questions", async (req, res) => {
       .from(formSchema.formPages)
       .where(eq(formSchema.formPages.id, pageId));
     
+    console.log(`Backend: Page lookup result:`, page);
+    
     if (!page) {
+      console.log(`Backend: Page with ID ${pageId} not found`);
       return res.status(404).json({ message: "Page not found" });
     }
+    
+    console.log(`Backend: Found page ${pageId}, fetching questions...`);
     
     // Get all questions for this page, ordered by displayOrder
     // Join with question library to get the full question details
@@ -716,6 +727,8 @@ router.get("/pages/:pageId/questions", async (req, res) => {
     .orderBy(formSchema.formPageQuestions.displayOrder);
     
     // Process questions to resolve overrides
+    console.log(`Backend: Raw questions data from DB:`, JSON.stringify(questions, null, 2));
+    
     const resolvedQuestions = questions.map(q => {
       // Extract base metadata fields from the default metadata (if it exists)
       const baseMetadata = q.libraryDefaultMetadata || {};
@@ -758,6 +771,9 @@ router.get("/pages/:pageId/questions", async (req, res) => {
         }
       };
     });
+    
+    console.log(`Backend: Processed ${resolvedQuestions.length} questions for page ${req.params.pageId}`);
+    console.log(`Backend: Fetched questions from DB for pageId: ${req.params.pageId}`);
       
     return res.json(resolvedQuestions);
   } catch (error) {

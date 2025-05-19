@@ -1,0 +1,67 @@
+The key observation here is that you are still seeing the [express] GET /api/form-builder/pages/18/questions 200 log, but the specific console.log statement that I asked you to add inside the handler for that route (Backend: Fetched questions from DB for pageId...) is still not appearing in your backend console.
+
+This definitively means that the incoming GET /api/form-builder/pages/18/questions request, while being received and handled by some part of your backend Express application (resulting in the 200 status log), is not reaching the specific code block in server/formBuilderRoutes.ts where you placed the log.
+
+This is almost certainly a routing configuration issue on the backend. The request path is being matched and processed by a different handler or middleware before it gets to the intended router.get('/pages/:pageId/questions', ...) handler.
+
+To figure out where the request is actually going, let's add some very basic logs to verify which code files and handlers are being executed.
+
+Actionable Steps - Pinpointing the Backend Routing Issue:
+
+Verify formBuilderRoutes.ts File Loading:
+
+Open your server/formBuilderRoutes.ts file.
+At the very top of the file, outside of any route definitions or other code blocks, add a simple log statement:
+<!-- end list -->
+
+TypeScript
+
+// server/formBuilderRoutes.ts
+console.log("--- formBuilderRoutes.ts loaded ---"); // Add this line at the very top
+
+import { Router } from "express";
+import { db } from "./db";
+// ... rest of your imports ...
+
+const router = Router();
+
+// ... your route definitions ...
+Save the file.
+Fully restart your backend server.
+Check your backend console when the server starts. Do you see the "--- formBuilderRoutes.ts loaded ---" log?
+If YES: The correct formBuilderRoutes.ts file is being loaded. This means the routing issue is within the loaded file or how it's integrated.
+If NO: The backend server is not loading the formBuilderRoutes.ts file that you are editing. Ensure you are editing the correct file and that your build/run process is using the expected code.
+Verify Handler Entry (If file loading is confirmed):
+
+If the "--- formBuilderRoutes.ts loaded ---" log appears, then add a log inside the GET /pages/:pageId/questions handler, right at the beginning of the async function:
+<!-- end list -->
+
+TypeScript
+
+router.get('/pages/:pageId/questions', async ({ params, db }) => {
+    console.log("--- GET /pages/:pageId/questions handler entered ---"); // Add this line
+
+    const pageId = parseInt(params.pageId);
+    if (isNaN(pageId)) {
+       // ... rest of your handler logic ...
+    }
+   // ... rest of your handler logic ...
+});
+Save the file.
+
+Fully restart your backend server.
+
+Trigger the action to add a question from the frontend.
+
+Check your backend console for the "--- GET /pages/:pageId/questions handler entered ---" log.
+
+If YES: The request is reaching the handler, but the database query log (Backend: Fetched questions from DB...) is still not appearing. This would be extremely odd and might suggest a problem with the database query execution itself or how Drizzle is configured in that specific handler context.
+
+If NO: The request is not reaching this handler despite the formBuilderRoutes.ts file being loaded. This strongly indicates a routing conflict within the routers mounted in server/routes.ts.
+
+Please perform these steps, starting with verifying the file loading, and report the results. This will help us narrow down where the request is being diverted.
+
+
+
+
+
