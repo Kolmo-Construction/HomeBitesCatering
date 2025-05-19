@@ -695,24 +695,30 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     <FormLabel className="text-xs text-muted-foreground">
                       Override Options
                     </FormLabel>
-                    <Switch 
-                      checked={form.getValues("optionsOverrides")?.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (!checked) {
-                          // Reset to library options
-                          const libraryOptions = libraryQuestion?.defaultOptions || 
-                                               libraryQuestion?.default_options || [];
-                          setOptions([...libraryOptions]); // Create a new array to trigger state update
-                          form.setValue("optionsOverrides", []);
-                        } else {
-                          // When enabling overrides, use current options as a starting point
-                          // This preserves the order and any existing customizations
-                          const libraryOptions = libraryQuestion?.defaultOptions || 
-                                               libraryQuestion?.default_options || [];
-                          form.setValue("optionsOverrides", [...libraryOptions]);
-                        }
-                      }}
-                    />
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer"
+                        disabled={libraryQuestion?.questionType === "matrix"}
+                        checked={form.getValues("optionsOverrides")?.length > 0}
+                        onChange={(e) => {
+                          if (!e.target.checked) {
+                            // Reset to library options
+                            const libraryOptions = libraryQuestion?.defaultOptions || 
+                                                 libraryQuestion?.default_options || [];
+                            setOptions([...libraryOptions]); // Create a new array to trigger state update
+                            form.setValue("optionsOverrides", []);
+                          } else {
+                            // When enabling overrides, use current options as a starting point
+                            // This preserves the order and any existing customizations
+                            const libraryOptions = libraryQuestion?.defaultOptions || 
+                                                 libraryQuestion?.default_options || [];
+                            form.setValue("optionsOverrides", [...libraryOptions]);
+                          }
+                        }}
+                      />
+                      <div className={`w-11 h-6 ${libraryQuestion?.questionType === "matrix" ? 'bg-gray-300' : 'bg-gray-200'} peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 ${libraryQuestion?.questionType === "matrix" ? 'opacity-50' : ''}`}></div>
+                    </label>
                   </div>
                 </div>
                 <Button 
@@ -720,7 +726,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                   variant="outline" 
                   size="sm" 
                   onClick={handleAddOption}
-                  disabled={!form.getValues("optionsOverrides")?.length > 0}
+                  disabled={!form.getValues("optionsOverrides")?.length > 0 || libraryQuestion?.questionType === "matrix"}
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Add Option
