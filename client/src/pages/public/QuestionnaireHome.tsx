@@ -31,35 +31,35 @@ export default function QuestionnaireHome() {
           id: 'wedding',
           title: 'Wedding',
           description: 'Full-service gourmet catering designed for seamless coordination on your special day.',
-          image: '/images/events/wedding.jpg',
-          formKey: 'wedding-questionnaire'
+          image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=500',
+          formKey: 'wedding'
         },
         {
           id: 'corporate',
           title: 'Corporate Event',
           description: 'Professional catering services for meetings, conferences, and corporate gatherings.',
-          image: '/images/events/corporate.jpg',
-          formKey: 'corporate-event'
+          image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=500',
+          formKey: 'corporate'
         },
         {
           id: 'birthday',
           title: 'Birthday',
           description: 'Fun and festive catering themes to match any age or personality.',
-          image: '/images/events/birthday.jpg',
-          formKey: 'birthday-catering'
+          image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=500',
+          formKey: 'birthday'
         },
         {
           id: 'engagement',
           title: 'Engagement',
           description: 'Elegant and romantic setups with tailored menus to celebrate the couples commitment.',
-          image: '/images/events/engagement.jpg',
+          image: 'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?q=80&w=500',
           formKey: 'engagement'
         },
         {
           id: 'food-truck',
           title: 'Food Truck',
           description: 'On-site mobile kitchen delivering fresh, fast, and flavorful fare for any occasion.',
-          image: '/images/events/food-truck.jpg',
+          image: 'https://images.unsplash.com/photo-1509315811345-672d83ef2fbc?q=80&w=500',
           formKey: 'food-truck'
         }
       ];

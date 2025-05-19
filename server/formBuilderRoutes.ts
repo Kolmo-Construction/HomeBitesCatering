@@ -2,7 +2,7 @@ console.log("--- formBuilderRoutes.ts loaded ---"); // First line to verify this
 
 import { Router } from "express";
 import { db } from "./db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as formSchema from "@shared/form-schema";
 
@@ -2113,12 +2113,12 @@ router.get("/public/forms/:formKey", async (req, res) => {
     
     // Get all questions for these pages
     const pageQuestions = await db.select({
-      id: formSchema.pageQuestions.id,
-      pageId: formSchema.pageQuestions.pageId,
-      questionId: formSchema.pageQuestions.libraryQuestionId,
-      displayOrder: formSchema.pageQuestions.displayOrder,
-      displayTextOverride: formSchema.pageQuestions.displayTextOverride,
-      isRequiredOverride: formSchema.pageQuestions.isRequiredOverride,
+      id: formSchema.formPageQuestions.id,
+      pageId: formSchema.formPageQuestions.formPageId,
+      questionId: formSchema.formPageQuestions.libraryQuestionId,
+      displayOrder: formSchema.formPageQuestions.displayOrder,
+      displayTextOverride: formSchema.formPageQuestions.displayTextOverride,
+      isRequiredOverride: formSchema.formPageQuestions.isRequiredOverride,
       
       // Join with question library to get question details
       questionText: formSchema.questionLibrary.defaultText,
@@ -2127,16 +2127,16 @@ router.get("/public/forms/:formKey", async (req, res) => {
       defaultMetadata: formSchema.questionLibrary.defaultMetadata,
       defaultOptions: formSchema.questionLibrary.defaultOptions,
     })
-    .from(formSchema.pageQuestions)
+    .from(formSchema.formPageQuestions)
     .innerJoin(
       formSchema.questionLibrary,
-      eq(formSchema.pageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
+      eq(formSchema.formPageQuestions.libraryQuestionId, formSchema.questionLibrary.id)
     )
     .where(inArray(
-      formSchema.pageQuestions.pageId,
+      formSchema.formPageQuestions.formPageId,
       pages.map(page => page.id)
     ))
-    .orderBy(formSchema.pageQuestions.displayOrder);
+    .orderBy(formSchema.formPageQuestions.displayOrder);
     
     // Organize the questions by page
     const pagesWithQuestions = pages.map(page => {
@@ -2151,7 +2151,7 @@ router.get("/public/forms/:formKey", async (req, res) => {
             fieldKey: q.questionKey,
             isRequired: q.isRequiredOverride !== null ? q.isRequiredOverride : false,
             metadata: q.defaultMetadata,
-            options: q.defaultOptions ? q.defaultOptions.map(opt => ({
+            options: q.defaultOptions ? q.defaultOptions.map((opt: any) => ({
               label: opt.label,
               value: opt.value
             })) : []
