@@ -557,17 +557,15 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                       </div>
                       <div className="flex flex-col items-end">
                         <FormControl>
-                          <div className="inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-primary">
-                            <input
-                              type="checkbox"
-                              className="sr-only"
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer"
                               checked={field.value === true}
-                              onChange={(e) => {
-                                form.setValue("isRequiredOverride", e.target.checked);
-                              }}
+                              onChange={() => form.setValue("isRequiredOverride", !field.value)}
                             />
-                            <div className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${field.value === true ? 'translate-x-5' : 'translate-x-0'}`} />
-                          </div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
                         </FormControl>
                       </div>
                     </FormItem>
@@ -587,17 +585,15 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                       </div>
                       <div className="flex flex-col items-end">
                         <FormControl>
-                          <div className="inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-primary">
-                            <input
-                              type="checkbox"
-                              className="sr-only"
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer"
                               checked={field.value === true}
-                              onChange={(e) => {
-                                form.setValue("isHiddenOverride", e.target.checked);
-                              }}
+                              onChange={() => form.setValue("isHiddenOverride", !field.value)}
                             />
-                            <div className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${field.value === true ? 'translate-x-5' : 'translate-x-0'}`} />
-                          </div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
                         </FormControl>
                       </div>
                     </FormItem>
