@@ -1,25 +1,23 @@
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormDescription, 
-  FormMessage 
-} from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
-interface QuestionOption {
+export interface QuestionOption {
   label: string;
   value: string;
 }
 
-interface Question {
+export interface Question {
   id: number;
   questionText: string;
   questionType: string;
@@ -31,379 +29,232 @@ interface Question {
 
 interface QuestionRendererProps {
   question: Question;
+  value: any;
+  onChange: (value: any) => void;
+  error?: string;
 }
 
-export function QuestionRenderer({ question }: QuestionRendererProps) {
-  const { control } = useFormContext();
+export function QuestionRenderer({ question, value, onChange, error }: QuestionRendererProps) {
+  const {
+    questionText,
+    questionType,
+    isRequired,
+    options = [],
+    metadata = {},
+  } = question;
 
-  const getPlaceholder = () => {
-    return question.metadata?.placeholder || 'Type here...';
+  const handleSelectChange = (newValue: string) => {
+    onChange(newValue);
   };
 
-  const getHelperText = () => {
-    return question.metadata?.helper || '';
+  const handleCheckboxChange = (option: QuestionOption, checked: boolean) => {
+    // For checkboxes, we maintain an array of selected values
+    const currentValues = Array.isArray(value) ? [...value] : [];
+    
+    if (checked) {
+      // Add the value if it's not already in the array
+      if (!currentValues.includes(option.value)) {
+        onChange([...currentValues, option.value]);
+      }
+    } else {
+      // Remove the value if it's in the array
+      onChange(currentValues.filter(v => v !== option.value));
+    }
   };
 
-  // Render different input types based on question type
-  const renderQuestionInput = () => {
-    switch(question.questionType) {
+  const renderField = () => {
+    switch (questionType) {
       case 'text':
         return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder={getPlaceholder()} />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
+          <Input
+            type="text"
+            id={`question-${question.id}`}
+            placeholder={metadata.placeholder || ''}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full"
           />
         );
         
       case 'textarea':
         return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder={getPlaceholder()} />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
+          <Textarea
+            id={`question-${question.id}`}
+            placeholder={metadata.placeholder || ''}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full"
+            rows={5}
           />
+        );
+        
+      case 'select':
+        return (
+          <Select value={value || ''} onValueChange={handleSelectChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={metadata.placeholder || 'Select an option'} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+        
+      case 'radio':
+        return (
+          <RadioGroup
+            value={value || ''}
+            onValueChange={onChange}
+            className="space-y-2 mt-2"
+          >
+            {options.map((option) => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <RadioGroupItem id={`radio-${option.value}`} value={option.value} />
+                <Label htmlFor={`radio-${option.value}`} className="cursor-pointer">
+                  {option.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+        
+      case 'checkbox':
+        return (
+          <div className="space-y-3 mt-2">
+            {options.map((option) => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`checkbox-${option.value}`}
+                  checked={Array.isArray(value) && value.includes(option.value)}
+                  onCheckedChange={(checked) => handleCheckboxChange(option, !!checked)}
+                />
+                <Label htmlFor={`checkbox-${option.value}`} className="cursor-pointer">
+                  {option.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        );
+        
+      case 'date':
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !value && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => onChange(date?.toISOString() || null)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         );
         
       case 'email':
         return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ 
-              required: question.isRequired,
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: "Invalid email address",
-              }
-            }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Input {...field} type="email" placeholder={getPlaceholder()} />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
+          <Input
+            type="email"
+            id={`question-${question.id}`}
+            placeholder={metadata.placeholder || 'Email address'}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full"
           />
         );
         
       case 'phone':
         return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Input {...field} type="tel" placeholder={getPlaceholder()} />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
+          <Input
+            type="tel"
+            id={`question-${question.id}`}
+            placeholder={metadata.placeholder || 'Phone number'}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full"
           />
         );
         
       case 'number':
         return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field: { onChange, onBlur, value, ref, name } }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Input 
-                    onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                    onBlur={onBlur}
-                    value={value}
-                    ref={ref}
-                    name={name}
-                    type="number"
-                    placeholder={getPlaceholder()}
-                  />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
+          <Input
+            type="number"
+            id={`question-${question.id}`}
+            placeholder={metadata.placeholder || ''}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full"
+            min={metadata.min}
+            max={metadata.max}
+            step={metadata.step || 1}
           />
-        );
-        
-      case 'datetime':
-        return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Input {...field} type="datetime-local" />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-        
-      case 'date':
-        return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <Input {...field} type="date" />
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-        
-      case 'radio':
-        return (
-          <FormField
-            control={control}
-            name={question.fieldKey}
-            rules={{ required: question.isRequired }}
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex flex-col space-y-1"
-                  >
-                    {question.options?.map(option => (
-                      <div key={option.value} className="flex items-center space-x-2">
-                        <RadioGroupItem value={option.value} id={`${question.fieldKey}-${option.value}`} />
-                        <Label htmlFor={`${question.fieldKey}-${option.value}`}>{option.label}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-        
-      case 'checkbox':
-        return (
-          <div className="space-y-3">
-            <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-            {question.options?.map(option => (
-              <FormField
-                key={option.value}
-                control={control}
-                name={`${question.fieldKey}.${option.value}`}
-                render={({ field }) => (
-                  <FormItem key={option.value} className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-normal">
-                        {option.label}
-                      </FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            ))}
-            {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
-          </div>
         );
         
       case 'header':
-        return (
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">{question.questionText}</h2>
-            {getHelperText() && <p className="text-gray-600 mt-2">{getHelperText()}</p>}
-          </div>
-        );
+        // Headers don't have input elements
+        return null;
         
-      case 'info_text':
+      case 'text_display':
+        // Text display doesn't have input elements
         return (
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
-            <div className="prose max-w-none">
-              <h3 className="text-xl font-semibold mb-2">{question.questionText}</h3>
-              {getHelperText() && <p className="text-gray-700">{getHelperText()}</p>}
-            </div>
-          </div>
-        );
-        
-      // Implement other question types as needed (full_name, address, etc.)
-      case 'full_name':
-        const placeholders = getPlaceholder()?.split(';') || ['First name', 'Last name'];
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={control}
-              name={`${question.fieldKey}_first`}
-              rules={{ required: question.isRequired }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder={placeholders[0]} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name={`${question.fieldKey}_last`}
-              rules={{ required: question.isRequired }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder={placeholders[1]} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-        
-      case 'address':
-        const addressPlaceholders = getPlaceholder()?.split(';') || [
-          'Street Address', 'Street Address Line 2', 'City', 'State / Province', 'Postal / Zip Code'
-        ];
-        
-        return (
-          <div className="space-y-4">
-            <FormLabel>{question.questionText}{question.isRequired && <span className="text-red-500">*</span>}</FormLabel>
-            
-            <FormField
-              control={control}
-              name={`${question.fieldKey}_street`}
-              rules={{ required: question.isRequired }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input {...field} placeholder={addressPlaceholders[0]} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={control}
-              name={`${question.fieldKey}_street2`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input {...field} placeholder={addressPlaceholders[1]} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={control}
-                name={`${question.fieldKey}_city`}
-                rules={{ required: question.isRequired }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input {...field} placeholder={addressPlaceholders[2]} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={control}
-                name={`${question.fieldKey}_state`}
-                rules={{ required: question.isRequired }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input {...field} placeholder={addressPlaceholders[3]} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={control}
-              name={`${question.fieldKey}_zip`}
-              rules={{ required: question.isRequired }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input {...field} placeholder={addressPlaceholders[4]} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {getHelperText() && <FormDescription>{getHelperText()}</FormDescription>}
+          <div className="prose prose-sm max-w-none">
+            {metadata.displayText && (
+              <div dangerouslySetInnerHTML={{ __html: metadata.displayText }} />
+            )}
           </div>
         );
         
       default:
         return (
-          <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-md">
-            <p className="text-yellow-800">Question type "{question.questionType}" is not supported yet.</p>
-          </div>
+          <Input
+            type="text"
+            id={`question-${question.id}`}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full"
+          />
         );
     }
   };
 
   return (
-    <div className="question-wrapper">
-      {renderQuestionInput()}
+    <div className="mb-6">
+      {questionType !== 'header' && questionType !== 'text_display' ? (
+        <Label 
+          htmlFor={`question-${question.id}`} 
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {questionText}
+          {isRequired && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+      ) : questionType === 'header' ? (
+        <h3 className="text-xl font-semibold mb-2 text-gray-900">{questionText}</h3>
+      ) : null}
+      
+      {metadata.helperText && questionType !== 'header' && (
+        <p className="text-sm text-gray-500 mb-2">{metadata.helperText}</p>
+      )}
+      
+      {renderField()}
+      
+      {error && (
+        <p className="mt-1 text-sm text-red-600">{error}</p>
+      )}
     </div>
   );
 }

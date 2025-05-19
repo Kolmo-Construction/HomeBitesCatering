@@ -2086,165 +2086,172 @@ router.delete("/forms/:formId/rules/:ruleId", async (req, res) => {
 
 // --- PUBLIC API ENDPOINTS ---
 
-// Public endpoint to get a form by key (for customer-facing questionnaire)
+// Simplified public endpoint to get a form by key (for customer-facing questionnaire)
 router.get("/public/forms/:formKey", async (req, res) => {
   try {
     const formKey = req.params.formKey;
     
-    // Find the most recent published version of the form using raw SQL
-    const formResult = await db.execute(sql`
-      SELECT 
-        id,
-        form_key AS "formKey",
-        form_title AS "formTitle",
-        description,
-        version_number AS "versionNumber",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
+    // First check if the form exists - plain SQL query
+    const formQuery = `
+      SELECT id, form_key, form_title, description, version
       FROM forms
-      WHERE form_key = ${formKey} AND status = 'published'
-      ORDER BY version_number DESC
+      WHERE form_key = $1 AND status = 'published'
+      ORDER BY version DESC
       LIMIT 1
-    `);
+    `;
     
-    if (!formResult.rows.length) {
+    const formResult = await db.query(formQuery, [formKey]);
+    
+    if (formResult.rowCount === 0) {
       return res.status(404).json({ message: "Form not found or not published" });
     }
     
     const form = formResult.rows[0];
+    const formId = form.id;
     
-    // Get all pages for this form, ordered by pageOrder - using raw SQL
-    const pagesResult = await db.execute(sql`
-      SELECT 
-        id,
-        form_id AS "formId", 
-        page_title AS "pageTitle",
-        page_key AS "pageKey",
-        page_order AS "pageOrder",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt" 
+    // Get all pages with plain SQL
+    const pagesQuery = `
+      SELECT id, page_title, page_key, page_order
       FROM form_pages
-      WHERE form_id = ${form.id}
+      WHERE form_id = $1
       ORDER BY page_order
-    `);
+    `;
     
+    const pagesResult = await db.query(pagesQuery, [formId]);
     const pages = pagesResult.rows;
     
-    // Get all questions for these pages - Using a simpler query approach to avoid type issues
-    const pageQuestionsRaw = await db.execute(sql`
-      SELECT 
-        fpq.id, 
-        fpq.form_page_id as "pageId", 
-        fpq.library_question_id as "questionId",
-        fpq.display_order as "displayOrder",
-        fpq.display_text_override as "displayTextOverride",
-        fpq.is_required_override as "isRequiredOverride",
-        ql.default_text as "questionText",
-        ql.question_type as "questionType",
-        ql.library_key as "questionKey",
-        ql.default_metadata as "defaultMetadata",
-        ql.default_options as "defaultOptions"
-      FROM form_page_questions fpq
-      INNER JOIN question_library ql ON fpq.library_question_id = ql.id
-      WHERE fpq.form_page_id IN (${sql.join(pages.map(page => page.id))})
-      ORDER BY fpq.display_order
-    `);
+    // Extract page IDs for question query
+    const pageIds = pages.map(page => page.id);
     
-    const pageQuestions = pageQuestionsRaw.rows;
+    // Get all questions if we have pages
+    let questionsResult = { rows: [] };
+    if (pageIds.length > 0) {
+      const pageIdsStr = pageIds.join(',');
+      const questionsQuery = `
+        SELECT 
+          fpq.id, 
+          fpq.form_page_id, 
+          fpq.display_order,
+          fpq.display_text_override,
+          fpq.is_required_override,
+          ql.id AS library_question_id,
+          ql.library_key,
+          ql.default_text,
+          ql.question_type,
+          ql.default_metadata,
+          ql.default_options
+        FROM form_page_questions fpq
+        JOIN question_library ql ON fpq.library_question_id = ql.id
+        WHERE fpq.form_page_id IN (${pageIdsStr})
+        ORDER BY fpq.display_order
+      `;
+      
+      questionsResult = await db.query(questionsQuery);
+    }
     
-    // Organize the questions by page
+    // Structure pages with questions
     const pagesWithQuestions = pages.map(page => {
-      const questionsForPage = pageQuestions
-        .filter(q => q.pageId === page.id)
+      const questionsForPage = questionsResult.rows
+        .filter(q => q.form_page_id === page.id)
         .map(q => {
-          // Transform question format for client consumption
+          let metadata = {};
+          let options = [];
+          
+          // Safely parse JSON fields
+          try {
+            if (q.default_metadata) {
+              metadata = JSON.parse(q.default_metadata);
+            }
+            if (q.default_options) {
+              options = JSON.parse(q.default_options).map(opt => ({
+                label: opt.label,
+                value: opt.value
+              }));
+            }
+          } catch (e) {
+            console.warn('Error parsing JSON metadata or options for question', q.id);
+          }
+          
           return {
             id: q.id,
-            questionText: q.displayTextOverride || q.questionText,
-            questionType: q.questionType,
-            fieldKey: q.questionKey,
-            isRequired: q.isRequiredOverride !== null ? q.isRequiredOverride : false,
-            metadata: q.defaultMetadata,
-            options: q.defaultOptions ? q.defaultOptions.map((opt: any) => ({
-              label: opt.label,
-              value: opt.value
-            })) : []
+            questionText: q.display_text_override || q.default_text,
+            questionType: q.question_type,
+            fieldKey: q.library_key,
+            isRequired: q.is_required_override !== null ? q.is_required_override : true,
+            metadata,
+            options
           };
         });
       
       return {
         id: page.id,
-        pageTitle: page.pageTitle,
-        pageOrder: page.pageOrder,
-        description: page.description,
+        title: page.page_title,
+        key: page.page_key,
+        pageOrder: page.page_order,
         questions: questionsForPage
       };
     });
     
-    // Get rules and targets using raw SQL for conditional logic
-    const rulesRaw = await db.execute(sql`
-      SELECT 
-        id, 
-        trigger_form_page_question_id as "triggerQuestionId",
-        condition_type as "conditionType",
-        condition_value as "conditionValue",
-        action_type as "actionType"
+    // Get conditional logic rules with plain SQL
+    const rulesQuery = `
+      SELECT id, trigger_form_page_question_id, condition_type, condition_value, action_type
       FROM form_rules
-      WHERE form_id = ${form.id}
-    `);
+      WHERE form_id = $1
+    `;
     
-    const rules = rulesRaw.rows;
+    const rulesResult = await db.query(rulesQuery, [formId]);
+    const rules = rulesResult.rows;
     
     // Get rule targets if we have rules
-    let ruleTargetsRaw;
+    let ruleTargets = [];
     if (rules.length > 0) {
       const ruleIds = rules.map(rule => rule.id);
-      ruleTargetsRaw = await db.execute(sql`
-        SELECT 
-          rule_id as "ruleId",
-          target_type as "targetType",
-          target_id as "targetId"
+      const ruleIdsStr = ruleIds.join(',');
+      
+      const targetsQuery = `
+        SELECT rule_id, target_type, target_id
         FROM form_rule_targets
-        WHERE rule_id IN (${sql.join(ruleIds)})
-      `);
-    } else {
-      ruleTargetsRaw = { rows: [] };
+        WHERE rule_id IN (${ruleIdsStr})
+      `;
+      
+      const targetsResult = await db.query(targetsQuery);
+      ruleTargets = targetsResult.rows;
     }
-    
-    const ruleTargets = ruleTargetsRaw.rows;
     
     // Combine rules with their targets
     const rulesWithTargets = rules.map(rule => {
-      const targets = ruleTargets
-        .filter(target => target.ruleId === rule.id)
+      const targetsForRule = ruleTargets
+        .filter(target => target.rule_id === rule.id)
         .map(target => ({
-          targetType: target.targetType,
-          targetId: target.targetId
+          targetType: target.target_type,
+          targetId: target.target_id
         }));
       
       return {
         id: rule.id,
-        triggerQuestionId: rule.triggerQuestionId,
-        conditionType: rule.conditionType,
-        conditionValue: rule.conditionValue,
-        actionType: rule.actionType,
-        targets
+        triggerQuestionId: rule.trigger_form_page_question_id,
+        conditionType: rule.condition_type,
+        conditionValue: rule.condition_value,
+        actionType: rule.action_type,
+        targets: targetsForRule
       };
     });
     
     // Return the complete form structure
-    return res.json({ 
+    return res.json({
       form: {
         id: form.id,
-        formKey: form.formKey,
-        formTitle: form.formTitle,
-        version: form.version,
-        pages: pagesWithQuestions,
-        rules: rulesWithTargets
-      }
+        key: form.form_key,
+        title: form.form_title,
+        description: form.description,
+        version: form.version
+      },
+      pages: pagesWithQuestions,
+      rules: rulesWithTargets
     });
+    
   } catch (error) {
-    console.error("Error getting public form:", error);
+    console.error("Error getting public form:", error, error.stack);
     return res.status(500).json({ message: "Failed to get form" });
   }
 });
