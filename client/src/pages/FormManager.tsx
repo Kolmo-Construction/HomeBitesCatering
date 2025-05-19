@@ -294,8 +294,8 @@ export default function FormManager() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          form_title: formData.formTitle,
-          form_key: formData.formKey,
+          formTitle: formData.formTitle,
+          formKey: formData.formKey,
           description: formData.description,
           status: formData.status
         }),
