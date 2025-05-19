@@ -1534,7 +1534,7 @@ export default function FormEditor() {
             
             // Create payload for reordering API
             const reorderPayload = reorderedQuestions.map((question, index) => ({
-              questionId: question.id,
+              questionInstanceId: question.id, // Changed from questionId to match backend expectation
               newDisplayOrder: index + 1
             }));
             
