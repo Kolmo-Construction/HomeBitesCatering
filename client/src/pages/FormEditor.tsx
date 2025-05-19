@@ -1199,8 +1199,11 @@ export default function FormEditor() {
       
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Invalidate both query key formats to ensure consistent UI updates
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage?.id] });
+      
       toast({
         title: "Question updated",
         description: "The question settings have been updated successfully.",
