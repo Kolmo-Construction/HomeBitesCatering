@@ -482,11 +482,34 @@ router.post("/pages/:pageId/questions", async (req, res) => {
       return res.status(404).json({ message: `Library question not found with ID: ${libraryQuestionId}` });
     }
     
+    // Get the existing questions to check for display order conflicts
+    const existingQuestions = await db.select()
+      .from(formSchema.formPageQuestions)
+      .where(eq(formSchema.formPageQuestions.formPageId, pageId))
+      .orderBy(formSchema.formPageQuestions.displayOrder);
+    
+    console.log(`SERVER: Found ${existingQuestions.length} existing questions on page ${pageId}`);
+    
+    // Determine the correct display order
+    let requestedOrder = req.body.displayOrder || req.body.display_order || 0;
+    
+    // Check if there's already a question with this display order
+    if (existingQuestions.some(q => q.displayOrder === requestedOrder)) {
+      console.log(`SERVER: Display order ${requestedOrder} already exists, finding next available order`);
+      // Find the maximum display order and add 1
+      if (existingQuestions.length > 0) {
+        requestedOrder = Math.max(...existingQuestions.map(q => q.displayOrder)) + 1;
+      } else {
+        requestedOrder = 1;
+      }
+      console.log(`SERVER: Using new display order: ${requestedOrder}`);
+    }
+    
     // Transform request body to handle both camelCase and snake_case
     const transformedBody = {
       formPageId: pageId,
       libraryQuestionId: libraryQuestionId,
-      displayOrder: req.body.displayOrder || req.body.display_order || 0,
+      displayOrder: requestedOrder,
       displayTextOverride: req.body.displayTextOverride || req.body.display_text_override || null,
       isRequiredOverride: req.body.isRequiredOverride || req.body.is_required_override || null,
       isHiddenOverride: req.body.isHiddenOverride || req.body.is_hidden_override || null,
@@ -510,12 +533,26 @@ router.post("/pages/:pageId/questions", async (req, res) => {
       return res.status(400).json({ message: "Invalid question data", errors: parsed.error.format() });
     }
     
-    // Create the question
-    const [newQuestion] = await db.insert(formSchema.formPageQuestions)
-      .values(parsed.data)
-      .returning();
+    try {
+      // Create the question
+      const [newQuestion] = await db.insert(formSchema.formPageQuestions)
+        .values(parsed.data)
+        .returning();
       
-    return res.status(201).json(newQuestion);
+      return res.status(201).json(newQuestion);
+    } catch (err) {
+      console.error("Error adding question:", err);
+      
+      // If it's a duplicate key error, return a more helpful message
+      if (err.code === '23505' && err.constraint === 'form_page_questions_form_page_id_display_order_key') {
+        return res.status(400).json({ 
+          message: "A question with this display order already exists. Please try again or use a different order." 
+        });
+      }
+      
+      // Otherwise rethrow the error to be caught by the outer catch
+      throw err;
+    }
   } catch (error) {
     console.error("Error adding question:", error);
     return res.status(500).json({ message: "Failed to add question" });
