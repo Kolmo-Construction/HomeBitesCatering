@@ -1,0 +1,73 @@
+To fix this, you need to modify the db.execute calls within the getQuestionWithDetails function (and any other similar instances in server/questionLibraryRoutes.ts) to use the sql tagged template literal.
+
+File: server/questionLibraryRoutes.ts
+
+Original Code (within getQuestionWithDetails):
+
+TypeScript
+
+// server/questionLibraryRoutes.ts
+async function getQuestionWithDetails(id: number) {
+  // Get the base question
+  const questionSql = 'SELECT * FROM question_library WHERE id = $1';
+  const questionResult = await db.execute(questionSql, [id]); // Problematic line
+
+  if (questionResult.rows.length === 0) {
+    return null;
+  }
+  const question = questionResult.rows[0];
+
+  if (question.question_type === 'matrix') { 
+    const rowsSql = 'SELECT * FROM library_matrix_rows WHERE library_question_id = $1 ORDER BY row_order';
+    const rowsResult = await db.execute(rowsSql, [id]); // Problematic line
+
+    const columnsSql = 'SELECT * FROM library_matrix_columns WHERE library_question_id = $1 ORDER BY column_order';
+    const columnsResult = await db.execute(columnsSql, [id]); // Problematic line
+
+    return {
+      ...question,
+      matrixRows: rowsResult.rows,
+      matrixColumns: columnsResult.rows
+    };
+  }
+  return question;
+}
+Corrected Code:
+
+Ensure you have the sql import from drizzle-orm at the top of your server/questionLibraryRoutes.ts file:
+
+TypeScript
+
+import { eq, and, sql } from "drizzle-orm";
+Then, update the getQuestionWithDetails function as follows:
+
+TypeScript
+
+// server/questionLibraryRoutes.ts
+async function getQuestionWithDetails(id: number) {
+  // Get the base question
+  const questionResult = await db.execute(sql`SELECT * FROM question_library WHERE id = ${id}`);
+
+  if (questionResult.rows.length === 0) {
+    return null;
+  }
+  const question = questionResult.rows[0];
+
+  // If it's a matrix question, get rows and columns
+  if (question.question_type === 'matrix') { // Accessing property from raw SQL result
+    const rowsResult = await db.execute(sql`SELECT * FROM library_matrix_rows WHERE library_question_id = ${id} ORDER BY row_order`);
+    
+    const columnsResult = await db.execute(sql`SELECT * FROM library_matrix_columns WHERE library_question_id = ${id} ORDER BY column_order`);
+    
+    return {
+      ...question,
+      matrixRows: rowsResult.rows,
+      matrixColumns: columnsResult.rows
+    };
+  }
+  
+  return question;
+}
+Reasoning:
+
+By using sql\SELECT * FROM question_library WHERE id = ${id}`, you are leveraging Drizzle'ssqltemplate tag. This allows Drizzle to properly process the query and its parameters, ensuring that${id}` is correctly substituted, thus resolving the "no parameter $1" error. This is the recommended way to execute raw, parameterized SQL queries with Drizzle ORM to ensure security and correctness.

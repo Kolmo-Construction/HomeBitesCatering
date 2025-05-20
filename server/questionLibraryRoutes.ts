@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { z, ZodError } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "./db";
 
 // Define validation schemas with Zod for API requests
@@ -505,9 +505,8 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
 
 // Helper function to get a question with all related details
 async function getQuestionWithDetails(id: number) {
-  // Get the base question
-  const questionSql = 'SELECT * FROM question_library WHERE id = $1';
-  const questionResult = await db.execute(questionSql, [id]);
+  // Get the base question using sql tagged template
+  const questionResult = await db.execute(sql`SELECT * FROM question_library WHERE id = ${id}`);
   
   if (questionResult.rows.length === 0) {
     return null;
@@ -517,13 +516,11 @@ async function getQuestionWithDetails(id: number) {
   
   // If it's a matrix question, get rows and columns
   if (question.question_type === 'matrix') {
-    // Get rows
-    const rowsSql = 'SELECT * FROM library_matrix_rows WHERE library_question_id = $1 ORDER BY row_order';
-    const rowsResult = await db.execute(rowsSql, [id]);
+    // Get rows using sql tagged template
+    const rowsResult = await db.execute(sql`SELECT * FROM library_matrix_rows WHERE library_question_id = ${id} ORDER BY row_order`);
     
-    // Get columns
-    const columnsSql = 'SELECT * FROM library_matrix_columns WHERE library_question_id = $1 ORDER BY column_order';
-    const columnsResult = await db.execute(columnsSql, [id]);
+    // Get columns using sql tagged template
+    const columnsResult = await db.execute(sql`SELECT * FROM library_matrix_columns WHERE library_question_id = ${id} ORDER BY column_order`);
     
     // Return the full question with its matrix components
     return {
