@@ -99,13 +99,36 @@ export const registerFormRoutes = (app: Express) => {
       const pageSize = Number(req.query.pageSize) || 25;
       const offset = (page - 1) * pageSize;
       const category = req.query.category as string | undefined;
+      const search = req.query.search as string | undefined;
       
-      // Build query conditionally
+      // Build base query
       let query = db.select().from(questionLibrary);
+      
+      // Build where conditions array for filtering
+      let conditions = [];
       
       // Add category filter if provided
       if (category) {
-        query = query.where(eq(questionLibrary.category, category));
+        conditions.push(eq(questionLibrary.category, category));
+      }
+      
+      // Add search filter if provided
+      if (search && search.trim() !== '') {
+        // Search in questionKey, defaultText, and category fields
+        const searchTerm = search.toLowerCase().trim();
+        
+        // Use SQL to perform case-insensitive search
+        // Note: This is using drizzle-orm's sql template literal for raw SQL
+        conditions.push(
+          sql`(LOWER(${questionLibrary.libraryQuestionKey}) LIKE ${`%${searchTerm}%`} OR 
+               LOWER(${questionLibrary.defaultText}) LIKE ${`%${searchTerm}%`} OR 
+               LOWER(${questionLibrary.category}) LIKE ${`%${searchTerm}%`})`
+        );
+      }
+      
+      // Apply conditions if any
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
       }
       
       // Add pagination
@@ -116,12 +139,12 @@ export const registerFormRoutes = (app: Express) => {
       // Get total count for pagination
       let count = 0;
       try {
-        if (category) {
-          // Use count with where clause
+        if (conditions.length > 0) {
+          // Use count with conditions
           const countResult = await db
             .select({ count: sql`count(*)` })
             .from(questionLibrary)
-            .where(eq(questionLibrary.category, category));
+            .where(and(...conditions));
           count = Number(countResult[0]?.count || 0);
         } else {
           // Use simple count query
