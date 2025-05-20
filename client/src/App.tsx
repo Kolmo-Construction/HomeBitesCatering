@@ -19,6 +19,8 @@ import QuestionLibraryManager from "@/pages/QuestionLibraryManager";
 import QuestionLibraryEdit from "@/pages/QuestionLibraryEdit";
 import FormManager from "@/pages/FormManager";
 import FormEditor from "@/pages/FormEditor";
+// Calculator Test
+import CalculatorTest from "@/pages/CalculatorTest";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -77,6 +79,8 @@ function AppContent() {
             <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
             <Route path="/admin/form-builder/forms" component={FormManager} />
             <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
+            {/* Calculator Test Route */}
+            <Route path="/calculator-test" component={CalculatorTest} />
             {/* Fallback Route */}
             <Route>
               <Dashboard />

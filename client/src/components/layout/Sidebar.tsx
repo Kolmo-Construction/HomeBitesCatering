@@ -18,7 +18,8 @@ import {
   BookOpen,
   Code,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Calculator
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -42,6 +43,7 @@ export default function Sidebar() {
       submenu: [
         { name: "Question Library", href: "/admin/form-builder/question-library", icon: BookOpen },
         { name: "Forms", href: "/admin/form-builder/forms", icon: ClipboardList },
+        { name: "Calculator Test", href: "/calculator-test", icon: Calculator },
       ] 
     },
     { name: "Reports", href: "/reports", icon: BarChart2 },
