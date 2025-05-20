@@ -1543,13 +1543,32 @@ COPY public.events (id, client_id, estimate_id, event_date, start_time, end_time
 --
 
 COPY public.form_page_questions (id, form_page_id, library_question_id, display_order, display_text_override, is_required_override, is_hidden_override, placeholder_override, helper_text_override, metadata_overrides, options_overrides, created_at, updated_at, temp_display_order) FROM stdin;
-20	19	8	1	rand	\N	\N	\N	\N	{"helperText": null, "placeholder": null, "defaultRequired": true}	[{"label": "hi", "value": "0"}, {"label": "Hello", "value": "1"}]	2025-05-19 03:27:08.158474	2025-05-19 03:27:08.158474	\N
-21	19	7	2	asdf	\N	\N	asdf	\N	{"helperText": null, "placeholder": "asdf", "defaultRequired": true}	[{"label": "yes", "value": "1"}, {"label": "No", "value": "0"}]	2025-05-19 03:27:08.551488	2025-05-19 03:27:08.551488	\N
-22	19	6	3	Please rate our services:	\N	\N	\N	\N	{}	[]	2025-05-19 03:27:09.149906	2025-05-19 03:27:09.149906	\N
-28	19	3	5	What is your name?	\N	\N	\N	\N	{}	[]	2025-05-19 05:13:05.826092	2025-05-19 05:13:05.826092	\N
-10	18	3	1	What is your name?	\N	\N	\N	\N	{}	[]	2025-05-19 03:03:21.20028	2025-05-19 07:30:04.604248	\N
-50	18	2	2	Please rate our services:	\N	\N	\N	\N	{}	[]	2025-05-19 06:54:44.028992	2025-05-19 07:30:04.604248	\N
-25	18	11	3	to request information. It's a way to ask for	\N	\N	to request information. It's a way to ask for	to request information. It's a way to ask for	{"helperText": "to request information. It's a way to ask for", "validation": {"errorMessage": "what happened///"}, "placeholder": "to request information. It's a way to ask for", "defaultRequired": true}	[{"label": "hi", "value": "1"}, {"label": "no", "value": "0"}]	2025-05-19 03:45:23.957676	2025-05-19 07:30:04.604248	\N
+118	28	34	1	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:17:09.354735	2025-05-20 04:17:09.354735	\N
+119	28	51	2	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:17:23.236515	2025-05-20 04:17:23.236515	\N
+127	28	58	3	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:19:37.717203	2025-05-20 04:19:37.717203	\N
+130	25	62	10	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:24:43.746612	2025-05-20 04:24:43.746612	\N
+96	25	13	1	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:11:20.637599	2025-05-20 04:11:25.732	\N
+97	25	14	2	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:11:32.164357	2025-05-20 04:11:32.164357	\N
+98	25	47	3	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:01.551961	2025-05-20 04:12:01.551961	\N
+99	25	15	4	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:05.883477	2025-05-20 04:12:05.883477	\N
+100	25	16	5	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:11.433749	2025-05-20 04:12:11.433749	\N
+101	25	17	6	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:16.083221	2025-05-20 04:12:16.083221	\N
+102	25	18	7	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:20.608503	2025-05-20 04:12:20.608503	\N
+103	25	19	8	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:25.363282	2025-05-20 04:12:25.363282	\N
+104	25	20	9	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:31.185242	2025-05-20 04:12:31.185242	\N
+105	26	21	1	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:38.465068	2025-05-20 04:12:38.465068	\N
+106	26	22	2	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:44.314388	2025-05-20 04:12:44.314388	\N
+107	26	23	3	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:54.105689	2025-05-20 04:12:54.105689	\N
+108	26	24	4	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:23.213452	2025-05-20 04:13:23.213452	\N
+109	26	25	5	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:28.04506	2025-05-20 04:13:28.04506	\N
+110	26	26	6	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:32.87237	2025-05-20 04:13:32.87237	\N
+111	26	27	7	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:37.920348	2025-05-20 04:13:37.920348	\N
+112	26	42	8	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:07.725332	2025-05-20 04:14:07.725332	\N
+113	26	28	9	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:15.708693	2025-05-20 04:14:15.708693	\N
+114	26	29	10	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:21.105016	2025-05-20 04:14:21.105016	\N
+115	26	30	11	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:26.083104	2025-05-20 04:14:26.083104	\N
+116	26	31	12	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:31.573945	2025-05-20 04:14:31.573945	\N
+117	26	32	13	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:37.245413	2025-05-20 04:14:37.245413	\N
 \.
 
 
@@ -1558,8 +1577,10 @@ COPY public.form_page_questions (id, form_page_id, library_question_id, display_
 --
 
 COPY public.form_pages (id, form_id, page_title, page_order, description, created_at, updated_at, temp_new_order) FROM stdin;
-18	9	Basic information 	1		2025-05-19 02:05:19.917927	2025-05-19 07:47:43.158606	\N
-19	9	second basic page	2		2025-05-19 03:24:57.84396	2025-05-19 07:47:43.158606	\N
+26	11	Event Details	1	Information about your wedding event timing and logistics	2025-05-20 04:10:57.042618	2025-05-20 05:34:42.749589	\N
+25	11	Basic Information	2	Contact and event details	2025-05-20 04:10:53.363144	2025-05-20 05:34:42.749589	\N
+27	11	Venue Information	3	Details about your wedding venue	2025-05-20 04:11:00.965159	2025-05-20 05:34:42.749589	\N
+28	11	Service Information	4	Details about your catering service needs	2025-05-20 04:11:04.891412	2025-05-20 05:34:42.749589	\N
 \.
 
 
@@ -1568,6 +1589,7 @@ COPY public.form_pages (id, form_id, page_title, page_order, description, create
 --
 
 COPY public.form_rule_targets (id, rule_id, target_type, target_id, created_at) FROM stdin;
+6	6	question	104	2025-05-20 04:24:51.340607
 \.
 
 
@@ -1576,6 +1598,7 @@ COPY public.form_rule_targets (id, rule_id, target_type, target_id, created_at) 
 --
 
 COPY public.form_rules (id, form_id, trigger_form_page_question_id, condition_type, condition_value, action_type, rule_description, execution_order, created_at, updated_at) FROM stdin;
+6	11	130	equals	Yes	show_question	Show promo code entry field when user has a promo code	6	2025-05-20 04:24:51.294551	2025-05-20 04:24:51.294551
 \.
 
 
@@ -1600,7 +1623,7 @@ COPY public.form_submissions (id, form_id, form_version, user_id, client_id, opp
 --
 
 COPY public.forms (id, form_key, form_title, description, version, status, created_at, updated_at) FROM stdin;
-9	wedding-questionnaire	Wedding questionnaire		1	draft	2025-05-19 02:04:56.903095	2025-05-19 02:04:56.903095
+11	wedding-catering-form	Wedding Catering Questionnaire	Comprehensive wedding catering questionnaire with all package options, menu selections, and service details	1	draft	2025-05-20 04:10:49.279181	2025-05-20 04:10:49.279181
 \.
 
 
@@ -1617,14 +1640,6 @@ COPY public.gmail_sync_state (target_email, last_history_id, watch_expiration_ti
 --
 
 COPY public.library_matrix_columns (id, library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at) FROM stdin;
-2	2	poor	Poor	radio	\N	0	2025-05-18 15:33:25.016856	2025-05-18 15:33:25.016856
-1	2	fair	Fair	radio	\N	1	2025-05-18 15:33:25.017092	2025-05-18 15:33:25.017092
-3	2	good	Good	radio	\N	2	2025-05-18 15:33:25.016468	2025-05-18 15:33:25.016468
-4	2	excellent	Excellent	radio	\N	3	2025-05-18 15:33:25.165494	2025-05-18 15:33:25.165494
-6	6	good	Good	radio	\N	2	2025-05-18 15:37:22.390417	2025-05-18 15:37:22.390417
-5	6	poor	Poor	radio	\N	0	2025-05-18 15:37:22.390198	2025-05-18 15:37:22.390198
-7	6	fair	Fair	radio	\N	1	2025-05-18 15:37:22.390605	2025-05-18 15:37:22.390605
-8	6	excellent	Excellent	radio	\N	3	2025-05-18 15:37:22.541659	2025-05-18 15:37:22.541659
 \.
 
 
@@ -1633,12 +1648,6 @@ COPY public.library_matrix_columns (id, library_question_id, column_key, header,
 --
 
 COPY public.library_matrix_rows (id, library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at) FROM stdin;
-1	2	service	Customer Service	\N	\N	0	2025-05-18 15:33:22.81381	2025-05-18 15:33:22.81381
-2	2	quality	Product Quality	\N	\N	1	2025-05-18 15:33:22.957726	2025-05-18 15:33:22.957726
-3	2	price	Pricing	\N	\N	2	2025-05-18 15:33:24.958774	2025-05-18 15:33:24.958774
-4	6	service	Customer Service	\N	\N	0	2025-05-18 15:37:22.189266	2025-05-18 15:37:22.189266
-5	6	quality	Product Quality	\N	\N	1	2025-05-18 15:37:22.33056	2025-05-18 15:37:22.33056
-6	6	price	Pricing	\N	\N	2	2025-05-18 15:37:22.334484	2025-05-18 15:37:22.334484
 \.
 
 
@@ -1710,13 +1719,69 @@ COPY public.processed_emails (id, message_id, gmail_id, service, processed_at, e
 --
 
 COPY public.question_library (id, library_question_key, default_text, question_type, default_metadata, default_options, category, created_at, updated_at) FROM stdin;
-2	matrix_question_1	Please rate our services:	matrix	\N	\N	feedback	2025-05-18 15:33:22.76429	2025-05-18 15:33:22.76429
-3	text_question_1	What is your name?	textbox	\N	\N	personal	2025-05-18 15:35:52.789109	2025-05-18 15:35:52.789109
-6	matrix_question_1747582641867	Please rate our services:	matrix	\N	\N	feedback	2025-05-18 15:37:22.139228	2025-05-18 15:37:22.139228
-7	asdf	asdf	checkbox_group	{"helperText": null, "placeholder": "asdf", "defaultRequired": true}	[{"label": "yes", "value": "1"}, {"label": "No", "value": "0"}]	asdf	2025-05-18 22:32:21.272625	2025-05-18 22:32:21.272625
-8	randoonm	rand	radio_group	{"helperText": null, "placeholder": null, "defaultRequired": true}	[{"label": "hi", "value": "0"}, {"label": "Hello", "value": "1"}]	sf	2025-05-18 22:33:45.434406	2025-05-18 22:33:45.434406
-10	test-question	this is a supoer esay	datetime	{"helperText": "whatever works", "placeholder": "works", "defaultRequired": true}	\N	Seattle Remodeling	2025-05-19 03:19:06.453742	2025-05-19 03:19:06.453742
-11	ooooooooo	to request information. It's a way to ask for	radio_group	{"helperText": "to request information. It's a way to ask for", "validation": {"errorMessage": "what happened///"}, "placeholder": "to request information. It's a way to ask for", "defaultRequired": true}	[{"label": "hi", "value": "1"}, {"label": "no", "value": "0"}]	to request information. It's a way to ask for	2025-05-19 03:44:40.443784	2025-05-19 03:44:40.443784
+48	taco_fiesta_packages	Taco Fiesta Package Options	radio_group	\N	["Bronze - $28 per person (3 proteins, 2 sides, 3 salsas, 4 condiments)", "Silver - $34 per person (4 proteins, 3 sides, 4 salsas, 6 condiments)", "Gold - $40 per person (4 proteins, 4 sides, 4 salsas, 5 condiments)", "Diamond - $46 per person (5 proteins, 5 sides, 5 salsas, 8 condiments)"]	menu_info	2025-05-20 04:10:05.553847	2025-05-20 04:10:05.553847
+13	event_type	Event Type?	radio_group	\N	\N	basic_info	2025-05-20 03:44:47.783464	2025-05-20 03:44:47.783464
+14	company_name	Company Name	textbox	\N	\N	basic_info	2025-05-20 03:44:53.085354	2025-05-20 03:44:53.085354
+15	client_name	Name	full_name	\N	\N	basic_info	2025-05-20 03:44:57.664042	2025-05-20 03:44:57.664042
+16	client_email	Email	email	\N	\N	basic_info	2025-05-20 03:45:02.398178	2025-05-20 03:45:02.398178
+17	client_phone	Phone Number	phone	\N	\N	basic_info	2025-05-20 03:45:06.5507	2025-05-20 03:45:06.5507
+18	event_date	What is the date of your event	datetime	\N	\N	basic_info	2025-05-20 03:45:11.581585	2025-05-20 03:45:11.581585
+19	promo_code	Do you have a Discount Promo Code	radio_group	\N	\N	basic_info	2025-05-20 03:45:16.487491	2025-05-20 03:45:16.487491
+20	promo_code_entry	Enter code here	textbox	\N	\N	basic_info	2025-05-20 03:45:21.217943	2025-05-20 03:45:21.217943
+21	venue_secured	Have you secured a venue?	radio_group	\N	\N	venue_info	2025-05-20 03:45:52.342623	2025-05-20 03:45:52.342623
+22	venue_name	What is the name of your venue?	textbox	\N	\N	venue_info	2025-05-20 03:45:57.274644	2025-05-20 03:45:57.274644
+23	venue_address	What is the location of your venue?	address	\N	\N	venue_info	2025-05-20 03:46:01.029434	2025-05-20 03:46:01.029434
+24	event_start_time	What is the start time of your event?	time	\N	\N	timing_info	2025-05-20 03:46:05.658379	2025-05-20 03:46:05.658379
+25	event_end_time	What is the end time of your event?	time	\N	\N	timing_info	2025-05-20 03:46:10.057139	2025-05-20 03:46:10.057139
+26	ceremony_start_time	What is the start time of your ceremony?	time	\N	\N	timing_info	2025-05-20 03:46:15.386409	2025-05-20 03:46:15.386409
+27	ceremony_end_time	What is the end time of your ceremony?	time	\N	\N	timing_info	2025-05-20 03:46:20.217253	2025-05-20 03:46:20.217253
+28	cocktail_hour	Cocktail Hour?	radio_group	\N	\N	timing_info	2025-05-20 03:46:25.478677	2025-05-20 03:46:25.478677
+29	cocktail_start_time	What is the start time of your Cocktail/Appetizer service?	time	\N	\N	timing_info	2025-05-20 03:46:30.868699	2025-05-20 03:46:30.868699
+30	cocktail_end_time	What is the end time of your Cocktail/Appetizer service?	time	\N	\N	timing_info	2025-05-20 03:46:35.358241	2025-05-20 03:46:35.358241
+31	main_course_service	Main Course Service	radio_group	\N	\N	service_info	2025-05-20 03:47:14.407906	2025-05-20 03:47:14.407906
+32	food_service_start	What is the start time of your Food service?	time	\N	\N	service_info	2025-05-20 03:47:19.515141	2025-05-20 03:47:19.515141
+33	food_service_end	What is the end time of your Food service?	time	\N	\N	service_info	2025-05-20 03:47:24.289214	2025-05-20 03:47:24.289214
+34	guest_count	How many guests are you hosting?	number	\N	\N	service_info	2025-05-20 03:47:28.989456	2025-05-20 03:47:28.989456
+35	service_style	Service Style	radio_group	\N	\N	service_info	2025-05-20 03:47:36.15069	2025-05-20 03:47:36.15069
+36	menu_selection	What would like a quote for:	radio_group	\N	\N	menu_info	2025-05-20 03:47:51.828747	2025-05-20 03:47:51.828747
+37	taco_package	Taco Fiesta Package	radio_group	\N	\N	menu_info	2025-05-20 03:47:59.571381	2025-05-20 03:47:59.571381
+38	bbq_package	American BBQ Package	radio_group	\N	\N	menu_info	2025-05-20 03:48:07.196328	2025-05-20 03:48:07.196328
+39	greek_package	A Taste of Greece Package	radio_group	\N	\N	menu_info	2025-05-20 03:48:48.05906	2025-05-20 03:48:48.05906
+40	kebab_package	Kebab Party Package	radio_group	\N	\N	menu_info	2025-05-20 03:48:55.709579	2025-05-20 03:48:55.709579
+41	italian_package	A Taste of Italy Package	radio_group	\N	\N	menu_info	2025-05-20 03:49:03.384699	2025-05-20 03:49:03.384699
+42	ceremony_setup	Set-up before Ceremony start time?	radio_group	\N	\N	timing_info	2025-05-20 03:58:45.6868	2025-05-20 03:58:45.6868
+43	bar_service	Bar Service	radio_group	\N	["Yes, we need bartenders", "No, we will handle our own bar service"]	service_info	2025-05-20 04:02:30.847635	2025-05-20 04:02:30.847635
+44	dessert_selection	Dessert Selection	checkbox_group	\N	["Tiramisu", "Tres Leches Cake", "Flan", "Baklava", "Churros", "Chocolate Brownie", "Fruit Platter"]	menu_info	2025-05-20 04:02:41.529116	2025-05-20 04:02:41.529116
+45	equipment_rental	Equipment Rental	checkbox_group	\N	["Tables", "Chairs", "Linens", "Tableware", "Glassware", "Serving Utensils", "Serving Platters", "Chafing Dishes"]	equipment	2025-05-20 04:02:46.071959	2025-05-20 04:02:46.071959
+46	special_requests	Special Requests or Additional Information	textarea	\N	\N	additional_info	2025-05-20 04:03:11.506096	2025-05-20 04:03:11.506096
+47	billing_address	Billing Address	address	\N	\N	basic_info	2025-05-20 04:09:52.494556	2025-05-20 04:09:52.494556
+51	service_style_options	Service Style	radio_group	\N	["Drop-off", "Buffet Standard", "Buffet Full Service – no setup", "Buffet Full Service", "Family Style Service- (not available for Taco Fiesta)", "Plated Dinner", "Cocktail Party", "Food Truck"]	service_info	2025-05-20 04:17:16.957514	2025-05-20 04:17:16.957514
+52	menu_type_selection	What would like a quote for:	radio_group	\N	["Taco Fiesta", "American BBQ", "A taste of Greece", "Kebab Party", "A taste of Italy", "Custom Menu", "Hor d' oeuvres only (Cocktail party)", "Food Truck"]	menu_info	2025-05-20 04:17:31.229366	2025-05-20 04:17:31.229366
+55	kebab_party_options	Kebab Party Package Options	radio_group	\N	["Bronze - $36 per person (2 kebab types, 4 sides, 2 sauces)", "Silver - $44 per person (3 kebab types, 5 sides, 3 sauces)", "Gold - $52 per person (4 kebab types, 6 sides, 4 sauces)", "Diamond - $60 per person (5 kebab types, 7 sides, 5 sauces, premium ingredients)"]	menu_info	2025-05-20 04:19:00.605044	2025-05-20 04:19:00.605044
+58	equipment_rentals	Do you need equipment rentals?	checkbox_group	\N	["Tables ($12 each)", "Chairs ($3 each)", "Linens ($15 each)", "Place settings ($4 per person)", "Glassware ($3 per person)", "Serving equipment ($2 per person)", "None - venue provides all equipment"]	service_info	2025-05-20 04:19:32.586011	2025-05-20 04:19:32.586011
+60	dietary_requirements	Do you have any dietary requirements or allergies we should be aware of?	textarea	\N	[]	menu_info	2025-05-20 04:20:18.249778	2025-05-20 04:20:18.249778
+61	additional_notes	Any additional notes or special requests for your event?	textarea	\N	[]	service_info	2025-05-20 04:20:30.077586	2025-05-20 04:20:30.077586
+62	has_promo_code	Do you have a Discount Promo Code?	radio_group	\N	["Yes", "No"]	basic_info	2025-05-20 04:24:37.327718	2025-05-20 04:24:37.327718
+67	taco_fiesta_proteins	Taco Fiesta - Proteins (Selection limits vary by package)	checkbox_group	\N	["Barbacoa", "Flank steak Fajitas - **upcharge of $2.00 pp**", "Ground Beef", "Pork Carnitas", "Pork Belly", "Chorizo", "Beef Birria", "Mexican Chicken", "Cod", "Shrimp", "Tofu", "Roasted Vegetables", "Escabeche - House-made picked vegetable medley"]	menu_info	2025-05-20 05:59:35.78288	2025-05-20 05:59:35.78288
+68	taco_fiesta_sides	Taco Fiesta - Sides (Selection limits vary by package)	checkbox_group	\N	["Refried Beans", "Mexican Street corn (Elotes)", "Queso Dip", "Chorizo Queso Dip", "Stuffed Poblano peppers", "Mexican Rice", "Cilantro Lime Rice", "Rice and Beans", "Jalapeno cornbread", "Grilled Vegetables", "Mexican Slaw with Mango", "Vegetarian Empanadas"]	menu_info	2025-05-20 05:59:35.965345	2025-05-20 05:59:35.965345
+69	taco_fiesta_salsas	Taco Fiesta - Salsas (Selection limits vary by package)	checkbox_group	\N	["Classic Pico de Gallo", "Fresh Mango Salsa", "Pineapple Habanero Salsa", "Cucumber & Apple Salsa", "Jicama and Papaya Salsa", "Salsa Roja (red sauce)", "Salsa Verde (green sauce)", "Creamy Salsa Verde (green sauce)", "Salsa Macha -(contains peanuts and sesame seeds)"]	menu_info	2025-05-20 05:59:36.058397	2025-05-20 05:59:36.058397
+70	taco_fiesta_condiments	Taco Fiesta - Condiments (Selection limits vary by package)	checkbox_group	\N	["Shredded cheese", "Shredded vegan cheese", "Diced Onions", "Lime wedges", "Jalapeños", "Sour Cream", "Diced bell peppers", "Guacamole", "Fire roasted bell peppers", "Sliced radish", "Cilantro", "Pickled cabbage", "Escabeche - House-made picked vegetable medley"]	menu_info	2025-05-20 05:59:36.154181	2025-05-20 05:59:36.154181
+71	american_bbq_mains	American BBQ - Mains/Protein Choice (Selection limits vary by package)	checkbox_group	\N	["Prime Rib - Boneless -Carving station (**upcharge of $4.00 pp**)", "Smoked Brisket (**upcharge $2.00 pp**)", "Beef Ribs (**upcharge $3.00 pp** or **$4.00 pp in Diamond**)", "Guinness Braised Boneless Short Ribs (**upcharge $2.00 pp**)", "Bacon Wrapped Fillet Mingon - (**upcharge of $4.00 pp**)", "Flank Steak with Chimichurri", "Sausage Medley", "Hamburger Bar (**upcharge of $1.50 pp**) (includes full condiment bar for Silver)", "Lamb Chops (**upcharge of $3.00 pp**)", "Smoked Leg of Lamb (Family Style only)", "Pulled Pork", "Smoked pork Belly", "Baby Back Ribs", "Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze", "BBQ Guiness Chicken (**upcharge of $1.00 pp for Silver**)", "Carolina BBQ Chicken", "Rotisserie Chicken", "BBQ Prawns (**upcharge of $1.00 pp**) / BBQ Black Tiger Prawns (**upcharge of $2.00 pp for Silver**)", "Salmon steak", "Tofu", "Vegetable kebabs", "Grilled Cauliflower Steaks"]	menu_info	2025-05-20 05:59:36.247675	2025-05-20 05:59:36.247675
+72	american_bbq_sides	American BBQ - Side Choice (Selection limits vary by package)	checkbox_group	\N	["Ham hock baked Beans", "Avocado deviled Eggs", "Mac n' Cheese", "Stuffed Poblano peppers", "Baked Potato Bar (**upcharge $1.50 pp**)", "Garlic Mashed Potatoes", "Mini Smashed Potatoes", "Twice Baked Potatoes (**upcharge $0.50 pp** or **$0.75 pp for Custom**)", "Corn on the Cob", "Creamed Corn", "Jalapeño Poppers", "Roasted Brussels Sprouts", "Corn Bread", "Jalapeno cornbread", "Grilled Vegetables", "Grilled Asparagus"]	menu_info	2025-05-20 05:59:36.349081	2025-05-20 05:59:36.349081
+73	american_bbq_salads	American BBQ - Salad Choice (Selection limits vary by package)	checkbox_group	\N	["Caesar", "Coleslaw", "Garden Salad", "Pasta Salad", "Bacon Jalapeño Corn Salad", "Wedge Salad", "German cucumber salad", "Crunchy Asian Slaw", "Tossed Cobb Salad", "Classic Potato Salad", "German Potato Salad", "Macaroni Salad", "Hawaiian Macaroni Salad", "Fruit Salad"]	menu_info	2025-05-20 05:59:36.443088	2025-05-20 05:59:36.443088
+74	american_bbq_sauces	American BBQ - Sauce Choice (Selection limits vary by package)	checkbox_group	\N	["Kansas City BBQ Sauce", "South Carolina Gold BBQ Sauce", "North Carolina Vinegar based BBQ Sauce", "Alabama White BBQ Sauce", "Texas BBQ Sauce", "Very Berry BBQ Sauce", "Smoky bourbon BBQ Sauce"]	menu_info	2025-05-20 05:59:36.53291	2025-05-20 05:59:36.53291
+75	american_bbq_condiments	American BBQ - Condiment Choice (Selection limits vary by package)	checkbox_group	\N	["Ketchup", "Stone Ground Mustard", "Dijon Mustard", "Yellow Mustard", "Mayonnaise", "Sweet pickle Chips", "Dill pickle Chips", "Sliced radish", "Sweet Relish", "Cranberry Relish", "Kimchi", "Mixed Pickled Vegetables - Giardiniera"]	menu_info	2025-05-20 05:59:36.621946	2025-05-20 05:59:36.621946
+76	taste_of_greece_mains	A Taste of Greece - Mains (Selection limits vary by package)	checkbox_group	\N	["Papoutsakia -Classic moussaka in individual hollowed eggplant shells with seasoned ground beef and topped with creamy bechamel", "Soutzoukakia -Plump oblong-shaped meatballs are packed with loads of aromatics and fresh herbs, smothered in a cinnamon wine-enhanced tomato sauce.", "Kokinisto - Boneless short rib slowly cooked in cinnamon-scented tomato sauce.", "Kleftiko - (Family style only - **upcharge of $5.00 pp**)- Boldly seasoned lamb roast that cooks with new potatoes, celery, and carrots, low and slow for 6 hours, in a parchment paper pouch.", "Pastitsio Classic baked pasta dish with cinnamon-scented ground meat and creamy béchamel sauce.", "Kotopoulo lemonato Aromatic and lemony baked chicken with fresh herbs.", "Paidakia (**upcharge of $4.00 per person**) These Greek lamb chops are marinated in a mix of olive oil, lemon juice, garlic and oregano and grilled to perfection", "Kotsi Arni - Slowly roasted lamb shank with tomato, herbs and robust spices such as cinnamon and clove.", "Bifteki Gemisto - Aromatic oven-baked minced beef 'burgers', stuffed with cheese and topped with tomato relish.", "Psari Plaki Oven-baked fish fillet topped with fresh tomato slices, onion, and fresh herbs", "Brizola Solomou Grilled salmon steaks with fresh herbs, lemon, and evoo.", "Bakaliaros Plaki - Oven-baked Cod fish fillet topped with fresh tomato slices, onion, and fresh herbs", "Aginares -Ala Polita - Vegan option - Artichoke hearts braised with potatoes and carrots and finished with a lemony sauce with herbs and olive oil."]	menu_info	2025-05-20 05:59:36.714288	2025-05-20 05:59:36.714288
+77	taste_of_greece_sides	A Taste of Greece - Sides (Selection limits vary by package)	checkbox_group	\N	["Spanakopita - Spinach and Feta Pie", "Tiropita - Cheese Pie", "Dolmades - Stuffed Grape Leaves", "Greek Roasted Potatoes", "Greek-Style Rice", "Souvlaki", "Grilled Vegetables", "Roasted Eggplant Dip (Melitzanosalata)", "Hummus", "Tzatziki", "Spanakorizo - Spinach Rice", "Gigantes Plaki - Greek Baked Giant Beans", "Lemon Potatoes", "Fava - Yellow Split Pea Puree", "Skordalia - Garlic Dip"]	menu_info	2025-05-20 05:59:36.805343	2025-05-20 05:59:36.805343
+78	taste_of_greece_salads	A Taste of Greece - Salad Choice (Selection limits vary by package)	checkbox_group	\N	["Greek Salad - Classic combination of tomatoes, cucumbers, bell peppers, red onions, Kalamata olives, and feta cheese", "Cretan Dakos Salad - Barley rusks topped with grated tomato, feta, olives, capers, and herbs", "Politiki Salad - Cabbage, carrot and celery salad with a vinegar dressing", "Marouli Salad - Romaine lettuce with fresh dill and spring onions in a light dressing"]	menu_info	2025-05-20 05:59:36.914393	2025-05-20 05:59:36.914393
+79	taste_of_italy_mains	A Taste of Italy - Mains (Selection limits vary by package)	checkbox_group	\N	["Meatballs", "Italian Sausage with Peppers and Onions", "Eggplant Parmesan", "Chicken Parmesan", "Chicken Piccata - Lemon Caper Sauce", "Chicken Marsala", "Chicken Cacciatore", "Chicken Saltimbocca", "Veal Parmesan (**upcharge of $3.00 pp**)", "Veal Piccata (**upcharge of $3.00 pp**)", "Veal Marsala (**upcharge of $3.00 pp**)", "Veal Saltimbocca (**upcharge of $3.00 pp**)", "Ossobuco - Braised Veal Shanks (**upcharge of $4.00 pp**)", "Tuscan Steak - Steak with Rosemary, Garlic & Olive Oil (**upcharge of $3.00 pp**)", "Porchetta - Stuffed, Rolled, and Roasted Pork Belly (**upcharge of $2.00 pp**)", "Pork Involtini", "Shrimp Scampi", "Baked Shrimp", "Linguine with Clams", "Baked Salmon", "Italian Stuffed Peppers", "Vegetarian Lasagna", "Eggplant Involtini"]	menu_info	2025-05-20 05:59:37.003519	2025-05-20 05:59:37.003519
+80	taste_of_italy_pasta	A Taste of Italy - Pasta Choice (Selection limits vary by package)	checkbox_group	\N	["Spaghetti and Meatballs", "Fettuccine Alfredo", "Spaghetti Carbonara", "Lasagna Bolognese", "Lasagna Vegetarian", "Baked Ziti", "Stuffed Shells", "Rigatoni with Vodka Sauce", "Gnocchi with Brown Butter and Sage", "Linguine with Clam Sauce", "Cacio e Pepe", "Tortellini with Pesto", "Cheese Ravioli with Tomato Sauce", "Lobster Ravioli (**upcharge of $2.00 pp**)", "Mushroom Risotto", "Seafood Risotto (**upcharge of $3.00 pp**)", "Truffle Risotto (**upcharge of $3.00 pp**)"]	menu_info	2025-05-20 05:59:37.100997	2025-05-20 05:59:37.100997
+81	taste_of_italy_sides	A Taste of Italy - Sides (Selection limits vary by package)	checkbox_group	\N	["Garlic Bread", "Rosemary Focaccia", "Bruschetta", "Caprese Salad", "Italian Green Beans", "Roasted Vegetables", "Grilled Asparagus", "Roasted Potatoes with Rosemary", "Polenta", "Risotto", "Ratatouille", "Italian Bread Basket"]	menu_info	2025-05-20 05:59:37.210007	2025-05-20 05:59:37.210007
+82	taste_of_italy_salads	A Taste of Italy - Salad Choice (Selection limits vary by package)	checkbox_group	\N	["Caesar Salad", "Caprese Salad", "Arugula with Parmesan", "Italian Chopped Salad", "Tuscan Kale Salad", "Antipasto Salad", "Insalata Mista - Mixed Greens with Balsamic Vinaigrette"]	menu_info	2025-05-20 05:59:37.313365	2025-05-20 05:59:37.313365
+83	taco_fiesta_proteins_fixed	Taco Fiesta - Proteins (Selection limits vary by package)	checkbox_group	\N	[{"label": "Barbacoa", "value": "barbacoa"}, {"label": "Flank steak Fajitas - **upcharge of $2.00 pp**", "value": "flank_steak_fajitas_____upcharge_of__2_00_pp__"}, {"label": "Ground Beef", "value": "ground_beef"}, {"label": "Pork Carnitas", "value": "pork_carnitas"}, {"label": "Pork Belly", "value": "pork_belly"}, {"label": "Chorizo", "value": "chorizo"}, {"label": "Beef Birria", "value": "beef_birria"}, {"label": "Mexican Chicken", "value": "mexican_chicken"}, {"label": "Cod", "value": "cod"}, {"label": "Shrimp", "value": "shrimp"}, {"label": "Tofu", "value": "tofu"}, {"label": "Roasted Vegetables", "value": "roasted_vegetables"}, {"label": "Escabeche - House-made picked vegetable medley", "value": "escabeche___house_made_picked_vegetable_medley"}]	menu_info	2025-05-20 06:10:08.29826	2025-05-20 06:10:08.29826
+84	taco_fiesta_sides_fixed	Taco Fiesta - Sides (Selection limits vary by package)	checkbox_group	\N	[{"label": "Refried Beans", "value": "refried_beans"}, {"label": "Mexican Street corn (Elotes)", "value": "mexican_street_corn__elotes_"}, {"label": "Queso Dip", "value": "queso_dip"}, {"label": "Chorizo Queso Dip", "value": "chorizo_queso_dip"}, {"label": "Stuffed Poblano peppers", "value": "stuffed_poblano_peppers"}, {"label": "Mexican Rice", "value": "mexican_rice"}, {"label": "Cilantro Lime Rice", "value": "cilantro_lime_rice"}, {"label": "Rice and Beans", "value": "rice_and_beans"}, {"label": "Jalapeno cornbread", "value": "jalapeno_cornbread"}, {"label": "Grilled Vegetables", "value": "grilled_vegetables"}, {"label": "Mexican Slaw with Mango", "value": "mexican_slaw_with_mango"}, {"label": "Vegetarian Empanadas", "value": "vegetarian_empanadas"}]	menu_info	2025-05-20 06:10:08.469288	2025-05-20 06:10:08.469288
+85	taco_fiesta_salsas_fixed	Taco Fiesta - Salsas (Selection limits vary by package)	checkbox_group	\N	[{"label": "Classic Pico de Gallo", "value": "classic_pico_de_gallo"}, {"label": "Fresh Mango Salsa", "value": "fresh_mango_salsa"}, {"label": "Pineapple Habanero Salsa", "value": "pineapple_habanero_salsa"}, {"label": "Cucumber & Apple Salsa", "value": "cucumber___apple_salsa"}, {"label": "Jicama and Papaya Salsa", "value": "jicama_and_papaya_salsa"}, {"label": "Salsa Roja (red sauce)", "value": "salsa_roja__red_sauce_"}, {"label": "Salsa Verde (green sauce)", "value": "salsa_verde__green_sauce_"}, {"label": "Creamy Salsa Verde (green sauce)", "value": "creamy_salsa_verde__green_sauce_"}, {"label": "Salsa Macha -(contains peanuts and sesame seeds)", "value": "salsa_macha___contains_peanuts_and_sesame_seeds_"}]	menu_info	2025-05-20 06:10:08.565914	2025-05-20 06:10:08.565914
+86	taco_fiesta_condiments_fixed	Taco Fiesta - Condiments (Selection limits vary by package)	checkbox_group	\N	[{"label": "Shredded cheese", "value": "shredded_cheese"}, {"label": "Shredded vegan cheese", "value": "shredded_vegan_cheese"}, {"label": "Diced Onions", "value": "diced_onions"}, {"label": "Lime wedges", "value": "lime_wedges"}, {"label": "Jalapeños", "value": "jalape_os"}, {"label": "Sour Cream", "value": "sour_cream"}, {"label": "Diced bell peppers", "value": "diced_bell_peppers"}, {"label": "Guacamole", "value": "guacamole"}, {"label": "Fire roasted bell peppers", "value": "fire_roasted_bell_peppers"}, {"label": "Sliced radish", "value": "sliced_radish"}, {"label": "Cilantro", "value": "cilantro"}, {"label": "Pickled cabbage", "value": "pickled_cabbage"}, {"label": "Escabeche - House-made picked vegetable medley", "value": "escabeche___house_made_picked_vegetable_medley"}]	menu_info	2025-05-20 06:10:08.661234	2025-05-20 06:10:08.661234
 \.
 
 
@@ -1734,11 +1799,13 @@ COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_
 --
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
-v1vKQK59wOGdJV39atg1JxrpUYYPCtlH	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:37:21.815Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:37:24
+g-6s7EcWb7zUav0iScWYKD4vqgE6YQv7	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T16:27:42.355Z","secure":false,"httpOnly":true,"domain":"home-bites-catering-kolmoconstructi.replit.app","path":"/","sameSite":"lax"},"userId":1}	2025-05-20 16:27:43
 CqhndxmWLZdv4KplScHzyLrscE7ZaTTb	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T14:14:52.952Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-20 14:14:53
-odqEPayEvCId8FtCjAayx37nYqS6Edxn	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T06:36:08.295Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-20 14:22:19
-BvoEC7TR59WqhNqPZof6GXg7MhfIcLN5	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:33:22.301Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:33:27
-bIOwPZzV2aDqnIu1le78V3wN1LW8lO-A	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T15:35:50.346Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-19 15:35:54
+CSOZSXgdUeSH08I5lPL0lIQiFSINRCX4	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:43:40.193Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:43:41
+04gHD9PYFFdsf2-xHOe95Knd0pozXZCD	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:55:06.789Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:55:07
+odqEPayEvCId8FtCjAayx37nYqS6Edxn	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T06:36:08.295Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 06:12:14
+q5F8B3hBiR45XkZG0RxUzemw1_WZBXsI	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:47:07.709Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:47:08
+hWojm7dk84ALBhHPan0F6VkU9wEDdD3v	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:48:38.303Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:48:39
 RDFTrMoxo5yR2egujeBx0fncU2slurMU	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-19T06:25:47.584Z","secure":false,"httpOnly":true,"path":"/"},"userId":1}	2025-05-20 06:20:17
 \.
 
@@ -1791,28 +1858,28 @@ SELECT pg_catalog.setval('public.events_id_seq', 1, false);
 -- Name: form_page_questions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_page_questions_id_seq', 60, true);
+SELECT pg_catalog.setval('public.form_page_questions_id_seq', 133, true);
 
 
 --
 -- Name: form_pages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_pages_id_seq', 19, true);
+SELECT pg_catalog.setval('public.form_pages_id_seq', 35, true);
 
 
 --
 -- Name: form_rule_targets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_rule_targets_id_seq', 1, false);
+SELECT pg_catalog.setval('public.form_rule_targets_id_seq', 8, true);
 
 
 --
 -- Name: form_rules_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_rules_id_seq', 1, false);
+SELECT pg_catalog.setval('public.form_rules_id_seq', 8, true);
 
 
 --
@@ -1833,7 +1900,7 @@ SELECT pg_catalog.setval('public.form_submissions_id_seq', 1, false);
 -- Name: forms_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.forms_id_seq', 9, true);
+SELECT pg_catalog.setval('public.forms_id_seq', 12, true);
 
 
 --
@@ -1882,7 +1949,7 @@ SELECT pg_catalog.setval('public.processed_emails_id_seq', 1, false);
 -- Name: question_library_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.question_library_id_seq', 11, true);
+SELECT pg_catalog.setval('public.question_library_id_seq', 86, true);
 
 
 --

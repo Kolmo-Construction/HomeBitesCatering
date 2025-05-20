@@ -1,0 +1,224 @@
+/**
+ * Menu Items Import Script - Focused Version
+ * * This script imports predefined menu items for Sandwich Factory and Vegan Menu
+ * into the library questions system with properly formatted options.
+ */
+
+import fetch from 'node-fetch';
+
+// Configuration
+const API_ENDPOINT_URL = "http://localhost:5000/api/form-builder/library-questions";
+const USERNAME = "admin";
+const PASSWORD = "admin123";
+
+/**
+ * Helper function to make authenticated API requests
+ */
+async function makeRequest(url, data) {
+  try {
+    const auth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${auth}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    if (!response.ok) {
+        // Log more details if the response is not OK
+        console.error(`API request failed with status ${response.status}:`, result);
+        return { success: false, data: result, status: response.status };
+    }
+    return { success: true, data: result };
+  } catch (error) {
+    console.error(`Error making request to ${url}:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Format options for checkbox_group or radio_group question types
+ * Each option should have a label, value structure (not just strings)
+ */
+function formatOptions(optionsArray) {
+  if (!Array.isArray(optionsArray)) {
+    console.warn('formatOptions expected an array, received:', optionsArray);
+    return []; // Return empty array or handle error as appropriate
+  }
+  return optionsArray.map(option => ({
+    label: String(option), // Ensure option is a string
+    value: String(option).replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase().substring(0, 50) // Sanitize and shorten value
+  }));
+}
+
+/**
+ * Create a library question
+ */
+async function createLibraryQuestion(data) {
+  console.log(`Preparing to create library question: ${data.defaultText}`);
+  
+  // Format the options properly if they exist and it's a relevant question type
+  if ((data.questionType === "checkbox_group" || data.questionType === "radio_group" || data.questionType === "dropdown") && data.defaultOptions && Array.isArray(data.defaultOptions)) {
+    data.defaultOptions = formatOptions(data.defaultOptions);
+  } else if (data.defaultOptions && !Array.isArray(data.defaultOptions)) {
+    console.warn(`defaultOptions for ${data.libraryQuestionKey} is not an array, skipping formatOptions.`);
+  }
+  
+  const result = await makeRequest(API_ENDPOINT_URL, data);
+  
+  if (result.success) {
+    console.log(`✅ Successfully created: ${data.defaultText} (ID: ${result.data?.id})`);
+  } else {
+    console.error(`❌ Failed to create: ${data.defaultText}`);
+    if (result.data) {
+        console.error("Error Data:", JSON.stringify(result.data, null, 2));
+    } else if (result.error) {
+        console.error("Fetch Error:", result.error);
+    }
+  }
+  console.log('---');
+  
+  return result;
+}
+
+/**
+ * Import all menu items
+ */
+async function importMenuItems() {
+  console.log("Starting menu items import for Sandwich Factory and Vegan Menu...");
+  
+  // ------ SANDWICH FACTORY SECTION ------
+  console.log("### IMPORTING SANDWICH FACTORY SECTIONS ###");
+
+  // Sandwich Factory - Spreads/Condiments
+  await createLibraryQuestion({
+    libraryQuestionKey: "sandwich_factory_spreads_condiments_v2", // Added _v2 for potential re-runs
+    defaultText: "Sandwich Factory - Spreads/Condiments (Selection limits vary by package)",
+    questionType: "checkbox_group",
+    category: "menu_info",
+    defaultOptions: [
+      "Classic Mayo",
+      "Vegan Mayo",
+      "Cranberry Mayo",
+      "Stone Ground Mustard",
+      "Dijon Mustard",
+      "Vegan Cilantro jalapeño aioli",
+      "Citrus Aioli",
+      "Basil Aioli",
+      "Horseradish Aioli",
+      "Cranberry relish",
+      "Classic Sweet Pickle Relish",
+      "Balsamic Fig Relish",
+      "Avocado Cilantro & Lime Spread",
+      "Eggplant & Tahini Spread",
+      "Pomegranate / pepper / walnut spread",
+      "Lebanese garlic Spread (very garlicky)"
+    ]
+  });
+
+  // Sandwich Factory - Salads
+  await createLibraryQuestion({
+    libraryQuestionKey: "sandwich_factory_salads_v2", // Added _v2
+    defaultText: "Sandwich Factory - Salads (Selection limits vary by package)",
+    questionType: "checkbox_group",
+    category: "menu_info",
+    defaultOptions: [
+      "Kale Salad",
+      "Greek Village Salad",
+      "Italian Pasta Salad",
+      "Tabouli Salad",
+      "German Cucumber Salad",
+      "Wedge Salad",
+      "Classic Potato Salad",
+      "Tossed Cobb",
+      "Crunchy Asian Salad",
+      "Caesar Salad",
+      "Garden Salad",
+      "Lebanese Bread Salad (Fattoush)"
+    ]
+  });
+  
+  // Note: Gluten-Free Bread options were in a matrix format in the original HTML,
+  // which is not directly compatible with the simple 'defaultOptions' array structure
+  // handled by the current 'createLibraryQuestion' and 'formatOptions' functions.
+  // Creating matrix questions would require a different API payload structure and is omitted here.
+
+  // ------ VEGAN MENU SECTION ------
+  console.log("### IMPORTING VEGAN MENU SECTIONS ###");
+
+  // Vegan Menu - Main Choice
+  await createLibraryQuestion({
+    libraryQuestionKey: "vegan_menu_mains_v2", // Added _v2
+    defaultText: "Vegan Menu - Main Choice",
+    questionType: "checkbox_group",
+    category: "menu_info",
+    defaultOptions: [
+      "Cabbage rolls- Stuffed with rice dried figs, pine nuts and fresh herbs",
+      "Eggplant Imam Baildi- Eggplant slices topped with stewed tomato, onions and peppers",
+      "Indian style stuffed Peppers - With curried chickpeas, spinach and rice",
+      "Eggplant Napolean - with roasted red peppers, Lebanese garlic spread and fresh herbs",
+      "Artichoke Ala Polita Artichoke hearts, new potatoes, and carrots with lemon tahini sauce",
+      "Stuffed Portabella Mushroom- with stewed lentils and cauliflower bechamel",
+      "Wild Rice Stuffed Acorn Squash",
+      "Tofu Vindaloo - Pan-seared tofu in a tangy Kashmiri chili garlic vinegar sauce!",
+      "Greek style stuffed Peppers.- With jasmine rice, fresh herbs and tomato",
+      "Vegan Moussaka- With stewed lentils, tomato and cauliflower bechamel",
+      "Stuffed Poblano peppers - Fire roasted poblano peppers, stuffed with rice, corn, black beans and cilantro"
+    ]
+  });
+
+  // Vegan Menu - Side Choice
+  await createLibraryQuestion({
+    libraryQuestionKey: "vegan_menu_sides_v2", // Added _v2
+    defaultText: "Vegan Menu - Side Choice (Example: Pick 2 - clarify package structure)",
+    questionType: "checkbox_group",
+    category: "menu_info",
+    defaultOptions: [
+      "Lemon Potatoes- Roasted russet potatoes cooked with oregano garlic, evoo and fresh lemon juice",
+      "Green Beans Almondine - Harricots with lemon, almond slices, and dill",
+      "​Fasolakia - Green beans simmered with tomato and fresh herbs",
+      "Gigante Beans - Oven-baked lima beans ﻿in a herbaceous tomato sauce",
+      "Dolmades - Hand-rolled grape leaves, stuffed with bulgur, dried figs and pine nuts. Finished with lemon tahini",
+      "Cannellini Beans with caponata",
+      "Roasted Brussel Sprouts - With EVOO and balsamic crema",
+      "Morrocan-style roasted Cauliflower- Lightly seasoned with Morrocan spices",
+      "Tuscan carrots- Whole baby carrots with thyme and balsamic crema",
+      "Moroccan wild rice",
+      "Cilantro-Lime rice",
+      "Greek rice pilaf",
+      "Southwest style Spring Rolls - Stuffed with rice, corn, black beans and bell pepper",
+      "Crispy Falafel - Homemade chickpea balls with lemon tahini sauce"
+    ]
+  });
+
+  // Vegan Menu - Salad Choice
+  await createLibraryQuestion({
+    libraryQuestionKey: "vegan_menu_salads_v2", // Added _v2
+    defaultText: "Vegan Menu - Salad Choice (Example: Pick 2 - clarify package structure)",
+    questionType: "checkbox_group",
+    category: "menu_info",
+    defaultOptions: [
+      "Panzanella Bread Salad= Cherry tomatoes, frisee, red onion, cucumber, fresh basil",
+      "Sicilian Fennel Salad- Shaved fennel, orange segments, dill, red onion, Kalamata olives",
+      "Bowtie Pasta Salad - Bowtie pasta, grape tomatoes, squash, zuchini, red onion, green olives, pimento",
+      "Tuscan Orzo Pesto Salad - Orzo pasta, basil, pine nuts, grape tomatoes, chickpeas, Kalamata olives",
+      "Garden Salad",
+      "Greek Village Salad - heirloom tomatoes, cucumber, red onion, green bell pepper, red onion, Kalamata olives, capers",
+      "Tomato - Cucumber salad",
+      "Tabouli- Bulgur, tomato, parsley, red onion, tahini, lemon",
+      "Lebanese Potato Salad - New potatoes, red onions, parsley, olives"
+    ]
+  });
+
+  console.log("Menu items import complete for Sandwich Factory and Vegan Menu!");
+}
+
+// Run the import function
+importMenuItems().catch(err => {
+  console.error("Error importing menu items:", err);
+  process.exit(1); // Exit with an error code if the import fails
+});
