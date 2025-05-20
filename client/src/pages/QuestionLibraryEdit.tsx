@@ -388,6 +388,17 @@ export default function QuestionLibraryEdit() {
       // Initialize matrix with empty rows and columns
       setRows([{ id: 'row-0', label: '' }]);
       setColumns([{ id: 'col-0', label: '', value: '' }]);
+    } else if (value === 'hidden_calculation') {
+      // Initialize calculation metadata if not already present
+      const currentMetadata = form.getValues('defaultMetadata') || {};
+      form.setValue('defaultMetadata', {
+        ...currentMetadata,
+        formula: currentMetadata.formula || '',
+        dataType: currentMetadata.dataType || 'number',
+        precision: currentMetadata.precision || 2,
+        formatOptions: currentMetadata.formatOptions || {},
+        description: currentMetadata.description || ''
+      });
     }
   };
 
@@ -689,6 +700,110 @@ export default function QuestionLibraryEdit() {
                         </FormItem>
                       )}
                     />
+                    
+                    {/* Special fields for hidden_calculation type */}
+                    {questionType === 'hidden_calculation' && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="defaultMetadata.formula"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Calculation Formula</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="e.g. {appetizer_cost} + {main_course_cost} * {guest_count}" 
+                                  {...field} 
+                                  className="font-mono"
+                                  rows={3}
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Enter your calculation formula. Use {'{question_key}'} to reference other form fields.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="defaultMetadata.description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="e.g. Calculates the total cost for catering based on selected items and guest count" 
+                                  {...field} 
+                                  rows={2}
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Explain what this calculation does (for admin use only)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="defaultMetadata.dataType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Data Type</FormLabel>
+                              <Select
+                                value={field.value || "number"}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select data type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="number">Number</SelectItem>
+                                  <SelectItem value="currency">Currency</SelectItem>
+                                  <SelectItem value="percentage">Percentage</SelectItem>
+                                  <SelectItem value="boolean">Yes/No</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                How the calculated value should be formatted
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="defaultMetadata.precision"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Decimal Precision</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="6" 
+                                  {...field} 
+                                  value={field.value || "2"}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Number of decimal places to display (0-6)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
                     
                     <FormField
                       control={form.control}
