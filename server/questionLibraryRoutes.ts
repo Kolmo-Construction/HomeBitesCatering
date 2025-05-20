@@ -418,48 +418,56 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       console.log("Clone result:", result.rows[0]);
       const newQuestion = result.rows[0];
       
-      // If it's a matrix question, clone the rows and columns too
-      if ((originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix') && 
-          (originalQuestion.matrixRows || []).length > 0 && 
-          (originalQuestion.matrixColumns || []).length > 0) {
-        // Clone rows
-        for (const row of originalQuestion.matrixRows) {
-          const createRowSql = `
-            INSERT INTO library_matrix_rows
-            (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-          `;
-          
-          const rowValues = [
-            newQuestion.id,
-            row.row_key,
-            row.label,
-            row.price,
-            row.default_metadata,
-            row.row_order
-          ];
-          
-          await db.execute(createRowSql, rowValues);
+      // Handle matrix-type questions
+      const isMatrixType = originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix';
+
+      if (isMatrixType) {
+        // Clone rows if they exist
+        if (originalQuestion.matrixRows && originalQuestion.matrixRows.length > 0) {
+          console.log(`Cloning ${originalQuestion.matrixRows.length} matrix rows for new question ID: ${newQuestion.id}`);
+          for (const row of originalQuestion.matrixRows) {
+            const createRowSql = `
+              INSERT INTO library_matrix_rows
+              (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
+              VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            `;
+            
+            // Ensure row properties are accessed correctly (snake_case from DB)
+            const rowValues = [
+              newQuestion.id,
+              row.row_key,
+              row.label,
+              row.price,
+              row.default_metadata ? JSON.stringify(row.default_metadata) : null, // Ensure metadata is stringified
+              row.row_order
+            ];
+            
+            await db.execute(createRowSql, rowValues);
+          }
         }
-        
-        // Clone columns
-        for (const column of originalQuestion.matrixColumns) {
-          const createColumnSql = `
-            INSERT INTO library_matrix_columns
-            (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-          `;
-          
-          const columnValues = [
-            newQuestion.id,
-            column.column_key,
-            column.header,
-            column.cell_input_type,
-            column.default_metadata,
-            column.column_order
-          ];
-          
-          await db.execute(createColumnSql, columnValues);
+
+        // Clone columns if they exist
+        if (originalQuestion.matrixColumns && originalQuestion.matrixColumns.length > 0) {
+          console.log(`Cloning ${originalQuestion.matrixColumns.length} matrix columns for new question ID: ${newQuestion.id}`);
+          for (const column of originalQuestion.matrixColumns) {
+            const createColumnSql = `
+              INSERT INTO library_matrix_columns
+              (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
+              VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            `;
+            
+            // Ensure column properties are accessed correctly (snake_case from DB)
+            const columnValues = [
+              newQuestion.id,
+              column.column_key,
+              column.header,
+              column.cell_input_type,
+              column.default_metadata ? JSON.stringify(column.default_metadata) : null, // Ensure metadata is stringified
+              column.column_order
+            ];
+            
+            await db.execute(createColumnSql, columnValues);
+          }
         }
       }
       

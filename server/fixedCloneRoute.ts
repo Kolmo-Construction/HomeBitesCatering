@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "./db";
+import { pool } from "./db";
 
 /**
  * Fixed question cloning function that addresses the parameter issue
@@ -18,7 +19,7 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
     const fetchSql = `SELECT * FROM question_library WHERE id = $1`;
     console.log("Executing fetch query with ID:", questionId);
     
-    const originalResult = await db.execute(fetchSql, [questionId]);
+    const originalResult = await pool.query(fetchSql, [questionId]);
     if (!originalResult || !originalResult.rows || originalResult.rows.length === 0) {
       return res.status(404).json({ message: "Question not found" });
     }
@@ -54,7 +55,7 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
     console.log("Executing insert with params:", insertParams.map((p, i) => 
       `$${i+1}: ${typeof p === 'object' ? 'Object' : p}`).join(', '));
     
-    const insertResult = await db.execute(insertSql, insertParams);
+    const insertResult = await pool.query(insertSql, insertParams);
     const newQuestion = insertResult.rows[0];
     
     console.log("Successfully created clone with ID:", newQuestion.id);
@@ -64,7 +65,7 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
       try {
         // Matrix rows
         const rowsSql = `SELECT * FROM library_matrix_rows WHERE library_question_id = $1`;
-        const rowsResult = await db.execute(rowsSql, [questionId]);
+        const rowsResult = await pool.query(rowsSql, [questionId]);
         
         for (const row of rowsResult.rows) {
           const insertRowSql = `
@@ -82,12 +83,12 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
             row.row_order || 0
           ];
           
-          await db.execute(insertRowSql, rowParams);
+          await pool.query(insertRowSql, rowParams);
         }
         
         // Matrix columns
         const columnsSql = `SELECT * FROM library_matrix_columns WHERE library_question_id = $1`;
-        const columnsResult = await db.execute(columnsSql, [questionId]);
+        const columnsResult = await pool.query(columnsSql, [questionId]);
         
         for (const column of columnsResult.rows) {
           const insertColSql = `
@@ -105,7 +106,7 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
             column.column_order || 0
           ];
           
-          await db.execute(insertColSql, columnParams);
+          await pool.query(insertColSql, columnParams);
         }
       } catch (matrixError) {
         console.error("Matrix data cloning error:", matrixError);
