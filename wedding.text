@@ -1,0 +1,736 @@
+
+*(Incorporating UI/UX Recommendations for an Interactive Form)*
+
+## Basic Information
+*(Recommendation: Use conditional logic to show/hide fields based on previous selections. E.g., Ceremony times only if Event Type is Wedding.)*
+
+* **Event Type?** (Corporate event, Engagement, Wedding, Birthday, Other Private Party, Food Truck)
+    * *(UI Note: Selecting "Wedding" could reveal ceremony time fields. Selecting "Corporate event" could hide them.)*
+* **Company Name** *(UI Note: Potentially show only if "Corporate event" is selected)*
+* **Billing Address** (Street Address, Street Address Line 2, City, State / Province, Postal / Zip Code)
+* **Name** (First Name, Last Name)
+* **Email**
+* **Phone Number**
+* **What is the date of your event** (Month, Day, Year)
+* **Do you have a Discount Promo Code** (YES/NO)
+    * **Enter code here** *(UI Note: Show only if "YES" to promo code)*
+* **Have you secured a venue?** (YES/NO)
+    * **What is the name of your venue?** *(UI Note: Show only if "YES" to secured venue)*
+    * **What is the location of your venue?** (Street Address, Street Address Line 2, City, State / Province, Postal / Zip Code) *(UI Note: Show only if "YES" to secured venue)*
+* **What is the start time of your event?**
+* **What is the end time of your event?**
+* **What is the start time of your ceremony** (If applicable, e.g., for Weddings)
+* **What is the end time of your ceremony** (If applicable)
+* **Set-up before Ceremony start time?** (YES/NO) (If applicable)
+* **Cocktail Hour?** (YES/NO)
+    * **What is the start time of your Cocktail/Appetizer service?** *(UI Note: Show if "YES" to Cocktail Hour)*
+    * **What is the end time of your Cocktail/Appetizer service?** *(UI Note: Show if "YES" to Cocktail Hour)*
+* **Main Course Service** (YES/NO)
+    * **What is the start time of your Food service?** *(UI Note: Show if "YES" to Main Course Service)*
+    * **What is the end time of your Food service?** *(UI Note: Show if "YES" to Main Course Service)*
+* **How many guests are you hosting?** *(UI Note: This input is crucial. Warn if guest count is below minimums for certain packages, e.g., "Bronze package not available for a guest count lower than 50".)*
+* **Service Style** (Drop-off, Buffet Standard, Buffet Full Service – no setup, Buffet Full Service, Family Style Service- (not available for Taco Fiesta), Plated Dinner, Cocktail Party, Food Truck)
+    * *Service Fee Note- Full Service:* Please note that you have selected Full-service Buffet. This includes us assisting in all setup needs, buffet service, and breakdown including garbage removal. We will remain onsite for the duration of the event. *(UI Note: Display this note conditionally if "Buffet Full Service" is selected.)*
+    * *Service Fee Note- Standard Service:* Please note that you have selected Standard-service Buffet. This includes us setting up and servicing the, buffet . We will close the buffet at the above listed time (Food Service End Time) break down and clean the buffet area and depart. We will not be responsible for garbage disposal unless this has been negotiated in advance. *(UI Note: Display this note conditionally if "Buffet Standard" is selected.)*
+* **Service Duration** (Number)
+* **Labor Hours** (Number)
+* **What would like a quote for:** (Taco Fiesta, American BBQ, A taste of Greece, Kebab Party, A taste of Italy, Custom Menu, Hor d' oeuvres only (Cocktail party), Food Truck)
+    *(UI Note: This primary selection should drive which menu sections are subsequently displayed.)*
+
+---
+*(General UI Recommendation: Implement a running subtotal for each major section and a grand total that updates dynamically as users make selections, especially those with upcharges.)*
+---
+
+## Main Menu Categories & Packages
+
+*(General UI Recommendation for Themed Menus:
+1. User selects a theme (e.g., Taco Fiesta).
+2. User is prompted to select a package (Bronze, Silver, etc.).
+3. Based on package selection, dynamically display the correct item categories (Proteins, Sides, etc.) with the allowed number of choices for that package. Clearly indicate items with upcharges.
+4. Enforce selection limits (min/max) with real-time feedback.)*
+
+### 1. Taco Fiesta
+*Bronze package not available for a guest count lower than 50*
+
+**Packages:**
+* **Bronze - $28 per person** (3 proteins, 2 sides, 3 salsas, 4 condiments)
+* **Silver - $34 per person** (4 proteins, 3 sides, 4 salsas, 6 condiments)
+* **Gold - $40 per person** (4 proteins, 4 sides, 4 salsas, 5 condiments) (*Note from original extraction: Form shows 6 condiments for Silver, 5 for Gold, 8 for Diamond. This might be an error in the form or specific to Gold package structure. A new design should ensure consistency.*)
+* **Diamond - $46 per person** (5 proteins, 5 sides, 5 salsas, 8 condiments)
+
+**Proteins (Selection limits vary by package):**
+* Barbacoa
+* Flank steak Fajitas - **upcharge of $2.00 pp**
+* Ground Beef
+* Pork Carnitas
+* Pork Belly
+* Chorizo
+* Beef Birria
+* Mexican Chicken
+* Cod
+* Shrimp
+* Tofu
+* Roasted Vegetables
+* Escabeche - House-made picked vegetable medley (Appears under Bronze - Condiments in one section, Proteins in another; listed here as per Protein sections)
+
+**Sides (Selection limits vary by package):**
+* Refried Beans
+* Mexican Street corn (Elotes)
+* Queso Dip
+* Chorizo Queso Dip
+* Stuffed Poblano peppers
+* Mexican Rice
+* Cilantro Lime Rice
+* Rice and Beans
+* Jalapeno cornbread
+* Grilled Vegetables
+* Mexican Slaw with Mango
+* Vegetarian Empanadas
+
+**Salsas (Selection limits vary by package):**
+* Classic Pico de Gallo
+* Fresh Mango Salsa
+* Pineapple Habanero Salsa
+* Cucumber & Apple Salsa
+* Jicama and Papaya Salsa
+* Salsa Roja (red sauce)
+* Salsa Verde (green sauce)
+* Creamy Salsa Verde (green sauce)
+* Salsa Macha -(contains peanuts and sesame seeds)
+
+**Condiments (Selection limits vary by package):**
+* Shredded cheese
+* Shredded vegan cheese
+* Diced Onions
+* Lime wedges
+* Jalapeños
+* Sour Cream
+* Diced bell peppers
+* Guacamole
+* Fire roasted bell peppers
+* Sliced radish
+* Cilantro
+* Pickled cabbage
+* Escabeche - House-made picked vegetable medley
+
+---
+
+### 2. American BBQ
+*Bronze package not available for a guest count lower than 50*
+
+**Packages:**
+* **Bronze - $32 pp** (3 mains, 2 sides, 2 salads, 3 condiments, 2 sauces)
+* **Silver - $38 pp** (4 mains, 3 sides, 2 salads, 3 condiments, 2 sauces) (*Note from original extraction: Form shows 4 sides for Silver in one section, 3 in another. A new design should ensure consistency.*)
+* **Gold - $46 per person** (4 mains, 4 sides, 3 salads, 4 condiments, 3 sauces)
+* **Diamond - $54 per person** (5 mains, 5 sides, 3 salads, 4 condiments, 4 sauces) (*Note from original extraction: Form shows 5 condiments for Diamond in one section, 4 in another. A new design should ensure consistency.*)
+
+**Mains/Protein Choice (Selection limits vary by package):**
+* Prime Rib - Boneless -Carving station (**upcharge of $4.00 pp**)
+* Smoked Brisket (**upcharge $2.00 pp**)
+* Beef Ribs (**upcharge $3.00 pp** or **$4.00 pp in Diamond**)
+* Guinness Braised Boneless Short Ribs (**upcharge $2.00 pp**)
+* Bacon Wrapped Fillet Mingon - (**upcharge of $4.00 pp**)
+* Flank Steak with Chimichurri
+* Sausage Medley
+* Hamburger Bar (**upcharge of $1.50 pp**) (includes full condiment bar for Silver)
+* Lamb Chops (**upcharge of $3.00 pp**)
+* Smoked Leg of Lamb (Family Style only)
+* Pulled Pork
+* Smoked pork Belly
+* Baby Back Ribs
+* Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze
+* BBQ Guiness Chicken (**upcharge of $1.00 pp for Silver**)
+* Carolina BBQ Chicken
+* Rotisserie Chicken
+* BBQ Prawns (**upcharge of $1.00 pp**) / BBQ Black Tiger Prawns (**upcharge of $2.00 pp for Silver**)
+* Salmon steak
+* Tofu
+* Vegetable kebabs
+* Grilled Cauliflower Steaks
+
+**Side Choice (Selection limits vary by package):**
+* Ham hock baked Beans
+* Avocado deviled Eggs
+* Mac n' Cheese
+* Stuffed Poblano peppers
+* Baked Potato Bar (**upcharge $1.50 pp**)
+* Garlic Mashed Potatoes
+* Mini Smashed Potatoes
+* Twice Baked Potatoes (**upcharge $0.50 pp** or **$0.75 pp for Custom**)
+* Corn on the Cob
+* Creamed Corn
+* Jalapeño Poppers
+* Roasted Brussels Sprouts
+* Corn Bread
+* Jalapeno cornbread
+* Grilled Vegetables
+* Grilled Asparagus
+
+**Salad Choice (Selection limits vary by package):**
+* Caesar
+* Coleslaw
+* Garden Salad
+* Pasta Salad
+* Bacon Jalapeño Corn Salad
+* Wedge Salad
+* German cucumber salad
+* Crunchy Asian Slaw
+* Tossed Cobb Salad
+* Classic Potato Salad
+* German Potato Salad
+* Macaroni Salad
+* Hawaiian Macaroni Salad
+* Fruit Salad
+
+**Sauce Choice (Selection limits vary by package):**
+* Kansas City BBQ Sauce
+* South Carolina Gold BBQ Sauce
+* North Carolina Vinegar based BBQ Sauce
+* Alabama White BBQ Sauce
+* Texas BBQ Sauce
+* Very Berry BBQ Sauce
+* Smoky bourbon BBQ Sauce
+
+**Condiment Choice (Selection limits vary by package):**
+* Ketchup
+* Stone Ground Mustard
+* Dijon Mustard
+* Yellow Mustard
+* Mayonnaise
+* Sweet pickle Chips
+* Dill pickle Chips
+* Sliced radish
+* Sweet Relish
+* Cranberry Relish
+* Kimchi
+* Mixed Pickled Vegetables - Giardiniera
+
+---
+
+### 3. A Taste of Greece
+*Bronze package not available for a guest count lower than 50*
+
+**Packages:**
+* **Bronze - from $32 per person** (3 mains, 3 sides, 2 salads, pita bread)
+* **Silver - from $38 per person** (4 mains, 3 sides, 2 salads, pita bread)
+* **Gold - from $46 per person** (4 mains, 4 sides, 2 salads, spreads selection, pita bread)
+* **Diamond - from $59 per person** (5 mains, 4 sides, 3 salads, spreads selection, meze platter, pita bread)
+
+**Mains (Selection limits vary by package):**
+* Papoutsakia -Classic moussaka in individual hollowed eggplant shells with seasoned ground beef and topped with creamy bechamel
+* Soutzoukakia -Plump oblong-shaped meatballs are packed with loads of aromatics and fresh herbs, smothered in a cinnamon wine-enhanced tomato sauce.
+* Kokinisto - Boneless short rib slowly cooked in cinnamon-scented tomato sauce.
+* Kleftiko - (Family style only - **upcharge of $5.00 pp**)- Boldly seasoned lamb roast that cooks with new potatoes, celery, and carrots, low and slow for 6 hours, in a parchment paper pouch.
+* Pastitsio Classic baked pasta dish with cinnamon-scented ground meat and creamy béchamel sauce.
+* Kotopoulo lemonato Aromatic and lemony baked chicken with fresh herbs.
+* Paidakia (**upcharge of $4.00 per person**) These Greek lamb chops are marinated in a mix of olive oil, lemon juice, garlic and oregano and grilled to perfection
+* Kotsi Arni - Slowly roasted lamb shank with tomato, herbs and robust spices such as cinnamon and clove.
+* Bifteki Gemisto - Aromatic oven-baked minced beef “burgers”, stuffed with cheese and topped with tomato relish.
+* Psari Plaki Oven-baked fish fillet topped with fresh tomato slices, onion, and fresh herbs
+* Brizola Solomou Grilled salmon steaks with fresh herbs, lemon, and evoo.
+* Bakaliaros Plaki - Oven-baked Cod fish fillet topped with fresh tomato slices, onion, and fresh herbs
+* Aginares -Ala Polita - Vegan option - Artichoke hearts braised with potatoes and carrots and finished with a creamy egg-lemon sauce and fresh dill.
+* Gemista - Vegan Oven-baked stuffed tomatoes and peppers with rice, and fresh herbs
+
+**Sides (Selection limits vary by package):**
+* Lemon Potatoes - Roasted russet potatoes cooked with oregano garlic, evoo and fresh lemon juice
+* Spanakopita - House made phyllo dough pouches stuffed with spinach, greens, herbs, and feta cheese
+* Kritharaki - Orzo pasta baked in the oven. A pasta side dish choice with any main
+* Fasolakia - Green beans simmered with tomato and fresh herbs
+* Gigandes Plaki - Oven baked lima beans in a herbaceous tomato sauce
+* Tyrokroketes -A blend of three Greek cheeses rolled into delightful tangy balls and coated with sesame seeds
+* Octapodi -Spanish octopus slowly braised and served simply with lemon juice, EVOO, and fresh oregano. (**$7.00pp upcharge for Gold/Diamond**)
+* Dolmades Grape leaves stuffed with rice and fresh herbs
+* Saganaki Cheese - Cheese is deep fried to make a crispy outside, with a melty gooey inside. Flambeed tableside! (Family style only- **upcharge $2.00 pp**)
+* Greek Rice Pilaf - Long grain rice, with mixed diced vegetables, scented with lemon zest and fresh herbs.
+* Baked Vegetables- Briam - Thinly sliced vegetable medley, seasoned and baked till lightly charred.
+
+**Salads (Selection limits vary by package):**
+* Salata Horiatiki - A mix of tomatoes, cucumber, onion, green pepper, feta, and olives, dressed with oil and vinegar
+* Lahanosalata (Greek Coleslaw) -Green and red shredded cabbage, grated carrots, olive oil and lemon juice
+* Maroulosalata (Greek Romaine Salad) Shredded romaine lettuce, scallions, a mixed herbs, olive oil, lemon, juice
+* Patatosalata -Warm potato salad with sliced red onions, Kalamata olives, parsley and extra virgin olive oil
+* Dakos Bread Salad- Fresh tomatoes, barley rusks, feta, capers, onion, oregano, and basil.
+* Garden Salad - Mixed greens, cherry tomatoes, cucumber, red onion and mushrooms with choice of dressing
+* Tabouli - Chopped parsley, cous-cous, tomato, cucumber, mint , red onion and lemon-tahini dressing
+
+**Spreads (Included in Gold & Diamond, selection of 3):**
+* Tzatziki - Yogurt, garlic, cucumber, herbs
+* Hummus - Chickpea, tahini, lemon
+* Melitzanosalata - Eggplant, garlic, tahini, cilantro
+* Spicy Feta - Feta cheese puree with spicy peppers
+* Taramasalata - Cod roe, potato, extra virgin olive oil
+* Beet Hummus - Roasted beets, chickpea, garlic, tahini, evoo
+
+---
+
+### 4. Kebab Party
+*Bronze package not available for a guest count lower than 50*
+
+**Packages:**
+* **Bronze - $35 per person** (3 proteins, 3 sides, 2 salads)
+* **Silver -$39 per person** (4 mains, 4 sides, 2 salads) (*Note from original extraction: Form uses "mains" here, likely means proteins*)
+* **Gold -$49 per person** (4 mains, 4 sides, 3 salads. + Includes spreads)
+* **Diamond - $63 per person** (5 proteins, 4 sides, 3 salads, + Includes spreads + includes meze grazing board)
+
+**Proteins/Mains (Selection limits vary by package):**
+* Pork Tenderloin
+* Chicken
+* Beef Tenderloin
+* Beef Flank
+* Lamb - (**$1.50 upcharge** for Bronze, Silver, Gold, Diamond)
+* Swordfish
+* Shrimp
+* Bacon wrapped Asparagus
+* Tofu
+* Mushrooms
+* Tomato & Gnocchi- with pesto
+* Mixed Vegetables
+
+**Sides (Selection limits vary by package):**
+* Falafel
+* Spanakopita
+* Dolmades
+* Yellow Rice Pilaf
+* Wild Rice and Mushroom Pilaf
+* Patatas Bravas
+* Potato Croquettes
+* Roasted beets
+* Roasted Brussel Sprouts
+* Morrocan-style roasted Cauliflower
+* Roasted carrots
+* Grilled Vegetables
+
+**Salads (Selection limits vary by package):**
+* Tabouli
+* Fattoush
+* Cous-cous
+* Lebanese Potato Salad
+* Greek Village Salad
+* Tomato - Cucumber salad
+* Caprese pasta salad
+* Caesar
+* Garden Salad
+
+**Spreads (Included in Gold & Diamond, served with pita bread, crudité and breadsticks - Pick 3):**
+* Tzatziki
+* Hummus
+* Baba Ghanoush
+* Spicy Feta
+* Taramasalata
+* Muhammara
+* Lebanese garlic dip
+
+---
+
+### 5. A Taste of Italy
+*Bronze package not available for a guest count lower than 50*
+
+**Packages:**
+* **Bronze - $32 pp** (2 mains, 3 sides, 1 pasta, 2 salad, garlic bread)
+* **Silver -$38 per person** (3 mains, 3 sides, 1 pasta, 2 salads, garlic bread)
+* **Gold -$46 per person** (4 mains, 4 sides, 3 salads, 1 pasta, garlic bread) (*Note from original extraction: Form shows 2 salads for Gold in one section, 3 in another. A new design should ensure consistency.*)
+* **Diamond - $58 per person** (5 mains, 4 sides, 3 salads,1 pasta, garlic bread, antipasti platter)
+
+**Main Choice (Selection limits vary by package):**
+* Chicken Saltimbocca - Thinly sliced chicken breast (Scaloppine) with fresh Sage, Parmesan flakes and prosciutto
+* Chicken Florentine - Pan-fried chicken breast, spinach, garlic, white wine cream sauce
+* Chicken Piccata - Pan-fried chicken breast, butter, lemon, capers and parsley
+* Chicken Cacciatore - Slowly cooked chicken thighs with robust tomato sauce, mushrooms, peppers and onions
+* Chicken parmesan White - Breaded chicken breast, sun-dried tomato, garlic, parmesan, white wine cream sauce and basil
+* Chicken Parmesan Red - Breaded chicken breast, robust tomato sauce, mozzarella, parmesan and basil
+* Chicken Marsala - Thinly sliced chicken breast (Scaloppine)with mushrooms, creamy Marsala wine sauce and fresh parsley
+* Chicken Puttanesca -Slowly cooked chicken thighs with robust tomato sauce, olives, capers, anchovies and crushed red pepper (moderately spicy)
+* Beef Pizzaiola Slowly cooked beef shoulder with robust tomato sauce
+* Beef Braciole Stuffed flank steak with parmesan cheese, salami herbs and breadcrumbs braised in tomato sauce
+* Lasagna -Layered beef & pork with ricotta cheese, pasta, mozzarella cheese and tomato sauce
+* Veal Saltimbocca - Thinly Veal (Scaloppine) with fresh Sage, Parmesan flakes and prosciutto (**upcharge of $3.00 pp**)
+* Osso Bucco Beef shanks slowly braised with root vegetables, garlic and red wine (**upcharge of $8.00 pp**)
+* Brasato Al Barolo Flank steak braised with barolo wine and tomato
+* Italian Meatballs
+* Pesce All'Acqua Pazza -(Poached Hallibut) with tomatoes, capers and lemon
+* Spinach and Ricotta Manicotti / Cannelloni (form uses both terms)
+* Vegetarian Lasagna -Layered artichoke hearts with ricotta cheese, pasta, mozzarella cheese and bechamel sauce
+
+**Side Choice (Selection limits vary by package):**
+* Rosemary roasted Potatoes
+* Green Beans Almondine
+* Baked Cauliflower with bechamel and shaved Parmesan
+* Asiago Zucchini bites
+* Eggplant Parmesan
+* Cannellini Beans with caponata
+* Peas with Pancetta
+* Tuscan Roasted Carrots
+* Roasted Brussels sprouts wit balsamic Crema
+
+**Pasta Choice (Selection of 1 per package):**
+* Penne Pasta with butter
+* Penne Pasta with Pesto
+* Penne Pasta with Marinara
+* Rigatoni with butter
+* Rigatoni with Pesto
+* Rigatoni with Marinara
+* Conchiglie with butter
+* Conchiglie with Pesto
+* Conchiglie with Marinara
+
+**Salad Choice (Selection limits vary by package):**
+* Caprese Stuffed Avocado
+* Panzanella Bread Salad
+* Tossed Italian Cobb Salad
+* Sicilian Fennel Salad
+* Roasted Beets with Burrata
+* Caprese
+* Pasta Salad (Italian Pasta Salad in other sections)
+* Tuscan Orzo Pesto Salad
+* Caesar Salad
+* Garden Salad
+
+---
+
+### 6. Sandwich Factory
+
+**Packages:**
+* **Bronze - from $13 per person:** Meats, Cheeses, veggies, & four condiments, White, multigrain, and whole wheat breads.
+    * Meats: Smoked Turkey, Black Forest Ham, Pepperoni
+    * Cheeses: Cheddar Cheese, Swiss Cheese, Monterey Cheese
+    * Veggies: Lettuce, Tomato, Onion
+    * Breads: White Bread, Whole Wheat Bread, Multigrain Bread
+    * Condiments/Spreads: Choose 4
+* **Silver - from $18 per person:** Meats, cheeses, veggies, & five condiments. White, Multigrain, and whole wheat breads, croissants, bagels, and two salads.
+    * Meats: Smoked Turkey, Black Forest Ham, Pepperoni
+    * Cheeses: Cheddar Cheese, Swiss Cheese, Monterey Cheese, Cream Cheese
+    * Veggies: Lettuce, Tomato, Onion
+    * Breads: White Bread, Whole Wheat Bread, Multigrain Bread, Bagels, Croissants
+    * Condiments/Spreads: Choose 5
+    * Salads: Pick 2
+* **Gold - from $23 per person:** Premium meats & cheeses, veggies, fruits & six condiments. White, multigrain, whole wheat sliced breads, croissants, bagels, and two salads.
+    * Meats: Smoked Turkey, Black Forest Ham, Pepperoni
+    * Cheeses: Cheddar Cheese, Swiss Cheese, Monterey Cheese, Gouda, Cream Cheese
+    * Veggies: Lettuce, Tomato, Onion, Avocado, Spinach, Arugula
+    * Breads: White Bread, Sourdough, Rye, Whole Wheat Bread, Multigrain Bread, Bagels, Croissants
+    * Condiments/Spreads: Choose 6
+    * Salads: Pick 2
+* **Diamond - from $28 per person:** Premium meats & cheeses, veggies, & six condiments. White, multigrain, and whole wheat breads, croissants, bagels and rolls, three salads, and fresh fruit grazing board. Bottled Water.
+    * Meats: Smoked Turkey, Black Forest Ham, Pepperoni, Salami, Roast Beef, Pastrami
+    * Cheeses: Cheddar Cheese, Swiss Cheese, Monterey Cheese, Havarti, Brie, Gouda, Cream Cheese
+    * Veggies: Lettuce, Tomato, Onion, Avocado, Spinach, Arugula, Alfafa, Bell peppers - most special requests are honored.
+    * Breads: White Bread, Sourdough, Rye, Whole Wheat Bread, Multigrain Bread, Bagels, Croissants
+    * Condiments/Spreads: Choose 6
+    * Salads: Pick 3
+
+**Sandwich Spreads/Condiments (Selection limits vary by package):**
+* Classic Mayo
+* Vegan Mayo
+* Cranberry Mayo
+* Stone Ground Mustard
+* Dijon Mustard
+* Vegan Cilantro jalapeño aioli
+* Citrus Aioli
+* Basil Aioli
+* Horseradish Aioli
+* Cranberry relish
+* Classic Sweet Pickle Relish
+* Balsamic Fig Relish
+* Avocado Cilantro & Lime Spread
+* Eggplant & Tahini Spread
+* Pomegranate / pepper / walnut spread
+* Lebanese garlic Spread (very garlicky)
+
+**Salads (Selection limits vary by package - e.g., Pick 2 for Silver/Gold, Pick 3 for Diamond):**
+* Kale Salad
+* Greek Village Salad
+* Italian Pasta Salad
+* Tabouli Salad
+* German Cucumber Salad
+* Wedge Salad
+* Classic Potato Salad
+* Tossed Cobb
+* Crunchy Asian Salad
+* Caesar Salad
+* Garden Salad
+* Lebanese Bread Salad (Fattoush)
+
+**Gluten-Free Bread Options (Add-on):**
+*(UI Note: Use number input (stepper) for amount)*
+* Gluten-Free Buns ($0.95 ea) - Enter Amount
+* Gluten-Free Bread slices ($0.25 ea) - Enter Amount
+
+---
+
+### 7. Vegan Menu
+*(UI Note: If this is a single package, its price and included item counts should be clearly stated upfront. If it's a base for custom vegan choices, the per-item pricing or selection rules need clarification.)*
+
+**Main Choice:**
+* Cabbage rolls- Stuffed with rice dried figs, pine nuts and fresh herbs
+* Eggplant Imam Baildi- Eggplant slices topped with stewed tomato, onions and peppers
+* Indian style stuffed Peppers - With curried chickpeas, spinach and rice
+* Eggplant Napolean - with roasted red peppers, Lebanese garlic spread and fresh herbs
+* Artichoke Ala Polita Artichoke hearts, new potatoes, and carrots with lemon tahini sauce
+* Stuffed Portabella Mushroom- with stewed lentils and cauliflower bechamel
+* Wild Rice Stuffed Acorn Squash
+* Tofu Vindaloo - Pan-seared tofu in a tangy Kashmiri chili garlic vinegar sauce!
+* Greek style stuffed Peppers.- With jasmine rice, fresh herbs and tomato
+* Vegan Moussaka- With stewed lentils, tomato and cauliflower bechamel
+* Stuffed Poblano peppers - Fire roasted poblano peppers, stuffed with rice, corn, black beans and cilantro
+
+**Side Choice (Pick 2 for "Bronze" equivalent - clarify if this is a fixed package or customizable):**
+* Lemon Potatoes- Roasted russet potatoes cooked with oregano garlic, evoo and fresh lemon juice
+* Green Beans Almondine - Harricots with lemon, almond slices, and dill
+* ​Fasolakia - Green beans simmered with tomato and fresh herbs
+* Gigante Beans - Oven-baked lima beans ﻿in a herbaceous tomato sauce
+* Dolmades - Hand-rolled grape leaves, stuffed with bulgur, dried figs and pine nuts. Finished with lemon tahini
+* Cannellini Beans with caponata
+* Roasted Brussel Sprouts - With EVOO and balsamic crema
+* Morrocan-style roasted Cauliflower- Lightly seasoned with Morrocan spices
+* Tuscan carrots- Whole baby carrots with thyme and balsamic crema
+* Moroccan wild rice
+* Cilantro-Lime rice
+* Greek rice pilaf
+* Southwest style Spring Rolls - Stuffed with rice, corn, black beans and bell pepper
+* Crispy Falafel - Homemade chickpea balls with lemon tahini sauce
+
+**Salad Choice (Pick 2 for "Bronze" equivalent - clarify if this is a fixed package or customizable):**
+* Panzanella Bread Salad= Cherry tomatoes, frisee, red onion, cucumber, fresh basil
+* Sicilian Fennel Salad- Shaved fennel, orange segments, dill, red onion, Kalamata olives
+* Bowtie Pasta Salad - Bowtie pasta, grape tomatoes, squash, zuchini, red onion, green olives, pimento
+* Tuscan Orzo Pesto Salad - Orzo pasta, basil, pine nuts, grape tomatoes, chickpeas, Kalamata olives
+* Garden Salad
+* Greek Village Salad - heirloom tomatoes, cucumber, red onion, green bell pepper, red onion, Kalamata olives, capers
+* Tomato - Cucumber salad
+* Tabouli- Bulgur, tomato, parsley, red onion, tahini, lemon
+* Lebanese Potato Salad - New potatoes, red onions, parsley, olives
+
+---
+
+## Hors d'oeuvres
+
+*(UI Recommendation: For items offered in lots, use a number input for "number of lots" with the lot size clearly indicated (e.g., "Offered in lots of 48"). Alternatively, if only specific lot quantities are allowed, a dropdown might be clearer than a wide radio matrix.)*
+
+*Minimum $5.00 per guest surcharge for "Passed" service, depending upon number of guests and service duration.*
+**Service Style:** Stationary buffet OR Passed *(UI Note: If "Passed" is selected, clearly display and add the surcharge to the running total.)*
+
+**Categories & Items:**
+
+* **Tea Sandwiches** (Offered in lots of 48)
+    * Pate with pickled veg ($1.95 each) - Select Lot: 36, 48, 96, 144
+    * Cream Cheese and Shrimp ($2.50 each) - Select Lot: 36, 48, 96, 144
+    * BLT - (Bacon Lettuce & Tomato ($1.95 each) - Select Lot: 36, 48, 96, 144
+    * Caprese (Mozzarella, Tomato, & Basil) ($1.95 each) - Select Lot: 36, 48, 96, 144
+    * Gravlax, Cream Cheese & Cucumber ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Prosciutto-Fig ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Crab Salad ($3.00 each) - Select Lot: 36, 48, 96, 144
+    * Chicken Cranberry ($2.00 each) - Select Lot: 36, 48, 96, 144
+    * Miso egg salad ($2.25 each) - Select Lot: 36, 48, 96, 144
+* **Shooters** (Offered in lots of 24)
+    * Chicken Satay ($2.45 each) - Select Lot: 36, 48, 72, 96
+    * Greek Village - Tomato, feta, cucumber and olive ($2.25 each) - Select Lot: 36, 48, 72, 96
+    * Gazpacho with shrimp ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Chilled Cucumber/Jalapeno with shrimp. ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Bloody Mary with lobster (non-alchoholic) ($4.75 each) - Select Lot: 36, 48, 72, 96
+    * Roasted beet Vichyssoise with green bean ($2.45 each) - Select Lot: 36, 48, 72, 96
+    * Chilled peach soup with Gravlax ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Chilled avocado soup with crab and pico (3.75 each) - Select Lot: 36, 48, 72, 96
+* **Mini Skewers** (Offered in lots of 24)
+    * Korean BBQ pork belly ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Greek Village - Tomato, feta, cucumber and olive ($2.25 each) - Select Lot: 36, 48, 72, 96
+    * Chicken Teriyaki ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Grilled Moroccan style Flank steak ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Mediterranean style shrimp ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Caprese - Tomato, Basil and Mozzarella - cold ($2.25 each) - Select Lot: 36, 48, 72, 96
+    * Prosciutto, Melon and Basil - cold ($2.75 each) - Select Lot: 36, 48, 72, 96
+    * Tofu with Hoisin plum sauce ($2.25 each) - Select Lot: 36, 48, 72, 96
+    * Antipasto Bites ($2.75) - Select Lot: 36, 48, 72, 96
+* **Canapes** (Offered in lots of 48)
+    * Watermelon radish chips with apple chutney ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Greek Village - Tomato, feta, cucumber and olive ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * French onion tartlets with Gruyere and dill ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Pear and Camembert tartlet ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Mediterranean style shrimp ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Miso maple deviled eggs ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Beet chips with goat cheese and asparagus tips ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Vegan Brushetta with olive tapenade and mint coulis ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Phyllo pastry cups with feta mousse, fig jam and walnut powder ($2.95 each) - Select Lot: 36, 48, 96, 144
+    * Focaccia Pizza Bites with Proscuitto, sundried tomato pesto and fresh mozzarella ($2.95) - Select Lot: 36, 48, 96, 144
+    * Italian Arancini balls ($2.95) - Select Lot: 36, 48, 96, 144
+    * Crostini with goat cheese and asparagus tips and cherry tomato ($1.95 each) - Select Lot: 36, 48, 96, 144
+    * Stuffed Green-Lipped Mussels ($3.50) - Select Lot: 36, 48, 96, 144
+* **Vol au vents** (Offered in lots of 24)
+    * Gravlax with cream cheese ($3.00 each) - Select Lot: 36, 48, 60, 96
+    * Spinach, feta and leek ($3.00 each) - Select Lot: 36, 48, 60, 96
+    * Chicken Teriyaki ($3.00 each) - Select Lot: 36, 48, 60, 96
+    * Melted Brie with cranberry relish ($3.50 each) - Select Lot: 36, 48, 60, 96
+    * Curried chicken salad ($3.00 each) - Select Lot: 36, 48, 60, 96
+    * Tuna tartare ($3.75 each) - Select Lot: 36, 48, 60, 96
+    * Brie with walnuts and mushrooms ($3.25each) - Select Lot: 36, 48, 60, 96
+    * Pulled pork with prunes and apple ($3.25 each) - Select Lot: 36, 48, 60, 96
+* **Simple fare** (Offered in lots of 48)
+    * Loaded Potato Skins ($1.95 each) - Select Lot: 36, 48, 96, 144
+    * Stuffed mushrooms ($2.25 each) - Select Lot: 36, 48, 96, 144
+    * Chicken wings ($2.65 each) - Select Lot: 36, 48, 96, 144
+    * Deviled eggs with bacon bits and chives ($2.25 each) - Select Lot: 36, 48, 96, 144
+    * Meatballs in a blanket ($2.50 each) - Select Lot: 36, 48, 96, 144
+    * Mac n’ cheese bites ($2.50 each) - Select Lot: 36, 48, 96, 144
+    * Lumpia (Filipino Spring Rolls) Vegetarian ($2.75 each) - Select Lot: 36, 48, 96, 144
+    * Lobster Rolls ($6.50 each) - Select Lot: 36, 48, 96, 144
+    * Tater tot cheeseburger Bites ($2.50) - Select Lot: 36, 48, 96, 144
+* **Charcuterie boards** (Offered in lots of 24)
+    * Cheese and fruit Grazing Board ($8.00 pp) - Select Lot: 24, 36, 48, 96, 144
+    * Meat, cheese and fruit grazing Board ($9.00 pp) - Select Lot: 24, 36, 48, 96, 144
+    * Mexican Grazing Board ($10.00 pp) - Select Lot: 24, 36, 48, 96, 144
+    * Mediterranean grazing board ($11.00 pp) - Select Lot: 24, 36, 48, 96, 144
+    * Premium Grazing Board ($15.00 pp) - Select Lot: 24, 36, 48, 96, 144
+    * Chips and salsa bar as an appetizer. Includes an array of corn and flour tortillas, salsas and queso. ($5.50 pp) - Select Lot: 24, 36, 48, 96, 144
+    * Charcuterie Cones ($4.75 pp) - Select Lot: 24, 36, 48, 96, 144
+* **Spreads** ($6.50 per person - Served with Pita bread, and crudité. Select 3 spreads)
+    * Tzatziki
+    * Hummus
+    * Beet Hummus
+    * Baba Ghannoush
+    * Spicy Feta
+    * Taramasalata
+    * Muhammara
+    * Lebanese garlic dip
+    * *Enter number of servings for spreads (UI Note: Number input for number of guests to apply $6.50 pp cost):* 24, 36, 48, 96, 144
+
+---
+
+## Dessert Selections
+*(UI Recommendation: Similar to Hors d'oeuvres, use number input for "number of lots" or dropdowns if quantities are fixed. Clearly display per-item price.)*
+*(Lot sizes vary by item, typically 36, 48, 72, 96, 144 - This needs clarification per item)*
+* Petit Fours ($2.25 each)
+* Macaroons ($2.25 each)
+* Flourless Chocolate Cake ($4.75 each)
+* Cheesecake ($5.75 each)
+* Baklava ($5.25each)
+* Cannolis ($4.75 each)
+* Mini Cannolis ($2.75 each)
+* Assorted dessert cups ($3.25 each)
+* Pâte à Choux with Crème Pâtissière ($3.25 each)
+* Baklava roll-ups ($3.75 ea)
+* Lemon Tartlets ($2.75 each)
+* Mille feuille with cream and berries ($3.75 each)
+
+---
+
+## Beverage Service
+*(UI Recommendation: Implement a step-by-step flow)*
+1.  **Beverage Service Type:** (Radio Buttons: Alcoholic, Non Alcoholic, Both)
+
+2.  **If "Alcoholic" or "Both" selected:**
+    * **What type of Bartending Service are you requesting?** (Radio Buttons: DRY HIRE - YOU provide alcohol & mixers, WET HIRE - WE provide everything)
+    * **If DRY HIRE:**
+        * **What we are serving (Dry Hire):** (Checkboxes: Beer, Wine, Cocktails X 2, Mocktails, Champagne, Open Bar, Cash Bar)
+        * **Add additional Cocktails?** (Radio Buttons: YES/NO)
+            * If YES: **How many additional cocktails?** (Number Input)
+    * **If WET HIRE:**
+        * **What we are serving (Wet Hire):** (Checkboxes: Beer, Wine, Cocktails X 2, Mocktails, Open Bar, Cash Bar)
+        * **Add additional Cocktails?** (Radio Buttons: YES/NO)
+            * If YES: **How many additional cocktails?** (Number Input)
+        * **Liquor Quality:** (Radio Buttons - *Show only if cocktails/spirits are part of "What we are serving"*)
+            * Well (Economical)
+            * Mid Shelf (Medium Pricing)
+            * Top Shelf (Premium)
+        * **Use this box to notate any particular spirit brands you require** (Text Area)
+        * *Cash bar requires a $500 deposit per 100 guests. We require a minimum consumption of $1000 per 50 guests or $20 per guest, whichever is greater. The client is responsible for any shortfalls if the minimum is not met.* (Display if "Cash Bar" selected)
+
+3.  **Bar Equipment** *(UI Note: Show this section if "Alcoholic" or "Both" selected, and potentially if "Add Bar Equipment" is YES, though this could be integrated into the Dry/Wet Hire flow)*
+    * Mobile Bar unit ($300.00) - Amount, Total
+    * Beer Glasses Disposable Plastic Basic ($.20) - Amount, Total
+    * Beer Glasses Disposable Plastic Premium ($1.05) - Amount, Total
+    * Beer Glasses Glass Pint ($2.05) - Amount, Total
+    * Beer Glasses Glass Pilsner ($1.85) - Amount, Total
+    * Wine Glasses Disposable Plastic Basic ($.05) (*Note from original extraction: Likely a typo, should be $0.20 or similar. Needs correction.*) - Amount, Total
+    * Wine Glasses Disposable Plastic Premium - with stem ($1.05) - Amount, Total
+    * Wine Glasses Glass with stem ($1.15) - Amount, Total
+    * Cocktail Glasses Disposable Plastic Basic ($.05) (*Note from original extraction: Likely a typo. Needs correction.*) - Amount, Total
+    * Cocktail Glasses Disposable Plastic Premium ($1.05) - Amount, Total
+
+4.  **Non-Alcoholic Beverage Service** *(UI Note: Show if "Non Alcoholic" or "Both" selected, or if "Add Non-alcoholic beverages?" is YES in Dry Hire)*
+    *(Enter the amount of each item - UI: Number input for "number of guests" to apply per-person pricing)*
+    * Assorted Soft Drinks (1pp)- $2.00
+    * Assorted Soft Drinks (unlimited)- $4.00
+    * Assorted Snapple (1 pp) $2.75
+    * Assorted Snapple (unlimited) $5.50
+    * Pellegrino Flavored sodas (1 pp) $3.35
+    * Pellegrino Flavored sodas (unlimited) $7.00
+    * Self serve citrus infused water ($1.25)
+    * Bottled Water (1pp) $1.25
+    * Bottled Water (unlimited) $2.50
+    * Iced tea- Free pour $2.25 pp
+    * Lemonade Free pour $2.25
+    * Mocktails Free Pour $3.50
+
+5.  **Table water service? ($2.50 pp)** (Radio Buttons: YES/NO)
+
+---
+
+## Equipment Rentals & Serving Ware
+*(UI Recommendation: Use expandable sections or tabs for Furniture, Linens, Serving Ware to avoid a very long page. Clearly display per-unit price next to each item in matrix inputs.)*
+
+**Furniture:**
+*(Enter Amount for each)*
+* 8ft Table - $25
+* 6ft Table- rectangle $24
+* Table round 60" $30 (*Note from original extraction: Form shows $25 in one place, $30 in another. Needs correction to $30 or $25.*)
+* Table round 70" $35 (*Note from original extraction: Form shows $28 in one place, $35 in another. Needs correction to $35 or $28.*)
+* Chairs- folding economy $8.00 (*Note from original extraction: Form shows $7.50 in one place, $8.00 in another. Needs correction to $8.00 or $7.50.*)
+* Antique vineyard chair with cushion $30.00 (*Note from original extraction: Form shows $20 in one place, $30 in another. Needs correction to $30 or $20.*)
+
+**Linens:**
+*(Enter Amount for each)*
+* Napkins - Linen feel $1.25
+* Napkins -Mid- Range $3.50 (*Note from original extraction: Form shows $2.25 in one place, $3.50 in another. Needs correction to $3.50 or $2.25.*)
+* 90x156 Buffet Tablecloth - Basic $35
+* 90x156 Buffet Tablecloth Premium -$65
+* Buffet Runners Basic $22
+* Buffet Runners Premium $45
+* 90' Round Tablecloths Basic $22.00
+* 90' Round Tablecloths Premium $55.00
+* 60x 120 Round Tablecloths Basic $22.00
+* 60x 120 Round Tablecloths Premium $55.00
+
+**Serving Ware:**
+*(Enter Amount for each)*
+* Biodegradable dinner plates, silverware, napkins $2.25
+* Silver Plastic Disposable premium dinner plates, silverware, napkins and cups $4.00
+* Gold Plastic Disposable premium dinner plates, silverware, napkins and cups $4.00
+* Eco-friendly Premium disposable Bamboo set with pre-rolled napkin and bamboo silverware $4.00
+* China/ Silverware set economy - (2 forks 1 knife 1 spoon) (1) 10" plate+ (2) 6" plate $8.25
+* Water Glasses - Glass Stemless All Purpose $1.15
+* Basic Wine Glasses - Glass $1.15
+* Dinner plate only - $2.25
+* Salad/cocktail plate only - $2.25
+* Water Pitchers -$3.00
+
+---
+
+## Other Fees and Services
+*(UI Recommendation: Automatically calculate fees like taxes. Conditionally display service fee notes based on "Service Style" selection.)*
+
+* **Travel Fee** (Calculated Field)
+* **Admin fee** (Number Input)
+* **Service Fee** (Calculated based on service style and subtotal 1, typically 20% of Subtotal 1)
+    * *Full Service Buffet Note:* "Please note that you have selected Full-service Buffet. This includes us assisting in all setup needs, buffet service, and breakdown including garbage removal. We will remain onsite for the duration of the event." *(Display conditionally)*
+    * *Standard Service Buffet Note:* "Please note that you have selected Standard-service Buffet. This includes us setting up and servicing the, buffet . We will close the buffet at the above listed time (Food Service End Time) break down and clean the buffet area and depart. We will not be responsible for garbage disposal unless this has been negotiated in advance." *(Display conditionally)*
+* **CC processing 2.9%** (Calculated Field)
+* **Deposit required to book event (35%)** (Calculated Field)
+* **Coupon Code / Discount:**
+    * Do you have a Discount Promo Code (YES/NO)
+    * Enter code here (Text Input, e.g., "BOOKHB365" for 10% discount) *(Show if YES)*
+    * Discount Percent (Number Input) *(Show if YES)*
+* **Other fees description** (Text Input)
+* **Other Fees** (Number Input)
+* **Washington State Sales and Use Tax 6.5%** (Calculated Field)
+* **Local City/County Sales and Use Tax 3.75%** (Calculated Field)
+
+---
+
+## Notes & Comments Fields
+
+* **Please list any comment/concerns/special requests. There is a Dietary restriction page to follow.** (Text Area, appears after Custom Menu and Sandwich Factory sections)
+* **Dietary Notes** (Text Area)
+* **Beverage Service Notes** (Text Area)
+* **Notes** (Text Area, prefilled with a greeting from Home Bites)
+* **Tastings Note:** "Tastings are billed at $75.00 + tax per couple. We will provide a full credit if you decide to book with us. Please click this LINK to schedule a tasting. If your requested date is not available please contact us at events@eathomebites.com to request alternate arrangements." *(UI Note: Display contextually, e.g., if guest count < 75 for certain packages or if user is browsing wedding packages.)*
+
