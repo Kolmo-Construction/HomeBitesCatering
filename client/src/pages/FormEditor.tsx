@@ -98,41 +98,41 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between p-2 mb-2 rounded-md cursor-pointer ${
+      className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 p-3 mb-2 rounded-md ${
         isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200 hover:border-gray-300"
       }`}
-      onClick={() => onSelect(page)}
     >
-      <div className="flex items-center flex-1">
-        <div className="mr-2 cursor-grab" {...attributes} {...listeners}>
-          <GripVertical className="h-5 w-5 text-gray-400" />
-        </div>
-        <div className="flex-1 truncate">
-          <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
-          {page.description && (
-            <p className="text-xs text-gray-500 truncate">{page.description}</p>
-          )}
-        </div>
+      <div className="cursor-grab" {...attributes} {...listeners}>
+        <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
-      <div className="flex items-center space-x-1">
+      
+      <div className="truncate cursor-pointer" onClick={() => onSelect(page)}>
+        <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
+        {page.description && (
+          <p className="text-xs text-gray-500 truncate">{page.description}</p>
+        )}
+      </div>
+      
+      <div className="flex items-center justify-end gap-2">
         {onEdit && (
           <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 bg-white hover:bg-gray-100 border border-gray-200" 
+            variant="outline" 
+            size="sm"
+            className="h-8 px-2 flex items-center gap-1 bg-white" 
             onClick={(e) => {
               e.stopPropagation();
               onEdit(page);
             }}
           >
             <Settings className="h-4 w-4" />
+            <span>Edit</span>
           </Button>
         )}
         {onDelete && (
           <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-7 w-7 bg-white hover:bg-red-50 text-red-500 hover:text-red-600 border border-red-200" 
+            variant="destructive" 
+            size="sm"
+            className="h-8 px-3 bg-red-500 hover:bg-red-600 text-white" 
             onClick={(e) => {
               e.stopPropagation();
               console.log("Delete button clicked for page ID:", page.id);
@@ -148,7 +148,8 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
               }
             }}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4 mr-1" />
+            <span>Delete</span>
           </Button>
         )}
       </div>
