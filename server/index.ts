@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { registerFormRoutes } from "./formRoutes";
 import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
 import formBuilderRoutes from "./formBuilderRoutes";
+import { cloneQuestion } from "./cloneQuestionRoute";
 import { setupVite, serveStatic, log } from "./vite";
 // Gmail sync service has been retired in favor of more specialized services
 import { LeadGenerationService } from './services/leadGenerationService';
@@ -59,6 +60,9 @@ app.use((req, res, next) => {
   
   // Register form builder API routes
   app.use('/api/form-builder', formBuilderRoutes);
+  
+  // Register the clone question endpoint
+  app.post('/api/form-builder/library-questions/:id/clone', cloneQuestion);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

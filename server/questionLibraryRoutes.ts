@@ -374,7 +374,13 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       
       // Generate a unique key for the cloned question
       const timestamp = Date.now();
-      const clonedQuestionKey = `${originalQuestion.library_question_key}_clone_${timestamp}`;
+      // Properly access properties regardless of property naming convention
+      const originalKey = originalQuestion.library_question_key || originalQuestion.libraryQuestionKey;
+      const originalText = originalQuestion.default_text || originalQuestion.defaultText;
+      const questionType = originalQuestion.question_type || originalQuestion.questionType;
+      const clonedQuestionKey = `${originalKey}_clone_${timestamp}`;
+      
+      console.log("Creating clone with key:", clonedQuestionKey);
       
       // Create a new question record
       const createQuestionSql = `
@@ -384,20 +390,38 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
         RETURNING *
       `;
       
+      // Handle default_metadata and default_options which could be already stringified or not
+      let defaultMetadata = originalQuestion.default_metadata || originalQuestion.defaultMetadata;
+      let defaultOptions = originalQuestion.default_options || originalQuestion.defaultOptions;
+      
+      // Ensure these are properly stringified if they're not already strings
+      if (defaultMetadata && typeof defaultMetadata !== 'string') {
+        defaultMetadata = JSON.stringify(defaultMetadata);
+      }
+      
+      if (defaultOptions && typeof defaultOptions !== 'string') {
+        defaultOptions = JSON.stringify(defaultOptions);
+      }
+      
       const questionValues = [
         clonedQuestionKey,
-        `${originalQuestion.default_text} (Copy)`,
-        originalQuestion.question_type,
-        originalQuestion.default_metadata,
-        originalQuestion.default_options,
+        `${originalText} (Copy)`,
+        questionType,
+        defaultMetadata,
+        defaultOptions,
         originalQuestion.category
       ];
       
+      console.log("Clone SQL params:", questionValues);
+      
       const result = await db.execute(createQuestionSql, questionValues);
+      console.log("Clone result:", result.rows[0]);
       const newQuestion = result.rows[0];
       
       // If it's a matrix question, clone the rows and columns too
-      if (originalQuestion.question_type === 'matrix' && originalQuestion.matrixRows && originalQuestion.matrixColumns) {
+      if ((originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix') && 
+          (originalQuestion.matrixRows || []).length > 0 && 
+          (originalQuestion.matrixColumns || []).length > 0) {
         // Clone rows
         for (const row of originalQuestion.matrixRows) {
           const createRowSql = `
