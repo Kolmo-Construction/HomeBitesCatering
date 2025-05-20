@@ -77,7 +77,7 @@ const formPageSchema = z.object({
 });
 
 // Page Component for the sortable page list
-const SortablePage = ({ page, isSelected, onSelect }) => {
+const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
   const {
     attributes,
     listeners,
@@ -95,8 +95,8 @@ const SortablePage = ({ page, isSelected, onSelect }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center p-2 mb-2 rounded-md cursor-pointer ${
-        isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200"
+      className={`flex items-center p-2 mb-2 rounded-md cursor-pointer relative group ${
+        isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200 hover:border-gray-300"
       }`}
       onClick={() => onSelect(page)}
     >
@@ -107,6 +107,34 @@ const SortablePage = ({ page, isSelected, onSelect }) => {
         <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
         {page.description && (
           <p className="text-xs text-gray-500 truncate">{page.description}</p>
+        )}
+      </div>
+      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+        {onEdit && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(page);
+            }}
+          >
+            <Settings className="h-3 w-3" />
+          </Button>
+        )}
+        {onDelete && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-red-500" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(page.id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         )}
       </div>
     </div>
@@ -1777,7 +1805,7 @@ export default function FormEditor() {
                   ) : (
                     <SortableContext items={pages.map(p => p.id)} strategy={verticalListSortingStrategy}>
                       {pages.map(page => (
-                        <div key={page.id} className="relative group">
+                        <div key={page.id}>
                           <SortablePage
                             page={page}
                             isSelected={selectedPage?.id === page.id}
@@ -1786,31 +1814,9 @@ export default function FormEditor() {
                               setSelectedPage(pageData);
                               setSelectedQuestion(null);
                             }}
+                            onEdit={(pageData) => handleEditPage(pageData)}
+                            onDelete={(pageId) => handleDeletePage(pageId)}
                           />
-                          <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditPage(page);
-                              }}
-                            >
-                              <Settings className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 text-red-500" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeletePage(page.id);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
                         </div>
                       ))}
                     </SortableContext>
