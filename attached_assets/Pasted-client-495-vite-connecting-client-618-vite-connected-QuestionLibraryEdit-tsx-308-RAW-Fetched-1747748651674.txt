@@ -1,0 +1,146 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+QuestionLibraryEdit.tsx:308 RAW Fetched questionData for edit: {
+  "id": 35,
+  "libraryQuestionKey": "service_style",
+  "defaultText": "Service Style",
+  "questionType": "radio_group",
+  "defaultMetadata": null,
+  "defaultOptions": null,
+  "category": "service_info",
+  "createdAt": "2025-05-20T03:47:36.150Z",
+  "updatedAt": "2025-05-20T03:47:36.150Z"
+}
+QuestionLibraryEdit.tsx:325 Form values after reset: Object
+QuestionLibraryEdit.tsx:205 Client Payload to Server: {
+  "libraryQuestionKey": "service_style",
+  "defaultText": "Service Style",
+  "questionType": "radio_group",
+  "category": "service_info",
+  "defaultMetadata": {
+    "defaultRequired": false,
+    "helperText": null,
+    "placeholder": null
+  },
+  "defaultOptions": [
+    {
+      "label": "Drop-off",
+      "value": "drop-off"
+    },
+    {
+      "label": "Buffet Standard",
+      "value": "buffet_standard"
+    },
+    {
+      "label": "Buffet Full Service – no setup",
+      "value": "buffet_full_service_–_no_setup"
+    },
+    {
+      "label": "Buffet Full Service",
+      "value": "buffet_full_service"
+    },
+    {
+      "label": "Family Style Service- (not available for Taco Fiesta)",
+      "value": "family_style_service-_(not_available_for_taco_fiesta)"
+    },
+    {
+      "label": "Plated Dinner",
+      "value": "plated_dinner"
+    },
+    {
+      "label": "Cocktail Party",
+      "value": "cocktail_party"
+    },
+    {
+      "label": "Food Truck",
+      "value": "food_truck"
+    }
+  ]
+}
+QuestionLibraryEdit.tsx:238 Invalidating cache for queryKey: ['/api/form-builder/library-questions', '35']
+QuestionLibraryEdit.tsx:242 Setting query data for: Array(2) with Object
+QuestionLibraryEdit.tsx:308 RAW Fetched questionData for edit: {
+  "id": 35,
+  "libraryQuestionKey": "service_style",
+  "defaultText": "Service Style",
+  "questionType": "radio_group",
+  "defaultMetadata": {
+    "helperText": null,
+    "placeholder": null,
+    "defaultRequired": false
+  },
+  "defaultOptions": [
+    {
+      "label": "Drop-off",
+      "value": "drop-off"
+    },
+    {
+      "label": "Buffet Standard",
+      "value": "buffet_standard"
+    },
+    {
+      "label": "Buffet Full Service – no setup",
+      "value": "buffet_full_service_–_no_setup"
+    },
+    {
+      "label": "Buffet Full Service",
+      "value": "buffet_full_service"
+    },
+    {
+      "label": "Family Style Service- (not available for Taco Fiesta)",
+      "value": "family_style_service-_(not_available_for_taco_fiesta)"
+    },
+    {
+      "label": "Plated Dinner",
+      "value": "plated_dinner"
+    },
+    {
+      "label": "Cocktail Party",
+      "value": "cocktail_party"
+    },
+    {
+      "label": "Food Truck",
+      "value": "food_truck"
+    }
+  ],
+  "category": "service_info",
+  "createdAt": "2025-05-20T03:47:36.150Z",
+  "updatedAt": "2025-05-20T13:41:23.437Z"
+}
+QuestionLibraryEdit.tsx:325 Form values after reset: Object
+QuestionLibraryEdit.tsx:308 RAW Fetched questionData for edit: {
+  "id": 13,
+  "libraryQuestionKey": "event_type",
+  "defaultText": "Event Type?",
+  "questionType": "radio_group",
+  "defaultMetadata": null,
+  "defaultOptions": null,
+  "category": "basic_info",
+  "createdAt": "2025-05-20T03:44:47.783Z",
+  "updatedAt": "2025-05-20T03:44:47.783Z"
+}
+QuestionLibraryEdit.tsx:325 Form values after reset: Object
+QuestionLibraryEdit.tsx:308 RAW Fetched questionData for edit: {
+  "id": 13,
+  "libraryQuestionKey": "event_type",
+  "defaultText": "Event Type?",
+  "questionType": "radio_group",
+  "defaultMetadata": null,
+  "defaultOptions": null,
+  "category": "basic_info",
+  "createdAt": "2025-05-20T03:44:47.783Z",
+  "updatedAt": "2025-05-20T03:44:47.783Z"
+}
+QuestionLibraryEdit.tsx:325 Form values after reset: Object
+QuestionLibraryEdit.tsx:308 RAW Fetched questionData for edit: {
+  "id": 13,
+  "libraryQuestionKey": "event_type",
+  "defaultText": "Event Type?",
+  "questionType": "radio_group",
+  "defaultMetadata": null,
+  "defaultOptions": null,
+  "category": "basic_info",
+  "createdAt": "2025-05-20T03:44:47.783Z",
+  "updatedAt": "2025-05-20T03:44:47.783Z"
+}
+QuestionLibraryEdit.tsx:325 Form values after reset: Object
