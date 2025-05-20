@@ -511,6 +511,8 @@ export const formQuestionTypeEnum = pgEnum("form_question_type", [
   // Modern, mobile-first types
   'image_upload', 'file_upload', 'signature_pad', 'rating_scale', 'slider',
   'toggle_switch', 'location_picker', 'tag_select', 'date_range_picker', 'stepper_input',
+  // Advanced types
+  'hidden_calculation',
 ]);
 
 export const conditionalLogicActionTypeEnum = pgEnum("conditional_logic_action_type", [
