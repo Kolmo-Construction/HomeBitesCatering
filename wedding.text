@@ -37,9 +37,6 @@
 * **What would like a quote for:** (Taco Fiesta, American BBQ, A taste of Greece, Kebab Party, A taste of Italy, Custom Menu, Hor d' oeuvres only (Cocktail party), Food Truck)
     *(UI Note: This primary selection should drive which menu sections are subsequently displayed.)*
 
----
-*(General UI Recommendation: Implement a running subtotal for each major section and a grand total that updates dynamically as users make selections, especially those with upcharges.)*
----
 
 ## Main Menu Categories & Packages
 
