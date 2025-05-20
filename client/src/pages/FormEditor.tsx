@@ -90,6 +90,9 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  
+  // For debugging - log the page object
+  console.log("SortablePage rendered with page:", page);
 
   return (
     <div
@@ -130,7 +133,17 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
             className="h-6 w-6 bg-white hover:bg-red-50 text-red-500 hover:text-red-600" 
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(page.id);
+              console.log("Delete button clicked for page ID:", page.id);
+              if (page.id) {
+                onDelete(page.id);
+              } else {
+                console.error("Cannot delete page: No page ID found");
+                toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Could not delete page: No page ID found",
+                });
+              }
             }}
           >
             <Trash2 className="h-3 w-3" />
@@ -1112,18 +1125,26 @@ export default function FormEditor() {
 
   const deletePageMutation = useMutation({
     mutationFn: async (pageId) => {
+      // Log the attempt to delete
+      console.log(`Attempting to delete page ${pageId} from form ${formId}`);
+      
       const response = await fetch(`/api/form-builder/forms/${formId}/pages/${pageId}`, {
         method: 'DELETE',
       });
       
+      // Check response status and log it
+      console.log(`Delete page response status: ${response.status}`);
+      
       if (!response.ok) {
         const error = await response.json();
+        console.error("Delete page error:", error);
         throw new Error(error.message || 'Failed to delete page');
       }
       
       return true;
     },
     onSuccess: () => {
+      console.log("Page deleted successfully, invalidating queries");
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/forms', formId, 'pages'] });
       setSelectedPage(null);
       toast({
@@ -1132,6 +1153,7 @@ export default function FormEditor() {
       });
     },
     onError: (error) => {
+      console.error("Delete page mutation error:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -1331,7 +1353,23 @@ export default function FormEditor() {
       return;
     }
     
-    await deletePageMutation.mutateAsync(pageId);
+    // Ensure pageId is a valid number
+    if (!pageId || isNaN(Number(pageId))) {
+      console.error("Invalid page ID for deletion:", pageId);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Invalid page ID. Could not delete the page.",
+      });
+      return;
+    }
+    
+    try {
+      console.log("Calling deletePageMutation with pageId:", pageId);
+      await deletePageMutation.mutateAsync(pageId);
+    } catch (error) {
+      console.error("Error in handleDeletePage:", error);
+    }
   };
 
   // Handle question operations
