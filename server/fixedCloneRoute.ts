@@ -3,6 +3,7 @@ import { db } from "./db";
 
 /**
  * Fixed question cloning function that addresses the parameter issue
+ * Uses parameterized queries to prevent SQL injection and handle special characters
  */
 export async function fixedCloneQuestion(req: Request, res: Response) {
   try {
@@ -13,11 +14,11 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
       return res.status(400).json({ message: "Invalid question ID" });
     }
     
-    // 1. Fetch the original question directly
-    const fetchSql = `SELECT * FROM question_library WHERE id = ${questionId}`;
-    console.log("Executing simplified query:", fetchSql);
+    // 1. Fetch the original question using parameterized query
+    const fetchSql = `SELECT * FROM question_library WHERE id = $1`;
+    console.log("Executing fetch query with ID:", questionId);
     
-    const originalResult = await db.execute(fetchSql);
+    const originalResult = await db.execute(fetchSql, [questionId]);
     if (!originalResult || !originalResult.rows || originalResult.rows.length === 0) {
       return res.status(404).json({ message: "Question not found" });
     }
@@ -32,25 +33,28 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
     const clonedKey = `${originalKey}_clone_${timestamp}`;
     const clonedText = `${originalText} (Copy)`;
     
-    // Safely handle metadata and options (which could be in different formats)
-    let metadata = originalQuestion.default_metadata;
-    let options = originalQuestion.default_options;
-    
-    // 3. Insert the cloned question
+    // 3. Insert the cloned question using parameterized query
     const insertSql = `
       INSERT INTO question_library 
       (library_question_key, default_text, question_type, default_metadata, default_options, category, created_at, updated_at)
-      VALUES ('${clonedKey}', '${clonedText}', '${originalQuestion.question_type}', 
-              ${metadata ? `'${JSON.stringify(metadata)}'` : 'NULL'}, 
-              ${options ? `'${JSON.stringify(options)}'` : 'NULL'}, 
-              ${originalQuestion.category ? `'${originalQuestion.category}'` : 'NULL'}, 
-              NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING *
     `;
     
-    console.log("Executing insert with SQL:", insertSql);
+    // Prepare parameters safely
+    const insertParams = [
+      clonedKey,
+      clonedText,
+      originalQuestion.question_type,
+      originalQuestion.default_metadata,
+      originalQuestion.default_options,
+      originalQuestion.category
+    ];
     
-    const insertResult = await db.execute(insertSql);
+    console.log("Executing insert with params:", insertParams.map((p, i) => 
+      `$${i+1}: ${typeof p === 'object' ? 'Object' : p}`).join(', '));
+    
+    const insertResult = await db.execute(insertSql, insertParams);
     const newQuestion = insertResult.rows[0];
     
     console.log("Successfully created clone with ID:", newQuestion.id);
@@ -59,37 +63,52 @@ export async function fixedCloneQuestion(req: Request, res: Response) {
     if (originalQuestion.question_type === 'matrix') {
       try {
         // Matrix rows
-        const rowsSql = `SELECT * FROM library_matrix_rows WHERE library_question_id = ${questionId}`;
-        const rowsResult = await db.execute(rowsSql);
+        const rowsSql = `SELECT * FROM library_matrix_rows WHERE library_question_id = $1`;
+        const rowsResult = await db.execute(rowsSql, [questionId]);
         
         for (const row of rowsResult.rows) {
           const insertRowSql = `
             INSERT INTO library_matrix_rows 
             (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
-            VALUES (${newQuestion.id}, '${row.row_key}', '${row.label}', 
-                   ${row.price ? `'${row.price}'` : 'NULL'}, 
-                   ${row.default_metadata ? `'${JSON.stringify(row.default_metadata)}'` : 'NULL'}, 
-                   ${row.row_order || 0}, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
           `;
-          await db.execute(insertRowSql);
+          
+          const rowParams = [
+            newQuestion.id,
+            row.row_key,
+            row.label,
+            row.price,
+            row.default_metadata,
+            row.row_order || 0
+          ];
+          
+          await db.execute(insertRowSql, rowParams);
         }
         
         // Matrix columns
-        const columnsSql = `SELECT * FROM library_matrix_columns WHERE library_question_id = ${questionId}`;
-        const columnsResult = await db.execute(columnsSql);
+        const columnsSql = `SELECT * FROM library_matrix_columns WHERE library_question_id = $1`;
+        const columnsResult = await db.execute(columnsSql, [questionId]);
         
         for (const column of columnsResult.rows) {
           const insertColSql = `
             INSERT INTO library_matrix_columns 
             (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
-            VALUES (${newQuestion.id}, '${column.column_key}', '${column.header}', '${column.cell_input_type}', 
-                   ${column.default_metadata ? `'${JSON.stringify(column.default_metadata)}'` : 'NULL'}, 
-                   ${column.column_order || 0}, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
           `;
-          await db.execute(insertColSql);
+          
+          const columnParams = [
+            newQuestion.id,
+            column.column_key,
+            column.header,
+            column.cell_input_type,
+            column.default_metadata,
+            column.column_order || 0
+          ];
+          
+          await db.execute(insertColSql, columnParams);
         }
       } catch (matrixError) {
-        console.log("Non-fatal error with matrix data:", matrixError);
+        console.error("Matrix data cloning error:", matrixError);
         // Continue since we already have the base question
       }
     }
