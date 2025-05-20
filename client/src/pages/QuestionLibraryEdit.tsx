@@ -83,6 +83,7 @@ const questionTypes = [
   { value: "slider", label: "Slider" },
   { value: "toggle_switch", label: "Toggle Switch" },
   { value: "full_name", label: "Full Name" },
+  { value: "hidden_calculation", label: "Hidden Calculation" },
 ];
 
 export default function QuestionLibraryEdit() {

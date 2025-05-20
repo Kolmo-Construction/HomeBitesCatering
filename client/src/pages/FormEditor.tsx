@@ -461,6 +461,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       'slider': 'Slider',
       'toggle_switch': 'Toggle Switch',
       'full_name': 'Full Name',
+      'hidden_calculation': 'Hidden Calculation',
     };
     
     return typeMap[type] || type;
@@ -884,6 +885,126 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     <p className="text-xs text-muted-foreground">
                       Matrix configuration overrides will be available in a future update.
                     </p>
+                  </div>
+                )}
+                
+                {questionType === 'hidden_calculation' && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Calculation Formula</p>
+                    <div>
+                      <FormLabel className="text-xs">Formula</FormLabel>
+                      <Textarea
+                        placeholder="Enter calculation formula, e.g. {question1} + {question2} * 5"
+                        className="font-mono"
+                        value={form.watch('metadataOverrides')?.formula || ''}
+                        onChange={(e) => {
+                          const currentOverrides = form.getValues('metadataOverrides') || {};
+                          form.setValue('metadataOverrides', {
+                            ...currentOverrides,
+                            formula: e.target.value
+                          });
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Use {'{question_key}'} to reference other question values
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <FormLabel className="text-xs">Data Type</FormLabel>
+                        <Select
+                          value={form.watch('metadataOverrides')?.dataType || 'number'}
+                          onValueChange={(value) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              dataType: value
+                            });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="number">Number</SelectItem>
+                            <SelectItem value="currency">Currency</SelectItem>
+                            <SelectItem value="percentage">Percentage</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <FormLabel className="text-xs">Decimal Places</FormLabel>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          max="10"
+                          placeholder="2"
+                          value={form.watch('metadataOverrides')?.precision || '2'}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              precision: parseInt(e.target.value) || 0
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <FormLabel className="text-xs">Prefix (optional)</FormLabel>
+                        <Input 
+                          placeholder="e.g. $"
+                          value={form.watch('metadataOverrides')?.formatOptions?.prefix || ''}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              formatOptions: {
+                                ...currentOverrides?.formatOptions,
+                                prefix: e.target.value
+                              }
+                            });
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormLabel className="text-xs">Suffix (optional)</FormLabel>
+                        <Input 
+                          placeholder="e.g. %"
+                          value={form.watch('metadataOverrides')?.formatOptions?.suffix || ''}
+                          onChange={(e) => {
+                            const currentOverrides = form.getValues('metadataOverrides') || {};
+                            form.setValue('metadataOverrides', {
+                              ...currentOverrides,
+                              formatOptions: {
+                                ...currentOverrides?.formatOptions,
+                                suffix: e.target.value
+                              }
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <FormLabel className="text-xs">Description (Internal Only)</FormLabel>
+                      <Textarea
+                        placeholder="Describe what this calculation does"
+                        value={form.watch('metadataOverrides')?.description || ''}
+                        onChange={(e) => {
+                          const currentOverrides = form.getValues('metadataOverrides') || {};
+                          form.setValue('metadataOverrides', {
+                            ...currentOverrides,
+                            description: e.target.value
+                          });
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
                 

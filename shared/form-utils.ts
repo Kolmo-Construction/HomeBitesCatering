@@ -26,6 +26,7 @@ export const questionTypeLabels = {
   'slider': 'Slider',
   'toggle_switch': 'Toggle Switch',
   'full_name': 'Full Name',
+  'hidden_calculation': 'Hidden Calculation',
 };
 
 /**

@@ -486,6 +486,43 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
           </div>
         );
         
+      case 'hidden_calculation':
+        // For hidden calculation fields, import the renderer
+        // This is imported when needed rather than at the top to avoid circular dependencies
+        const HiddenCalculationRenderer = require('../form-renderer/HiddenCalculationRenderer').default;
+        
+        // Render a UI preview in the form builder showing it's a calculation field
+        return (
+          <div className="mb-4">
+            <div className="p-3 border rounded-md bg-blue-50 flex items-center gap-2">
+              <span className="text-blue-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="14" x="2" y="5" rx="2" />
+                  <line x1="6" x2="6" y1="9" y2="19" />
+                  <line x1="10" x2="10" y1="9" y2="19" />
+                  <line x1="14" x2="14" y1="9" y2="19" />
+                  <line x1="18" x2="18" y1="9" y2="19" />
+                </svg>
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-700">Hidden Calculation Field</p>
+                <p className="text-xs text-blue-700">
+                  Formula: {metadata?.formula || "No formula defined"}
+                </p>
+                <p className="text-xs text-blue-600">
+                  This calculation happens behind the scenes and isn't visible to users.
+                </p>
+              </div>
+            </div>
+            
+            {/* Include the actual renderer component for the calculation to work */}
+            <HiddenCalculationRenderer 
+              questionKey={questionKey}
+              metadata={metadata || {}}
+            />
+          </div>
+        );
+      
       default:
         return (
           <div className="mb-4">
