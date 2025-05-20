@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +40,7 @@ export default function QuestionLibraryManager() {
   const fetchQuestions = async () => {
     try {
       // Create query string manually to avoid URLSearchParams
-      let queryStr = `page=${page}&pageSize=${pageSize}`;
-      
-      if (searchQuery) {
-        queryStr += `&search=${encodeURIComponent(searchQuery)}`;
-      }
+      let queryStr = `page=${page}&pageSize=100`; // Fetch more items to allow client-side filtering
       
       if (categoryFilter) {
         queryStr += `&category=${encodeURIComponent(categoryFilter)}`;
@@ -81,11 +77,37 @@ export default function QuestionLibraryManager() {
     }
   };
 
-  // Fetch library questions with search, category filter and pagination
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/api/form-builder/library-questions', page, pageSize, searchQuery, categoryFilter],
+  // Fetch library questions with category filter
+  const { data: allData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['/api/form-builder/library-questions', page, 100, categoryFilter],
     queryFn: fetchQuestions
   });
+  
+  // Client-side filtering for search
+  const filteredData = React.useMemo(() => {
+    if (!allData?.data || !searchQuery.trim()) {
+      return allData;
+    }
+    
+    const lowerCaseQuery = searchQuery.toLowerCase().trim();
+    const filteredItems = allData.data.filter(item => 
+      (item.libraryQuestionKey && item.libraryQuestionKey.toLowerCase().includes(lowerCaseQuery)) ||
+      (item.defaultText && item.defaultText.toLowerCase().includes(lowerCaseQuery)) ||
+      (item.category && item.category.toLowerCase().includes(lowerCaseQuery))
+    );
+    
+    return {
+      data: filteredItems,
+      pagination: {
+        ...allData.pagination,
+        total: filteredItems.length,
+        totalPages: Math.ceil(filteredItems.length / pageSize)
+      }
+    };
+  }, [allData, searchQuery, pageSize]);
+  
+  // Use filtered data instead of raw data
+  const data = filteredData;
 
   const handleCreateNew = () => {
     navigate("/admin/form-builder/question-library/new");
