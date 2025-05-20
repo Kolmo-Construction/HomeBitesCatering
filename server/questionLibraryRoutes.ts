@@ -357,6 +357,100 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
   });
   
   // Delete a library question
+  // Clone a library question
+  app.post('/api/form-builder/library-questions/:id/clone', async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid question ID" });
+      }
+      
+      // Get the original question with all its details
+      const originalQuestion = await getQuestionWithDetails(id);
+      
+      if (!originalQuestion) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      
+      // Generate a unique key for the cloned question
+      const timestamp = Date.now();
+      const clonedQuestionKey = `${originalQuestion.library_question_key}_clone_${timestamp}`;
+      
+      // Create a new question record
+      const createQuestionSql = `
+        INSERT INTO question_library 
+        (library_question_key, default_text, question_type, default_metadata, default_options, category, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        RETURNING *
+      `;
+      
+      const questionValues = [
+        clonedQuestionKey,
+        `${originalQuestion.default_text} (Copy)`,
+        originalQuestion.question_type,
+        originalQuestion.default_metadata,
+        originalQuestion.default_options,
+        originalQuestion.category
+      ];
+      
+      const result = await db.execute(createQuestionSql, questionValues);
+      const newQuestion = result.rows[0];
+      
+      // If it's a matrix question, clone the rows and columns too
+      if (originalQuestion.question_type === 'matrix' && originalQuestion.matrixRows && originalQuestion.matrixColumns) {
+        // Clone rows
+        for (const row of originalQuestion.matrixRows) {
+          const createRowSql = `
+            INSERT INTO library_matrix_rows
+            (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          `;
+          
+          const rowValues = [
+            newQuestion.id,
+            row.row_key,
+            row.label,
+            row.price,
+            row.default_metadata,
+            row.row_order
+          ];
+          
+          await db.execute(createRowSql, rowValues);
+        }
+        
+        // Clone columns
+        for (const column of originalQuestion.matrixColumns) {
+          const createColumnSql = `
+            INSERT INTO library_matrix_columns
+            (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          `;
+          
+          const columnValues = [
+            newQuestion.id,
+            column.column_key,
+            column.header,
+            column.cell_input_type,
+            column.default_metadata,
+            column.column_order
+          ];
+          
+          await db.execute(createColumnSql, columnValues);
+        }
+      }
+      
+      // Get the complete cloned question with its details
+      const clonedQuestion = await getQuestionWithDetails(newQuestion.id);
+      
+      return res.status(201).json({
+        message: "Question cloned successfully",
+        question: clonedQuestion
+      });
+    } catch (err) {
+      return handleError(err, res);
+    }
+  });
+
   app.delete('/api/form-builder/library-questions/:id', async (req: Request, res: Response) => {
     try {
       const id = Number(req.params.id);

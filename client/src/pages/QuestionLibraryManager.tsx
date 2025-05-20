@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { toast } from "@/hooks/use-toast";
-import { Pencil, Trash2, MoreHorizontal, PlusCircle, Search } from "lucide-react";
+import { Pencil, Trash2, MoreHorizontal, PlusCircle, Search, Copy } from "lucide-react";
 import { useLocation } from "wouter";
 import { getQuestionTypeLabel } from "@shared/form-utils";
 
@@ -35,6 +35,7 @@ export default function QuestionLibraryManager() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [location, navigate] = useLocation();
+  const queryClient = useQueryClient();
   
   // Fetch all questions without pagination to ensure we get everything
   const fetchAllQuestions = async () => {
@@ -122,7 +123,7 @@ export default function QuestionLibraryManager() {
     navigate(`/admin/form-builder/question-library/${questionId}/edit`);
   };
 
-  const handleDelete = async (questionId) => {
+  const handleDelete = async (questionId: number) => {
     try {
       const response = await fetch(`/api/form-builder/library-questions/${questionId}`, {
         method: 'DELETE',
@@ -144,6 +145,44 @@ export default function QuestionLibraryManager() {
         variant: "destructive",
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete question",
+      });
+    }
+  };
+  
+  const handleClone = async (questionId: number) => {
+    try {
+      // Show loading toast
+      toast({
+        title: "Cloning question",
+        description: "Please wait while the question is being cloned...",
+      });
+      
+      const response = await fetch(`/api/form-builder/library-questions/${questionId}/clone`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to clone question");
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "Question cloned successfully",
+        description: `A copy of the question has been created.`,
+      });
+
+      // Invalidate cache and refetch to show the newly cloned question
+      queryClient.invalidateQueries({ queryKey: ['/api/form-builder/library-questions'] });
+      refetch();
+      
+      // Optionally, we could navigate to edit the new question
+      // navigate(`/admin/form-builder/question-library/${result.question.id}/edit`);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error cloning question",
+        description: error instanceof Error ? error.message : "Failed to clone question",
       });
     }
   };
@@ -256,6 +295,10 @@ export default function QuestionLibraryManager() {
                             <DropdownMenuItem onClick={() => handleEdit(question.id)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleClone(question.id)}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Clone
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => {
