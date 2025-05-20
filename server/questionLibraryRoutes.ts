@@ -156,16 +156,37 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       const pageSize = Number(req.query.pageSize) || 25;
       const offset = (page - 1) * pageSize;
       const category = req.query.category as string | undefined;
+      const search = req.query.search as string | undefined;
       
       // Build query based on filters
       let querySql = 'SELECT * FROM question_library';
       let countSql = 'SELECT COUNT(*) FROM question_library';
       const queryParams: any[] = [];
+      let hasWhere = false;
       
+      // Apply category filter
       if (category) {
         querySql += ' WHERE category = $1';
         countSql += ' WHERE category = $1';
         queryParams.push(category);
+        hasWhere = true;
+      }
+      
+      // Apply search filter if provided
+      if (search && search.trim() !== '') {
+        const paramIndex = queryParams.length + 1;
+        const searchTerm = `%${search.toLowerCase()}%`;
+        
+        if (hasWhere) {
+          querySql += ` AND (LOWER(library_question_key) LIKE $${paramIndex} OR LOWER(default_text) LIKE $${paramIndex})`;
+          countSql += ` AND (LOWER(library_question_key) LIKE $${paramIndex} OR LOWER(default_text) LIKE $${paramIndex})`;
+        } else {
+          querySql += ` WHERE (LOWER(library_question_key) LIKE $${paramIndex} OR LOWER(default_text) LIKE $${paramIndex})`;
+          countSql += ` WHERE (LOWER(library_question_key) LIKE $${paramIndex} OR LOWER(default_text) LIKE $${paramIndex})`;
+          hasWhere = true;
+        }
+        
+        queryParams.push(searchTerm);
       }
       
       // Add pagination
@@ -175,7 +196,7 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       // Execute queries
       const [questionsResult, countResult] = await Promise.all([
         db.execute(querySql, queryParams),
-        db.execute(countSql, category ? [category] : [])
+        db.execute(countSql, queryParams)
       ]);
       
       const questions = questionsResult.rows;
