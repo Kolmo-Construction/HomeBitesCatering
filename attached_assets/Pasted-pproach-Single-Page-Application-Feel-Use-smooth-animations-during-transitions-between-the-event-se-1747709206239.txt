@@ -1,0 +1,93 @@
+pproach: Single Page Application Feel
+
+Use smooth animations during transitions between the event selection and the questionnaire
+
+Maintain consistent header/footer/branding elements across both experiences
+
+Use a breadcrumb or progress indicator that starts on the selection page and continues through the form
+
+Visual Continuity
+
+Use a consistent color scheme and typography throughout
+
+Implement a card-based design where the event selection cards visually transform into the form header
+
+Keep the same background elements/patterns to maintain visual continuity
+
+Contextual Continuity
+
+Show a small visual reminder of their selected event type (icon/badge) throughout the questionnaire
+
+Personalize form greeting based on selection (e.g., "Let's plan your perfect wedding...")
+
+Use imagery related to their event type in the form's background or header
+
+Technical Implementation Options
+
+Use React's animated transitions between routes
+
+Implement a multi-step form where the event selection is actually the first step
+
+Use URL parameters to pass the event type and customize the form accordingly
+
+Mobile-First Design Elements
+
+For the mobile experience:
+
+Navigation
+
+Single question focus for mobile screens
+
+Swipeable navigation between questions
+
+Collapsible sections for longer forms
+
+Floating action button for quick navigation
+
+Input Design
+
+Large touch targets (at least 44×44px)
+
+Full-width form elements optimized for thumb operation
+
+Custom mobile-optimized selects and date pickers
+
+Auto-expanding text areas
+
+Visual Hierarchy
+
+Bold, clear section headers
+
+Progressive disclosure of complex options
+
+Use of iconography to supplement text labels
+
+Visual cues for required vs. optional fields
+
+Integration Ideas
+
+To make the event selection seamlessly flow into the form:
+
+Contextual Pre-filling
+
+Pre-fill the "event type" field based on their selection
+
+Customize follow-up questions based on event type
+
+Skip irrelevant questions based on the event selected
+
+Visual Storytelling
+
+Create a visual narrative from selection to completion
+
+Use imagery that evolves throughout the questionnaire journey
+
+Implement progress visualization that tells a story
+
+Personalized Experience
+
+Address the user by name once collected
+
+Show examples/suggestions relevant to their event type
+
+Provide contextual help specific to the selected event
