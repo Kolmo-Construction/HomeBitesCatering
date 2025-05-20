@@ -131,8 +131,8 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
         {onDelete && (
           <Button 
             variant="destructive" 
-            size="sm"
-            className="h-8 px-3 bg-red-500 hover:bg-red-600 text-white" 
+            size="icon"
+            className="h-7 w-7 bg-red-500 hover:bg-red-600 text-white" 
             onClick={(e) => {
               e.stopPropagation();
               console.log("Delete button clicked for page ID:", page.id);
@@ -147,9 +147,9 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
                 });
               }
             }}
+            title="Delete page"
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            <span>Delete</span>
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
