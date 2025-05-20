@@ -422,47 +422,53 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       const newQuestion = result.rows[0];
       
       // If it's a matrix question, clone the rows and columns too
-      if ((originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix') && 
-          (originalQuestion.matrixRows || []).length > 0 && 
-          (originalQuestion.matrixColumns || []).length > 0) {
+      const isMatrix = originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix';
+      const hasMatrixRows = Array.isArray(originalQuestion.matrixRows) && originalQuestion.matrixRows.length > 0;
+      const hasMatrixColumns = Array.isArray(originalQuestion.matrixColumns) && originalQuestion.matrixColumns.length > 0;
+      
+      if (isMatrix && hasMatrixRows && hasMatrixColumns) {
+        console.log("Cloning matrix-specific data for question:", newQuestion.id);
+        
         // Clone rows
         for (const row of originalQuestion.matrixRows) {
-          const createRowSql = `
+          let rowMetadata = row.default_metadata || row.defaultMetadata;
+          if (rowMetadata && typeof rowMetadata !== 'string') {
+            rowMetadata = JSON.stringify(rowMetadata);
+          } else if (rowMetadata === undefined) {
+            rowMetadata = null;
+          }
+          
+          const rowKey = row.row_key || row.rowKey;
+          const label = row.label;
+          const price = row.price || null;
+          const rowOrder = row.row_order || row.rowOrder || 0;
+          
+          await db.execute(sql`
             INSERT INTO library_matrix_rows
             (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-          `;
-          
-          const rowValues = [
-            newQuestion.id,
-            row.row_key,
-            row.label,
-            row.price,
-            row.default_metadata,
-            row.row_order
-          ];
-          
-          await db.execute(createRowSql, rowValues);
+            VALUES (${newQuestion.id}, ${rowKey}, ${label}, ${price}, ${rowMetadata}, ${rowOrder}, NOW(), NOW())
+          `);
         }
         
         // Clone columns
         for (const column of originalQuestion.matrixColumns) {
-          const createColumnSql = `
+          let colMetadata = column.default_metadata || column.defaultMetadata;
+          if (colMetadata && typeof colMetadata !== 'string') {
+            colMetadata = JSON.stringify(colMetadata);
+          } else if (colMetadata === undefined) {
+            colMetadata = null;
+          }
+          
+          const columnKey = column.column_key || column.columnKey;
+          const header = column.header;
+          const cellInputType = column.cell_input_type || column.cellInputType;
+          const columnOrder = column.column_order || column.columnOrder || 0;
+          
+          await db.execute(sql`
             INSERT INTO library_matrix_columns
             (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-          `;
-          
-          const columnValues = [
-            newQuestion.id,
-            column.column_key,
-            column.header,
-            column.cell_input_type,
-            column.default_metadata,
-            column.column_order
-          ];
-          
-          await db.execute(createColumnSql, columnValues);
+            VALUES (${newQuestion.id}, ${columnKey}, ${header}, ${cellInputType}, ${colMetadata}, ${columnOrder}, NOW(), NOW())
+          `);
         }
       }
       
