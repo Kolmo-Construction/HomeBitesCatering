@@ -98,39 +98,41 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center p-2 mb-2 rounded-md cursor-pointer relative group ${
+      className={`flex items-center justify-between p-2 mb-2 rounded-md cursor-pointer ${
         isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200 hover:border-gray-300"
       }`}
       onClick={() => onSelect(page)}
     >
-      <div className="mr-2 cursor-grab" {...attributes} {...listeners}>
-        <GripVertical className="h-5 w-5 text-gray-400" />
+      <div className="flex items-center flex-1">
+        <div className="mr-2 cursor-grab" {...attributes} {...listeners}>
+          <GripVertical className="h-5 w-5 text-gray-400" />
+        </div>
+        <div className="flex-1 truncate">
+          <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
+          {page.description && (
+            <p className="text-xs text-gray-500 truncate">{page.description}</p>
+          )}
+        </div>
       </div>
-      <div className="flex-1 truncate">
-        <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
-        {page.description && (
-          <p className="text-xs text-gray-500 truncate">{page.description}</p>
-        )}
-      </div>
-      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+      <div className="flex items-center space-x-1">
         {onEdit && (
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-6 w-6 bg-white hover:bg-gray-100" 
+            className="h-7 w-7 bg-white hover:bg-gray-100 border border-gray-200" 
             onClick={(e) => {
               e.stopPropagation();
               onEdit(page);
             }}
           >
-            <Settings className="h-3 w-3" />
+            <Settings className="h-4 w-4" />
           </Button>
         )}
         {onDelete && (
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="icon" 
-            className="h-6 w-6 bg-white hover:bg-red-50 text-red-500 hover:text-red-600" 
+            className="h-7 w-7 bg-white hover:bg-red-50 text-red-500 hover:text-red-600 border border-red-200" 
             onClick={(e) => {
               e.stopPropagation();
               console.log("Delete button clicked for page ID:", page.id);
@@ -146,7 +148,7 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
               }
             }}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
