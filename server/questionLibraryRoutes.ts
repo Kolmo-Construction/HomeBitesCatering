@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { z, ZodError } from "zod";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "./db";
 
 // Define validation schemas with Zod for API requests
@@ -418,56 +418,48 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       console.log("Clone result:", result.rows[0]);
       const newQuestion = result.rows[0];
       
-      // Handle matrix-type questions
-      const isMatrixType = originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix';
-
-      if (isMatrixType) {
-        // Clone rows if they exist
-        if (originalQuestion.matrixRows && originalQuestion.matrixRows.length > 0) {
-          console.log(`Cloning ${originalQuestion.matrixRows.length} matrix rows for new question ID: ${newQuestion.id}`);
-          for (const row of originalQuestion.matrixRows) {
-            const createRowSql = `
-              INSERT INTO library_matrix_rows
-              (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
-              VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-            `;
-            
-            // Ensure row properties are accessed correctly (snake_case from DB)
-            const rowValues = [
-              newQuestion.id,
-              row.row_key,
-              row.label,
-              row.price,
-              row.default_metadata ? JSON.stringify(row.default_metadata) : null, // Ensure metadata is stringified
-              row.row_order
-            ];
-            
-            await db.execute(createRowSql, rowValues);
-          }
+      // If it's a matrix question, clone the rows and columns too
+      if ((originalQuestion.question_type === 'matrix' || originalQuestion.questionType === 'matrix') && 
+          (originalQuestion.matrixRows || []).length > 0 && 
+          (originalQuestion.matrixColumns || []).length > 0) {
+        // Clone rows
+        for (const row of originalQuestion.matrixRows) {
+          const createRowSql = `
+            INSERT INTO library_matrix_rows
+            (library_question_id, row_key, label, price, default_metadata, row_order, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          `;
+          
+          const rowValues = [
+            newQuestion.id,
+            row.row_key,
+            row.label,
+            row.price,
+            row.default_metadata,
+            row.row_order
+          ];
+          
+          await db.execute(createRowSql, rowValues);
         }
-
-        // Clone columns if they exist
-        if (originalQuestion.matrixColumns && originalQuestion.matrixColumns.length > 0) {
-          console.log(`Cloning ${originalQuestion.matrixColumns.length} matrix columns for new question ID: ${newQuestion.id}`);
-          for (const column of originalQuestion.matrixColumns) {
-            const createColumnSql = `
-              INSERT INTO library_matrix_columns
-              (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
-              VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-            `;
-            
-            // Ensure column properties are accessed correctly (snake_case from DB)
-            const columnValues = [
-              newQuestion.id,
-              column.column_key,
-              column.header,
-              column.cell_input_type || 'text', // Add fallback for NOT NULL cell_input_type field
-              column.default_metadata ? JSON.stringify(column.default_metadata) : null, // Ensure metadata is stringified
-              column.column_order || 0 // Add fallback for column_order
-            ];
-            
-            await db.execute(createColumnSql, columnValues);
-          }
+        
+        // Clone columns
+        for (const column of originalQuestion.matrixColumns) {
+          const createColumnSql = `
+            INSERT INTO library_matrix_columns
+            (library_question_id, column_key, header, cell_input_type, default_metadata, column_order, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          `;
+          
+          const columnValues = [
+            newQuestion.id,
+            column.column_key,
+            column.header,
+            column.cell_input_type,
+            column.default_metadata,
+            column.column_order
+          ];
+          
+          await db.execute(createColumnSql, columnValues);
         }
       }
       
@@ -513,8 +505,9 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
 
 // Helper function to get a question with all related details
 async function getQuestionWithDetails(id: number) {
-  // Get the base question using sql template literal instead of parameters
-  const questionResult = await db.execute(sql`SELECT * FROM question_library WHERE id = ${id}`);
+  // Get the base question
+  const questionSql = 'SELECT * FROM question_library WHERE id = $1';
+  const questionResult = await db.execute(questionSql, [id]);
   
   if (questionResult.rows.length === 0) {
     return null;
@@ -524,11 +517,13 @@ async function getQuestionWithDetails(id: number) {
   
   // If it's a matrix question, get rows and columns
   if (question.question_type === 'matrix') {
-    // Get rows using sql template literal
-    const rowsResult = await db.execute(sql`SELECT * FROM library_matrix_rows WHERE library_question_id = ${id} ORDER BY row_order`);
+    // Get rows
+    const rowsSql = 'SELECT * FROM library_matrix_rows WHERE library_question_id = $1 ORDER BY row_order';
+    const rowsResult = await db.execute(rowsSql, [id]);
     
-    // Get columns using sql template literal
-    const columnsResult = await db.execute(sql`SELECT * FROM library_matrix_columns WHERE library_question_id = ${id} ORDER BY column_order`);
+    // Get columns
+    const columnsSql = 'SELECT * FROM library_matrix_columns WHERE library_question_id = $1 ORDER BY column_order';
+    const columnsResult = await db.execute(columnsSql, [id]);
     
     // Return the full question with its matrix components
     return {
