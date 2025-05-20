@@ -1084,7 +1084,7 @@ export default function FormEditor() {
 
   const deletePageMutation = useMutation({
     mutationFn: async (pageId) => {
-      const response = await fetch(`/api/form-builder/pages/${pageId}`, {
+      const response = await fetch(`/api/form-builder/forms/${formId}/pages/${pageId}`, {
         method: 'DELETE',
       });
       
