@@ -382,14 +382,6 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       
       console.log("Creating clone with key:", clonedQuestionKey);
       
-      // Create a new question record
-      const createQuestionSql = `
-        INSERT INTO question_library 
-        (library_question_key, default_text, question_type, default_metadata, default_options, category, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        RETURNING *
-      `;
-      
       // Handle default_metadata and default_options which could be already stringified or not
       let defaultMetadata = originalQuestion.default_metadata || originalQuestion.defaultMetadata;
       let defaultOptions = originalQuestion.default_options || originalQuestion.defaultOptions;
@@ -397,24 +389,35 @@ export const registerQuestionLibraryRoutes = (app: Express) => {
       // Ensure these are properly stringified if they're not already strings
       if (defaultMetadata && typeof defaultMetadata !== 'string') {
         defaultMetadata = JSON.stringify(defaultMetadata);
+      } else if (defaultMetadata === undefined) {
+        defaultMetadata = null;
       }
       
       if (defaultOptions && typeof defaultOptions !== 'string') {
         defaultOptions = JSON.stringify(defaultOptions);
+      } else if (defaultOptions === undefined) {
+        defaultOptions = null;
       }
       
-      const questionValues = [
+      const newDefaultText = `${originalText} (Copy)`;
+      const categoryToInsert = originalQuestion.category;
+      
+      console.log("Clone SQL params:", {
         clonedQuestionKey,
-        `${originalText} (Copy)`,
+        newDefaultText,
         questionType,
         defaultMetadata,
         defaultOptions,
-        originalQuestion.category
-      ];
+        categoryToInsert
+      });
       
-      console.log("Clone SQL params:", questionValues);
-      
-      const result = await db.execute(createQuestionSql, questionValues);
+      // Create a new question record using sql tagged template
+      const result = await db.execute(sql`
+        INSERT INTO question_library 
+        (library_question_key, default_text, question_type, default_metadata, default_options, category, created_at, updated_at)
+        VALUES (${clonedQuestionKey}, ${newDefaultText}, ${questionType}, ${defaultMetadata}, ${defaultOptions}, ${categoryToInsert}, NOW(), NOW())
+        RETURNING *
+      `);
       console.log("Clone result:", result.rows[0]);
       const newQuestion = result.rows[0];
       
