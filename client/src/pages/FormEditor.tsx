@@ -98,61 +98,45 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 p-3 mb-2 rounded-md ${
+      className={`flex items-center p-2 mb-2 rounded-md group ${
         isSelected ? "bg-primary-50 border border-primary-200" : "bg-white border border-gray-200 hover:border-gray-300"
       }`}
     >
-      <div className="cursor-grab" {...attributes} {...listeners}>
+      <div className="cursor-grab mr-2" {...attributes} {...listeners}>
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
       
-      <div className="truncate cursor-pointer" onClick={() => onSelect(page)}>
+      <div className="truncate cursor-pointer flex-grow" onClick={() => onSelect(page)}>
         <p className="font-medium text-sm">{page.pageTitle || page.title || `Page ${page.pageOrder + 1}`}</p>
         {page.description && (
           <p className="text-xs text-gray-500 truncate">{page.description}</p>
         )}
       </div>
       
-      <div className="flex items-center justify-end gap-2">
-        {onEdit && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 px-2 flex items-center gap-1 bg-white" 
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(page);
-            }}
-          >
-            <Settings className="h-4 w-4" />
-            <span>Edit</span>
-          </Button>
-        )}
-        {onDelete && (
-          <Button 
-            variant="destructive" 
-            size="icon"
-            className="h-7 w-7 bg-red-500 hover:bg-red-600 text-white" 
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log("Delete button clicked for page ID:", page.id);
-              if (page.id) {
-                onDelete(page.id);
-              } else {
-                console.error("Cannot delete page: No page ID found");
-                toast({
-                  variant: "destructive",
-                  title: "Error",
-                  description: "Could not delete page: No page ID found",
-                });
-              }
-            }}
-            title="Delete page"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+      {onDelete && (
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50 hover:text-red-600" 
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log("Delete button clicked for page ID:", page.id);
+            if (page.id) {
+              onDelete(page.id);
+            } else {
+              console.error("Cannot delete page: No page ID found");
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not delete page: No page ID found",
+              });
+            }
+          }}
+          title="Delete page"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
     </div>
   );
 };
