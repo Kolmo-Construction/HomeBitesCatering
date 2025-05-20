@@ -67,7 +67,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taco_fiesta_proteins",
     defaultText: "Taco Fiesta - Proteins (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Barbacoa",
@@ -90,7 +90,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taco_fiesta_sides",
     defaultText: "Taco Fiesta - Sides (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Refried Beans",
@@ -112,7 +112,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taco_fiesta_salsas",
     defaultText: "Taco Fiesta - Salsas (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Classic Pico de Gallo",
@@ -131,7 +131,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taco_fiesta_condiments",
     defaultText: "Taco Fiesta - Condiments (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Shredded cheese",
@@ -157,7 +157,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "american_bbq_mains",
     defaultText: "American BBQ - Mains/Protein Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Prime Rib - Boneless -Carving station (**upcharge of $4.00 pp**)",
@@ -189,7 +189,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "american_bbq_sides",
     defaultText: "American BBQ - Side Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Ham hock baked Beans",
@@ -215,7 +215,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "american_bbq_salads",
     defaultText: "American BBQ - Salad Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Caesar",
@@ -239,7 +239,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "american_bbq_sauces",
     defaultText: "American BBQ - Sauce Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Kansas City BBQ Sauce",
@@ -256,7 +256,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "american_bbq_condiments",
     defaultText: "American BBQ - Condiment Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Ketchup",
@@ -281,7 +281,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_greece_mains",
     defaultText: "A Taste of Greece - Mains (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Papoutsakia -Classic moussaka in individual hollowed eggplant shells with seasoned ground beef and topped with creamy bechamel",
@@ -304,7 +304,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_greece_sides",
     defaultText: "A Taste of Greece - Sides (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Spanakopita - Spinach and Feta Pie",
@@ -329,7 +329,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_greece_salads",
     defaultText: "A Taste of Greece - Salad Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Greek Salad - Classic combination of tomatoes, cucumbers, bell peppers, red onions, Kalamata olives, and feta cheese",
@@ -346,7 +346,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_italy_mains",
     defaultText: "A Taste of Italy - Mains (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Meatballs",
@@ -379,7 +379,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_italy_pasta",
     defaultText: "A Taste of Italy - Pasta Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Spaghetti and Meatballs",
@@ -406,7 +406,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_italy_sides",
     defaultText: "A Taste of Italy - Sides (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Garlic Bread",
@@ -428,7 +428,7 @@ async function importMenuItems() {
   await createLibraryQuestion({
     libraryQuestionKey: "taste_of_italy_salads",
     defaultText: "A Taste of Italy - Salad Choice (Selection limits vary by package)",
-    questionType: "checkbox",
+    questionType: "checkbox_group",
     category: "menu_info",
     defaultOptions: [
       "Caesar Salad",
