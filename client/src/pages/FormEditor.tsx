@@ -114,7 +114,7 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-6 w-6" 
+            className="h-6 w-6 bg-white hover:bg-gray-100" 
             onClick={(e) => {
               e.stopPropagation();
               onEdit(page);
@@ -127,7 +127,7 @@ const SortablePage = ({ page, isSelected, onSelect, onEdit, onDelete }) => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-6 w-6 text-red-500" 
+            className="h-6 w-6 bg-white hover:bg-red-50 text-red-500 hover:text-red-600" 
             onClick={(e) => {
               e.stopPropagation();
               onDelete(page.id);
