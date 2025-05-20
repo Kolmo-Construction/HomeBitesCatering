@@ -36,11 +36,10 @@ export default function QuestionLibraryManager() {
   const pageSize = 10;
   const [location, navigate] = useLocation();
   
-  // Simple fetch function that returns a safe default in case of error
-  const fetchQuestions = async () => {
+  // Fetch all questions without pagination to ensure we get everything
+  const fetchAllQuestions = async () => {
     try {
-      // Create query string manually to avoid URLSearchParams
-      let queryStr = `page=${page}&pageSize=100`; // Fetch more items to allow client-side filtering
+      let queryStr = `pageSize=1000`; // Request a large number to get all questions
       
       if (categoryFilter) {
         queryStr += `&category=${encodeURIComponent(categoryFilter)}`;
@@ -53,12 +52,11 @@ export default function QuestionLibraryManager() {
       
       const result = await response.json();
       
-      // Ensure we always have the expected structure
       return {
         data: result.data || [],
-        pagination: result.pagination || {
+        pagination: {
           page: 1,
-          pageSize,
+          pageSize: 1000,
           total: (result.data || []).length,
           totalPages: 1
         }
@@ -77,37 +75,44 @@ export default function QuestionLibraryManager() {
     }
   };
 
-  // Fetch library questions with category filter
+  // Fetch all library questions
   const { data: allData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/api/form-builder/library-questions', page, 100, categoryFilter],
-    queryFn: fetchQuestions
+    queryKey: ['/api/form-builder/library-questions', 'all', categoryFilter],
+    queryFn: fetchAllQuestions
   });
   
-  // Client-side filtering for search
-  const filteredData = React.useMemo(() => {
-    if (!allData?.data || !searchQuery.trim()) {
-      return allData;
+  // Filter questions based on search query
+  const allFilteredItems = useMemo(() => {
+    if (!allData?.data) return [];
+    
+    if (!searchQuery.trim()) {
+      return allData.data;
     }
     
     const lowerCaseQuery = searchQuery.toLowerCase().trim();
-    const filteredItems = allData.data.filter(item => 
+    return allData.data.filter(item => 
       (item.libraryQuestionKey && item.libraryQuestionKey.toLowerCase().includes(lowerCaseQuery)) ||
       (item.defaultText && item.defaultText.toLowerCase().includes(lowerCaseQuery)) ||
       (item.category && item.category.toLowerCase().includes(lowerCaseQuery))
     );
-    
-    return {
-      data: filteredItems,
-      pagination: {
-        ...allData.pagination,
-        total: filteredItems.length,
-        totalPages: Math.ceil(filteredItems.length / pageSize)
-      }
-    };
-  }, [allData, searchQuery, pageSize]);
+  }, [allData, searchQuery]);
   
-  // Use filtered data instead of raw data
-  const data = filteredData;
+  // Apply pagination to filtered results
+  const paginatedItems = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return allFilteredItems.slice(startIndex, startIndex + pageSize);
+  }, [allFilteredItems, page, pageSize]);
+  
+  // Create data object with correct pagination info
+  const data = useMemo(() => ({
+    data: paginatedItems,
+    pagination: {
+      page,
+      pageSize,
+      total: allFilteredItems.length,
+      totalPages: Math.ceil(allFilteredItems.length / pageSize)
+    }
+  }), [paginatedItems, page, pageSize, allFilteredItems.length]);
 
   const handleCreateNew = () => {
     navigate("/admin/form-builder/question-library/new");
