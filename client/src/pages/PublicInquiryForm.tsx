@@ -3246,8 +3246,20 @@ export default function PublicInquiryForm() {
   
   const handleNext = () => {
     const currentIndex = steps.indexOf(currentStep);
+    const currentFormTheme = watch("requestedTheme"); // Get current theme
+    
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      let nextStep = steps[currentIndex + 1];
+      
+      // If current step is EventDetails and "hors_doeuvres" is selected,
+      // and the natural next step is menuSelection, skip to appetizers.
+      if (currentStep === "eventDetails" && 
+          currentFormTheme === "hors_doeuvres" && 
+          nextStep === "menuSelection") {
+        nextStep = "appetizers";
+      }
+      
+      setCurrentStep(nextStep);
     }
   };
   
