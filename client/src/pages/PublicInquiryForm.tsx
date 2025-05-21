@@ -1322,58 +1322,164 @@ const themeMenuData = {
     packages: [
       { 
         id: "bronze",
-        name: "Bronze Package", 
-        price: 21.95,
-        description: "2 proteins, 2 sides, cornbread & butter",
+        name: "Bronze", 
+        price: 32.00,
+        description: "Pick 3 Proteins, 2 Sides, 2 Salads, 3 Condiments, 2 Sauces",
         minGuestCount: 50
       },
       { 
         id: "silver",
-        name: "Silver Package", 
-        price: 26.95,
-        description: "3 proteins, 3 sides, cornbread & butter",
+        name: "Silver", 
+        price: 38.00,
+        description: "Pick 4 Proteins, 3 Sides, 2 Salads, 3 Condiments, 2 Sauces",
         minGuestCount: 0
       },
       { 
         id: "gold",
-        name: "Gold Package", 
-        price: 31.95,
-        description: "4 proteins, 4 sides, cornbread & butter, 1 dessert",
+        name: "Gold", 
+        price: 46.00,
+        description: "Pick 4 Proteins, 4 Sides, 3 Salads, 4 Condiments, 3 Sauces",
+        minGuestCount: 0
+      },
+      { 
+        id: "diamond",
+        name: "Diamond", 
+        price: 54.00,
+        description: "Pick 5 Proteins, 5 Sides, 3 Salads, 5 Condiments, 4 Sauces",
         minGuestCount: 0
       }
     ],
     categories: {
       proteins: {
         title: "Proteins",
+        description: "Select your protein options",
         items: [
+          { id: "prime_rib", name: "Prime Rib - Boneless - Carving station", upcharge: 4.00 },
+          { id: "smoked_brisket", name: "Smoked Brisket", upcharge: 2.00 },
+          { id: "beef_ribs", name: "Beef Ribs", upcharge: 3.00 },
+          { id: "short_ribs", name: "Guinness Braised Boneless Short Ribs", upcharge: 2.00 },
+          { id: "filet_mignon", name: "Bacon Wrapped Fillet Mignon", upcharge: 4.00 },
+          { id: "flank_steak", name: "Flank Steak with Chimichurri", upcharge: 0 },
+          { id: "sausage_medley", name: "Sausage Medley", upcharge: 0 },
+          { id: "hamburger_bar", name: "Hamburger Bar", upcharge: 1.50 },
+          { id: "lamb_chops", name: "Lamb Chops", upcharge: 3.00 },
+          { id: "smoked_lamb", name: "Smoked Leg of Lamb (Family Style only)", upcharge: 0 },
           { id: "pulled_pork", name: "Pulled Pork", upcharge: 0 },
-          { id: "brisket", name: "Brisket", upcharge: 3.00 },
-          { id: "chicken", name: "BBQ Chicken", upcharge: 0 },
-          { id: "ribs", name: "Ribs", upcharge: 3.00 },
-          { id: "sausage", name: "Sausage", upcharge: 0 },
-          { id: "burnt_ends", name: "Burnt Ends", upcharge: 4.00 }
+          { id: "pork_belly", name: "Smoked Pork Belly", upcharge: 0 },
+          { id: "baby_back_ribs", name: "Baby Back Ribs", upcharge: 0 },
+          { id: "pork_chop", name: "Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze", upcharge: 0 },
+          { id: "guinness_chicken", name: "BBQ Guinness Chicken", upcharge: 1.00 },
+          { id: "carolina_chicken", name: "Carolina BBQ Chicken", upcharge: 0 },
+          { id: "rotisserie_chicken", name: "Rotisserie Chicken", upcharge: 0 },
+          { id: "bbq_prawns", name: "BBQ Prawns", upcharge: 1.00 },
+          { id: "tiger_prawns", name: "BBQ Black Tiger Prawns", upcharge: 2.00 },
+          { id: "salmon", name: "Salmon steak", upcharge: 0 },
+          { id: "tofu", name: "Tofu (V)", upcharge: 0 },
+          { id: "veg_kebabs", name: "Vegetable kebabs (V)", upcharge: 0 },
+          { id: "cauliflower_steaks", name: "Grilled Cauliflower Steaks (V)", upcharge: 0 }
         ],
         limits: {
-          "bronze": 2,
-          "silver": 3,
-          "gold": 4
+          "bronze": 3,
+          "silver": 4,
+          "gold": 4,
+          "diamond": 5
         }
       },
       sides: {
         title: "Sides",
+        description: "Select your side dishes",
         items: [
-          { id: "mac_cheese", name: "Mac & Cheese", upcharge: 0 },
-          { id: "baked_beans", name: "Baked Beans", upcharge: 0 },
-          { id: "coleslaw", name: "Coleslaw", upcharge: 0 },
-          { id: "potato_salad", name: "Potato Salad", upcharge: 0 },
-          { id: "green_beans", name: "Green Beans", upcharge: 0 },
-          { id: "corn", name: "Corn on the Cob", upcharge: 0 },
-          { id: "collard_greens", name: "Collard Greens", upcharge: 0 }
+          { id: "ham_hock_beans", name: "Ham hock baked Beans", upcharge: 0 },
+          { id: "avocado_eggs", name: "Avocado deviled Eggs", upcharge: 0 },
+          { id: "mac_cheese", name: "Mac n' Cheese", upcharge: 0 },
+          { id: "stuffed_poblano", name: "Stuffed Poblano peppers", upcharge: 0 },
+          { id: "baked_potato_bar", name: "Baked Potato Bar", upcharge: 1.50 },
+          { id: "garlic_mashed", name: "Garlic Mashed Potatoes", upcharge: 0 },
+          { id: "mini_smashed", name: "Mini Smashed Potatoes", upcharge: 0 },
+          { id: "twice_baked", name: "Twice Baked Potatoes", upcharge: 0.50 },
+          { id: "corn_cob", name: "Corn on the Cob", upcharge: 0 },
+          { id: "creamed_corn", name: "Creamed Corn", upcharge: 0 },
+          { id: "jalapeno_poppers", name: "Jalapeño Poppers", upcharge: 0 },
+          { id: "brussels_sprouts", name: "Roasted Brussels Sprouts", upcharge: 0 },
+          { id: "corn_bread", name: "Corn Bread", upcharge: 0 },
+          { id: "jalapeno_cornbread", name: "Jalapeno cornbread", upcharge: 0 },
+          { id: "grilled_vegetables", name: "Grilled Vegetables", upcharge: 0 },
+          { id: "grilled_asparagus", name: "Grilled Asparagus", upcharge: 0 }
         ],
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      salads: {
+        title: "Salads",
+        description: "Select your salad options",
+        items: [
+          { id: "caesar", name: "Caesar", upcharge: 0 },
+          { id: "coleslaw", name: "Coleslaw", upcharge: 0 },
+          { id: "garden_salad", name: "Garden Salad", upcharge: 0 },
+          { id: "pasta_salad", name: "Pasta Salad", upcharge: 0 },
+          { id: "bacon_jalapeno_corn", name: "Bacon Jalapeño Corn Salad", upcharge: 0 },
+          { id: "wedge_salad", name: "Wedge Salad", upcharge: 0 },
+          { id: "german_cucumber", name: "German cucumber salad", upcharge: 0 },
+          { id: "asian_slaw", name: "Crunchy Asian Slaw", upcharge: 0 },
+          { id: "cobb_salad", name: "Tossed Cobb Salad", upcharge: 0 },
+          { id: "potato_salad", name: "Classic Potato Salad", upcharge: 0 },
+          { id: "german_potato", name: "German Potato Salad", upcharge: 0 },
+          { id: "macaroni_salad", name: "Macaroni Salad", upcharge: 0 },
+          { id: "hawaiian_macaroni", name: "Hawaiian Macaroni Salad", upcharge: 0 },
+          { id: "fruit_salad", name: "Fruit Salad", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 2,
+          "gold": 3,
+          "diamond": 3
+        }
+      },
+      sauces: {
+        title: "Sauces",
+        description: "Select your sauce options",
+        items: [
+          { id: "kansas_city", name: "Kansas City BBQ Sauce", upcharge: 0 },
+          { id: "south_carolina", name: "South Carolina Gold BBQ Sauce", upcharge: 0 },
+          { id: "north_carolina", name: "North Carolina Vinegar based BBQ Sauce", upcharge: 0 },
+          { id: "alabama_white", name: "Alabama White BBQ Sauce", upcharge: 0 },
+          { id: "texas_bbq", name: "Texas BBQ Sauce", upcharge: 0 },
+          { id: "very_berry", name: "Very Berry BBQ Sauce", upcharge: 0 },
+          { id: "smoky_bourbon", name: "Smoky bourbon BBQ Sauce", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 2,
+          "gold": 3,
+          "diamond": 4
+        }
+      },
+      condiments: {
+        title: "Condiments",
+        description: "Select your condiment options",
+        items: [
+          { id: "ketchup", name: "Ketchup", upcharge: 0 },
+          { id: "stone_ground", name: "Stone Ground Mustard", upcharge: 0 },
+          { id: "dijon", name: "Dijon Mustard", upcharge: 0 },
+          { id: "yellow_mustard", name: "Yellow Mustard", upcharge: 0 },
+          { id: "mayonnaise", name: "Mayonnaise", upcharge: 0 },
+          { id: "sweet_pickle", name: "Sweet pickle Chips", upcharge: 0 },
+          { id: "dill_pickle", name: "Dill pickle Chips", upcharge: 0 },
+          { id: "sliced_radish", name: "Sliced radish", upcharge: 0 },
+          { id: "sweet_relish", name: "Sweet Relish", upcharge: 0 },
+          { id: "cranberry_relish", name: "Cranberry Relish", upcharge: 0 },
+          { id: "kimchi", name: "Kimchi", upcharge: 0 },
+          { id: "giardiniera", name: "Mixed Pickled Vegetables - Giardiniera", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 3,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 5
         }
       }
     }
