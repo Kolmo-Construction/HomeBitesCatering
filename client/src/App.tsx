@@ -21,6 +21,8 @@ import FormManager from "@/pages/FormManager";
 import FormEditor from "@/pages/FormEditor";
 // Calculator Test
 import CalculatorTest from "@/pages/CalculatorTest";
+// Public Inquiry Form
+import PublicInquiryForm from "@/pages/PublicInquiryForm";
 // Public Questionnaire will be reimplemented
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
@@ -42,6 +44,11 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster />
+      
+      {/* Public routes that don't require authentication */}
+      <Switch>
+        <Route path="/inquiry" component={PublicInquiryForm} />
+      </Switch>
       
       {!user ? (
         <Login />
