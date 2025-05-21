@@ -2236,14 +2236,15 @@ const AppetizersStep = ({
   
   // Make sure we have the horsDoeurvesSelections structure initialized
   useEffect(() => {
-    // Initialize horsDoeurvesSelections with empty structure
-    setValue("horsDoeurvesSelections", {
-      serviceStyle: horsDoeurvesSelections?.serviceStyle || "stationary",
-      categories: horsDoeurvesSelections?.categories || {}
-    });
+    // Initialize horsDoeurvesSelections with empty structure if needed
+    if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories) {
+      setValue("horsDoeurvesSelections", {
+        serviceStyle: horsDoeurvesSelections?.serviceStyle || "stationary",
+        categories: {}
+      });
+    }
     
-    // Set requestedTheme to hors_doeuvres to ensure matrix displays properly
-    setValue("requestedTheme", "hors_doeuvres");
+    // We don't modify requestedTheme here to avoid navigation issues
   }, []);
   
   // Initialize appetizers structure if needed

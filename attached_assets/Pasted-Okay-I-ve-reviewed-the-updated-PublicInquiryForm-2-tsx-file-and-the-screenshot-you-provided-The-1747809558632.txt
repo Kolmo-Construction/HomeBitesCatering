@@ -1,0 +1,61 @@
+Okay, I've reviewed the updated PublicInquiryForm (2).tsx file and the screenshot you provided.
+
+The issue you're seeing on the "Menu Selection" step ("Please complete the previous steps to select a menu theme.") arises from how the requestedTheme form value, particularly when it's "hors_doeuvres", interacts with the MenuSelectionStep and the data structure themeMenuData.
+
+Here's a breakdown of the problem and how to address it:
+
+Root Cause:
+
+themeMenuData Structure: The themeMenuData object (around line 804) contains detailed menu packages for themes like "taco_fiesta", "american_bbq", etc. It does not have an entry for "hors_doeuvres".
+MenuSelectionStep Logic: This step tries to load themeData using themeMenuData[selectedTheme]. If selectedTheme is "hors_doeuvres" (or an empty string if no theme was selected), themeData will be undefined, causing the fallback message "Please complete the previous steps..." to display.
+"Hor d'oeuvres only" Theme Option: In EventDetailsStep (around line 740), you have an option: { value: "hors_doeuvres", label: "Hor d'oeuvres only (Cocktail party)" }. If a user selects this, requestedTheme becomes "hors_doeuvres".
+Problematic useEffect Hooks:
+In MenuSelectionStep (around line 1679):
+JavaScript
+
+React.useEffect(() => {
+  if (!selectedTheme || selectedTheme === "") {
+    setValue("requestedTheme", "hors_doeuvres");
+  }
+}, [selectedTheme, setValue]);
+If no theme was actively selected in the previous step (so selectedTheme is ""), this hook forces requestedTheme to "hors_doeuvres". Since "hors_doeuvres" isn't in themeMenuData, themeData remains undefined, and the fallback UI is shown. This hook doesn't achieve the goal of showing a valid menu if one wasn't selected.
+In AppetizersStep (around line 1460):
+JavaScript
+
+useEffect(() => {
+  // ...
+  setValue("requestedTheme", "hors_doeuvres"); 
+}, []);
+This unconditionally sets requestedTheme to "hors_doeuvres" when the AppetizersStep mounts. If the user selected a main theme (e.g., "Taco Fiesta"), then navigates to AppetizersStep, and then navigates back to MenuSelectionStep, the selectedTheme prop for MenuSelectionStep will now be "hors_doeuvres", again causing the fallback UI. The AppetizersStep should not modify the main requestedTheme.
+Recommended Solution:
+
+The theme "hors_doeuvres" implies that no main course menu selection is needed. The form flow should accommodate this.
+
+Remove Problematic useEffect Hooks:
+
+In MenuSelectionStep.tsx (around line 1679): Delete the entire React.useEffect block that tries to set requestedTheme to "hors_doeuvres". The selectedTheme should come directly from the user's choice in EventDetailsStep.
+In AppetizersStep.tsx (around line 1460): Remove the line setValue("requestedTheme", "hors_doeuvres"); from the useEffect. This step should not change the overall event theme.
+Adjust Navigation Logic in PublicInquiryForm (Main Component):
+Modify the handleNext function to skip MenuSelectionStep if the "Hor d'oeuvres only" theme is selected.
+
+TypeScript
+
+// Inside PublicInquiryForm component (around line 1851)
+
+const handleNext = () => {
+  const currentIndex = steps.indexOf(currentStep);
+  const currentFormTheme = watch("requestedTheme"); // Get current theme
+
+  if (currentIndex < steps.length - 1) {
+    let nextStep = steps[currentIndex + 1];
+
+    // If current step is EventDetails and "hors_doeuvres" is selected,
+    // and the natural next step is menuSelection, skip to appetizers.
+    if (currentStep === "eventDetails" && 
+        currentFormTheme === "hors_doeuvres" && 
+        nextStep === "menuSelection") {
+      nextStep = "appetizers"; 
+    }
+    setCurrentStep(nextStep);
+  }
+};
