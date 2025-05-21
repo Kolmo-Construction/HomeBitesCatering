@@ -112,8 +112,13 @@ const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initi
   const handleSelectEventType = (type: EventType) => {
     setValue('eventType', type);
     
-    // Redirect to event-specific URL
-    window.location.href = `/experimental-inquiry/${type}`;
+    // We need to both update the step AND redirect
+    // First update the current step to basic information
+    setCurrentStep(FormStep.BASIC_INFORMATION);
+    
+    // Use history.push instead of window.location for a smoother experience
+    // that won't cause a full page reload
+    window.history.pushState({}, '', `/experimental-inquiry/${type}`);
   };
   
   // Navigate to next step
