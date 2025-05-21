@@ -1342,6 +1342,7 @@ const EventDetailsStep = ({
 const themeMenuData = {
   sandwich_factory: {
     title: "Sandwich Factory - Catering Packages",
+    quantityInput: true,
     packages: [
       { 
         id: "bronze",
@@ -1526,15 +1527,17 @@ const themeMenuData = {
       },
       add_ons: {
         title: "Add-ons",
-        description: "Optional extras",
+        description: "Optional extras with quantity entry",
         limits: {
           bronze: 3,
           silver: 3,
           gold: 3,
           diamond: 3
         },
+        quantityInput: true,
         items: [
-          { id: "gluten_free_bread", name: "Gluten-Free Bread slices ($0.25 ea)", upcharge: 0.25 }
+          { id: "gluten_free_bread", name: "Gluten-Free Bread slices ($0.25 ea)", upcharge: 0.25 },
+          { id: "gluten_free_buns", name: "Gluten-Free Buns ($0.95 ea)", upcharge: 0.95 }
         ]
       }
     }
@@ -3280,35 +3283,76 @@ const MenuSelectionStep = ({
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {category.items.map((item) => (
-                      <div key={item.id} className="relative">
-                        <label className={`
-                          flex items-center justify-between p-3 border rounded-md
-                          ${isItemSelected(categoryKey, item.id) ? 'border-primary bg-primary/5' : 'border-gray-200'}
-                          ${(!isItemSelected(categoryKey, item.id) && isSelectionLimitReached(categoryKey)) 
-                            ? 'opacity-50 cursor-not-allowed' 
-                            : 'cursor-pointer hover:border-primary/50'}
-                        `}>
-                          <div className="flex items-start">
-                            <Checkbox
-                              checked={isItemSelected(categoryKey, item.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked === "indeterminate") return;
-                                handleItemSelection(categoryKey, item.id, !!checked);
-                              }}
-                              disabled={!isItemSelected(categoryKey, item.id) && isSelectionLimitReached(categoryKey)}
-                              className="mr-3 mt-0.5"
-                            />
-                            <div>
-                              <div className="font-medium">{item.name}</div>
-                              {item.upcharge > 0 && (
-                                <div className="text-sm text-amber-600">+${item.upcharge.toFixed(2)} per person</div>
-                              )}
+                    {category.items.map((item) => {
+                      // Special handling for add-ons with quantity input in Sandwich Factory
+                      if (categoryKey === 'add_ons' && 'quantityInput' in themeData && themeData.quantityInput) {
+                        return (
+                          <div key={item.id} className="relative">
+                            <div className="p-3 border rounded-md border-gray-200 hover:border-primary/50">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="font-medium">{item.name}</div>
+                              </div>
+                              <div className="flex items-center mt-2">
+                                <Label htmlFor={`qty-${categoryKey}-${item.id}`} className="text-sm mr-2">
+                                  Amount:
+                                </Label>
+                                <Input
+                                  id={`qty-${categoryKey}-${item.id}`}
+                                  type="number"
+                                  min="0"
+                                  className="w-20 text-right"
+                                  value={getItemQuantity(categoryKey, item.id) || ""}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    if (value > 0) {
+                                      handleItemSelection(categoryKey, item.id, true, value);
+                                    } else {
+                                      handleItemSelection(categoryKey, item.id, false);
+                                    }
+                                  }}
+                                />
+                                {item.upcharge > 0 && getItemQuantity(categoryKey, item.id) > 0 && (
+                                  <div className="ml-4 text-sm font-medium">
+                                    Total: ${(item.upcharge * getItemQuantity(categoryKey, item.id)).toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </label>
-                      </div>
-                    ))}
+                        );
+                      } else {
+                        // Regular checkbox selections for other categories
+                        return (
+                          <div key={item.id} className="relative">
+                            <label className={`
+                              flex items-center justify-between p-3 border rounded-md
+                              ${isItemSelected(categoryKey, item.id) ? 'border-primary bg-primary/5' : 'border-gray-200'}
+                              ${(!isItemSelected(categoryKey, item.id) && isSelectionLimitReached(categoryKey)) 
+                                ? 'opacity-50 cursor-not-allowed' 
+                                : 'cursor-pointer hover:border-primary/50'}
+                            `}>
+                              <div className="flex items-start">
+                                <Checkbox
+                                  checked={isItemSelected(categoryKey, item.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked === "indeterminate") return;
+                                    handleItemSelection(categoryKey, item.id, !!checked);
+                                  }}
+                                  disabled={!isItemSelected(categoryKey, item.id) && isSelectionLimitReached(categoryKey)}
+                                  className="mr-3 mt-0.5"
+                                />
+                                <div>
+                                  <div className="font-medium">{item.name}</div>
+                                  {item.upcharge > 0 && (
+                                    <div className="text-sm text-amber-600">+${item.upcharge.toFixed(2)} per person</div>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+                        );
+                      }
+                    })}
                   </div>
                 </div>
               );
