@@ -1179,8 +1179,10 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                                 <SelectValue placeholder="Select action" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="show">Show this question</SelectItem>
-                                <SelectItem value="hide">Hide this question</SelectItem>
+                                <SelectItem value="show_question">Show this question</SelectItem>
+                                <SelectItem value="hide_question">Hide this question</SelectItem>
+                                <SelectItem value="require_question">Make required</SelectItem>
+                                <SelectItem value="unrequire_question">Make optional</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1211,15 +1213,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                   Add Rule
                 </Button>
                 
-                <div className="mt-4 pt-4 border-t flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => form.handleSubmit(handleSubmit)()}
-                    className="bg-primary text-white"
-                  >
-                    Save Changes
-                  </Button>
-                </div>
+                {/* Rule save button intentionally removed to avoid duplication with the main form save button */}
               </div>
             </TabsContent>
             
