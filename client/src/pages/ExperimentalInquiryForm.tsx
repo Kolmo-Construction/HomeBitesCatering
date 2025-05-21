@@ -2144,7 +2144,7 @@ const MenuSelectionStep = ({
     }
     
     const category = themeData.categories[categoryKey as keyof typeof themeData.categories];
-    return category.limits[selectedPackage as keyof typeof category.limits] || 0;
+    return category.limits?.[selectedPackage as keyof typeof category.limits] || 0;
   };
   
   // Check if a category is available for the selected package
@@ -2772,6 +2772,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
       guestCount: 50,
       serviceStyle: "",
       requestedTheme: "",
+      selectedPackages: {}, // Theme-specific package selections
       menuSelections: {
         proteins: [],
         sides: [],
