@@ -43,6 +43,125 @@ export type ThemeMenu = {
 
 // Main theme menu data structure
 export const themeMenuData = {
+  taste_of_italy: {
+    title: "A Taste of Italy",
+    description: "Traditional Italian cuisine with rich flavors",
+    packages: [
+      {
+        id: "bronze",
+        name: "Bronze Package",
+        price: 32.00,
+        description: "Pick 2 Mains, Pick 3 Sides, Pick 1 Pasta, Pick 1 Salad",
+        limits: {
+          mains: 2,
+          sides: 3,
+          pasta: 1,
+          salads: 1
+        }
+      },
+      {
+        id: "silver",
+        name: "Silver Package",
+        price: 38.00,
+        description: "Pick 3 Mains, Pick 3 Sides, Pick 2 Pasta, Pick 2 Salads",
+        limits: {
+          mains: 3,
+          sides: 3,
+          pasta: 2,
+          salads: 2
+        }
+      },
+      {
+        id: "gold",
+        name: "Gold Package",
+        price: 45.00,
+        description: "Pick 3 Mains, Pick 4 Sides, Pick 2 Pasta, Pick 2 Salads",
+        limits: {
+          mains: 3,
+          sides: 4,
+          pasta: 2,
+          salads: 2
+        }
+      }
+    ],
+    categories: {
+      mains: {
+        title: "Italian Mains",
+        description: "Select your main dishes",
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 3
+        },
+        items: [
+          { id: "chicken_saltimbocca", name: "Chicken Saltimbocca", upcharge: 0 },
+          { id: "chicken_florentine", name: "Chicken Florentine", upcharge: 0 },
+          { id: "chicken_piccata", name: "Chicken Piccata", upcharge: 0 },
+          { id: "chicken_cacciatore", name: "Chicken Cacciatore", upcharge: 0 },
+          { id: "chicken_parmesan_white", name: "Chicken Parmesan White", upcharge: 0 },
+          { id: "chicken_parmesan_red", name: "Chicken Parmesan Red", upcharge: 0 },
+          { id: "beef_pizzaiola", name: "Beef Pizzaiola", upcharge: 0 },
+          { id: "beef_braciole", name: "Beef Braciole", upcharge: 0 },
+          { id: "lasagna", name: "Lasagna", upcharge: 0 },
+          { id: "italian_meatballs", name: "Italian Meatballs", upcharge: 0 },
+          { id: "vegetarian_lasagna", name: "Vegetarian Lasagna", upcharge: 0 }
+        ]
+      },
+      sides: {
+        title: "Italian Sides",
+        description: "Select your side dishes",
+        limits: {
+          "bronze": 3,
+          "silver": 3,
+          "gold": 4
+        },
+        items: [
+          { id: "garlic_broccoli", name: "Garlic Broccoli", upcharge: 0 },
+          { id: "garlic_green_beans", name: "Garlic Green Beans", upcharge: 0 },
+          { id: "italian_vegetables", name: "Italian Vegetables", upcharge: 0 },
+          { id: "grilled_asparagus", name: "Grilled Asparagus", upcharge: 0 },
+          { id: "eggplant_caponata", name: "Eggplant Caponata", upcharge: 0 },
+          { id: "risotto", name: "Risotto", upcharge: 0 },
+          { id: "garlic_bread", name: "Garlic Bread", upcharge: 0 },
+          { id: "rosemary_potatoes", name: "Rosemary Potatoes", upcharge: 0 }
+        ]
+      },
+      pasta: {
+        title: "Italian Pasta",
+        description: "Select your pasta dishes",
+        limits: {
+          "bronze": 1,
+          "silver": 2,
+          "gold": 2
+        },
+        items: [
+          { id: "spaghetti_bolognese", name: "Spaghetti Bolognese", upcharge: 0 },
+          { id: "fettuccine_alfredo", name: "Fettuccine Alfredo", upcharge: 0 },
+          { id: "penne_alla_vodka", name: "Penne alla Vodka", upcharge: 0 },
+          { id: "linguine_vongole", name: "Linguine Vongole", upcharge: 0 },
+          { id: "ravioli", name: "Ravioli", upcharge: 0 },
+          { id: "spaghetti_carbonara", name: "Spaghetti Carbonara", upcharge: 0 },
+          { id: "gnocchi", name: "Gnocchi", upcharge: 0 }
+        ]
+      },
+      salads: {
+        title: "Italian Salads",
+        description: "Select your salads",
+        limits: {
+          "bronze": 1,
+          "silver": 2,
+          "gold": 2
+        },
+        items: [
+          { id: "caesar", name: "Caesar Salad", upcharge: 0 },
+          { id: "caprese", name: "Caprese Salad", upcharge: 0 },
+          { id: "italian_cobb", name: "Tossed Italian Cobb Salad", upcharge: 0 },
+          { id: "antipasto", name: "Antipasto Salad", upcharge: 0 },
+          { id: "panzanella", name: "Panzanella Salad", upcharge: 0 }
+        ]
+      }
+    }
+  },
   custom_menu: {
     title: "Custom Menu - Flexible Selection",
     description: "Build your own menu by selecting items from different cuisine styles",
