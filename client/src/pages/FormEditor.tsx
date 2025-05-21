@@ -479,10 +479,26 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       if (question?.id) {
         console.log(`Proceeding to save ${rules.length} rules for question ${question.id}`);
         try {
-          // First delete existing rules
-          const deleteResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
-            method: 'DELETE',
-          });
+          // First get existing rules
+          const getRulesResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`);
+          const existingRules = await getRulesResponse.json();
+          
+          // Delete each existing rule individually
+          let deleteResponse = { ok: true };
+          for (const rule of existingRules) {
+            const ruleId = rule.id;
+            const formId = formIdFromParams; // Get the form ID from URL
+            if (ruleId && formId) {
+              deleteResponse = await fetch(`/api/form-builder/forms/${formId}/rules/${ruleId}`, {
+                method: 'DELETE',
+              });
+              
+              if (!deleteResponse.ok) {
+                console.error(`Failed to delete rule ${ruleId}`);
+                break;
+              }
+            }
+          }
           
           if (!deleteResponse.ok) {
             const errorData = await deleteResponse.json().catch(() => ({ message: "Failed to delete existing rules" }));
@@ -503,17 +519,28 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
               console.log("CLIENT: Processing rule for POST:", JSON.stringify(rule, null, 2));
               
               if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
+                const formId = formIdFromParams;
+                if (!formId) {
+                  console.error("Cannot save rule - missing form ID");
+                  continue;
+                }
+                
                 const rulePayload = {
-                  sourceQuestionId: rule.sourceQuestionId,
+                  triggerFormPageQuestionId: rule.sourceQuestionId,
                   conditionType: rule.conditionType,
                   conditionValue: rule.conditionType === 'is_answered' || rule.conditionType === 'is_not_answered'
                     ? null
                     : (rule.conditionValue || ""),
                   actionType: rule.actionType,
+                  ruleDescription: `Rule for question ${question.id}`,
+                  executionOrder: 0,
+                  targets: [
+                    { targetType: 'question', targetId: question.id }
+                  ]
                 };
                 console.log(`CLIENT: POSTing rule payload:`, JSON.stringify(rulePayload, null, 2));
                 
-                const ruleResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
+                const ruleResponse = await fetch(`/api/form-builder/forms/${formId}/rules`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(rulePayload),
