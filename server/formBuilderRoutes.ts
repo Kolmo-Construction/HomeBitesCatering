@@ -2084,4 +2084,115 @@ router.delete("/forms/:formId/rules/:ruleId", async (req, res) => {
   }
 });
 
+// --- QUESTION RULES API ---
+
+// Get rules for a specific question
+router.get("/questions/:questionId/rules", async (req, res) => {
+  try {
+    const questionId = parseInt(req.params.questionId);
+    
+    if (isNaN(questionId)) {
+      return res.status(400).json({ message: "Invalid question ID" });
+    }
+    
+    // Get all rules where this question is the target
+    const rules = await db.select()
+      .from(formSchema.formRules)
+      .where(eq(formSchema.formRules.targetFormPageQuestionId, questionId))
+      .orderBy(formSchema.formRules.executionOrder);
+      
+    return res.status(200).json(rules);
+  } catch (error) {
+    console.error("Error fetching rules for question:", error);
+    return res.status(500).json({ message: "Failed to fetch rules" });
+  }
+});
+
+// Create a new rule for a question
+router.post("/questions/:questionId/rules", async (req, res) => {
+  try {
+    const questionId = parseInt(req.params.questionId);
+    
+    if (isNaN(questionId)) {
+      return res.status(400).json({ message: "Invalid question ID" });
+    }
+    
+    // Find the form page question to get the form ID
+    const [question] = await db.select()
+      .from(formSchema.formPageQuestions)
+      .where(eq(formSchema.formPageQuestions.id, questionId));
+      
+    if (!question) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+    
+    // Find the page to get the form ID
+    const [page] = await db.select()
+      .from(formSchema.formPages)
+      .where(eq(formSchema.formPages.id, question.formPageId));
+      
+    if (!page) {
+      return res.status(404).json({ message: "Page not found" });
+    }
+    
+    // Validate the rule data
+    const ruleSchema = z.object({
+      sourceQuestionId: z.number(),
+      conditionType: z.string(),
+      conditionValue: z.string().optional(),
+      actionType: z.string()
+    });
+    
+    const parsed = ruleSchema.safeParse(req.body);
+    
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        message: "Invalid rule data", 
+        errors: parsed.error.format() 
+      });
+    }
+    
+    // Create the rule
+    const [newRule] = await db.insert(formSchema.formRules)
+      .values({
+        formId: page.formId,
+        triggerFormPageQuestionId: parsed.data.sourceQuestionId,
+        targetFormPageQuestionId: questionId,
+        conditionType: parsed.data.conditionType,
+        conditionValue: parsed.data.conditionValue || null,
+        actionType: parsed.data.actionType,
+        executionOrder: 0, // Default execution order
+      })
+      .returning();
+      
+    return res.status(201).json(newRule);
+  } catch (error) {
+    console.error("Error creating rule:", error);
+    return res.status(500).json({ message: "Failed to create rule" });
+  }
+});
+
+// Delete all rules for a question
+router.delete("/questions/:questionId/rules", async (req, res) => {
+  try {
+    const questionId = parseInt(req.params.questionId);
+    
+    if (isNaN(questionId)) {
+      return res.status(400).json({ message: "Invalid question ID" });
+    }
+    
+    // Delete all rules where this question is the target
+    await db.delete(formSchema.formRules)
+      .where(eq(formSchema.formRules.targetFormPageQuestionId, questionId));
+      
+    return res.status(200).json({ 
+      success: true,
+      message: "Rules deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting rules:", error);
+    return res.status(500).json({ message: "Failed to delete rules" });
+  }
+});
+
 export default router;

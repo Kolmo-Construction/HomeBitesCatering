@@ -469,7 +469,40 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         }
       }
       
+      // Save the main question data first
       await onSave(data);
+      
+      // Now save the conditional logic rules separately
+      if (rules.length > 0 && question?.id) {
+        try {
+          // First delete existing rules
+          await fetch(`/api/form-builder/questions/${question.id}/rules`, {
+            method: 'DELETE',
+          });
+          
+          // Then save the new rules
+          for (const rule of rules) {
+            if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
+              await fetch(`/api/form-builder/questions/${question.id}/rules`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  sourceQuestionId: rule.sourceQuestionId,
+                  conditionType: rule.conditionType,
+                  conditionValue: rule.conditionValue || "",
+                  actionType: rule.actionType
+                }),
+              });
+            }
+          }
+        } catch (ruleError) {
+          console.error("Error saving rules:", ruleError);
+          // Continue execution - we don't want to fail the whole save if rules fail
+        }
+      }
+      
       toast({
         title: "Question updated",
         description: "The question settings have been updated successfully.",
