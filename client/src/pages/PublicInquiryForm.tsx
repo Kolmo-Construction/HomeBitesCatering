@@ -61,6 +61,16 @@ type FormStep =
   | "equipment"
   | "review";
 
+// Dessert lot sizes for quantity selection
+type DessertLotSize = 36 | 48 | 72 | 96 | 144;
+
+// Dessert item type definition
+type DessertItem = {
+  id: string;
+  name: string;
+  price: number;
+};
+
 // Event type details including description and icon
 const eventTypes: {
   type: EventType;
@@ -4423,8 +4433,15 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
                 />
               )}
               
+              {currentStep === "desserts" && eventType && (
+                <DessertsStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
               {/* Additional steps will be rendered here */}
-              {/* For now, we've implemented the first five steps */}
+              {/* For now, we've implemented the six steps */}
               
               {currentStep !== "eventType" && 
                currentStep !== "basicInfo" && 
