@@ -231,7 +231,8 @@ const RuleEditorDialog = ({
   initialRule = null,
   onSave,
   questionId,
-  availableQuestions = []
+  availableQuestions = [],
+  availablePages = []
 }) => {
   // Define the condition types and action types that would normally come from the schema
   const conditionTypes = [
@@ -407,31 +408,58 @@ const RuleEditorDialog = ({
               <FormLabel>Select Targets</FormLabel>
               <div className="max-h-[200px] overflow-y-auto border rounded-md p-3">
                 {targetType === 'question' ? (
-                  availableQuestions
-                    .filter(q => q.id !== questionId) // Don't allow self-reference
-                    .map(question => (
-                      <div key={question.id} className="flex items-center mb-2">
+                  availableQuestions.length > 0 ? (
+                    availableQuestions
+                      .filter(q => q.id !== questionId) // Don't allow self-reference
+                      .map(question => (
+                        <div key={question.id} className="flex items-center mb-2">
+                          <input
+                            type="checkbox"
+                            id={`target-${question.id}`}
+                            className="mr-2"
+                            checked={selectedTargetIds.includes(question.id)}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              const newSelectedIds = isChecked
+                                ? [...selectedTargetIds, question.id]
+                                : selectedTargetIds.filter(id => id !== question.id);
+                              handleTargetChange(newSelectedIds);
+                            }}
+                          />
+                          <label htmlFor={`target-${question.id}`} className="text-sm">
+                            {question.displayText} (Page: {question.pageName})
+                          </label>
+                        </div>
+                      ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No other questions available in this form.</p>
+                  )
+                ) : (
+                  // Display page targets
+                  availablePages.length > 0 ? (
+                    availablePages.map(page => (
+                      <div key={page.id} className="flex items-center mb-2">
                         <input
                           type="checkbox"
-                          id={`target-${question.id}`}
+                          id={`target-page-${page.id}`}
                           className="mr-2"
-                          checked={selectedTargetIds.includes(question.id)}
+                          checked={selectedTargetIds.includes(page.id)}
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             const newSelectedIds = isChecked
-                              ? [...selectedTargetIds, question.id]
-                              : selectedTargetIds.filter(id => id !== question.id);
+                              ? [...selectedTargetIds, page.id]
+                              : selectedTargetIds.filter(id => id !== page.id);
                             handleTargetChange(newSelectedIds);
                           }}
                         />
-                        <label htmlFor={`target-${question.id}`} className="text-sm">
-                          {question.displayText} (Page: {question.pageName})
+                        <label htmlFor={`target-page-${page.id}`} className="text-sm">
+                          {page.pageTitle || 'Untitled Page'}
                         </label>
                       </div>
                     ))
-                ) : (
-                  // We would render page targets here if they were passed in
-                  <p className="text-sm text-muted-foreground">No page targets available.</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No pages available in this form.</p>
+                  )
                 )}
               </div>
             </div>
@@ -588,53 +616,32 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     optionsOverrides: z.any().optional(),
   });
 
-  // Effect to get all questions in the form for rule targeting
+  // Effect to collect all questions and pages in the form for rule targets
   useEffect(() => {
-    const fetchAllFormQuestions = async () => {
-      if (!question?.formPageId) return;
+    // If we have formData and pages, we can build the list of all form questions
+    if (formData?.id && pages) {
+      // First, set all pages in the form
+      setAllPagesInForm(pages);
       
-      try {
-        // First, get the form ID from the page
-        const pageResponse = await fetch(`/api/form-builder/pages/${question.formPageId}`);
-        if (!pageResponse.ok) return;
+      // Then collect all questions from all pages with their page names
+      const allQuestions: PageQuestion[] = [];
+      
+      pages.forEach(page => {
+        // Get questions for this page from the pageQuestions map
+        const questionsForPage = pageQuestions[page.id] || [];
         
-        const pageData = await pageResponse.json();
-        const formId = pageData.formId;
+        // Add page name to each question for better display in rule editor
+        const questionsWithPageInfo = questionsForPage.map(q => ({
+          ...q,
+          pageName: page.pageTitle || 'Unnamed Page'
+        }));
         
-        // Get all pages in the form
-        const pagesResponse = await fetch(`/api/form-builder/forms/${formId}/pages`);
-        if (!pagesResponse.ok) return;
-        
-        const pagesData = await pagesResponse.json();
-        setAllPagesInForm(pagesData.map(page => ({
-          id: page.id,
-          pageTitle: page.pageTitle || page.title
-        })));
-        
-        // Get questions for each page
-        const allQuestions = [];
-        for (const page of pagesData) {
-          const questionsResponse = await fetch(`/api/form-builder/pages/${page.id}/questions`);
-          if (questionsResponse.ok) {
-            const questionsData = await questionsResponse.json();
-            const pageQuestions = questionsData.map(q => ({
-              id: q.id,
-              displayText: q.displayText || q.display_text || q.displayTextOverride || q.display_text_override,
-              pageId: page.id,
-              pageName: page.pageTitle || page.title
-            }));
-            allQuestions.push(...pageQuestions);
-          }
-        }
-        
-        setAllQuestionsInForm(allQuestions);
-      } catch (error) {
-        console.error("Error fetching form structure for conditional rules:", error);
-      }
-    };
-    
-    fetchAllFormQuestions();
-  }, [question?.formPageId]);
+        allQuestions.push(...questionsWithPageInfo);
+      });
+      
+      setAllQuestionsInForm(allQuestions);
+    }
+  }, [formData?.id, pages, pageQuestions]);
 
   // Extract question type for conditional fields
   const questionType = question?.questionType || question?.question_type || 
@@ -983,6 +990,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         onSave={handleSaveRule}
         questionId={question?.id}
         availableQuestions={allQuestionsInForm}
+        availablePages={allPagesInForm}
       />
       
       <div className="mb-4 flex items-center justify-between">
