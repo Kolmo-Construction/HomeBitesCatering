@@ -41,14 +41,21 @@ function AppContent() {
     );
   }
   
+  // Check if the current path is /inquiry to show only the inquiry form
+  const [location] = useState(window.location.pathname);
+  
+  if (location === "/inquiry") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Toaster />
+        <PublicInquiryForm />
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster />
-      
-      {/* Public routes that don't require authentication */}
-      <Switch>
-        <Route path="/inquiry" component={PublicInquiryForm} />
-      </Switch>
       
       {!user ? (
         <Login />
