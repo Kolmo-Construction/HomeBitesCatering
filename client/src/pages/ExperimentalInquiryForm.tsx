@@ -4393,10 +4393,74 @@ function mapUrlToEventType(type: string): EventType | null {
 }
 
 export default function ExperimentalInquiryForm({ initialEventType = "" }: { initialEventType?: string }) {
+  // For navigation after event type selection
+  const navigate = (path: string) => {
+    window.location.href = path;
+  };
+
   // Map the URL parameter to a valid event type
   const mappedEventType = initialEventType ? mapUrlToEventType(initialEventType) : null;
   
-  // Define form with default values
+  // If we're at the landing page without an event type, only show event type selection
+  if (!initialEventType && !mappedEventType) {
+    return (
+      <>
+        <Helmet>
+          <title>EXPERIMENTAL - Event Inquiry | Home Bites Catering Services</title>
+          <meta name="description" content="Experimental version - Select your event type and get a personalized catering quote. We offer services for weddings, corporate events, birthdays, and more special occasions." />
+        </Helmet>
+        
+        <div className="min-h-screen bg-gray-50 pb-12">
+          <div className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 text-white p-6 mb-8">
+            <div className="container mx-auto">
+              <h1 className="text-5xl font-extrabold mb-4 text-center">Home Bites Catering Services</h1>
+              <p className="text-xl text-center max-w-2xl mx-auto">
+                <span className="bg-white/20 px-2 py-1 rounded">EXPERIMENTAL VERSION</span> - Exceptional cuisine for extraordinary moments
+              </p>
+            </div>
+          </div>
+          
+          <div className="container mx-auto px-4 py-8 max-w-6xl">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold tracking-tight mb-3 text-gray-900">
+                Let's Plan Your Perfect Event
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Select the type of event you're planning, and we'll customize our services to match your vision.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {eventTypes.map((event) => (
+                <Card 
+                  key={event.type}
+                  className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+                  onClick={() => navigate(`/experimental-inquiry/${event.type.toLowerCase().replace(/ /g, '-')}`)}
+                >
+                  <div className={`bg-gradient-to-r ${event.gradient} p-8 text-white text-center`}>
+                    {event.icon}
+                    <h3 className="text-2xl font-bold mb-1">{event.type}</h3>
+                  </div>
+                  <CardContent className="p-6">
+                    <p className="text-gray-600 text-lg mb-4">{event.description}</p>
+                    <Button 
+                      className="w-full mt-2 py-6 text-lg transition-all duration-300"
+                      variant="outline"
+                      size="lg"
+                    >
+                      Select This Event
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+  
+  // If we have an event type, continue with the full form
   const methods = useForm<EventInquiryFormData>({
     defaultValues: {
       eventType: mappedEventType,
