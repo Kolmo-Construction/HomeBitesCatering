@@ -2180,7 +2180,7 @@ router.get("/forms/:formId/rules", async (req, res) => {
   }
 });
 
-// 3. Get Rules for a Specific Question
+// 3. Get Rules for a Specific Question by ID
 router.get("/questions/:questionId/rules", async (req, res) => {
   try {
     const questionId = parseInt(req.params.questionId);
@@ -2200,6 +2200,88 @@ router.get("/questions/:questionId/rules", async (req, res) => {
   } catch (error) {
     console.error("Error fetching rules:", error);
     return res.status(500).json({ message: "Failed to fetch rules" });
+  }
+});
+
+// Get All Rules Triggered by a Specific Question Instance (for FormEditor's Logic tab)
+router.get("/form-page-questions/:questionInstanceId/rules", async (req, res) => {
+  try {
+    const questionInstanceId = parseInt(req.params.questionInstanceId);
+    if (isNaN(questionInstanceId)) {
+      return res.status(400).json({ message: "Invalid question instance ID" });
+    }
+
+    // First, check if the question instance exists
+    const questionInstance = await db.query.formPageQuestions.findFirst({
+      where: eq(formSchema.formPageQuestions.id, questionInstanceId)
+    });
+
+    if (!questionInstance) {
+      return res.status(404).json({ message: "Question instance not found" });
+    }
+
+    // Fetch all rules where this question instance is the trigger
+    const rules = await db.query.formRules.findMany({
+      where: eq(formSchema.formRules.triggerFormPageQuestionId, questionInstanceId),
+      with: {
+        targets: true
+      }
+    });
+
+    // For each rule, enhance the targets with additional information for the UI
+    const enhancedRules = await Promise.all(rules.map(async (rule) => {
+      // Process each target to include additional information about the target (page or question)
+      const enhancedTargets = await Promise.all(rule.targets.map(async (target) => {
+        let targetDetails = null;
+        
+        // Get additional information based on target type
+        if (target.targetType === 'question') {
+          // Get question details
+          const question = await db.query.formPageQuestions.findFirst({
+            where: eq(formSchema.formPageQuestions.id, target.targetId),
+            with: {
+              formPage: true,
+              libraryQuestion: true
+            }
+          });
+          
+          if (question) {
+            targetDetails = {
+              displayText: question.displayTextOverride || question.libraryQuestion?.defaultText || 'Unknown Question',
+              pageName: question.formPage?.pageTitle || 'Unknown Page',
+              pageId: question.formPage?.id
+            };
+          }
+        } else if (target.targetType === 'page') {
+          // Get page details
+          const page = await db.query.formPages.findFirst({
+            where: eq(formSchema.formPages.id, target.targetId)
+          });
+          
+          if (page) {
+            targetDetails = {
+              pageTitle: page.pageTitle || 'Untitled Page',
+              description: page.description
+            };
+          }
+        }
+        
+        return {
+          ...target,
+          details: targetDetails
+        };
+      }));
+      
+      return {
+        ...rule,
+        targets: enhancedTargets
+      };
+    }));
+
+    return res.status(200).json(enhancedRules);
+  } catch (error) {
+    console.error("Error fetching rules for question instance:", error);
+    return res.status(500).json({ message: "Failed to fetch rules for question instance" });
   }
 });
 
