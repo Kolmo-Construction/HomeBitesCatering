@@ -2093,19 +2093,6 @@ const AppetizersStep = ({
   const appetizers = watch("appetizers");
   const horsDoeurvesSelections = watch("horsDoeurvesSelections");
   
-  // Function to get selected quantity for an item in the matrix
-  const getSelectedQuantity = (categoryId: string, itemId: string): number | null => {
-    if (!horsDoeurvesSelections || 
-        !horsDoeurvesSelections.categories || 
-        !horsDoeurvesSelections.categories[categoryId] ||
-        !horsDoeurvesSelections.categories[categoryId].items ||
-        !horsDoeurvesSelections.categories[categoryId].items[itemId]) {
-      return null;
-    }
-    
-    return horsDoeurvesSelections.categories[categoryId].items[itemId].quantity || null;
-  };
-  
   // Initialize appetizers structure if needed
   const initializeCategory = (categoryId: string) => {
     if (!appetizers[categoryId]) {
@@ -2166,6 +2153,14 @@ const AppetizersStep = ({
         });
       }
     }
+  };
+  
+  // Get the selected quantity for an item in the matrix
+  const getSelectedQuantity = (categoryId: string, itemId: string): number | null => {
+    if (!horsDoeurvesSelections?.categories?.[categoryId]?.items?.[itemId]) {
+      return null;
+    }
+    return horsDoeurvesSelections.categories[categoryId].items[itemId].quantity;
   };
   
   // Calculate total for hors d'oeuvres
