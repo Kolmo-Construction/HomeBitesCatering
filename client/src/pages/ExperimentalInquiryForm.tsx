@@ -2990,6 +2990,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
     "menuSelection", // Keep menuSelection as step 4 (for regular themes)
     "appetizerQuestion", // New step to ask if user wants appetizers
     "appetizers",    // Only show if user wants appetizers
+    "foodTruckMenu", // Food Truck menu step (will be conditionally shown)
     "desserts", 
     "beverages",
     "equipment",
@@ -3018,6 +3019,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
     const currentIndex = steps.indexOf(currentStep);
     const currentFormTheme = watch("requestedTheme"); // Get current theme
     const wantsAppetizers = watch("wantsAppetizers"); // Get appetizer preference
+    const serviceStyle = watch("serviceStyle"); // Get service style for Food Truck detection
     
     if (currentIndex < steps.length - 1) {
       let nextStep = steps[currentIndex + 1];
@@ -3035,9 +3037,27 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         // For all other themes, proceed normally to menuSelection
       } else if (currentStep === "appetizerQuestion" && !wantsAppetizers) {
         // Skip the appetizers step if user doesn't want appetizers
-        const dessertsIndex = steps.indexOf("desserts");
-        if (dessertsIndex > -1) {
-          nextStep = "desserts";
+        
+        // If Food Truck is selected, go to the Food Truck menu step
+        if (serviceStyle === "Food Truck") {
+          const foodTruckIndex = steps.indexOf("foodTruckMenu");
+          if (foodTruckIndex > -1) {
+            nextStep = "foodTruckMenu";
+          }
+        } else {
+          // For other service styles, go directly to desserts
+          const dessertsIndex = steps.indexOf("desserts");
+          if (dessertsIndex > -1) {
+            nextStep = "desserts";
+          }
+        }
+      } else if (currentStep === "appetizers") {
+        // After appetizers, check if Food Truck menu should be shown
+        if (serviceStyle === "Food Truck") {
+          const foodTruckIndex = steps.indexOf("foodTruckMenu");
+          if (foodTruckIndex > -1) {
+            nextStep = "foodTruckMenu";
+          }
         }
       }
       
@@ -3112,6 +3132,18 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
                 <AppetizersStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "foodTruckMenu" && eventType && (
+                <FoodTruckMenu
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onSkipDessert={() => {
+                    // If user doesn't want desserts, skip to beverages step
+                    const nextStepIndex = steps.indexOf("beverages");
+                    setCurrentStep(steps[nextStepIndex]);
+                  }}
                 />
               )}
               
