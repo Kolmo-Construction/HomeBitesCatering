@@ -3148,45 +3148,11 @@ const MenuSelectionStep = ({
 };
 
 // Main component
-// Helper function to validate if a string is a valid event type
-function validateEventType(type: string): boolean {
-  // Convert input to match case-sensitive event types
-  const eventTypeMap: Record<string, EventType> = {
-    "wedding": "Wedding",
-    "corporate": "Corporate",
-    "engagement": "Engagement",
-    "birthday": "Birthday",
-    "foodtruck": "Food Truck",
-    "mobilebartending": "Mobile Bartending",
-    "otherprivateparty": "Other Private Party"
-  };
-  
-  return !!eventTypeMap[type.toLowerCase()];
-}
-
-// Convert URL parameter to actual event type
-function mapUrlToEventType(type: string): EventType | null {
-  const eventTypeMap: Record<string, EventType> = {
-    "wedding": "Wedding",
-    "corporate": "Corporate",
-    "engagement": "Engagement",
-    "birthday": "Birthday",
-    "foodtruck": "Food Truck",
-    "mobilebartending": "Mobile Bartending",
-    "otherprivateparty": "Other Private Party"
-  };
-  
-  return eventTypeMap[type.toLowerCase()] || null;
-}
-
-export default function PublicInquiryForm({ initialEventType = "" }: { initialEventType?: string }) {
-  // Map the URL parameter to a valid event type
-  const mappedEventType = initialEventType ? mapUrlToEventType(initialEventType) : null;
-  
+export default function PublicInquiryForm() {
   // Define form with default values
   const methods = useForm<EventInquiryFormData>({
     defaultValues: {
-      eventType: mappedEventType,
+      eventType: null,
       billingAddress: {
         street: "",
         city: "",
@@ -3249,10 +3215,7 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
   const guestCount = watch("guestCount");
   
   // State for tracking the current step
-  // If a valid event type was mapped from the URL, start at the basicInfo step
-  const [currentStep, setCurrentStep] = useState<FormStep>(
-    mappedEventType ? "basicInfo" : "eventType"
-  );
+  const [currentStep, setCurrentStep] = useState<FormStep>("eventType");
   
   // Calculate step number and total steps
   const steps: FormStep[] = [
