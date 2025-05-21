@@ -2559,13 +2559,18 @@ const AppetizersStep = ({
           {horsDoeurvesData.categories.map((category) => {
             // Special handling for spreads which uses a different UI
             if (category.id === "spreads") {
+              // Calculate selectedCount at a higher scope level to fix the scoping issue
+              const currentSpreadsCategorySelections = horsDoeurvesSelections?.categories?.[category.id]?.items;
+              const selectedCountForSpreads = currentSpreadsCategorySelections ? 
+                Object.keys(currentSpreadsCategorySelections).length : 0;
+                
               return (
                 <div key={category.id} className="border-t pt-6">
                   <div className="flex justify-between items-center mb-4">
                     <div>
                       <h3 className="text-lg font-semibold">{category.name}</h3>
                       <p className="text-sm text-gray-500">{category.description}</p>
-                      <p className="text-sm text-gray-500 mt-1">Select up to {category.selectLimit} options</p>
+                      <p className="text-sm text-gray-500 mt-1">Select up to {category.selectLimit} options ({selectedCountForSpreads} selected)</p>
                     </div>
                     {category.basePrice && (
                       <div className="text-lg font-medium">${category.basePrice.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
@@ -2574,10 +2579,8 @@ const AppetizersStep = ({
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                     {category.items.map((item) => {
-                      const isSelected = horsDoeurvesSelections?.categories?.[category.id]?.items?.[item.id] !== undefined;
-                      const selectedCount = horsDoeurvesSelections?.categories?.[category.id]?.items ? 
-                        Object.keys(horsDoeurvesSelections.categories[category.id].items).length : 0;
-                      const isAtLimit = selectedCount >= (category.selectLimit || 3) && !isSelected;
+                      const isSelected = currentSpreadsCategorySelections?.[item.id] !== undefined;
+                      const isAtLimit = selectedCountForSpreads >= (category.selectLimit || 3) && !isSelected;
                       
                       return (
                         <div key={item.id} className="relative">
@@ -2591,7 +2594,7 @@ const AppetizersStep = ({
                               onCheckedChange={(checked) => {
                                 if (checked === "indeterminate") return;
                                 if (checked) {
-                                  if (selectedCount < (category.selectLimit || 3)) {
+                                  if (selectedCountForSpreads < (category.selectLimit || 3)) {
                                     handleHorsDoeurvesItemSelection(category.id, item.id, category.servingSizes?.[0] || 24);
                                   }
                                 } else {
@@ -2609,20 +2612,20 @@ const AppetizersStep = ({
                   </div>
                   
                   {/* Serving Size Selection for spreads */}
-                  {selectedCount > 0 && category.servingSizes && (
+                  {selectedCountForSpreads > 0 && category.servingSizes && (
                     <div className="mt-4 p-4 border border-gray-200 rounded-md">
                       <h4 className="font-medium mb-2">Select serving size:</h4>
                       <RadioGroup 
                         value={String(
-                          horsDoeurvesSelections?.categories?.[category.id]?.items?.[
-                            Object.keys(horsDoeurvesSelections?.categories?.[category.id]?.items || {})[0]
+                          currentSpreadsCategorySelections?.[
+                            Object.keys(currentSpreadsCategorySelections || {})[0]
                           ]?.quantity || category.servingSizes[0]
                         )} 
                         onValueChange={(value) => {
                           const quantity = Number(value);
                           // Update all selected items with the same quantity
-                          if (horsDoeurvesSelections?.categories?.[category.id]?.items) {
-                            Object.keys(horsDoeurvesSelections.categories[category.id].items).forEach(itemId => {
+                          if (currentSpreadsCategorySelections) {
+                            Object.keys(currentSpreadsCategorySelections).forEach(itemId => {
                               handleHorsDoeurvesItemSelection(category.id, itemId, quantity);
                             });
                           }
