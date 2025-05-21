@@ -1489,58 +1489,81 @@ const themeMenuData = {
     packages: [
       { 
         id: "bronze",
-        name: "Bronze Package", 
-        price: 22.95,
-        description: "2 proteins, 2 sides, pita bread & tzatziki",
-        minGuestCount: 40
+        name: "Bronze", 
+        price: 32.00,
+        description: "Pick 3 Mains, 3 Sides, 2 Salads, Includes pita bread",
+        minGuestCount: 50
       },
       { 
         id: "silver",
-        name: "Silver Package", 
-        price: 27.95,
-        description: "3 proteins, 3 sides, pita bread, tzatziki & hummus",
+        name: "Silver", 
+        price: 38.00,
+        description: "Pick 4 Mains, 3 Sides, 2 Salads, Includes pita bread",
         minGuestCount: 0
       },
       { 
         id: "gold",
-        name: "Gold Package", 
-        price: 32.95,
-        description: "4 proteins, 4 sides, pita bread, dips platter",
+        name: "Gold", 
+        price: 46.00,
+        description: "Pick 4 Mains, 4 Sides, 2 Salads, Includes spreads selection and pita bread",
+        minGuestCount: 0
+      },
+      { 
+        id: "diamond",
+        name: "Diamond", 
+        price: 59.00,
+        description: "Pick 5 Mains, 4 Sides, 3 Salads, Includes spreads selection, meze platter, and pita bread",
         minGuestCount: 0
       }
     ],
     categories: {
-      proteins: {
-        title: "Proteins",
+      mains: {
+        title: "Mains",
+        description: "Select your main dishes",
         items: [
-          { id: "chicken_souvlaki", name: "Chicken Souvlaki", upcharge: 0 },
-          { id: "pork_souvlaki", name: "Pork Souvlaki", upcharge: 0 },
-          { id: "gyro_meat", name: "Gyro Meat (Beef/Lamb)", upcharge: 2.00 },
-          { id: "lamb_chops", name: "Lamb Chops", upcharge: 5.00 },
-          { id: "moussaka", name: "Moussaka", upcharge: 0 },
-          { id: "pastitsio", name: "Pastitsio", upcharge: 0 },
-          { id: "stuffed_peppers", name: "Vegetarian Stuffed Peppers", upcharge: 0 }
+          { id: "papoutsakia", name: "Papoutsakia - Classic moussaka in individual eggplant shells", upcharge: 0 },
+          { id: "soutzoukakia", name: "Soutzoukakia - Plump meatballs in cinnamon wine-enhanced tomato sauce", upcharge: 0 },
+          { id: "kokinisto", name: "Kokinisto - Boneless short rib in cinnamon-scented tomato sauce", upcharge: 0 },
+          { id: "kleftiko", name: "Kleftiko - Boldly seasoned lamb roast (Family style only)", upcharge: 5.00 },
+          { id: "pastitsio", name: "Pastitsio - Baked pasta with cinnamon-scented meat and béchamel", upcharge: 0 },
+          { id: "kotopoulo_lemonato", name: "Kotopoulo lemonato - Lemony baked chicken with fresh herbs", upcharge: 0 },
+          { id: "paidakia", name: "Paidakia - Greek lamb chops marinated and grilled to perfection", upcharge: 4.00 },
+          { id: "kotsi_arni", name: "Kotsi Arni - Slowly roasted lamb shank with tomato and herbs", upcharge: 0 },
+          { id: "bifteki_gemisto", name: "Bifteki Gemisto - Oven-baked minced beef burgers with cheese", upcharge: 0 },
+          { id: "psari_plaki", name: "Psari Plaki - Oven-baked fish fillet with tomato and herbs", upcharge: 0 },
+          { id: "brizola_solomou", name: "Brizola Solomou - Grilled salmon steaks with herbs and lemon", upcharge: 0 },
+          { id: "bakaliaros_plaki", name: "Bakaliaros Plaki - Oven-baked Cod fillet with tomato and herbs", upcharge: 0 },
+          { id: "aginares", name: "Aginares Ala Polita - Artichoke hearts with potatoes (Vegan)", upcharge: 0 },
+          { id: "gemista", name: "Gemista - Oven-baked stuffed tomatoes and peppers (Vegan)", upcharge: 0 }
         ],
         limits: {
-          "bronze": 2,
-          "silver": 3,
-          "gold": 4
+          "bronze": 3,
+          "silver": 4,
+          "gold": 4,
+          "diamond": 5
         }
       },
       sides: {
         title: "Sides",
+        description: "Select your side dishes",
         items: [
-          { id: "greek_salad", name: "Greek Salad", upcharge: 0 },
-          { id: "lemon_potatoes", name: "Lemon Potatoes", upcharge: 0 },
-          { id: "rice_pilaf", name: "Greek Rice Pilaf", upcharge: 0 },
-          { id: "spanakopita", name: "Spanakopita", upcharge: 1.50 },
-          { id: "dolmades", name: "Dolmades (Stuffed Grape Leaves)", upcharge: 1.50 },
-          { id: "orzo_salad", name: "Orzo Salad", upcharge: 0 }
+          { id: "lemon_potatoes", name: "Lemon Potatoes - Roasted with oregano, garlic, and lemon", upcharge: 0 },
+          { id: "spanakopita", name: "Spanakopita - Phyllo dough pouches with spinach and feta", upcharge: 0 },
+          { id: "kritharaki", name: "Kritharaki - Orzo pasta baked in the oven", upcharge: 0 },
+          { id: "fasolakia", name: "Fasolakia - Green beans with tomato and herbs", upcharge: 0 },
+          { id: "gigandes_plaki", name: "Gigandes Plaki - Oven baked lima beans in tomato sauce", upcharge: 0 },
+          { id: "tyrokroketes", name: "Tyrokroketes - Cheese balls coated with sesame seeds", upcharge: 0 },
+          { id: "octapodi", name: "Octapodi - Spanish octopus slowly braised", upcharge: 7.00 },
+          { id: "dolmades", name: "Dolmades - Grape leaves stuffed with rice and herbs", upcharge: 0 },
+          { id: "saganaki", name: "Saganaki Cheese - Deep fried and flambeed (Family style only)", upcharge: 2.00 },
+          { id: "rice_pilaf", name: "Greek Rice Pilaf - With vegetables and lemon zest", upcharge: 0 },
+          { id: "baked_vegetables", name: "Baked Vegetables (Briam) - Thinly sliced vegetable medley", upcharge: 0 }
         ],
         limits: {
-          "bronze": 2,
+          "bronze": 3,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 4
         }
       }
     }
