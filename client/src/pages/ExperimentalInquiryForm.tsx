@@ -502,7 +502,7 @@ const DietaryRestrictionsStep = ({
   onPrevious: () => void;
   onNext: () => void;
 }) => {
-  const { control } = useFormContext<EventInquiryFormData>();
+  const { control, watch } = useFormContext<EventInquiryFormData>();
   
   // Common allergies and dietary restrictions
   const commonDietaryRestrictions = [
@@ -555,6 +555,52 @@ const DietaryRestrictionsStep = ({
                 )}
               />
             ))}
+          </div>
+          
+          <div className="mt-6">
+            <h4 className="text-lg font-medium mb-2">Guest Count for Dietary Restrictions</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              For each selected restriction, please specify how many guests require this option.
+            </p>
+            
+            <div className="space-y-4">
+              {commonDietaryRestrictions.map((restriction) => {
+                // Only show count field if restriction is selected
+                const isSelected = watch(`dietaryRestrictions.${restriction.id}`);
+                
+                if (!isSelected) return null;
+                
+                return (
+                  <FormField
+                    key={`${restriction.id}-count`}
+                    control={control}
+                    name={`dietaryCount.${restriction.id}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="font-medium">
+                            {restriction.label} Count:
+                          </FormLabel>
+                          <div className="w-24">
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                                className="text-right"
+                              />
+                            </FormControl>
+                          </div>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
         
@@ -2897,6 +2943,16 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         shellfish_allergy: false,
         kosher: false,
         halal: false
+      },
+      dietaryCount: {
+        vegetarian: 0,
+        vegan: 0,
+        gluten_free: 0,
+        dairy_free: 0,
+        nut_free: 0,
+        shellfish_allergy: 0,
+        kosher: 0,
+        halal: 0
       },
       dietaryNotes: "",
       dessertSelections: {},

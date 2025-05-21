@@ -159,6 +159,17 @@ export type EventInquiryFormData = {
     halal?: boolean;
     [key: string]: boolean | undefined;
   };
+  dietaryCount?: {
+    vegetarian?: number;
+    vegan?: number;
+    gluten_free?: number;
+    dairy_free?: number;
+    nut_free?: number;
+    shellfish_allergy?: number;
+    kosher?: number;
+    halal?: number;
+    [key: string]: number | undefined;
+  };
   dietaryNotes?: string;
   
   // Step 10: Notes & Final Review
