@@ -1,0 +1,182 @@
+Here's what's happening:
+
+New Data Structure for custom_menu: In your themeMenuInfo (2).ts, the custom_menu.categories object is now a "flat" list of specific categories that directly contain items. For example:
+
+TypeScript
+
+// themeMenuInfo (2).ts
+custom_menu: {
+  // ...
+  categories: {
+    taco_proteins: {
+      title: "Taco Fiesta - Proteins",
+      description: "...",
+      items: [/* item objects */] // Items are directly here
+    },
+    taco_sides: { /* ... directly has items ... */ },
+    bbq_mains: { /* ... directly has items ... */ },
+    // etc.
+  }
+}
+Crucially, an entry like themeMenuData.custom_menu.categories.taco_proteins now directly holds items and does not have a subcategories property.
+
+Old Rendering Logic in MenuSelectionStep:
+Your ExperimentalInquiryForm (2).tsx file, within the MenuSelectionStep component for custom_menu, still uses a three-stage drill-down logic based on selectedCategory and selectedSubcategory states. This logic was designed for an older data structure where custom_menu.categories might have held broader cuisine types (e.g., "mexican"), which then had a subcategories property (e.g., "proteins", "sides").
+
+Let's trace the UI flow and state in ExperimentalInquiryForm (2).tsx:
+
+Initial View (!selectedCategory): The UI (around line 1160) iterates through Object.keys(themeData.categories). With the new data, categoryKey becomes "taco_proteins", "taco_sides", etc. When you click on one of these (e.g., "Taco Fiesta - Proteins"), handleCategorySelect("taco_proteins") is called, setting selectedCategory to "taco_proteins".
+Second View (selectedCategory is set, !selectedSubcategory): The component re-renders.
+selectedCategory is now "taco_proteins".
+selectedSubcategory is still null.
+The code enters the block that intends to display further subcategories (around line 1175).
+This is where the error occurs (line 1190 in ExperimentalInquiryForm (2).tsx, which is the equivalent of line 2378 in the error screenshot's context):
+TypeScript
+
+{Object.keys(themeData.categories[selectedCategory].subcategories).map((subcategoryKey) => {
+Here, themeData.categories[selectedCategory] is themeMenuData.custom_menu.categories["taco_proteins"]. As per your new themeMenuInfo (2).ts, this object ({ title: "...", items: [...] }) has no .subcategories property. Therefore, themeData.categories[selectedCategory].subcategories evaluates to undefined. Calling Object.keys(undefined) throws the error: "Cannot convert undefined or null to object".
+You click on what appears to be a main category in the first list (like "Taco Fiesta - Proteins"), but this action directly sets selectedCategory to this specific, item-holding category. The code then incorrectly tries to find another level of subcategories under it, which doesn't exist in your current themeMenuInfo (2).ts data structure for custom_menu.
+
+How to Fix:
+
+You need to adjust the rendering logic within MenuSelectionStep for the custom_menu to align with its actual (flatter) data structure in themeMenuInfo (2).ts.
+
+The selectedSubcategory state and the second level of drill-down (the block !selectedSubcategory ? (...) : (...) which contains the error) are no longer appropriate for the custom_menu items as they are currently structured. Once selectedCategory is set to a key like "taco_proteins", you should directly display the items from themeData.categories[selectedCategory].items.
+
+Revised Logic for custom_menu in MenuSelectionStep:
+
+TypeScript
+
+// ExperimentalInquiryForm (2).tsx
+// Inside MenuSelectionStep, for the "if (selectedTheme === 'custom_menu')" block:
+
+if (selectedTheme === "custom_menu") {
+  // selectedCuisineType might be useful if you want to group the flat categories by cuisine
+  // For now, let's simplify based on directly selecting an item-bearing category.
+  const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null); // Renamed for clarity
+
+  // This effect might be useful if selectedCuisineType is used for a preliminary filter
+  // useEffect(() => {
+  //   if (selectedCuisineType) {
+  //     setSelectedActualCategory(null);
+  //   }
+  // }, [selectedCuisineType]);
+
+  const handleActualCategorySelect = (categoryKey: string) => {
+    setSelectedActualCategory(categoryKey);
+  };
+
+  const handleCustomItemSelect = (categoryKey: string, itemId: string, isSelected: boolean) => {
+    // Your existing handleCustomItemSelection logic, using categoryKey directly
+    const currentSelections = Array.isArray(menuSelections?.[categoryKey]) 
+      ? [...menuSelections[categoryKey]] 
+      : [];
+    // ... (rest of your item selection logic) ...
+    setValue(`menuSelections.${categoryKey}`, currentSelections);
+  };
+
+  const isCustomItemSelected = (categoryKey: string, itemId: string) => {
+    // Your existing isCustomItemSelected logic
+    if (!menuSelections || !menuSelections[categoryKey]) return false;
+    const selectedItems = menuSelections[categoryKey];
+    return selectedItems.some(item => typeof item === 'object' && item !== null && 'id' in item && item.id === itemId);
+  };
+
+  // Get the theme data for custom_menu
+  const customMenuData = themeMenuData.custom_menu;
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">{customMenuData.title}</h2>
+        <p className="text-lg text-gray-600">{customMenuData.description}</p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {!selectedActualCategory ? (
+          // STAGE 1: Display all available categories from custom_menu.categories
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Select a Category</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {Object.keys(customMenuData.categories).map((categoryKey) => {
+                const categoryDetails = customMenuData.categories[categoryKey];
+                if (!categoryDetails) return null; // Should not happen if data is well-formed
+                return (
+                  <div
+                    key={categoryKey}
+                    className="border rounded-md p-4 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
+                    onClick={() => handleActualCategorySelect(categoryKey)}
+                  >
+                    <h4 className="text-lg font-medium mb-2">{categoryDetails.title}</h4>
+                    <p className="text-sm text-gray-600">{categoryDetails.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          // STAGE 2: Display items for the selectedActualCategory
+          <div>
+            <div className="flex items-center mb-6">
+              <button
+                className="text-primary hover:underline flex items-center mr-2"
+                onClick={() => setSelectedActualCategory(null)} // Go back to category list
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Back to Categories
+              </button>
+              <span className="text-gray-500">→</span>
+              <span className="ml-2 font-medium">
+                {customMenuData.categories[selectedActualCategory]?.title}
+              </span>
+            </div>
+
+            <h3 className="text-xl font-semibold mb-4">
+              {customMenuData.categories[selectedActualCategory]?.title}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {customMenuData.categories[selectedActualCategory]?.description}
+            </p>
+
+            <div className="grid grid-cols-1 gap-3 mt-4">
+              {customMenuData.categories[selectedActualCategory]?.items?.map((item) => {
+                if (!item) return null;
+                const isSelected = isCustomItemSelected(selectedActualCategory, item.id);
+                return (
+                  <div
+                    key={item.id}
+                    className={`border rounded-md p-3 cursor-pointer ${
+                      isSelected
+                        ? 'border-primary bg-primary/5'
+                        : 'border-gray-200 hover:border-primary/30'
+                    }`}
+                    onClick={() => handleCustomItemSelect(selectedActualCategory, item.id, !isSelected)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-medium">{item.name}</span>
+                        {item.upcharge && item.upcharge > 0 && (
+                          <span className="text-amber-600 text-sm ml-2">
+                            (+${item.upcharge.toFixed(2)} upcharge per person)
+                          </span>
+                        )}
+                      </div>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        isSelected ? 'bg-primary text-white' : 'border border-gray-300'
+                      }`}>
+                        {isSelected && <Check className="h-4 w-4" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* ... You might want a "Choose Another Category" button or summary here ... */}
+          </div>
+        )}
+      </div>
+      {/* Navigation Buttons */}
+      {/* ... (onPrevious, onNext buttons) ... */}
+    </div>
+  );
+}
+This revised structure simplifies the state for custom_menu to a single selectedActualCategory (which holds keys like "taco_proteins"). When this is set, it directly proceeds to list the items from that category. The intermediate step that was looking for .subcategories is removed, which should resolve the error. You may need to adjust the handleCustomItemSelection and isCustomItemSelected functions if their categoryKey and subcategoryKey logic was tied to the old structure, but the example above assumes categoryKey now directly refers to keys like "taco_proteins".
