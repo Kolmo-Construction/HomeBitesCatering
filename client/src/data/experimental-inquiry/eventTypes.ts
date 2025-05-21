@@ -6,14 +6,14 @@ import type { EventType } from "./types";
 export const eventTypes: Array<{
   type: EventType;
   description: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   gradient: string;
   image?: string;
 }> = [
   {
     type: "Wedding",
     description: "Elegant food service for your special day.",
-    icon: <Calendar className="h-16 w-16 mb-4 text-white" />,
+    icon: React.createElement(Calendar, { className: "h-16 w-16 mb-4 text-white" }),
     gradient: "from-pink-500 to-rose-500",
   },
   {
