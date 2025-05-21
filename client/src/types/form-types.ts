@@ -147,11 +147,24 @@ export type EventInquiryFormData = {
     servingWare: Record<string, number>;
   };
   
-  // Step 9: Notes & Final Review
+  // Step 9: Dietary Restrictions
+  dietaryRestrictions?: {
+    vegetarian?: boolean;
+    vegan?: boolean;
+    gluten_free?: boolean;
+    dairy_free?: boolean;
+    nut_free?: boolean;
+    shellfish_allergy?: boolean;
+    kosher?: boolean;
+    halal?: boolean;
+    [key: string]: boolean | undefined;
+  };
+  dietaryNotes?: string;
+  
+  // Step 10: Notes & Final Review
   adminFee?: number;
   otherFeesDescription?: string;
   otherFeesAmount?: number;
-  dietaryNotes?: string;
   beverageNotes?: string;
   specialRequests?: string;
   generalNotes?: string;

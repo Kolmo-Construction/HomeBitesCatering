@@ -495,7 +495,6 @@ const DessertMatrix = ({
 };
 
 // Desserts step component
-// Dietary Restrictions Step component
 const DietaryRestrictionsStep = ({ 
   onPrevious,
   onNext 
@@ -2889,6 +2888,17 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         serviceStyle: "stationary",
         categories: {}
       },
+      dietaryRestrictions: {
+        vegetarian: false,
+        vegan: false,
+        gluten_free: false,
+        dairy_free: false,
+        nut_free: false,
+        shellfish_allergy: false,
+        kosher: false,
+        halal: false
+      },
+      dietaryNotes: "",
       dessertSelections: {},
       servingAlcohol: [],
       additionalCocktails: false,
