@@ -59,7 +59,6 @@ import {
   Loader2
 } from "lucide-react";
 import FormPreview from "@/components/form-builder/FormPreview";
-import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -221,6 +220,157 @@ const SortableQuestion = ({ question, isSelected, onSelect }) => {
   );
 };
 
+// Rule Editor Dialog component for adding/editing conditional rules
+const RuleEditorDialog = ({
+  isOpen,
+  onOpenChange,
+  initialRule = null,
+  onSave,
+  questionId,
+  availableQuestions = []
+}) => {
+  const defaultRule = initialRule || {
+    targetQuestionId: '',
+    action: 'show',
+    operator: 'equals',
+    value: ''
+  };
+  
+  const ruleForm = useForm({
+    defaultValues: defaultRule
+  });
+  
+  // Reset form when initialRule changes
+  useEffect(() => {
+    ruleForm.reset(initialRule || defaultRule);
+  }, [initialRule]);
+  
+  const handleSubmit = async (data) => {
+    try {
+      // Find the question text for display purposes
+      const targetQuestion = availableQuestions.find(q => q.id === data.targetQuestionId);
+      const enhancedData = {
+        ...data,
+        targetQuestionText: targetQuestion?.displayText || 'Unknown Question'
+      };
+      await onSave(enhancedData);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error saving rule:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save rule",
+      });
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{initialRule ? "Edit Rule" : "Add New Rule"}</DialogTitle>
+          <DialogDescription>
+            Define when this question should be shown or hidden based on answers to other questions.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={ruleForm.handleSubmit(handleSubmit)} className="space-y-4 py-2">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">When the answer to:</p>
+            </div>
+            
+            <div>
+              <FormItem>
+                <FormLabel>Target Question</FormLabel>
+                <Select
+                  onValueChange={(value) => ruleForm.setValue('targetQuestionId', value)}
+                  defaultValue={ruleForm.getValues('targetQuestionId')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a question" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableQuestions
+                      .filter(q => q.id !== questionId) // Don't allow self-reference
+                      .map(question => (
+                        <SelectItem key={question.id} value={question.id}>
+                          {question.displayText} (Page: {question.pageName})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <FormItem className="flex-1">
+                <FormLabel>Condition</FormLabel>
+                <Select
+                  onValueChange={(value) => ruleForm.setValue('operator', value)}
+                  defaultValue={ruleForm.getValues('operator')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="equals">Equals</SelectItem>
+                    <SelectItem value="not_equals">Not Equals</SelectItem>
+                    <SelectItem value="contains">Contains</SelectItem>
+                    <SelectItem value="not_contains">Does Not Contain</SelectItem>
+                    <SelectItem value="greater_than">Greater Than</SelectItem>
+                    <SelectItem value="less_than">Less Than</SelectItem>
+                    <SelectItem value="is_empty">Is Empty</SelectItem>
+                    <SelectItem value="is_not_empty">Is Not Empty</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+              
+              {!['is_empty', 'is_not_empty'].includes(ruleForm.getValues('operator')) && (
+                <FormItem className="flex-1">
+                  <FormLabel>Value</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter value"
+                      {...ruleForm.register('value')}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            </div>
+            
+            <div>
+              <FormItem>
+                <FormLabel>Action</FormLabel>
+                <Select
+                  onValueChange={(value) => ruleForm.setValue('action', value)}
+                  defaultValue={ruleForm.getValues('action')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="show">Show this question</SelectItem>
+                    <SelectItem value="hide">Hide this question</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Save Rule</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Page Form Dialog
 const PageFormDialog = ({ 
   isOpen, 
@@ -343,6 +493,58 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     metadataOverrides: z.any().optional(),
     optionsOverrides: z.any().optional(),
   });
+
+  // State for storing all questions in the form (for conditional rule targets)
+  const [allQuestionsInForm, setAllQuestionsInForm] = useState([]);
+  const [allPagesInForm, setAllPagesInForm] = useState([]);
+  
+  // Effect to get all questions in the form for rule targeting
+  useEffect(() => {
+    const fetchAllFormQuestions = async () => {
+      if (!question?.formPageId) return;
+      
+      try {
+        // First, get the form ID from the page
+        const pageResponse = await fetch(`/api/form-builder/pages/${question.formPageId}`);
+        if (!pageResponse.ok) return;
+        
+        const pageData = await pageResponse.json();
+        const formId = pageData.formId;
+        
+        // Get all pages in the form
+        const pagesResponse = await fetch(`/api/form-builder/forms/${formId}/pages`);
+        if (!pagesResponse.ok) return;
+        
+        const pagesData = await pagesResponse.json();
+        setAllPagesInForm(pagesData.map(page => ({
+          id: page.id,
+          pageTitle: page.pageTitle || page.title
+        })));
+        
+        // Get questions for each page
+        const allQuestions = [];
+        for (const page of pagesData) {
+          const questionsResponse = await fetch(`/api/form-builder/pages/${page.id}/questions`);
+          if (questionsResponse.ok) {
+            const questionsData = await questionsResponse.json();
+            const pageQuestions = questionsData.map(q => ({
+              id: q.id,
+              displayText: q.displayText || q.display_text || q.displayTextOverride || q.display_text_override,
+              pageId: page.id,
+              pageName: page.pageTitle || page.title
+            }));
+            allQuestions.push(...pageQuestions);
+          }
+        }
+        
+        setAllQuestionsInForm(allQuestions);
+      } catch (error) {
+        console.error("Error fetching form structure for conditional rules:", error);
+      }
+    };
+    
+    fetchAllFormQuestions();
+  }, [question?.formPageId]);
 
   // Extract question type for conditional fields
   const questionType = question?.questionType || question?.question_type || 
@@ -482,6 +684,53 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     return typeMap[type] || type;
   };
 
+  // Handle conditional rules
+  const handleAddRule = () => {
+    setEditingRule(null);
+    setIsRuleEditorOpen(true);
+  };
+  
+  const handleEditRule = (rule) => {
+    setEditingRule(rule);
+    setIsRuleEditorOpen(true);
+  };
+  
+  const handleDeleteRule = (ruleId) => {
+    const updatedRules = conditionalRules.filter(rule => rule.id !== ruleId);
+    setConditionalRules(updatedRules);
+    toast({
+      title: "Rule deleted",
+      description: "The conditional rule has been removed",
+    });
+  };
+  
+  const handleSaveRule = (ruleData) => {
+    if (editingRule) {
+      // Update existing rule
+      const updatedRules = conditionalRules.map(rule => 
+        rule.id === editingRule.id ? { ...ruleData, id: rule.id } : rule
+      );
+      setConditionalRules(updatedRules);
+      toast({
+        title: "Rule updated",
+        description: "The conditional rule has been updated",
+      });
+    } else {
+      // Add new rule
+      const newRule = {
+        ...ruleData,
+        id: `rule-${Date.now()}`, // Generate a temporary ID
+      };
+      setConditionalRules([...conditionalRules, newRule]);
+      toast({
+        title: "Rule added",
+        description: "A new conditional rule has been added",
+      });
+    }
+    setIsRuleEditorOpen(false);
+    setEditingRule(null);
+  };
+  
   // Handle adding a new option for choice-based questions
   const handleAddOption = () => {
     // Only allow adding if we have active overrides
