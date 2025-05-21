@@ -1128,6 +1128,16 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Add Rule
                 </Button>
+                
+                <div className="mt-4 pt-4 border-t flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={() => form.handleSubmit(handleSubmit)()}
+                    className="bg-primary text-white"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
               </div>
             </TabsContent>
             
