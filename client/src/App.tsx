@@ -23,6 +23,7 @@ import FormEditor from "@/pages/FormEditor";
 import CalculatorTest from "@/pages/CalculatorTest";
 // Public Inquiry Form
 import PublicInquiryForm from "@/pages/PublicInquiryForm";
+import ExperimentalInquiryForm from "@/pages/ExperimentalInquiryForm";
 // Public Questionnaire will be reimplemented
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
@@ -44,11 +45,14 @@ function AppContent() {
   // Check if the URL is for the public inquiry form
   const pathname = window.location.pathname;
   const isInquiryPage = pathname === '/inquiry' || pathname.startsWith('/inquiry/');
+  const isExperimentalPage = pathname === '/experimental-inquiry' || pathname.startsWith('/experimental-inquiry/');
   
   // Handle event type extraction from URL
   let eventType = '';
   if (pathname.startsWith('/inquiry/')) {
     eventType = pathname.split('/inquiry/')[1];
+  } else if (pathname.startsWith('/experimental-inquiry/')) {
+    eventType = pathname.split('/experimental-inquiry/')[1];
   }
   
   // Return public inquiry form if that's the current page
@@ -57,6 +61,16 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <Toaster />
         <PublicInquiryForm initialEventType={eventType} />
+      </div>
+    );
+  }
+  
+  // Return experimental inquiry form if that's the current page
+  if (isExperimentalPage) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Toaster />
+        <ExperimentalInquiryForm initialEventType={eventType} />
       </div>
     );
   }

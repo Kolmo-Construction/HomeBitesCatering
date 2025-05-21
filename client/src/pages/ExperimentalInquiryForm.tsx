@@ -4533,8 +4533,8 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
   return (
     <>
       <Helmet>
-        <title>Event Inquiry | Home Bites Catering Services</title>
-        <meta name="description" content="Tell us about your event and get a personalized catering quote. We offer services for weddings, corporate events, birthdays, and more special occasions." />
+        <title>EXPERIMENTAL - Event Inquiry | Home Bites Catering Services</title>
+        <meta name="description" content="Experimental version - Tell us about your event and get a personalized catering quote. We offer services for weddings, corporate events, birthdays, and more special occasions." />
       </Helmet>
       
       <div className="min-h-screen bg-gray-50 pb-12">
