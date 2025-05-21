@@ -495,6 +495,118 @@ const DessertMatrix = ({
 };
 
 // Desserts step component
+// Dietary Restrictions Step component
+const DietaryRestrictionsStep = ({ 
+  onPrevious,
+  onNext 
+}: { 
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control } = useFormContext<EventInquiryFormData>();
+  
+  // Common allergies and dietary restrictions
+  const commonDietaryRestrictions = [
+    { id: "vegetarian", label: "Vegetarian" },
+    { id: "vegan", label: "Vegan" },
+    { id: "gluten_free", label: "Gluten Free" },
+    { id: "dairy_free", label: "Dairy Free" },
+    { id: "nut_free", label: "Nut Free" },
+    { id: "shellfish_allergy", label: "Shellfish Allergy" },
+    { id: "kosher", label: "Kosher" },
+    { id: "halal", label: "Halal" }
+  ];
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Dietary Restrictions</h2>
+        <p className="text-lg text-gray-600">
+          Let us know about any dietary requirements or food allergies
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-4">Common Dietary Restrictions</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Select any dietary restrictions that apply to your guests. This helps us prepare appropriate menu options.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+            {commonDietaryRestrictions.map((restriction) => (
+              <FormField
+                key={restriction.id}
+                control={control}
+                name={`dietaryRestrictions.${restriction.id}`}
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-medium">
+                        {restriction.label}
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            ))}
+          </div>
+        </div>
+        
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-4">Food Allergies</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Please specify any food allergies or intolerances that we should be aware of.
+          </p>
+          
+          <FormField
+            control={control}
+            name="dietaryNotes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dietary Notes & Food Allergies</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Please provide details about any dietary restrictions, food allergies, or special requirements (e.g., number of vegetarian meals needed, severe allergies, etc.)"
+                    className="min-h-[150px]"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <div className="flex justify-between mt-8">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onPrevious}
+            className="flex items-center"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+          
+          <Button 
+            type="button" 
+            onClick={onNext}
+            className="flex items-center"
+          >
+            Review Your Inquiry <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DessertsStep = ({ 
   onPrevious,
   onNext 
