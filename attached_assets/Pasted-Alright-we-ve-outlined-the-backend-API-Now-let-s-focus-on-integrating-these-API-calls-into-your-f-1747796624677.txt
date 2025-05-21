@@ -1,0 +1,162 @@
+Alright, we've outlined the backend API. Now, let's focus on integrating these API calls into your frontend FormEditor.tsx, specifically within the QuestionSettingsPanel and the new RuleEditorForm dialog. This will involve fetching existing rules, fetching data needed for rule creation (all questions and pages in the form), and then saving/deleting rules.
+
+File: client/src/pages/FormEditor.tsx
+
+Here's how we'll proceed with the frontend data operations and state management for conditional logic:
+
+I. Enhancements to FormEditor (Main Component)
+
+State for All Questions and Pages in the Form:
+
+You'll need to manage state that holds all question instances and all pages for the currently loaded form. This data is vital for the RuleEditorForm dialog to populate dropdowns for selecting target questions or pages.
+TypeScript
+
+// Inside FormEditor component
+const [allQuestionsInForm, setAllQuestionsInForm] = useState<Array<{ id: string; displayText: string; pageId: string; questionKey: string }>>([]);
+const [allPagesInForm, setAllPagesInForm] = useState<Array<{ id: string; pageTitle: string }>>([]);
+Fetching All Questions and Pages for the Form:
+
+Use useEffect or useQuery (if you prefer to keep data fetching consistent with TanStack Query) to fetch this data when formId is available.
+API Endpoint Needed (Backend): You might need a new backend endpoint like GET /api/form-builder/forms/:formId/summary or similar that returns a lightweight list of all pages (id, title) and all question instances (id, displayText, pageId, questionKey) for that form. Alternatively, modify the existing GET /api/form-builder/forms/:formId/render endpoint to include a flattened list of all questions with their instance IDs and page IDs, in addition to the nested structure.
+Example Fetch Logic (Conceptual):
+TypeScript
+
+useEffect(() => {
+  if (formId && formData) { // Assuming formData is loaded and contains the form structure or you fetch separately
+    const extractedQuestions: Array<{ id: string; displayText: string; pageId: string; questionKey: string }> = [];
+    const extractedPages: Array<{ id: string; pageTitle: string }> = [];
+
+    // Iterate through formData.pages (or pagesData if fetched separately)
+    (formData.pages || pagesData || []).forEach(page => {
+      extractedPages.push({ id: String(page.id || page.pageId), pageTitle: page.pageTitle || page.title || `Page ${page.pageOrder}` });
+      (page.questions || []).forEach(questionInstance => {
+        extractedQuestions.push({
+          id: String(questionInstance.id || questionInstance.pageQuestionId),
+          displayText: questionInstance.displayTextOverride || questionInstance.displayText || questionInstance.display_text || questionInstance.libraryDefaultText || 'Unnamed Question',
+          pageId: String(page.id || page.pageId),
+          questionKey: questionInstance.questionKey || `<span class="math-inline">\{page\.id \|\| page\.pageId\}\_</span>{questionInstance.id || questionInstance.pageQuestionId}`
+        });
+      });
+    });
+    setAllQuestionsInForm(extractedQuestions);
+    setAllPagesInForm(extractedPages);
+  }
+}, [formId, formData, pagesData]); // Adjust dependencies as needed
+This allQuestionsInForm and allPagesInForm state will be passed down to the QuestionSettingsPanel and then to the RuleEditorForm dialog.
+II. Enhancements to QuestionSettingsPanel (Inside FormEditor.tsx)
+
+Props:
+
+It will now need to receive allQuestionsInForm and allPagesInForm from its parent FormEditor.
+It already receives selectedQuestion (let's assume this prop is named question).
+Fetching Rules for the Selected Question:
+
+Use useQuery from @tanstack/react-query to fetch rules when question (the selected question) changes.
+TypeScript
+
+// Inside QuestionSettingsPanel
+const { data: conditionalRules = [], refetch: refetchConditionalRules } = useQuery<RuleDefinition[]>({
+  queryKey: ['formQuestionRules', question?.id], // question.id is formPageQuestions.id
+  queryFn: async () => {
+    if (!question?.id) return [];
+    const response = await fetch(`/api/form-builder/form-page-questions/${question.id}/rules`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch conditional rules');
+    }
+    return response.json();
+  },
+  enabled: !!question?.id, // Only fetch if a question is selected
+});
+The conditionalRules state you defined earlier will now be derived from this useQuery hook.
+Saving/Updating Rules (using useMutation):
+
+Modify handleSaveRule to use a mutation.
+TypeScript
+
+const saveRuleMutation = useMutation({
+  mutationFn: async (ruleDataWithTargets: Omit<RuleDefinition, 'id'> & { id?: string }) => {
+    const { id: ruleId, ...payload } = ruleDataWithTargets;
+    const completePayload = {
+      ...payload,
+      formId: parseInt(formId), // Ensure formId is available and parsed
+      triggerFormPageQuestionId: parseInt(question.id), // The question this panel is for
+      // Ensure targets are correctly formatted with numeric IDs
+      targets: payload.targets.map(t => ({
+        ...t,
+        targetId: parseInt(t.targetId, 10)
+      }))
+    };
+
+    if (ruleId && !ruleId.startsWith('temp-')) { // Editing an existing rule (that has a real ID)
+      const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(completePayload),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    } else { // Creating a new rule
+      const response = await fetch(`/api/form-builder/forms/${formId}/rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(completePayload),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    }
+  },
+  onSuccess: () => {
+    toast({ title: "Rule saved", description: "Conditional rule has been successfully saved to the server." });
+    refetchConditionalRules(); // Refetch rules for the current question
+    setIsRuleEditorOpen(false);
+    setCurrentRule(null);
+  },
+  onError: (error: Error) => {
+    toast({ variant: "destructive", title: "Error saving rule", description: error.message });
+  },
+});
+
+const handleSaveRule = (ruleDataFromDialog: any) => {
+  const ruleToSave = {
+    ...(editingRule || {}), // Spread existing rule if editing (contains its ID)
+    ...ruleDataFromDialog, // Spread new/updated data from dialog
+  };
+  saveRuleMutation.mutate(ruleToSave);
+};
+Deleting Rules (using useMutation):
+
+Modify handleDeleteRule to use a mutation.
+TypeScript
+
+const deleteRuleMutation = useMutation({
+  mutationFn: async (ruleId: string) => {
+    if (ruleId.startsWith('temp-')) { // For locally added, unsaved rules
+      return Promise.resolve({ message: "Local rule removed" });
+    }
+    const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.json();
+  },
+  onSuccess: (data, ruleId) => {
+    toast({ title: "Rule deleted", description: "Conditional rule has been deleted." });
+    if (ruleId.startsWith('temp-')) {
+      // If it was a local rule, just filter it out from local state (already handled by setConditionalRules)
+      // This part is a bit redundant if you're calling refetchConditionalRules anyway
+      // but good for immediate UI update if not refetching immediately.
+      // setConditionalRules(prevRules => prevRules.filter(r => r.id !== ruleId));
+    }
+    refetchConditionalRules(); // Refetch rules
+  },
+  onError: (error: Error) => {
+    toast({ variant: "destructive", title: "Error deleting rule", description: error.message });
+  },
+});
+
+const handleDeleteRule = (ruleId: string) => {
+  // Optional: Add a confirmation dialog here
+  if (window.confirm("Are you sure you want to delete this rule?")) {
+    deleteRuleMutation.mutate(ruleId);
+  }
+};

@@ -796,128 +796,142 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   };
   
   const handleDeleteRule = (ruleId: string) => {
-    const updatedRules = conditionalRules.filter(rule => rule.id !== ruleId);
-    setConditionalRules(updatedRules);
-    
-    // Later: API call to delete the rule
-    // const deleteRuleMutation = useMutation({
-    //   mutationFn: async (id) => {
-    //     const response = await fetch(`/api/form-builder/rules/${id}`, {
-    //       method: 'DELETE'
-    //     });
-    //     if (!response.ok) throw new Error('Failed to delete rule');
-    //     return await response.json();
-    //   },
-    //   onSuccess: () => {
-    //     // Invalidate and refetch
-    //     queryClient.invalidateQueries(['/api/form-builder/forms', formId, 'rules']);
-    //   }
-    // });
-    
-    toast({
-      title: "Rule deleted",
-      description: "The conditional rule has been removed",
-    });
+    // Confirm deletion with user
+    if (window.confirm("Are you sure you want to delete this rule?")) {
+      deleteRuleMutation.mutate(ruleId);
+    }
   };
   
-  const handleSaveRule = (ruleData: Omit<RuleDefinition, 'id'>) => {
-    if (editingRule) {
-      // Update existing rule
-      const updatedRules = conditionalRules.map(rule => 
-        rule.id === editingRule.id ? { ...ruleData, id: rule.id } : rule
-      );
-      setConditionalRules(updatedRules);
-      
-      // Later: API call to update the rule
-      // const updateRuleMutation = useMutation({
-      //   mutationFn: async (data) => {
-      //     const response = await fetch(`/api/form-builder/rules/${editingRule.id}`, {
-      //       method: 'PUT',
-      //       headers: { 'Content-Type': 'application/json' },
-      //       body: JSON.stringify(data)
-      //     });
-      //     if (!response.ok) throw new Error('Failed to update rule');
-      //     return await response.json();
-      //   },
-      //   onSuccess: () => {
-      //     // Invalidate and refetch
-      //     queryClient.invalidateQueries(['/api/form-builder/forms', formId, 'rules']);
-      //   }
-      // });
-      
-      toast({
-        title: "Rule updated",
-        description: "The conditional rule has been updated",
-      });
-    } else {
-      // Add new rule
-      const newRule: RuleDefinition = {
-        ...ruleData as any, // Type casting for simplicity
-        id: `rule-${Date.now()}`, // Generate a temporary ID
+  // Save rule mutation
+  const saveRuleMutation = useMutation({
+    mutationFn: async (ruleDataWithTargets: Omit<RuleDefinition, 'id'> & { id?: string }) => {
+      const { id: ruleId, ...payload } = ruleDataWithTargets;
+      const completePayload = {
+        ...payload,
+        formId: parseInt(formData.id), 
+        triggerFormPageQuestionId: parseInt(question.id),
+        // Ensure targets are correctly formatted with numeric IDs
+        targets: payload.targets.map(t => ({
+          ...t,
+          targetId: parseInt(t.targetId)
+        }))
       };
-      setConditionalRules([...conditionalRules, newRule]);
-      
-      // Later: API call to create a new rule
-      // const createRuleMutation = useMutation({
-      //   mutationFn: async (data) => {
-      //     const response = await fetch(`/api/form-builder/forms/${formId}/rules`, {
-      //       method: 'POST',
-      //       headers: { 'Content-Type': 'application/json' },
-      //       body: JSON.stringify({
-      //         ...data,
-      //         triggerFormPageQuestionId: question.id,
-      //       })
-      //     });
-      //     if (!response.ok) throw new Error('Failed to create rule');
-      //     return await response.json();
-      //   },
-      //   onSuccess: () => {
-      //     // Invalidate and refetch
-      //     queryClient.invalidateQueries(['/api/form-builder/forms', formId, 'rules']);
-      //   }
-      // });
-      
-      toast({
-        title: "Rule added",
-        description: "A new conditional rule has been added",
+
+      if (ruleId && !ruleId.startsWith('rule-')) { // Editing an existing rule (that has a real DB ID)
+        const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(completePayload),
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to update rule: ${errorText}`);
+        }
+        return response.json();
+      } else { // Creating a new rule
+        const response = await fetch(`/api/form-builder/forms/${formData.id}/rules`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(completePayload),
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to create rule: ${errorText}`);
+        }
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Rule saved", 
+        description: "Conditional rule has been successfully saved" 
       });
-    }
-    setIsRuleEditorOpen(false);
-    setEditingRule(null);
+      // Refetch rules for the current question
+      refetchConditionalRules();
+      setIsRuleEditorOpen(false);
+      setEditingRule(null);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error saving rule", 
+        description: error.message 
+      });
+    },
+  });
+
+  // Delete rule mutation
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (ruleId: string) => {
+      if (ruleId.startsWith('rule-')) { // For locally added, unsaved rules
+        return Promise.resolve({ message: "Local rule removed" });
+      }
+      const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to delete rule: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Rule deleted", 
+        description: "Conditional rule has been removed" 
+      });
+      // Refetch rules
+      refetchConditionalRules();
+    },
+    onError: (error: Error) => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error deleting rule", 
+        description: error.message 
+      });
+    },
+  });
+
+  const handleSaveRule = (ruleData: Omit<RuleDefinition, 'id'>) => {
+    const ruleToSave = {
+      ...(editingRule || {}), // Include existing ID if editing
+      ...ruleData
+    };
+    saveRuleMutation.mutate(ruleToSave);
   };
   
-  // Effect to fetch rules when selected question changes
-  useEffect(() => {
-    if (question?.id) {
-      // Clear existing rules when question changes
-      setConditionalRules([]);
-      
-      // For demonstration, we'll add a sample rule
-      // In a real implementation, you would fetch rules from the API
-      if (process.env.NODE_ENV === 'development') {
-        // This is just for demonstration purposes
-        setTimeout(() => {
-          const sampleRule: RuleDefinition = {
-            id: `rule-${Date.now()}`,
-            conditionType: 'equals',
-            conditionValue: 'Yes',
-            actionType: 'show',
-            targets: [
-              {
-                targetType: 'question',
-                targetId: '2' // This is just a placeholder
-              }
-            ],
-            description: 'Sample rule for demonstration'
-          };
-          setConditionalRules([sampleRule]);
-        }, 500);
+  // Fetch rules for the selected question
+  const { 
+    data: fetchedRules = [], 
+    isLoading: isLoadingRules, 
+    refetch: refetchRules 
+  } = useQuery({
+    queryKey: ['formQuestionRules', question?.id],
+    queryFn: async () => {
+      if (!question?.id) return [];
+      const response = await fetch(`/api/form-builder/form-page-questions/${question.id}/rules`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch conditional rules: ${errorText}`);
       }
-      
-      // Later: API call to fetch rules for the selected question
-      // fetchRules(question.id);
+      return response.json();
+    },
+    enabled: !!question?.id, // Only fetch if a question is selected
+  });
+  
+  // Define refetchConditionalRules function to be used in mutations
+  const refetchConditionalRules = () => {
+    refetchRules();
+  };
+  
+  // Update local state when fetched rules change
+  useEffect(() => {
+    if (fetchedRules && fetchedRules.length > 0) {
+      setConditionalRules(fetchedRules);
+    } else {
+      setConditionalRules([]);
     }
-  }, [question?.id]);
+  }, [fetchedRules]);
   
   // Effect to collect all form questions and pages for rule targeting
   useEffect(() => {
