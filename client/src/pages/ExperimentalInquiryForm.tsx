@@ -2098,9 +2098,17 @@ const MenuSelectionStep = ({
   const { useState, useEffect } = React;
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
   
-  // Watch the selected package
-  const selectedPackage = watch("selectedPackage");
+  // Watch the selected packages (theme-specific)
+  const selectedPackages = watch("selectedPackages") || {};
+  const selectedPackage = selectedPackages[selectedTheme];
   const menuSelections = watch("menuSelections");
+  
+  // Initialize selectedPackages if it doesn't exist
+  useEffect(() => {
+    if (!selectedPackages) {
+      setValue("selectedPackages", {});
+    }
+  }, [selectedPackages, setValue]);
   
   // Get the theme menu data or show default message if theme not found
   const themeData = themeMenuData[selectedTheme as keyof typeof themeMenuData];
@@ -2516,7 +2524,7 @@ const MenuSelectionStep = ({
                         ? 'border-primary bg-primary/5 ring-1 ring-primary' 
                         : 'border-gray-200 hover:border-primary/50'
                     }`}
-                    onClick={() => setValue("selectedPackage", pkg.id)}
+                    onClick={() => setValue(`selectedPackages.${selectedTheme}`, pkg.id)}
                   >
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="text-lg font-medium">{pkg.name}</h4>

@@ -94,7 +94,7 @@ export type EventInquiryFormData = {
   requestedTheme: string;
   
   // Step 4: Menu Selection
-  selectedPackage?: string;
+  selectedPackages: Record<string, string>; // Store package selections by theme
   menuSelections: {
     proteins: string[];
     sides: string[];
