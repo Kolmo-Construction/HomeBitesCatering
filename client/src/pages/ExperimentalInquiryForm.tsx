@@ -48,7 +48,7 @@ import {
 
 // Import externalized data
 import { dessertItems, dessertLotSizes } from "@/data/dessert-data";
-import { eventTypes, mapUrlToEventType } from "@/data/event-types";
+import { eventTypes, mapUrlToEventType, validateEventType } from "@/data/event-types";
 
 // Using EventInquiryFormData imported from form-types.ts
 
@@ -4157,21 +4157,7 @@ const MenuSelectionStep = ({
 };
 
 // Main component
-// Helper function to validate if a string is a valid event type
-function validateEventType(type: string): boolean {
-  // Convert input to match case-sensitive event types
-  const eventTypeMap: Record<string, EventType> = {
-    "wedding": "Wedding",
-    "corporate": "Corporate",
-    "engagement": "Engagement",
-    "birthday": "Birthday",
-    "foodtruck": "Food Truck",
-    "mobilebartending": "Mobile Bartending",
-    "otherprivateparty": "Other Private Party"
-  };
-  
-  return !!eventTypeMap[type.toLowerCase()];
-}
+// Using validateEventType imported from event-types.tsx
 
 // Using imported mapUrlToEventType from event-types.tsx
 

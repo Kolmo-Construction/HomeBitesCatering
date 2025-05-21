@@ -62,3 +62,19 @@ export function mapUrlToEventType(type: string): EventType | null {
   
   return eventTypeMap[type.toLowerCase()] || null;
 }
+
+// Helper function to validate if a string is a valid event type
+export function validateEventType(type: string): boolean {
+  // Convert input to match case-sensitive event types
+  const eventTypeMap: Record<string, EventType> = {
+    "wedding": "Wedding",
+    "corporate": "Corporate",
+    "engagement": "Engagement",
+    "birthday": "Birthday",
+    "foodtruck": "Food Truck",
+    "mobilebartending": "Mobile Bartending",
+    "otherprivateparty": "Other Private Party"
+  };
+  
+  return !!eventTypeMap[type.toLowerCase()];
+}
