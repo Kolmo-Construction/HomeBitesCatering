@@ -3222,8 +3222,8 @@ export default function PublicInquiryForm() {
     "eventType", 
     "basicInfo", 
     "eventDetails", 
-    "appetizers", // Moved appetizers (hors d'oeuvres) to step 4
-    "menuSelection", 
+    "menuSelection", // Keep menuSelection as step 4 (for regular themes)
+    "appetizers",    // Keep appetizers as step 5
     "desserts", 
     "beverages",
     "equipment",
@@ -3254,12 +3254,17 @@ export default function PublicInquiryForm() {
     if (currentIndex < steps.length - 1) {
       let nextStep = steps[currentIndex + 1];
       
-      // If current step is EventDetails and "hors_doeuvres" is selected,
-      // and the natural next step is menuSelection, skip to appetizers.
-      if (currentStep === "eventDetails" && 
-          currentFormTheme === "hors_doeuvres" && 
-          nextStep === "menuSelection") {
-        nextStep = "appetizers";
+      // Handle special navigation based on current step and theme selection
+      if (currentStep === "eventDetails") {
+        // If hors_doeuvres is selected, skip menuSelection and go directly to appetizers
+        if (currentFormTheme === "hors_doeuvres") {
+          // Find the index of appetizers step
+          const appetizersIndex = steps.indexOf("appetizers");
+          if (appetizersIndex > -1) {
+            nextStep = "appetizers";
+          }
+        }
+        // For all other themes, proceed normally to menuSelection
       }
       
       setCurrentStep(nextStep);
