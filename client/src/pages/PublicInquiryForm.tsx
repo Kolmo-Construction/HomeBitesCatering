@@ -4587,14 +4587,7 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
               )}
               
               {currentStep === "appetizerQuestion" && eventType && (
-                <AppetizersQuestionStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              
-              {currentStep === "appetizers" && eventType && (
-                <AppetizersStep
+                <CombinedAppetizersStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                 />
