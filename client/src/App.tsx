@@ -71,7 +71,7 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <Toaster />
         <Switch>
-          <Route path="/experimental-inquiry" exact>
+          <Route path="/experimental-inquiry">
             <ExperimentalInquiryForm />
           </Route>
           <Route path="/experimental-inquiry/:eventType">
