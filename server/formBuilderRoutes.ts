@@ -2095,13 +2095,37 @@ router.get("/questions/:questionId/rules", async (req, res) => {
       return res.status(400).json({ message: "Invalid question ID" });
     }
     
-    // Get all rules where this question is the target
+    // Get all rules where this question is either the trigger or the target
+    console.log(`Looking for rules where triggerFormPageQuestionId = ${questionId}`);
+    
+    // First, get rules from the main form_rules table
     const rules = await db.select()
       .from(formSchema.formRules)
-      .where(eq(formSchema.formRules.targetFormPageQuestionId, questionId))
+      .where(eq(formSchema.formRules.triggerFormPageQuestionId, questionId))
       .orderBy(formSchema.formRules.executionOrder);
+    
+    // Then, check if we have any targets in the form_rule_targets table
+    const targetRules = await db.select({
+      rule: formSchema.formRules,
+      target: formSchema.formRuleTargets
+    })
+      .from(formSchema.formRuleTargets)
+      .innerJoin(
+        formSchema.formRules,
+        eq(formSchema.formRuleTargets.ruleId, formSchema.formRules.id)
+      )
+      .where(
+        eq(formSchema.formRuleTargets.targetId, questionId)
+      )
+      .orderBy(formSchema.formRules.executionOrder);
+    
+    // Combine both sets of rules
+    const combinedRules = [
+      ...rules,
+      ...targetRules.map(tr => tr.rule)
+    ];
       
-    return res.status(200).json(rules);
+    return res.status(200).json(combinedRules);
   } catch (error) {
     console.error("Error fetching rules for question:", error);
     return res.status(500).json({ message: "Failed to fetch rules" });
@@ -2152,16 +2176,24 @@ router.post("/questions/:questionId/rules", async (req, res) => {
       });
     }
     
-    // Create the rule
+    // Create the rule in the form_rules table
     const [newRule] = await db.insert(formSchema.formRules)
       .values({
         formId: page.formId,
         triggerFormPageQuestionId: parsed.data.sourceQuestionId,
-        targetFormPageQuestionId: questionId,
         conditionType: parsed.data.conditionType,
         conditionValue: parsed.data.conditionValue || null,
         actionType: parsed.data.actionType,
         executionOrder: 0, // Default execution order
+      })
+      .returning();
+      
+    // Now create the target entry in the form_rule_targets table
+    const [newTarget] = await db.insert(formSchema.formRuleTargets)
+      .values({
+        ruleId: newRule.id,
+        targetType: 'question', // Assume question type, could be extended for other types
+        targetId: questionId,
       })
       .returning();
       
@@ -2181,9 +2213,29 @@ router.delete("/questions/:questionId/rules", async (req, res) => {
       return res.status(400).json({ message: "Invalid question ID" });
     }
     
-    // Delete all rules where this question is the target
+    // Find rules associated with this question
+    const ruleTargets = await db.select()
+      .from(formSchema.formRuleTargets)
+      .where(eq(formSchema.formRuleTargets.targetId, questionId));
+      
+    // Get the rule IDs
+    const ruleIds = ruleTargets.map(target => target.ruleId);
+    
+    if (ruleIds.length > 0) {
+      // Delete the rule targets first (foreign key constraint)
+      await db.delete(formSchema.formRuleTargets)
+        .where(eq(formSchema.formRuleTargets.targetId, questionId));
+      
+      // Then delete the rules
+      for (const ruleId of ruleIds) {
+        await db.delete(formSchema.formRules)
+          .where(eq(formSchema.formRules.id, ruleId));
+      }
+    }
+    
+    // Also delete rules where this question is the trigger
     await db.delete(formSchema.formRules)
-      .where(eq(formSchema.formRules.targetFormPageQuestionId, questionId));
+      .where(eq(formSchema.formRules.triggerFormPageQuestionId, questionId));
       
     return res.status(200).json({ 
       success: true,
