@@ -3025,593 +3025,63 @@ const calculateCategoryTotal = (category: any, selections: any): number => {
 };
 
 // Step 5: Appetizers Question Step
-// Step 5: Combined Appetizers Step (Question + Selection)
-const CombinedAppetizersStep = ({ 
+const AppetizersQuestionStep = ({ 
   onPrevious, 
   onNext 
 }: { 
   onPrevious: () => void;
   onNext: () => void;
 }) => {
-  const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  const { control, watch, setValue } = useFormContext<EventInquiryFormData>();
   const wantsAppetizers = watch("wantsAppetizers");
-  const appetizerService = watch("appetizerService");
-  const appetizers = watch("appetizers");
-  const horsDoeurvesSelections = watch("horsDoeurvesSelections");
-  
-  // Initialize appetizers data structures when user selects Yes
-  useEffect(() => {
-    // Initialize horsDoeurvesSelections with empty structure if needed
-    if (wantsAppetizers === true && (!horsDoeurvesSelections || !horsDoeurvesSelections.categories)) {
-      setValue("horsDoeurvesSelections", {
-        serviceStyle: horsDoeurvesSelections?.serviceStyle || "stationary",
-        categories: {}
-      });
-    }
-  }, [wantsAppetizers, horsDoeurvesSelections]);
   
   // Handle appetizer selection
   const handleAppetizerSelection = (value: boolean) => {
     setValue("wantsAppetizers", value);
   };
   
-  // Initialize appetizers structure if needed
-  const initializeCategory = (categoryId: string) => {
-    if (!appetizers[categoryId]) {
-      setValue(`appetizers.${categoryId}`, []);
-    }
-  };
-  
-  // Handle tea sandwich selection
-  const handleTeaSandwichSelection = (item: any, lotSize: number) => {
-    const categoryId = "tea_sandwiches";
-    initializeCategory(categoryId);
-    
-    // Get current selections
-    const currentSelections = [...(appetizers[categoryId] || [])];
-    
-    // Check if already selected
-    const existingIndex = currentSelections.findIndex(
-      (selection: any) => selection.name === item.name
-    );
-    
-    if (existingIndex > -1) {
-      // If already selected, remove it to toggle off
-      currentSelections.splice(existingIndex, 1);
-    } else {
-      // Otherwise add with the selected lot size
-      currentSelections.push({
-        name: item.name,
-        quantity: lotSize,
-        price: item.price
-      });
-    }
-    
-    // Update form state
-    setValue(`appetizers.${categoryId}`, currentSelections);
-  };
-  
-  // Check if tea sandwich is selected with specific lot size
-  const isTeaSandwichSelected = (itemName: string, lotSize: number): boolean => {
-    const categoryId = "tea_sandwiches";
-    if (!appetizers || !appetizers[categoryId]) return false;
-    
-    return appetizers[categoryId].some(
-      (item: any) => item.name === itemName && item.quantity === lotSize
-    );
-  };
-  
-  // Handle service style selection
-  const handleServiceStyleSelection = (value: "stationary" | "passed") => {
-    setValue("appetizerService", value);
-    
-    // Also update the Hors d'oeuvres service style
-    setValue("horsDoeurvesSelections.serviceStyle", value);
-  };
-  
-  // Handle selection for a Hors d'oeuvre item
-  const handleHorsDoeurvesSelection = (categoryId: string, itemId: string, quantity: number | null) => {
-    // Initialize the category if it doesn't exist yet
-    if (!horsDoeurvesSelections.categories[categoryId]) {
-      setValue(`horsDoeurvesSelections.categories.${categoryId}`, { items: {} });
-    }
-    
-    // If quantity is null, we want to remove the selection
-    if (quantity === null) {
-      // Create a new object without this item
-      const updatedItems = { ...horsDoeurvesSelections.categories[categoryId]?.items };
-      delete updatedItems[itemId];
-      
-      setValue(`horsDoeurvesSelections.categories.${categoryId}.items`, updatedItems);
-    } else {
-      // Add or update the selection
-      setValue(`horsDoeurvesSelections.categories.${categoryId}.items.${itemId}`, {
-        name: getItemNameById(categoryId, itemId),
-        quantity
-      });
-    }
-  };
-  
-  // Get the name of an item by its ID
-  const getItemNameById = (categoryId: string, itemId: string): string => {
-    const category = appetizerData.hors_doeuvres_categories.find(cat => cat.id === categoryId);
-    const item = category?.items.find(item => item.id === itemId);
-    return item?.name || "";
-  };
-  
-  // Calculate total for Hors d'oeuvres
-  const calculateHorsDoeurvesTotal = (): number => {
-    let total = 0;
-    
-    // Calculate item totals
-    if (horsDoeurvesSelections && horsDoeurvesSelections.categories) {
-      Object.keys(horsDoeurvesSelections.categories).forEach(categoryId => {
-        total += calculateCategoryTotal(categoryId);
-      });
-    }
-    
-    // Add service charge for passed service
-    if (horsDoeurvesSelections?.serviceStyle === "passed") {
-      total += 5 * (watch("guestCount") || 0);
-    }
-    
-    return total;
-  };
-  
-  // Calculate total for a category
-  const calculateCategoryTotal = (categoryId: string): number => {
-    const category = appetizerData.hors_doeuvres_categories.find(cat => cat.id === categoryId);
-    if (!category || !horsDoeurvesSelections?.categories?.[categoryId]?.items) return 0;
-    
-    let total = 0;
-    const items = horsDoeurvesSelections.categories[categoryId].items;
-    
-    Object.keys(items).forEach(itemId => {
-      const item = category.items.find(i => i.id === itemId);
-      const quantity = items[itemId].quantity;
-      
-      if (item && quantity) {
-        total += item.price * quantity;
-      }
-    });
-    
-    return total;
-  };
-  
-  // Count selected spreads
-  const getSelectedSpreadsCount = (): number => {
-    const categoryId = "spreads";
-    if (!appetizers || !appetizers[categoryId] || !Array.isArray(appetizers[categoryId])) return 0;
-    
-    return appetizers[categoryId].length;
-  };
-  
-  // Get the spreads serving size
-  const getSpreadsServingSize = (): number => {
-    const categoryId = "spreads";
-    if (!appetizers || !appetizers[categoryId] || !Array.isArray(appetizers[categoryId]) || appetizers[categoryId].length === 0) {
-      return 24; // Default to first serving size
-    }
-    
-    // All spreads have the same quantity/serving size
-    return appetizers[categoryId][0].quantity || 24;
-  };
-  
-  // Check if spreads selection limit is reached
-  const isSpreadsLimitReached = (): boolean => {
-    const categoryId = "spreads";
-    const spreadsCategory = appetizerData.categories.find(cat => cat.id === categoryId);
-    if (!spreadsCategory) return false;
-    
-    const selectedCount = getSelectedSpreadsCount();
-    return selectedCount >= (spreadsCategory.selectLimit || 3);
-  };
-  
-  // If user hasn't made a choice yet, show the question UI
-  if (wantsAppetizers === undefined) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-3 text-gray-900">Appetizers</h2>
-          <p className="text-lg text-gray-600">
-            Would you like to add any appetizers to your quote?
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card 
-              className={`
-                overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
-                ${wantsAppetizers === true ? 'ring-4 ring-primary ring-offset-2' : ''}
-              `}
-              onClick={() => handleAppetizerSelection(true)}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="mb-4 flex justify-center">
-                  <Check className={`h-16 w-16 ${wantsAppetizers === true ? 'text-primary' : 'text-gray-300'}`} />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Yes</h3>
-                <p className="text-gray-600">I would like to add appetizers to my event.</p>
-              </CardContent>
-            </Card>
-            
-            <Card 
-              className={`
-                overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
-                ${wantsAppetizers === false ? 'ring-4 ring-primary ring-offset-2' : ''}
-              `}
-              onClick={() => handleAppetizerSelection(false)}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="mb-4 flex justify-center">
-                  <X className={`h-16 w-16 ${wantsAppetizers === false ? 'text-primary' : 'text-gray-300'}`} />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No</h3>
-                <p className="text-gray-600">I don't need appetizers for this event.</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-        
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onPrevious}
-            className="flex items-center"
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-          
-          <Button 
-            type="button" 
-            onClick={onNext}
-            className="flex items-center"
-            disabled={wantsAppetizers === undefined}
-          >
-            Next <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
-  // If the user doesn't want appetizers, allow them to proceed
-  if (wantsAppetizers === false) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-3 text-gray-900">Appetizers</h2>
-          <p className="text-lg text-gray-600">
-            Would you like to add any appetizers to your quote?
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card 
-              className={`
-                overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
-                ${wantsAppetizers === true ? 'ring-4 ring-primary ring-offset-2' : ''}
-              `}
-              onClick={() => handleAppetizerSelection(true)}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="mb-4 flex justify-center">
-                  <Check className={`h-16 w-16 ${wantsAppetizers === true ? 'text-primary' : 'text-gray-300'}`} />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Yes</h3>
-                <p className="text-gray-600">I would like to add appetizers to my event.</p>
-              </CardContent>
-            </Card>
-            
-            <Card 
-              className={`
-                overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
-                ${wantsAppetizers === false ? 'ring-4 ring-primary ring-offset-2' : ''}
-              `}
-              onClick={() => handleAppetizerSelection(false)}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="mb-4 flex justify-center">
-                  <X className={`h-16 w-16 ${wantsAppetizers === false ? 'text-primary' : 'text-gray-300'}`} />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No</h3>
-                <p className="text-gray-600">I don't need appetizers for this event.</p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="mt-6 p-4 bg-gray-50 rounded-md text-center">
-            <p className="text-gray-600">You have opted to skip appetizers for this event. Click Next to continue.</p>
-          </div>
-        </div>
-        
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onPrevious}
-            className="flex items-center"
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-          
-          <Button 
-            type="button" 
-            onClick={onNext}
-            className="flex items-center"
-          >
-            Next <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
-  // If the user wants appetizers, show the full appetizer selection interface
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3 text-gray-900">Hors d'oeuvres Selection</h2>
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Appetizers</h2>
         <p className="text-lg text-gray-600">
-          Select appetizers to enhance your event
+          Would you like to add any appetizers to your quote?
         </p>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        {/* Option to change appetizer selection */}
-        <div className="mb-6 flex justify-between items-center">
-          <span className="font-medium">Appetizer Selection:</span>
-          <Button 
-            size="sm"
-            variant="outline"
+      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card 
+            className={`
+              overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+              ${wantsAppetizers ? 'ring-4 ring-primary ring-offset-2' : ''}
+            `}
+            onClick={() => handleAppetizerSelection(true)}
+          >
+            <CardContent className="p-6 text-center">
+              <div className="mb-4 flex justify-center">
+                <Check className={`h-16 w-16 ${wantsAppetizers ? 'text-primary' : 'text-gray-300'}`} />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Yes</h3>
+              <p className="text-gray-600">I would like to add appetizers to my event.</p>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`
+              overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+              ${wantsAppetizers === false ? 'ring-4 ring-primary ring-offset-2' : ''}
+            `}
             onClick={() => handleAppetizerSelection(false)}
           >
-            Remove All Appetizers
-          </Button>
-        </div>
-        
-        {/* General Notes and Information */}
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-6">
-          <h3 className="text-lg font-semibold mb-2 text-amber-800">Service Style</h3>
-          <p className="text-sm text-amber-700 mb-4">
-            Choose how you would like your appetizers to be served:
-          </p>
-          
-          <div className="flex flex-wrap gap-3 mb-4">
-            <Button
-              type="button"
-              variant={appetizerService === "stationary" ? "default" : "outline"}
-              onClick={() => handleServiceStyleSelection("stationary")}
-              className="flex items-center gap-2"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Stationary
-            </Button>
-            
-            <Button
-              type="button"
-              variant={appetizerService === "passed" ? "default" : "outline"}
-              onClick={() => handleServiceStyleSelection("passed")}
-              className="flex items-center gap-2"
-            >
-              <Users2 className="h-4 w-4" />
-              Passed (+ $5.00 per person)
-            </Button>
-          </div>
-          
-          <p className="text-xs text-amber-600">
-            Stationary: Items are placed on tables for guests to enjoy at their leisure.<br />
-            Passed: Our staff will circulate with trays of hors d'oeuvres throughout your event.
-          </p>
-        </div>
-        
-        {/* Hors d'Oeuvres Selections */}
-        <div className="space-y-8">
-          <h3 className="text-xl font-semibold mb-4">Hors d'Oeuvres Selections</h3>
-          
-          {appetizerData.hors_doeuvres_categories.map((category) => (
-            <div key={category.id} className="mb-8">
-              <div className="border-b pb-2 mb-4">
-                <h4 className="text-lg font-medium">{category.name}</h4>
-                <p className="text-sm text-gray-500">{category.description}</p>
+            <CardContent className="p-6 text-center">
+              <div className="mb-4 flex justify-center">
+                <X className={`h-16 w-16 ${wantsAppetizers === false ? 'text-primary' : 'text-gray-300'}`} />
               </div>
-              
-              <div className="grid grid-cols-1 gap-4">
-                {category.items.map((item) => (
-                  <HorsDoeurvesMatrix
-                    key={item.id}
-                    category={category}
-                    item={item}
-                    onSelectionChange={(itemId, quantity) => 
-                      handleHorsDoeurvesSelection(category.id, itemId, quantity)
-                    }
-                    selections={horsDoeurvesSelections?.categories?.[category.id]?.items || {}}
-                  />
-                ))}
-              </div>
-              
-              {/* Display total for this category */}
-              {horsDoeurvesSelections?.categories?.[category.id]?.items && 
-                Object.keys(horsDoeurvesSelections.categories[category.id].items).length > 0 && (
-                  <div className="mt-4 flex justify-end">
-                    <div className="p-2 bg-gray-50 border border-gray-200 rounded-md">
-                      <span className="font-medium">
-                        Category Total: ${calculateCategoryTotal(category.id).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-            </div>
-          ))}
-          
-          {/* Total for all selections */}
-          <div className="border-t pt-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Total for Hors d'oeuvres</h3>
-              <div className="text-xl font-bold text-primary">
-                ${calculateHorsDoeurvesTotal().toFixed(2)}
-              </div>
-            </div>
-            
-            {horsDoeurvesSelections?.serviceStyle === "passed" && (
-              <div className="mt-2 text-sm text-gray-600">
-                Includes ${(5 * (watch("guestCount") || 0)).toFixed(2)} service charge for passed service
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Traditional Appetizers Section */}
-        <div className="mt-12 mb-6 border-t pt-8">
-          <h3 className="text-xl font-semibold mb-2">Traditional Appetizers</h3>
-          <p className="text-gray-600">You can also select from our traditional appetizer options below:</p>
-        </div>
-        
-        {/* Traditional Appetizer Categories */}
-        <div className="space-y-10">
-          {appetizerData.categories.map((category) => {
-            // Special handling for spreads
-            if (category.id === "spreads") {
-              return (
-                <div key={category.id} className="border-t pt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">{category.name}</h3>
-                      <p className="text-sm text-gray-500">{category.note} ({getSelectedSpreadsCount()} of {category.selectLimit} selected)</p>
-                    </div>
-                    <div className="text-lg font-medium">${category.basePrice?.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                    {category.items.map((item) => (
-                      <div key={item.id} className="relative">
-                        <label className={`
-                          flex items-center p-3 border rounded-md 
-                          ${appetizers["spreads"]?.some((s: any) => s.name === item.name) 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-gray-200'
-                          }
-                          ${isSpreadsLimitReached() && !appetizers["spreads"]?.some((s: any) => s.name === item.name)
-                            ? 'opacity-50 cursor-not-allowed'
-                            : 'cursor-pointer hover:border-primary/30'
-                          }
-                        `}>
-                          <input
-                            type="checkbox"
-                            className="sr-only"
-                            disabled={isSpreadsLimitReached() && !appetizers["spreads"]?.some((s: any) => s.name === item.name)}
-                            checked={appetizers["spreads"]?.some((s: any) => s.name === item.name) || false}
-                            onChange={() => {
-                              if (isSpreadsLimitReached() && !appetizers["spreads"]?.some((s: any) => s.name === item.name)) {
-                                return; // Do nothing if limit reached
-                              }
-                              
-                              // Toggle this spread with the current serving size
-                              const currentSelections = [...(appetizers["spreads"] || [])];
-                              const existingIndex = currentSelections.findIndex((s: any) => s.name === item.name);
-                              
-                              if (existingIndex > -1) {
-                                currentSelections.splice(existingIndex, 1);
-                              } else {
-                                currentSelections.push({
-                                  name: item.name,
-                                  quantity: getSpreadsServingSize(),
-                                  price: item.price
-                                });
-                              }
-                              
-                              setValue("appetizers.spreads", currentSelections);
-                            }}
-                          />
-                          <span className="font-medium">{item.name}</span>
-                          
-                          <span className={`
-                            ml-auto w-5 h-5 flex items-center justify-center rounded-full
-                            ${appetizers["spreads"]?.some((s: any) => s.name === item.name)
-                              ? 'bg-primary text-white'
-                              : 'border border-gray-300'
-                            }
-                          `}>
-                            {appetizers["spreads"]?.some((s: any) => s.name === item.name) && (
-                              <Check className="h-3 w-3" />
-                            )}
-                          </span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Serving size selector for spreads */}
-                  {getSelectedSpreadsCount() > 0 && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                      <h4 className="text-sm font-medium mb-2">Serving Size</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {category.servingSizes?.map((size) => (
-                          <Button
-                            key={size}
-                            size="sm"
-                            variant={getSpreadsServingSize() === size ? "default" : "outline"}
-                            onClick={() => {
-                              // Update all selected spreads to use this serving size
-                              const currentSelections = appetizers["spreads"].map((s: any) => ({
-                                ...s,
-                                quantity: size
-                              }));
-                              setValue("appetizers.spreads", currentSelections);
-                            }}
-                          >
-                            {size} servings
-                          </Button>
-                        ))}
-                      </div>
-                      
-                      <div className="mt-3 text-right">
-                        <span className="font-medium">
-                          Subtotal: ${(getSelectedSpreadsCount() * (category.basePrice || 0)).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-            
-            // Regular category rendering (tea sandwiches, shooters, etc.)
-            return (
-              <div key={category.id} className="border-t pt-6">
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold">{category.name}</h3>
-                  <p className="text-sm text-gray-500">{category.note}</p>
-                </div>
-                
-                <div className="space-y-4">
-                  {category.items.map((item) => (
-                    <div key={item.id} className="border rounded-md p-4">
-                      <h4 className="font-medium mb-2">{item.name}</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {category.lotSizes?.map((lotSize) => (
-                          <Button
-                            key={`${item.id}-${lotSize}`}
-                            size="sm"
-                            variant={isTeaSandwichSelected(item.name, lotSize) ? "default" : "outline"}
-                            onClick={() => handleTeaSandwichSelection(item, lotSize)}
-                            className={`text-xs ${isTeaSandwichSelected(item.name, lotSize) ? 'bg-primary text-white' : ''}`}
-                          >
-                            {lotSize} pcs (${(item.price * lotSize).toFixed(2)})
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+              <h3 className="text-xl font-semibold mb-2">No</h3>
+              <p className="text-gray-600">I don't need appetizers for this event.</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
       
@@ -3638,7 +3108,40 @@ const CombinedAppetizersStep = ({
   );
 };
 
-// AppetizersStep has been merged into CombinedAppetizersStep for a more streamlined experience
+// Step 6: Appetizers & Hors d'oeuvres Selection Component
+const AppetizersStep = ({ 
+  onPrevious,
+  onNext 
+}: { 
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  
+  // Get form values
+  const appetizerService = watch("appetizerService");
+  const appetizers = watch("appetizers");
+  const horsDoeurvesSelections = watch("horsDoeurvesSelections");
+  
+  // Make sure we have the horsDoeurvesSelections structure initialized
+  useEffect(() => {
+    // Initialize horsDoeurvesSelections with empty structure if needed
+    if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories) {
+      setValue("horsDoeurvesSelections", {
+        serviceStyle: horsDoeurvesSelections?.serviceStyle || "stationary",
+        categories: {}
+      });
+    }
+    
+    // We don't modify requestedTheme here to avoid navigation issues
+  }, []);
+  
+  // Initialize appetizers structure if needed
+  const initializeCategory = (categoryId: string) => {
+    if (!appetizers[categoryId]) {
+      setValue(`appetizers.${categoryId}`, []);
+    }
+  };
 
   // Handle service style selection
   const handleServiceStyleChange = (value: string) => {
@@ -3703,7 +3206,8 @@ const CombinedAppetizersStep = ({
     return horsDoeurvesSelections.categories[categoryId].items[itemId].quantity;
   };
   
-  // Use the existing calculateCategoryTotal function
+  // Calculate total for specific hors d'oeuvres category
+  const calculateCategoryTotal = (categoryId: string): number => {
     if (!horsDoeurvesSelections?.categories?.[categoryId]?.items) {
       return 0;
     }
@@ -5014,19 +4518,11 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
           }
         }
         // For all other themes, proceed normally to menuSelection
-      } else if (currentStep === "appetizerQuestion") {
-        // If the user selects No for appetizers, skip to desserts
-        // If the user selects Yes, proceed to the appetizers selection
-        if (wantsAppetizers === false) {
-          const dessertsIndex = steps.indexOf("desserts");
-          if (dessertsIndex > -1) {
-            nextStep = "desserts";
-          }
-        } else if (wantsAppetizers === true) {
-          const appetizersIndex = steps.indexOf("appetizers");
-          if (appetizersIndex > -1) {
-            nextStep = "appetizers";
-          }
+      } else if (currentStep === "appetizerQuestion" && !wantsAppetizers) {
+        // Skip the appetizers step if user doesn't want appetizers
+        const dessertsIndex = steps.indexOf("desserts");
+        if (dessertsIndex > -1) {
+          nextStep = "desserts";
         }
       }
       
@@ -5091,7 +4587,14 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
               )}
               
               {currentStep === "appetizerQuestion" && eventType && (
-                <CombinedAppetizersStep
+                <AppetizersQuestionStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "appetizers" && eventType && (
+                <AppetizersStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                 />
