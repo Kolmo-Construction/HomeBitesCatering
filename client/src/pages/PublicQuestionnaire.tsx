@@ -1,150 +1,621 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { 
+  CalendarHeart, 
+  Building, 
+  GlassWater, 
+  Cake, 
+  Truck, 
+  Wine,
+  Loader2
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
-// Event Types
+// Define the event types
 type EventType = 'wedding' | 'corporate' | 'engagement' | 'birthday' | 'food-truck' | 'mobile-bartending';
 
-// Event Card Data with color gradients as visual placeholders
+// Map event types to form keys
+const eventFormKeys: Record<EventType, string> = {
+  'wedding': 'wedding-questionnaire',
+  'corporate': 'corporate-event',
+  'engagement': 'engagement-event',
+  'birthday': 'birthday-event',
+  'food-truck': 'food-truck-event',
+  'mobile-bartending': 'mobile-bartending',
+};
+
+// Define event card data
 const eventTypes = [
   {
     id: 'wedding',
     title: 'Wedding',
-    description: 'Celebrate your special day with our catering services',
-    gradient: 'from-rose-400 to-pink-600',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mb-4">
-        <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
-        <path d="M8.5 8.5a7 7 0 0 0 9.9 9.9 7 7 0 0 0-9.9-9.9Z" />
-      </svg>
-    )
+    description: 'Let us cater your special day with elegant food service',
+    icon: <CalendarHeart className="w-6 h-6" />,
+    gradient: 'from-rose-500 to-pink-600',
   },
   {
     id: 'corporate',
     title: 'Corporate Event',
-    description: 'Professional catering for business meetings and conferences',
-    gradient: 'from-blue-500 to-indigo-600',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mb-4">
-        <rect width="18" height="18" x="3" y="3" rx="2" />
-        <path d="M7 7h10" />
-        <path d="M7 12h10" />
-        <path d="M7 17h10" />
-      </svg>
-    )
+    description: 'Professional catering for business meetings and events',
+    icon: <Building className="w-6 h-6" />,
+    gradient: 'from-blue-600 to-indigo-700',
   },
   {
     id: 'engagement',
     title: 'Engagement',
-    description: 'Mark your engagement with a memorable catered celebration',
-    gradient: 'from-amber-400 to-orange-600',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mb-4">
-        <path d="M12 22v-6" />
-        <path d="M8 18h8" />
-        <path d="M18 8c0 4.5-6 7-6 10" />
-        <path d="M6 8c0 4.5 6 7 6 10" />
-        <path d="M12 2v4" />
-        <path d="M4 6c2.79.1 5.48-1.47 6-4" />
-        <path d="M20 6c-2.79.1-5.48-1.47-6-4" />
-      </svg>
-    )
+    description: 'Celebrate your engagement with friends and family',
+    icon: <GlassWater className="w-6 h-6" />,
+    gradient: 'from-purple-500 to-violet-600',
   },
   {
     id: 'birthday',
     title: 'Birthday',
-    description: 'Make your birthday special with custom catering options',
-    gradient: 'from-green-400 to-emerald-600',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mb-4">
-        <path d="M3 12h18" />
-        <path d="M3 20h18" />
-        <path d="M14 4c-.5-1-1.5-2-2.5-2-.8 0-1.5.5-2 1.5" />
-        <path d="M20 16.5c0 1-8 1.5-8-6 0 0 7-0.5 8 6 m-8-10v-4" />
-        <path d="M4 16.5c0 1 8 1.5 8-6 0 0-7-0.5-8 6 m8-10v-4" />
-      </svg>
-    )
+    description: 'Make your birthday celebration extra special',
+    icon: <Cake className="w-6 h-6" />,
+    gradient: 'from-amber-500 to-orange-600',
   },
   {
     id: 'food-truck',
     title: 'Food Truck',
-    description: 'Mobile food service perfect for outdoor events',
-    gradient: 'from-purple-500 to-violet-600',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mb-4">
-        <path d="M3 6h13l3 4.5m0 0h.5V18H15" />
-        <path d="M10 18H8" />
-        <rect width="4" height="4" x="2" y="16" rx="1" />
-        <rect width="4" height="4" x="14" y="16" rx="1" />
-        <path d="M15 9h4.5c.3 0 .5.1.7.3l1.5 1.7" />
-        <path d="M12 16V9" />
-      </svg>
-    )
+    description: 'Mobile food service for any outdoor event',
+    icon: <Truck className="w-6 h-6" />,
+    gradient: 'from-emerald-500 to-green-600',
   },
   {
     id: 'mobile-bartending',
     title: 'Mobile Bartending',
-    description: 'Professional bartending services at your location',
-    gradient: 'from-cyan-500 to-teal-600',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mb-4">
-        <path d="m7 9 3 9 3-9" />
-        <path d="M16 8h2a2 2 0 0 1 0 4h-1a2 2 0 0 0 0 4h2" />
-        <line x1="2" x2="22" y1="2" y2="2" />
-        <line x1="2" x2="22" y1="22" y2="22" />
-      </svg>
-    )
+    description: 'Professional bartending service at your location',
+    icon: <Wine className="w-6 h-6" />,
+    gradient: 'from-cyan-500 to-blue-600',
   },
 ];
 
-// This component displays the customized form for the selected event type
-const EventForm = ({ eventType }: { eventType: EventType }) => {
-  const event = eventTypes.find(event => event.id === eventType);
-  const [formStep, setFormStep] = useState(0);
-  
-  // Define the form steps based on event type
-  const formSteps = eventType === 'wedding' 
-    ? [
-        { title: "Wedding Details", fields: ["date", "location", "guests", "time"] },
-        { title: "Couple Information", fields: ["names", "email", "phone"] },
-        { title: "Catering Preferences", fields: ["meal-style", "dietary", "bar"] },
-        { title: "Special Requests", fields: ["cake", "special-needs", "notes"] }
-      ]
-    : [
-        { title: "Event Details", fields: ["date", "location", "guests"] },
-        { title: "Contact Information", fields: ["name", "email", "phone"] },
-        { title: "Menu Preferences", fields: ["dietary", "menu-style", "budget"] }
-      ];
+// Types for form data
+interface FormField {
+  id: string;
+  questionKey: string;
+  questionType: string;
+  displayText: string;
+  isRequired: boolean;
+  helperText?: string;
+  placeholder?: string;
+  options?: { optionText: string; optionValue: string; order: number }[];
+  min?: number;
+  max?: number;
+  metadata?: Record<string, any>;
+}
 
-  // Animated variants for staggered field appearance
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+interface FormPage {
+  id: number;
+  pageTitle: string;
+  pageOrder: number;
+  description?: string;
+  questions: FormField[];
+}
+
+interface FormDefinition {
+  id: number;
+  formKey: string;
+  formTitle: string;
+  description?: string;
+  isActive: boolean;
+  pages: FormPage[];
+  rules?: any[];
+}
+
+// Animated variants for staggered field appearance
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
+
+// This component dynamically renders form fields based on question type
+const DynamicFormField = ({ 
+  question, 
+  value, 
+  onChange,
+  animate = true
+}: { 
+  question: FormField;
+  value: any;
+  onChange: (questionKey: string, value: any) => void;
+  animate?: boolean;
+}) => {
+  const Component = animate ? motion.div : 'div';
+  const props = animate ? { variants: item } : {};
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { type, checked, value: inputValue } = e.target as HTMLInputElement;
+    if (type === 'checkbox') {
+      onChange(question.questionKey, checked);
+    } else {
+      onChange(question.questionKey, inputValue);
     }
   };
-  
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
+
+  const handleMultiCheckboxChange = (optionValue: string, checked: boolean) => {
+    let currentValues = Array.isArray(value) ? value : [];
+    if (checked) {
+      currentValues = [...currentValues, optionValue];
+    } else {
+      currentValues = currentValues.filter(v => v !== optionValue);
+    }
+    onChange(question.questionKey, currentValues);
   };
+
+  switch (question.questionType) {
+    case 'textbox':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="text" 
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder={question.placeholder || `Enter ${question.displayText.toLowerCase()}`}
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'textarea':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <textarea 
+            className="w-full px-3 py-2 border rounded-md h-24"
+            placeholder={question.placeholder || `Enter ${question.displayText.toLowerCase()}`}
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          ></textarea>
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'email':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="email" 
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder={question.placeholder || "Enter email address"}
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'phone':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="tel" 
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder={question.placeholder || "Enter phone number"}
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'number':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="number" 
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder={question.placeholder || "Enter number"}
+            min={question.min}
+            max={question.max}
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'date':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="date" 
+            className="w-full px-3 py-2 border rounded-md"
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'time':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="time" 
+            className="w-full px-3 py-2 border rounded-md"
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'dropdown':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <select 
+            className="w-full px-3 py-2 border rounded-md"
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          >
+            <option value="">{question.placeholder || "Select an option"}</option>
+            {question.options?.sort((a, b) => a.order - b.order).map(option => (
+              <option key={option.optionValue} value={option.optionValue}>
+                {option.optionText}
+              </option>
+            ))}
+          </select>
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'radio_group':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <div className="space-y-2 mt-2">
+            {question.options?.sort((a, b) => a.order - b.order).map(option => (
+              <label key={option.optionValue} className="flex items-center space-x-2 p-2 rounded border hover:bg-gray-50 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name={question.questionKey}
+                  value={option.optionValue}
+                  checked={value === option.optionValue}
+                  onChange={handleChange}
+                  required={question.isRequired}
+                />
+                <span>{option.optionText}</span>
+              </label>
+            ))}
+          </div>
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'checkbox_group':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <div className="grid grid-cols-2 gap-2">
+            {question.options?.sort((a, b) => a.order - b.order).map(option => (
+              <label 
+                key={option.optionValue} 
+                className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50"
+              >
+                <input 
+                  type="checkbox" 
+                  className="mr-2"
+                  checked={Array.isArray(value) && value.includes(option.optionValue)}
+                  onChange={(e) => handleMultiCheckboxChange(option.optionValue, e.target.checked)}
+                />
+                <span>{option.optionText}</span>
+              </label>
+            ))}
+          </div>
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+    
+    case 'checkbox':
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input 
+              type="checkbox"
+              checked={value === true}
+              onChange={handleChange}
+              required={question.isRequired}
+            />
+            <span>{question.displayText}</span>
+          </label>
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+      
+    default:
+      return (
+        <Component {...props} className="space-y-2">
+          <label className="font-medium">{question.displayText}</label>
+          <input 
+            type="text" 
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder={question.placeholder}
+            required={question.isRequired}
+            value={value || ''}
+            onChange={handleChange}
+          />
+          {question.helperText && (
+            <p className="text-sm text-muted-foreground">{question.helperText}</p>
+          )}
+        </Component>
+      );
+  }
+};
+
+// This component displays the dynamically loaded form for the selected event type
+const DynamicEventForm = ({ 
+  eventType,
+  onSubmitSuccess
+}: { 
+  eventType: EventType;
+  onSubmitSuccess: () => void;
+}) => {
+  const event = eventTypes.find(event => event.id === eventType);
+  const formKey = eventFormKeys[eventType];
+  const [formStep, setFormStep] = useState(0);
+  const [formData, setFormData] = useState<Record<string, any>>({});
   
+  // Fetch the form definition for the selected event type
+  const { data: formDefinition, isLoading, error } = useQuery({
+    queryKey: [`/api/form-builder/forms`, formKey],
+    queryFn: async () => {
+      try {
+        // First, fetch the form to get its ID
+        const formsResponse = await fetch(`/api/form-builder/forms?formKey=${formKey}`);
+        if (!formsResponse.ok) {
+          throw new Error('Failed to fetch form');
+        }
+        
+        const formsData = await formsResponse.json();
+        if (!formsData.data || formsData.data.length === 0) {
+          throw new Error(`No form found with key ${formKey}`);
+        }
+        
+        const formId = formsData.data[0].id;
+        
+        // Then fetch the form with its pages and questions
+        const formResponse = await fetch(`/api/form-builder/forms/${formId}`);
+        if (!formResponse.ok) {
+          throw new Error('Failed to fetch form details');
+        }
+        
+        const formData = await formResponse.json();
+        
+        // Fetch pages for the form
+        const pagesResponse = await fetch(`/api/form-builder/forms/${formId}/pages`);
+        if (!pagesResponse.ok) {
+          throw new Error('Failed to fetch form pages');
+        }
+        
+        const pages = await pagesResponse.json();
+        
+        // Sort pages by pageOrder
+        const sortedPages = [...pages].sort((a, b) => a.pageOrder - b.pageOrder);
+        
+        // For each page, fetch its questions
+        const pagesWithQuestions = await Promise.all(sortedPages.map(async (page) => {
+          const questionsResponse = await fetch(`/api/form-builder/pages/${page.id}/questions`);
+          if (!questionsResponse.ok) {
+            return { ...page, questions: [] };
+          }
+          
+          const questions = await questionsResponse.json();
+          
+          // Sort questions by order
+          const sortedQuestions = Array.isArray(questions) 
+            ? [...questions].sort((a, b) => a.displayOrder - b.displayOrder)
+            : [];
+          
+          return { ...page, questions: sortedQuestions };
+        }));
+        
+        // Return the complete form definition
+        return {
+          ...formData,
+          pages: pagesWithQuestions
+        } as FormDefinition;
+      } catch (error) {
+        console.error('Error fetching form:', error);
+        throw error;
+      }
+    },
+    enabled: !!formKey,
+  });
+
+  // Get pages with proper fallback for loading state
+  const formPages = formDefinition?.pages || [];
+  
+  // Handle form field changes
+  const handleFieldChange = (questionKey: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [questionKey]: value
+    }));
+  };
+
   // Handle form navigation
   const goToNextStep = () => {
-    if (formStep < formSteps.length - 1) {
+    if (formStep < formPages.length - 1) {
+      window.scrollTo(0, 0);
       setFormStep(formStep + 1);
     }
   };
   
   const goToPreviousStep = () => {
     if (formStep > 0) {
+      window.scrollTo(0, 0);
       setFormStep(formStep - 1);
     }
   };
+  
+  // Handle form submission
+  const handleSubmit = async () => {
+    try {
+      // If not using a real backend, simulate success for demo
+      // In production, you would post the data to your API
+      
+      // Format submission data
+      const formattedData = {
+        responses: formData,
+        submitterInfo: {
+          email: formData.email || '',
+          name: formData.name || formData.fullName || '',
+          phone: formData.phone || ''
+        }
+      };
+      
+      console.log('Submitting form data:', formattedData);
+      
+      // TODO: In production, uncomment this to submit to API
+      /*
+      const response = await fetch(`/api/forms/${formKey}/versions/1/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formattedData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Form submission failed');
+      }
+      */
+      
+      // Show success message
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg z-50 animate-fade-in-slide';
+      toast.style.animationDuration = '0.5s';
+      
+      const flexContainer = document.createElement('div');
+      flexContainer.className = 'flex items-center';
+      
+      const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      checkIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      checkIcon.setAttribute('class', 'h-6 w-6 mr-2 text-green-500');
+      checkIcon.setAttribute('fill', 'none');
+      checkIcon.setAttribute('viewBox', '0 0 24 24');
+      checkIcon.setAttribute('stroke', 'currentColor');
+      
+      const checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      checkPath.setAttribute('stroke-linecap', 'round');
+      checkPath.setAttribute('stroke-linejoin', 'round');
+      checkPath.setAttribute('stroke-width', '2');
+      checkPath.setAttribute('d', 'M5 13l4 4L19 7');
+      
+      checkIcon.appendChild(checkPath);
+      
+      const message = document.createElement('p');
+      message.className = 'font-medium';
+      message.textContent = `Your ${eventType} request has been submitted successfully! We'll contact you soon.`;
+      
+      flexContainer.appendChild(checkIcon);
+      flexContainer.appendChild(message);
+      toast.appendChild(flexContainer);
+      
+      document.body.appendChild(toast);
+      
+      // Remove toast after 5 seconds and reset form
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'opacity 0.5s, transform 0.5s';
+        
+        setTimeout(() => {
+          document.body.removeChild(toast);
+          // Reset form and return to event selection
+          setFormData({});
+          setFormStep(0);
+          onSubmitSuccess();
+        }, 500);
+      }, 3000);
+      
+      return true;
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      return false;
+    }
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p>Loading {event?.title} questionnaire...</p>
+      </div>
+    );
+  }
+  
+  if (error || !formDefinition) {
+    // Fallback to a default form if the API fails (optional)
+    return (
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-amber-700">
+              We're experiencing issues loading the {event?.title} questionnaire. Please try again or contact us directly at <a href="mailto:info@catering.com" className="font-medium underline">info@catering.com</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  const currentPage = formPages[formStep] || { questions: [] };
   
   return (
     <motion.div
@@ -159,37 +630,39 @@ const EventForm = ({ eventType }: { eventType: EventType }) => {
           {event?.icon}
         </div>
         <div>
-          <h2 className="text-2xl font-bold">{event?.title} Information</h2>
-          <p className="opacity-80">Please provide details about your event</p>
+          <h2 className="text-2xl font-bold">{formDefinition.formTitle || event?.title}</h2>
+          <p className="opacity-80">{formDefinition.description || `Please provide details about your ${event?.title.toLowerCase()}`}</p>
         </div>
       </div>
       
       {/* Progress indicators */}
-      <div className="flex justify-between mb-4">
-        {formSteps.map((step, index) => (
-          <div key={index} className="flex items-center">
-            <div 
-              className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm
-                ${index === formStep ? 'bg-primary text-white' : 
-                  index < formStep ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}
-            >
-              {index < formStep ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                index + 1
+      {formPages.length > 1 && (
+        <div className="flex justify-between mb-4">
+          {formPages.map((page, index) => (
+            <div key={index} className="flex items-center">
+              <div 
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm
+                  ${index === formStep ? 'bg-primary text-white' : 
+                    index < formStep ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+              >
+                {index < formStep ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </div>
+              <span className={`ml-2 hidden sm:inline-block text-sm ${index === formStep ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                {page.pageTitle}
+              </span>
+              {index < formPages.length - 1 && (
+                <div className={`w-12 h-1 mx-1 ${index < formStep ? 'bg-green-500' : 'bg-gray-200'}`}></div>
               )}
             </div>
-            <span className={`ml-2 hidden sm:inline-block text-sm ${index === formStep ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-              {step.title}
-            </span>
-            {index < formSteps.length - 1 && (
-              <div className={`w-12 h-1 mx-1 ${index < formStep ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       
       {/* Form fields for current step */}
       <motion.div
@@ -200,7 +673,10 @@ const EventForm = ({ eventType }: { eventType: EventType }) => {
         transition={{ duration: 0.3 }}
         className="p-6 border rounded-lg bg-card shadow-sm"
       >
-        <h3 className="text-xl font-semibold mb-4">{formSteps[formStep].title}</h3>
+        <h3 className="text-xl font-semibold mb-4">{currentPage.pageTitle}</h3>
+        {currentPage.description && (
+          <p className="text-gray-600 mb-6">{currentPage.description}</p>
+        )}
         
         <motion.div
           variants={container}
@@ -208,393 +684,17 @@ const EventForm = ({ eventType }: { eventType: EventType }) => {
           animate="show"
           className="space-y-6"
         >
-          {/* Wedding Details Form */}
-          {eventType === 'wedding' && formStep === 0 && (
-            <>
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Wedding Date</label>
-                <input 
-                  type="date" 
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-                <p className="text-sm text-muted-foreground">When will your wedding take place?</p>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Wedding Venue</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter the venue name and address"
-                />
-              </motion.div>
-              
-              <motion.div variants={item} className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="font-medium">Ceremony Time</label>
-                  <input 
-                    type="time" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Ceremony start time"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="font-medium">Reception Time</label>
-                  <input 
-                    type="time" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Reception start time"
-                  />
-                </div>
-              </motion.div>
-              
-              <motion.div variants={item} className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="font-medium">Expected Guests</label>
-                  <input 
-                    type="number" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Total guest count"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="font-medium">Wedding Style</label>
-                  <select className="w-full px-3 py-2 border rounded-md">
-                    <option value="">Select style</option>
-                    <option value="traditional">Traditional</option>
-                    <option value="modern">Modern</option>
-                    <option value="rustic">Rustic</option>
-                    <option value="garden">Garden</option>
-                    <option value="beach">Beach</option>
-                    <option value="destination">Destination</option>
-                  </select>
-                </div>
-              </motion.div>
-            </>
-          )}
-          
-          {/* Generic Event Details Form */}
-          {eventType !== 'wedding' && formStep === 0 && (
-            <>
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Event Date</label>
-                <input 
-                  type="date" 
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-                <p className="text-sm text-muted-foreground">When will your {event?.title.toLowerCase()} take place?</p>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Number of Guests</label>
-                <input 
-                  type="number" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter expected guest count"
-                />
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Event Location</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter the venue or address"
-                />
-              </motion.div>
-            </>
-          )}
-          
-          {/* Wedding Couple Information */}
-          {eventType === 'wedding' && formStep === 1 && (
-            <>
-              <motion.div variants={item} className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="font-medium">Partner 1 Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Enter full name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="font-medium">Partner 2 Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Enter full name"
-                  />
-                </div>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Primary Contact Email</label>
-                <input 
-                  type="email" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter email address for correspondence"
-                />
-              </motion.div>
-              
-              <motion.div variants={item} className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="font-medium">Primary Phone</label>
-                  <input 
-                    type="tel" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Enter primary contact number"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="font-medium">Alternative Phone</label>
-                  <input 
-                    type="tel" 
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Enter alternative contact (optional)"
-                  />
-                </div>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Wedding Planner Contact (if applicable)</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter planner name and contact info"
-                />
-              </motion.div>
-            </>
-          )}
-          
-          {/* General Contact Information for non-wedding events */}
-          {eventType !== 'wedding' && formStep === 1 && (
-            <>
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Your Name</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter your full name"
-                />
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Email Address</label>
-                <input 
-                  type="email" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter your email address"
-                />
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Phone Number</label>
-                <input 
-                  type="tel" 
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter your phone number"
-                />
-              </motion.div>
-            </>
-          )}
-          
-          {/* Wedding Catering Preferences */}
-          {eventType === 'wedding' && formStep === 2 && (
-            <>
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Meal Service Style</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select meal service style</option>
-                  <option value="plated">Plated Service</option>
-                  <option value="buffet">Buffet Style</option>
-                  <option value="family">Family Style</option>
-                  <option value="stations">Food Stations</option>
-                  <option value="cocktail">Cocktail Style (Heavy Appetizers)</option>
-                </select>
-                <p className="text-sm text-muted-foreground">How would you like the meal to be served to your guests?</p>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Bar Service</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select bar service option</option>
-                  <option value="open">Full Open Bar</option>
-                  <option value="beer-wine">Beer & Wine Only</option>
-                  <option value="cash">Cash Bar</option>
-                  <option value="signature">Signature Cocktails Only</option>
-                  <option value="none">No Bar Service</option>
-                </select>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Dietary Restrictions</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Vegetarian</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Vegan</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Gluten-Free</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Dairy-Free</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Nut Allergies</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Shellfish Allergies</span>
-                  </label>
-                </div>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Cuisine Preference</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select preferred cuisine style</option>
-                  <option value="american">American</option>
-                  <option value="italian">Italian</option>
-                  <option value="mediterranean">Mediterranean</option>
-                  <option value="asian-fusion">Asian Fusion</option>
-                  <option value="mexican">Mexican</option>
-                  <option value="french">French</option>
-                  <option value="custom">Custom Menu (describe in notes)</option>
-                </select>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Budget Range (Per Person)</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select your budget range</option>
-                  <option value="standard">$40-75 per person</option>
-                  <option value="premium">$75-125 per person</option>
-                  <option value="luxury">$125-200 per person</option>
-                  <option value="elite">$200+ per person</option>
-                </select>
-              </motion.div>
-            </>
-          )}
-          
-          {/* Wedding Special Requests (fourth step) */}
-          {eventType === 'wedding' && formStep === 3 && (
-            <>
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Wedding Cake Service</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select cake service</option>
-                  <option value="provide">Please provide wedding cake</option>
-                  <option value="outside">We'll bring cake from outside vendor</option>
-                  <option value="dessert">Alternative desserts instead</option>
-                  <option value="none">No cake/dessert needed</option>
-                </select>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Additional Services Needed</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Table & Chair Rental</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Linens & Tableware</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Servers & Staff</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Bartenders</span>
-                  </label>
-                </div>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Special Accommodations</label>
-                <textarea 
-                  className="w-full px-3 py-2 border rounded-md h-24" 
-                  placeholder="Please describe any special needs or accommodations required"
-                ></textarea>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Additional Notes</label>
-                <textarea 
-                  className="w-full px-3 py-2 border rounded-md h-24" 
-                  placeholder="Any additional details or requests for your wedding catering"
-                ></textarea>
-              </motion.div>
-              
-              <motion.div variants={item} className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md text-blue-800">
-                <div className="flex items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-3 mt-0.5">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M12 16v-4"></path>
-                    <path d="M12 8h.01"></path>
-                  </svg>
-                  <p className="text-sm">After submitting this form, a catering specialist will contact you within 24-48 hours to discuss your wedding details and provide a customized quote.</p>
-                </div>
-              </motion.div>
-            </>
-          )}
-          
-          {/* General Menu Preferences for non-wedding events */}
-          {eventType !== 'wedding' && formStep === 2 && (
-            <>
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Dietary Restrictions</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Vegetarian</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Vegan</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Gluten-Free</span>
-                  </label>
-                  <label className="flex items-center border p-3 rounded-md cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" className="mr-2" />
-                    <span>Dairy-Free</span>
-                  </label>
-                </div>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Preferred Menu Style</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select a menu style</option>
-                  <option value="buffet">Buffet Style</option>
-                  <option value="plated">Plated Service</option>
-                  <option value="family">Family Style</option>
-                  <option value="stations">Food Stations</option>
-                </select>
-              </motion.div>
-              
-              <motion.div variants={item} className="space-y-2">
-                <label className="font-medium">Budget Range (Per Person)</label>
-                <select className="w-full px-3 py-2 border rounded-md">
-                  <option value="">Select your budget range</option>
-                  <option value="economy">$15-25 per person</option>
-                  <option value="standard">$25-40 per person</option>
-                  <option value="premium">$40-60 per person</option>
-                  <option value="luxury">$60+ per person</option>
-                </select>
-              </motion.div>
-            </>
+          {currentPage.questions?.length > 0 ? (
+            currentPage.questions.map((question) => (
+              <DynamicFormField
+                key={question.id}
+                question={question}
+                value={formData[question.questionKey]}
+                onChange={handleFieldChange}
+              />
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">No questions available on this page.</p>
           )}
         </motion.div>
         
@@ -610,7 +710,7 @@ const EventForm = ({ eventType }: { eventType: EventType }) => {
             <div></div>
           )}
           
-          {formStep < formSteps.length - 1 ? (
+          {formStep < formPages.length - 1 ? (
             <Button onClick={goToNextStep}>
               Continue
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2">
@@ -620,55 +720,9 @@ const EventForm = ({ eventType }: { eventType: EventType }) => {
           ) : (
             <Button 
               className={`bg-gradient-to-r ${event?.gradient} hover:opacity-90`}
-              onClick={() => {
-                // Success message and animation
-                const toast = document.createElement('div');
-                toast.className = 'fixed top-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg z-50 animate-fade-in-slide';
-                toast.style.animationDuration = '0.5s';
-                
-                const flexContainer = document.createElement('div');
-                flexContainer.className = 'flex items-center';
-                
-                const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                checkIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-                checkIcon.setAttribute('class', 'h-6 w-6 mr-2 text-green-500');
-                checkIcon.setAttribute('fill', 'none');
-                checkIcon.setAttribute('viewBox', '0 0 24 24');
-                checkIcon.setAttribute('stroke', 'currentColor');
-                
-                const checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                checkPath.setAttribute('stroke-linecap', 'round');
-                checkPath.setAttribute('stroke-linejoin', 'round');
-                checkPath.setAttribute('stroke-width', '2');
-                checkPath.setAttribute('d', 'M5 13l4 4L19 7');
-                
-                checkIcon.appendChild(checkPath);
-                
-                const message = document.createElement('p');
-                message.className = 'font-medium';
-                message.textContent = `Your ${eventType} request has been submitted successfully! We'll contact you soon.`;
-                
-                flexContainer.appendChild(checkIcon);
-                flexContainer.appendChild(message);
-                toast.appendChild(flexContainer);
-                
-                document.body.appendChild(toast);
-                
-                // Remove toast after 5 seconds
-                setTimeout(() => {
-                  toast.style.opacity = '0';
-                  toast.style.transform = 'translateX(100%)';
-                  toast.style.transition = 'opacity 0.5s, transform 0.5s';
-                  
-                  setTimeout(() => {
-                    document.body.removeChild(toast);
-                    // Reset form and return to event selection
-                    setSelectedEvent(null);
-                  }, 500);
-                }, 3000);
-              }}
+              onClick={handleSubmit}
             >
-              {eventType === 'wedding' ? 'Submit Wedding Request' : 'Submit Request'}
+              Submit {event?.title} Request
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -678,7 +732,7 @@ const EventForm = ({ eventType }: { eventType: EventType }) => {
       </motion.div>
     </motion.div>
   );
-}
+};
 
 export default function PublicQuestionnaire() {
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
@@ -689,82 +743,65 @@ export default function PublicQuestionnaire() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <AnimatePresence mode="wait">
-          {!selectedEvent ? (
+    <div className="container mx-auto py-12 px-4 md:px-6">
+      <h1 className="text-3xl md:text-4xl font-bold text-center mb-4">Event Catering Services</h1>
+      <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
+        Select your event type below and fill out our questionnaire to receive a customized catering quote for your special occasion.
+      </p>
+
+      {!selectedEvent ? (
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ 
+            duration: 0.5,
+            staggerChildren: 0.1 
+          }}
+        >
+          {eventTypes.map((event) => (
             <motion.div
-              key="event-selection"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">What type of event are you planning?</h1>
-                <p className="text-xl text-gray-600">
-                  Select the type of event to get started with your catering quote
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {eventTypes.map((event) => (
-                  <motion.div
-                    key={event.id}
-                    whileHover={{ scale: 1.05, y: -5 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.2 }}
-                    onClick={() => handleSelectEvent(event.id as EventType)}
-                  >
-                    <Card className="overflow-hidden cursor-pointer h-full border-2 hover:border-primary transition-all duration-300 hover:shadow-lg">
-                      <div className={`p-8 flex flex-col items-center justify-center bg-gradient-to-br ${event.gradient} text-white`}>
-                        <div className="rounded-full p-4 bg-white/20 backdrop-blur-sm mb-4">
-                          {event.icon}
-                        </div>
-                        <h3 className="text-2xl font-bold mb-2 text-center">{event.title}</h3>
-                      </div>
-                      <CardContent className="p-6">
-                        <p className="text-gray-600">{event.description}</p>
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Select for details</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                              <path d="M5 12h14M12 5l7 7-7 7"/>
-                            </svg>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="event-form"
+              key={event.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="max-w-3xl mx-auto"
+              transition={{ duration: 0.3 }}
+              className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleSelectEvent(event.id as EventType)}
             >
-              <div className="mb-6">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setSelectedEvent(null)}
-                  className="flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                  </svg>
-                  Back to Event Selection
-                </Button>
+              <div className={`p-6 bg-gradient-to-r ${event.gradient} text-white`}>
+                <div className="rounded-full w-12 h-12 bg-white/20 flex items-center justify-center mb-4">
+                  {event.icon}
+                </div>
+                <h2 className="text-xl font-bold mb-2">{event.title}</h2>
+                <p className="opacity-90">{event.description}</p>
               </div>
-              
-              <EventForm eventType={selectedEvent} />
+              <div className="p-4 bg-white flex justify-between items-center">
+                <span className="text-sm text-gray-500">Fill out questionnaire</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          ))}
+        </motion.div>
+      ) : (
+        <div>
+          <button 
+            onClick={() => setSelectedEvent(null)}
+            className="mb-8 flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+            Back to event selection
+          </button>
+          
+          <DynamicEventForm 
+            eventType={selectedEvent} 
+            onSubmitSuccess={() => setSelectedEvent(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }
