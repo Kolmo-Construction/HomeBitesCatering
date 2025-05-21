@@ -3639,13 +3639,6 @@ const CombinedAppetizersStep = ({
 };
 
 // AppetizersStep has been merged into CombinedAppetizersStep for a more streamlined experience
-  
-  // Initialize appetizers structure if needed
-  const initializeCategory = (categoryId: string) => {
-    if (!appetizers[categoryId]) {
-      setValue(`appetizers.${categoryId}`, []);
-    }
-  };
 
   // Handle service style selection
   const handleServiceStyleChange = (value: string) => {
@@ -3710,8 +3703,7 @@ const CombinedAppetizersStep = ({
     return horsDoeurvesSelections.categories[categoryId].items[itemId].quantity;
   };
   
-  // Calculate total for specific hors d'oeuvres category
-  const calculateCategoryTotal = (categoryId: string): number => {
+  // Use the existing calculateCategoryTotal function
     if (!horsDoeurvesSelections?.categories?.[categoryId]?.items) {
       return 0;
     }
@@ -5022,11 +5014,19 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
           }
         }
         // For all other themes, proceed normally to menuSelection
-      } else if (currentStep === "appetizerQuestion" && !wantsAppetizers) {
-        // Skip the appetizers step if user doesn't want appetizers
-        const dessertsIndex = steps.indexOf("desserts");
-        if (dessertsIndex > -1) {
-          nextStep = "desserts";
+      } else if (currentStep === "appetizerQuestion") {
+        // If the user selects No for appetizers, skip to desserts
+        // If the user selects Yes, proceed to the appetizers selection
+        if (wantsAppetizers === false) {
+          const dessertsIndex = steps.indexOf("desserts");
+          if (dessertsIndex > -1) {
+            nextStep = "desserts";
+          }
+        } else if (wantsAppetizers === true) {
+          const appetizersIndex = steps.indexOf("appetizers");
+          if (appetizersIndex > -1) {
+            nextStep = "appetizers";
+          }
         }
       }
       
