@@ -106,6 +106,17 @@ export type EventInquiryFormData = {
     [key: string]: Array<{id: string, quantity: number}> | string[];
   };
   
+  // Food Truck Selections
+  foodTruckSelections?: {
+    smallBites: string[];
+    bigBites: string[];
+    vegetarianVegan: string[];
+    kidsBites: string[];
+    glutenFreeBuns: number;
+    includeMenuPoster: boolean;
+    includeDesserts: boolean;
+  };
+  
   // Step 5: Appetizer Question
   wantsAppetizers: boolean;
   

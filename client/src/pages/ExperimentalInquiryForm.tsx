@@ -5,6 +5,7 @@ import {
   ChevronRight, ChevronLeft, Check, Building, Phone,
   MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X
 } from "lucide-react";
+import FoodTruckMenu from "@/components/FoodTruckMenu";
 import { Helmet } from "react-helmet";
 import { useForm, FormProvider, useFormContext, Controller } from "react-hook-form";
 import { 
