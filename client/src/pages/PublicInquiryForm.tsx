@@ -1376,6 +1376,12 @@ const themeMenuData = {
       meats: {
         title: "Meats",
         description: "Select your desired meats",
+        limits: {
+          bronze: 2,
+          silver: 3,
+          gold: 4,
+          diamond: 5
+        },
         items: [
           { id: "smoked_turkey", name: "Smoked Turkey", upcharge: 0 },
           { id: "black_forest_ham", name: "Black Forest Ham", upcharge: 0 },
@@ -1388,6 +1394,12 @@ const themeMenuData = {
       cheeses: {
         title: "Cheeses",
         description: "Select your desired cheeses",
+        limits: {
+          bronze: 2,
+          silver: 3,
+          gold: 4,
+          diamond: 4
+        },
         items: [
           { id: "cheddar", name: "Cheddar Cheese", upcharge: 0 },
           { id: "swiss", name: "Swiss Cheese", upcharge: 0 },
@@ -1401,6 +1413,12 @@ const themeMenuData = {
       veggies: {
         title: "Sandwich Veggies",
         description: "Select your desired vegetables",
+        limits: {
+          bronze: 5,
+          silver: 6,
+          gold: 7,
+          diamond: 8
+        },
         items: [
           { id: "lettuce", name: "Lettuce", upcharge: 0 },
           { id: "tomato", name: "Tomato", upcharge: 0 },
@@ -1418,6 +1436,12 @@ const themeMenuData = {
       breads: {
         title: "Breads",
         description: "Select your desired bread types",
+        limits: {
+          bronze: 3,
+          silver: 5,
+          gold: 5,
+          diamond: 6
+        },
         items: [
           { id: "sourdough", name: "Sourdough", upcharge: 0 },
           { id: "rye", name: "Rye", upcharge: 0 },
@@ -1432,6 +1456,12 @@ const themeMenuData = {
       spreads: {
         title: "Sandwich Spreads/Condiments",
         description: "Bronze: Choose 4, Silver: Choose 5, Gold/Diamond: Choose 6",
+        limits: {
+          bronze: 4,
+          silver: 5,
+          gold: 6,
+          diamond: 6
+        },
         items: [
           { id: "classic_mayo", name: "Classic Mayo", upcharge: 0 },
           { id: "vegan_mayo", name: "Vegan Mayo", upcharge: 0 },
@@ -1466,6 +1496,12 @@ const themeMenuData = {
       salads: {
         title: "Salads",
         description: "Silver & Gold: Pick 2, Diamond: Pick 3",
+        limits: {
+          bronze: 0,
+          silver: 2,
+          gold: 2,
+          diamond: 3
+        },
         items: [
           { id: "side_salad", name: "Side Salad", upcharge: 0 },
           { id: "greek_salad", name: "Greek Village Salad", upcharge: 0 },
@@ -1491,6 +1527,12 @@ const themeMenuData = {
       add_ons: {
         title: "Add-ons",
         description: "Optional extras",
+        limits: {
+          bronze: 3,
+          silver: 3,
+          gold: 3,
+          diamond: 3
+        },
         items: [
           { id: "gluten_free_bread", name: "Gluten Free Bread ($0.50 / each)", upcharge: 0.5 }
         ]
