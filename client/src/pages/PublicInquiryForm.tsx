@@ -1727,6 +1727,135 @@ const themeMenuData = {
         }
       }
     }
+  },
+  taste_of_italy: {
+    title: "A Taste of Italy Selections",
+    packages: [
+      { 
+        id: "bronze",
+        name: "Bronze", 
+        price: 32.00,
+        description: "Pick 2 Mains, 3 Sides, 1 Pasta, 1 Salad, Includes garlic bread",
+        minGuestCount: 50
+      },
+      { 
+        id: "silver",
+        name: "Silver", 
+        price: 38.00,
+        description: "Pick 3 Mains, 3 Sides, 1 Pasta, 2 Salads, Includes garlic bread",
+        minGuestCount: 0
+      },
+      { 
+        id: "gold",
+        name: "Gold", 
+        price: 46.00,
+        description: "Pick 4 Mains, 4 Sides, 1 Pasta, 2 Salads, Includes garlic bread",
+        minGuestCount: 0
+      },
+      { 
+        id: "diamond",
+        name: "Diamond", 
+        price: 58.00,
+        description: "Pick 5 Mains, 4 Sides, 1 Pasta, 3 Salads, Includes garlic bread and antipasti platter",
+        minGuestCount: 0
+      }
+    ],
+    categories: {
+      mains: {
+        title: "Mains",
+        description: "Select your main dishes",
+        items: [
+          { id: "chicken_saltimbocca", name: "Chicken Saltimbocca - With sage, parmesan flakes and prosciutto", upcharge: 0 },
+          { id: "chicken_florentine", name: "Chicken Florentine - With spinach, garlic, white wine cream sauce", upcharge: 0 },
+          { id: "chicken_piccata", name: "Chicken Piccata - With butter, lemon, capers and parsley", upcharge: 0 },
+          { id: "chicken_cacciatore", name: "Chicken Cacciatore - With tomato sauce, mushrooms and peppers", upcharge: 0 },
+          { id: "chicken_parmesan_white", name: "Chicken Parmesan White - With sun-dried tomato and cream sauce", upcharge: 0 },
+          { id: "chicken_parmesan_red", name: "Chicken Parmesan Red - With tomato sauce and mozzarella", upcharge: 0 },
+          { id: "chicken_marsala", name: "Chicken Marsala - With mushrooms and Marsala wine sauce", upcharge: 0 },
+          { id: "chicken_puttanesca", name: "Chicken Puttanesca - With olives, capers and red pepper", upcharge: 0 },
+          { id: "beef_pizzaiola", name: "Beef Pizzaiola - Slowly cooked beef with tomato sauce", upcharge: 0 },
+          { id: "beef_braciole", name: "Beef Braciole - Stuffed flank steak braised in tomato sauce", upcharge: 0 },
+          { id: "lasagna", name: "Lasagna - Layered beef & pork with ricotta cheese", upcharge: 0 },
+          { id: "veal_saltimbocca", name: "Veal Saltimbocca - With sage, parmesan flakes and prosciutto", upcharge: 3.00 },
+          { id: "osso_bucco", name: "Osso Bucco - Beef shanks braised with vegetables and red wine", upcharge: 8.00 },
+          { id: "brasato_al_barolo", name: "Brasato Al Barolo - Flank steak braised with barolo wine", upcharge: 0 },
+          { id: "italian_meatballs", name: "Italian Meatballs", upcharge: 0 },
+          { id: "pesce_all_acqua_pazza", name: "Pesce All'Acqua Pazza - Poached Halibut with tomatoes", upcharge: 0 },
+          { id: "manicotti", name: "Spinach and Ricotta Manicotti/Cannelloni", upcharge: 0 },
+          { id: "vegetarian_lasagna", name: "Vegetarian Lasagna - With artichoke hearts and bechamel", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      sides: {
+        title: "Sides",
+        description: "Select your side dishes",
+        items: [
+          { id: "rosemary_potatoes", name: "Rosemary roasted Potatoes", upcharge: 0 },
+          { id: "green_beans_almondine", name: "Green Beans Almondine", upcharge: 0 },
+          { id: "baked_cauliflower", name: "Baked Cauliflower with bechamel and shaved Parmesan", upcharge: 0 },
+          { id: "asiago_zucchini", name: "Asiago Zucchini bites", upcharge: 0 },
+          { id: "eggplant_parmesan", name: "Eggplant Parmesan", upcharge: 0 },
+          { id: "cannellini_beans", name: "Cannellini Beans with caponata", upcharge: 0 },
+          { id: "peas_pancetta", name: "Peas with Pancetta", upcharge: 0 },
+          { id: "tuscan_carrots", name: "Tuscan Roasted Carrots", upcharge: 0 },
+          { id: "brussels_sprouts", name: "Roasted Brussels sprouts with balsamic Crema", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 3,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 4
+        }
+      },
+      pasta: {
+        title: "Pasta",
+        description: "Select your pasta",
+        items: [
+          { id: "penne_butter", name: "Penne Pasta with butter", upcharge: 0 },
+          { id: "penne_pesto", name: "Penne Pasta with Pesto", upcharge: 0 },
+          { id: "penne_marinara", name: "Penne Pasta with Marinara", upcharge: 0 },
+          { id: "rigatoni_butter", name: "Rigatoni with butter", upcharge: 0 },
+          { id: "rigatoni_pesto", name: "Rigatoni with Pesto", upcharge: 0 },
+          { id: "rigatoni_marinara", name: "Rigatoni with Marinara", upcharge: 0 },
+          { id: "conchiglie_butter", name: "Conchiglie with butter", upcharge: 0 },
+          { id: "conchiglie_pesto", name: "Conchiglie with Pesto", upcharge: 0 },
+          { id: "conchiglie_marinara", name: "Conchiglie with Marinara", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 1,
+          "silver": 1,
+          "gold": 1,
+          "diamond": 1
+        }
+      },
+      salads: {
+        title: "Salads",
+        description: "Select your salad options",
+        items: [
+          { id: "caprese_avocado", name: "Caprese Stuffed Avocado", upcharge: 0 },
+          { id: "panzanella", name: "Panzanella Bread Salad", upcharge: 0 },
+          { id: "italian_cobb", name: "Tossed Italian Cobb Salad", upcharge: 0 },
+          { id: "sicilian_fennel", name: "Sicilian Fennel Salad", upcharge: 0 },
+          { id: "beets_burrata", name: "Roasted Beets with Burrata", upcharge: 0 },
+          { id: "caprese", name: "Caprese", upcharge: 0 },
+          { id: "pasta_salad", name: "Pasta Salad", upcharge: 0 },
+          { id: "tuscan_orzo", name: "Tuscan Orzo Pesto Salad", upcharge: 0 },
+          { id: "caesar", name: "Caesar Salad", upcharge: 0 },
+          { id: "garden_salad", name: "Garden Salad", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 1,
+          "silver": 2,
+          "gold": 2,
+          "diamond": 3
+        }
+      }
+    }
   }
 };
 
