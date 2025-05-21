@@ -41,13 +41,18 @@ function AppContent() {
     );
   }
   
-  // Check if the path starts with /inquiry to show only the inquiry form
-  const [location] = useState(window.location.pathname);
+  // Check if the URL is for the public inquiry form
+  const pathname = window.location.pathname;
+  const isInquiryPage = pathname === '/inquiry' || pathname.startsWith('/inquiry/');
   
-  if (location.startsWith("/inquiry")) {
-    // Extract the event type from the URL if present
-    const eventType = location.split("/inquiry/")[1] || "";
-    
+  // Handle event type extraction from URL
+  let eventType = '';
+  if (pathname.startsWith('/inquiry/')) {
+    eventType = pathname.split('/inquiry/')[1];
+  }
+  
+  // Return public inquiry form if that's the current page
+  if (isInquiryPage) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Toaster />
@@ -56,6 +61,7 @@ function AppContent() {
     );
   }
   
+  // Otherwise return the admin dashboard
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster />
