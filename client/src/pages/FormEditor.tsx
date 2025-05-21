@@ -611,6 +611,44 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     },
     enabled: !!question?.id // Only fetch if a question is selected
   });
+  
+  // Effect to collect all questions and pages in the form for rule targeting
+  useEffect(() => {
+    // Only run when we have a form loaded and a question is selected
+    if (!question || !formData?.id) return;
+    
+    try {
+      // Process form pages
+      const pages = formData.pages || [];
+      const formPages = pages.map(page => ({
+        id: String(page.id),
+        pageTitle: page.pageTitle || page.title || `Page ${page.pageOrder + 1}`
+      }));
+      setAvailablePages(formPages);
+      
+      // Process form questions
+      let allQuestions = [];
+      pages.forEach(page => {
+        const pageQuestions = page.questions || [];
+        
+        pageQuestions.forEach(q => {
+          // Skip the current question (no self-referencing)
+          if (q.id === question.id) return;
+          
+          allQuestions.push({
+            id: String(q.id),
+            displayText: q.displayText || q.displayTextOverride || 'Unnamed Question',
+            pageId: String(page.id),
+            pageName: page.pageTitle || `Page ${page.pageOrder + 1}`
+          });
+        });
+      });
+      
+      setAvailableQuestions(allQuestions);
+    } catch (error) {
+      console.error("Error preparing rule target data:", error);
+    }
+  }, [question, formData]);
 
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
@@ -620,8 +658,8 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   const [editingRule, setEditingRule] = useState<RuleDefinition | null>(null);
   
   // State for tracking all questions and pages in the form (for rule targets)
-  const [allQuestionsInForm, setAllQuestionsInForm] = useState<PageQuestion[]>([]);
-  const [allPagesInForm, setAllPagesInForm] = useState<FormPage[]>([]);
+  const [availableQuestions, setAvailableQuestions] = useState<any[]>([]);
+  const [availablePages, setAvailablePages] = useState<any[]>([]);
   
   // Initialize form for question settings with all override fields
   const questionSettingsSchema = z.object({
@@ -824,14 +862,16 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   
 
 
-  // Saving/Updating Rules (using useMutation)
+  // Mutation for saving and updating rules
   const saveRuleMutation = useMutation({
     mutationFn: async (ruleDataWithTargets: Omit<RuleDefinition, 'id'> & { id?: string }) => {
       const { id: ruleId, ...payload } = ruleDataWithTargets;
+      const formId = question.formId || formData?.id;
+      
       const completePayload = {
         ...payload,
-        formId: parseInt(question.formId), // Ensure formId is available and parsed
-        triggerFormPageQuestionId: parseInt(question.id), // The question this panel is for
+        formId: parseInt(formId), 
+        triggerFormPageQuestionId: parseInt(question.id),
         // Ensure targets are correctly formatted with numeric IDs
         targets: payload.targets.map(t => ({
           ...t,
@@ -839,53 +879,74 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         }))
       };
 
-      if (ruleId && !ruleId.startsWith('temp-')) { // Editing an existing rule (that has a real ID)
+      if (ruleId && !ruleId.startsWith('temp-')) { 
+        // Editing an existing rule
         const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(completePayload),
         });
+        
         if (!response.ok) throw new Error(await response.text());
         return response.json();
-      } else { // Creating a new rule
-        const response = await fetch(`/api/form-builder/forms/${question.formId}/rules`, {
+      } else { 
+        // Creating a new rule
+        const response = await fetch(`/api/form-builder/forms/${formId}/rules`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(completePayload),
         });
+        
         if (!response.ok) throw new Error(await response.text());
         return response.json();
       }
     },
     onSuccess: () => {
-      toast({ title: "Rule saved", description: "Conditional rule has been successfully saved to the server." });
+      toast({ 
+        title: "Rule saved", 
+        description: "Conditional rule has been successfully saved to the server." 
+      });
       refetchConditionalRules(); // Refetch rules for the current question
       setIsRuleEditorOpen(false);
       setEditingRule(null);
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Error saving rule", description: error.message });
+      toast({ 
+        variant: "destructive", 
+        title: "Error saving rule", 
+        description: error.message 
+      });
     },
   });
 
-  // Deleting Rules (using useMutation)
+  // Mutation for deleting rules
   const deleteRuleMutation = useMutation({
     mutationFn: async (ruleId: string) => {
-      if (ruleId.startsWith('temp-')) { // For locally added, unsaved rules
+      if (ruleId.startsWith('temp-')) {
+        // For locally added, unsaved rules
         return Promise.resolve({ message: "Local rule removed" });
       }
+      
       const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
         method: 'DELETE',
       });
+      
       if (!response.ok) throw new Error(await response.text());
       return response.json();
     },
-    onSuccess: (data, ruleId) => {
-      toast({ title: "Rule deleted", description: "Conditional rule has been deleted." });
+    onSuccess: () => {
+      toast({ 
+        title: "Rule deleted", 
+        description: "Conditional rule has been deleted." 
+      });
       refetchConditionalRules(); // Refetch rules
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Error deleting rule", description: error.message });
+      toast({ 
+        variant: "destructive", 
+        title: "Error deleting rule", 
+        description: error.message 
+      });
     },
   });
 
@@ -990,8 +1051,8 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         initialRule={editingRule}
         onSave={handleSaveRule}
         questionId={question?.id}
-        availableQuestions={allQuestionsInForm}
-        availablePages={allPagesInForm}
+        availableQuestions={availableQuestions}
+        availablePages={availablePages}
       />
       
       <div className="mb-4 flex items-center justify-between">
