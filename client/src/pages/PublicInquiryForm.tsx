@@ -548,6 +548,540 @@ const BasicInformationStep = ({
   );
 };
 
+// Step 3: Event Details & Venue Form Component
+const EventDetailsStep = ({ 
+  eventType,
+  onPrevious,
+  onNext 
+}: { 
+  eventType: EventType;
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control, watch, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
+  
+  // Watch values to conditionally show fields
+  const venueSecured = watch("venueSecured");
+  const hasCocktailHour = watch("hasCocktailHour");
+  const hasMainCourse = watch("hasMainCourse");
+  const serviceStyle = watch("serviceStyle");
+  
+  // Service style options
+  const serviceStyleOptions = [
+    { value: "drop_off", label: "Drop-off" },
+    { value: "buffet_standard", label: "Buffet Standard" },
+    { value: "buffet_full", label: "Buffet Full Service" },
+    { value: "family_style", label: "Family Style" },
+    { value: "plated_dinner", label: "Plated Dinner" },
+    { value: "cocktail_party", label: "Cocktail Party" },
+    { value: "food_truck", label: "Food Truck" },
+  ];
+  
+  // Theme options
+  const themeOptions = [
+    { value: "taco_fiesta", label: "Taco Fiesta" },
+    { value: "american_bbq", label: "American BBQ" },
+    { value: "taste_of_greece", label: "A Taste of Greece" },
+    { value: "kebab_party", label: "Kebab Party" },
+    { value: "taste_of_italy", label: "A Taste of Italy" },
+    { value: "custom_menu", label: "Custom Menu" },
+    { value: "hors_doeuvres", label: "Hor d'oeuvres only (Cocktail party)" },
+    { value: "food_truck", label: "Food Truck" },
+  ];
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Event Details & Venue</h2>
+        <p className="text-lg text-gray-600">
+          Tell us more about your venue and event timing
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* Venue Information */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Venue Information</h3>
+          
+          <FormField
+            control={control}
+            name="venueSecured"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mb-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Have you secured a venue?</FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          {venueSecured && (
+            <div className="ml-4 border-l-2 border-primary/30 pl-4 py-2 space-y-4">
+              <FormField
+                control={control}
+                name="venueName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Venue Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter venue name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Venue Location */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium">Venue Location</h4>
+                
+                <FormField
+                  control={control}
+                  name="venueLocation.street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="123 Main St" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="venueLocation.street2"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street Address Line 2</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Apt, Suite, Unit, etc. (optional)" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={control}
+                    name="venueLocation.city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input placeholder="City" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="venueLocation.state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State/Province</FormLabel>
+                        <FormControl>
+                          <Input placeholder="State" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="venueLocation.zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal/Zip Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Zip Code" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Event Schedule */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Event Schedule</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <FormField
+              control={control}
+              name="eventStartTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Start Time</FormLabel>
+                  <FormControl>
+                    <Input placeholder="HH:MM AM/PM" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="eventEndTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event End Time</FormLabel>
+                  <FormControl>
+                    <Input placeholder="HH:MM AM/PM" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          {/* Wedding-specific timing fields */}
+          {eventType === "Wedding" && (
+            <div className="border rounded-md p-4 mb-4 bg-gray-50">
+              <h4 className="text-md font-medium mb-3">Wedding Ceremony Details</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <FormField
+                  control={control}
+                  name="ceremonyStartTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ceremony Start Time</FormLabel>
+                      <FormControl>
+                        <Input placeholder="HH:MM AM/PM" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="ceremonyEndTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ceremony End Time</FormLabel>
+                      <FormControl>
+                        <Input placeholder="HH:MM AM/PM" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={control}
+                name="setupBeforeCeremony"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 mb-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Set-up before Ceremony start time?</FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+          
+          {/* Cocktail Hour */}
+          <FormField
+            control={control}
+            name="hasCocktailHour"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mb-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Cocktail Hour</FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          {hasCocktailHour && (
+            <div className="ml-4 border-l-2 border-primary/30 pl-4 py-2 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="cocktailStartTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cocktail/Appetizer Start Time</FormLabel>
+                      <FormControl>
+                        <Input placeholder="HH:MM AM/PM" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="cocktailEndTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cocktail/Appetizer End Time</FormLabel>
+                      <FormControl>
+                        <Input placeholder="HH:MM AM/PM" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Main Course Service */}
+          <FormField
+            control={control}
+            name="hasMainCourse"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mb-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Main Course Service</FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          {hasMainCourse && (
+            <div className="ml-4 border-l-2 border-primary/30 pl-4 py-2 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="foodServiceStartTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Food Service Start Time</FormLabel>
+                      <FormControl>
+                        <Input placeholder="HH:MM AM/PM" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="foodServiceEndTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Food Service End Time</FormLabel>
+                      <FormControl>
+                        <Input placeholder="HH:MM AM/PM" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Guest Count and Service Style */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Service Details</h3>
+          
+          <FormField
+            control={control}
+            name="guestCount"
+            render={({ field }) => (
+              <FormItem className="mb-4">
+                <FormLabel>Guest Count</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="1"
+                    placeholder="Number of guests" 
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={control}
+            name="serviceStyle"
+            render={({ field }) => (
+              <FormItem className="mb-4">
+                <FormLabel>Service Style</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select service style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {serviceStyleOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {/* Service fee notes */}
+          {serviceStyle === "buffet_full" && (
+            <div className="p-4 mb-4 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-amber-800 text-sm">
+                <strong>Service Fee Note - Full Service:</strong> A 20% service fee will be applied for Buffet Full Service. This includes professional servers, complete setup and breakdown, and premium service throughout your event.
+              </p>
+            </div>
+          )}
+          
+          {serviceStyle === "buffet_standard" && (
+            <div className="p-4 mb-4 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-amber-800 text-sm">
+                <strong>Service Fee Note - Standard Service:</strong> A 15% service fee will be applied for Buffet Standard Service. This includes basic setup, food service assistance, and cleanup of service areas.
+              </p>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <FormField
+              control={control}
+              name="serviceDuration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Service Duration (hours)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="1"
+                      placeholder="Duration" 
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value) || undefined)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="laborHours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Labor Hours</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number"
+                      min="1" 
+                      placeholder="Labor hours" 
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value) || undefined)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+        
+        {/* Menu Theme Selection */}
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold mb-4">Menu Selection</h3>
+          
+          <FormField
+            control={control}
+            name="requestedTheme"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What would you like a quote for?</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select menu theme" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {themeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+      
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onPrevious}
+          className="flex items-center"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onNext}
+          className="flex items-center"
+        >
+          Next <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Main component
 export default function PublicInquiryForm() {
   // Define form with default values
@@ -660,10 +1194,20 @@ export default function PublicInquiryForm() {
                 />
               )}
               
-              {/* Additional steps will be rendered here */}
-              {/* For now, we're just implementing the first two steps */}
+              {currentStep === "eventDetails" && eventType && (
+                <EventDetailsStep
+                  eventType={eventType}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
               
-              {currentStep !== "eventType" && currentStep !== "basicInfo" && (
+              {/* Additional steps will be rendered here */}
+              {/* For now, we've implemented the first three steps */}
+              
+              {currentStep !== "eventType" && 
+               currentStep !== "basicInfo" && 
+               currentStep !== "eventDetails" && (
                 <div className="container mx-auto px-4 max-w-3xl text-center py-12">
                   <h2 className="text-2xl font-bold">Step {currentStepNumber} - {currentStep}</h2>
                   <p className="text-gray-600 mt-4">This step is under construction...</p>
