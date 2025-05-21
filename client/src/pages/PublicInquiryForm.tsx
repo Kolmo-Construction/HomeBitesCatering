@@ -1899,7 +1899,7 @@ const horsDoeurvesData = {
       id: "shooters",
       name: "Shooters",
       description: "Offered in lots of 24",
-      lotSizes: [24, 48, 96],
+      lotSizes: [24, 48, 96, 144],
       items: [
         { id: "chicken_satay", name: "Chicken Satay", price: 2.45 },
         { id: "greek_village", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
@@ -1910,6 +1910,55 @@ const horsDoeurvesData = {
         { id: "peach_soup", name: "Chilled peach soup with Gravlax", price: 2.75 },
         { id: "avocado_soup", name: "Chilled avocado soup with crab and pico", price: 3.75 }
       ]
+    },
+    {
+      id: "mini_skewers",
+      name: "Mini Skewers",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 96, 144],
+      items: [
+        { id: "korean_pork", name: "Korean BBQ pork belly", price: 2.75 },
+        { id: "greek_village_skewer", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
+        { id: "chicken_teriyaki", name: "Chicken Teriyaki", price: 2.75 },
+        { id: "moroccan_flank", name: "Grilled Moroccan style Flank steak", price: 2.75 },
+        { id: "med_shrimp", name: "Mediterranean style shrimp", price: 2.75 },
+        { id: "caprese_skewer", name: "Caprese - Tomato, Basil and Mozzarella - cold", price: 2.25 },
+        { id: "prosciutto_melon", name: "Prosciutto, Melon and Basil - cold", price: 2.75 },
+        { id: "tofu_hoisin", name: "Tofu with Hoisin plum sauce", price: 2.25 },
+        { id: "antipasto", name: "Antipasto Bites", price: 2.75 }
+      ]
+    },
+    {
+      id: "canapes",
+      name: "Canapes",
+      description: "Offered in lots of 48",
+      lotSizes: [48, 96, 144],
+      items: [
+        { id: "watermelon_radish", name: "Watermelon radish chips with apple chutney", price: 2.75 },
+        { id: "greek_village_canape", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.75 },
+        { id: "french_onion", name: "French onion tartlets with Gruyere and dill", price: 2.75 },
+        { id: "pear_camembert", name: "Pear and Camembert tartlet", price: 2.75 },
+        { id: "med_shrimp_canape", name: "Mediterranean style shrimp", price: 2.75 },
+        { id: "miso_maple", name: "Miso maple deviled eggs", price: 2.75 },
+        { id: "beet_chips", name: "Beet chips with goat cheese and asparagus tips", price: 2.75 },
+        { id: "vegan_bruschetta", name: "Vegan Bruschetta with olive tapenade and mint coulis", price: 2.75 }
+      ]
+    },
+    {
+      id: "vol_au_vents",
+      name: "Vol au vents",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 96],
+      items: [
+        { id: "gravlax_cream", name: "Gravlax with cream cheese", price: 3.00 },
+        { id: "spinach_feta", name: "Spinach, feta and leek", price: 3.00 },
+        { id: "chicken_teriyaki_vol", name: "Chicken Teriyaki", price: 3.00 },
+        { id: "melted_brie", name: "Melted Brie with cranberry relish", price: 3.50 },
+        { id: "curried_chicken", name: "Curried chicken salad", price: 3.00 },
+        { id: "tuna_tartare", name: "Tuna tartare", price: 3.75 },
+        { id: "brie_walnut", name: "Brie with walnuts and mushrooms", price: 3.25 },
+        { id: "pulled_pork", name: "Pulled pork with prunes and apple", price: 3.25 }
+      ]
     }
   ]
 };
@@ -1919,7 +1968,17 @@ const HorsDoeurvesMatrix = ({
   category, 
   onSelectionChange
 }: { 
-  category: any; 
+  category: {
+    id: string;
+    name: string;
+    description: string;
+    lotSizes: number[];
+    items: Array<{
+      id: string;
+      name: string;
+      price: number;
+    }>
+  }; 
   onSelectionChange: (itemId: string, quantity: number | null) => void;
 }) => {
   const { watch } = useFormContext<EventInquiryFormData>();
@@ -2044,6 +2103,86 @@ const AppetizersStep = ({
   // Handle service style selection
   const handleServiceStyleChange = (value: string) => {
     setValue("appetizerService", value as "stationary" | "passed");
+  };
+  
+  // Initialize horsDoeurvesSelections if needed
+  const initializeHorsDoeurvesSelections = () => {
+    if (!horsDoeurvesSelections) {
+      setValue("horsDoeurvesSelections", {
+        serviceStyle: "stationary",
+        categories: {}
+      });
+    }
+  };
+  
+  // Handle Hors d'oeuvres service style selection
+  const handleHorsDoeurvesServiceStyleChange = (value: string) => {
+    initializeHorsDoeurvesSelections();
+    setValue("horsDoeurvesSelections.serviceStyle", value as "stationary" | "passed");
+  };
+  
+  // Handle matrix selection for hors d'oeuvres
+  const handleHorsDoeurvesItemSelection = (categoryId: string, itemId: string, quantity: number | null) => {
+    initializeHorsDoeurvesSelections();
+    
+    // Make sure the category exists
+    if (!horsDoeurvesSelections?.categories?.[categoryId]) {
+      setValue(`horsDoeurvesSelections.categories.${categoryId}`, {
+        items: {}
+      });
+    }
+    
+    if (quantity === null) {
+      // Clear selection
+      if (horsDoeurvesSelections?.categories?.[categoryId]?.items?.[itemId]) {
+        const updatedItems = { ...horsDoeurvesSelections.categories[categoryId].items };
+        delete updatedItems[itemId];
+        setValue(`horsDoeurvesSelections.categories.${categoryId}.items`, updatedItems);
+      }
+    } else {
+      // Set selection
+      const item = horsDoeurvesData.categories
+        .find(cat => cat.id === categoryId)?.items
+        .find(item => item.id === itemId);
+        
+      if (item) {
+        setValue(`horsDoeurvesSelections.categories.${categoryId}.items.${itemId}`, {
+          name: item.name,
+          price: item.price,
+          quantity
+        });
+      }
+    }
+  };
+  
+  // Calculate total for hors d'oeuvres
+  const calculateHorsDoeurvesTotal = (): number => {
+    if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories) {
+      return 0;
+    }
+    
+    let total = 0;
+    
+    // Calculate item totals
+    Object.keys(horsDoeurvesSelections.categories).forEach(categoryId => {
+      const category = horsDoeurvesSelections.categories[categoryId];
+      if (category?.items) {
+        Object.keys(category.items).forEach(itemId => {
+          const item = category.items[itemId];
+          if (item && item.quantity && item.price) {
+            total += item.price * item.quantity;
+          }
+        });
+      }
+    });
+    
+    // Add passed service surcharge if applicable
+    if (horsDoeurvesSelections.serviceStyle === "passed") {
+      const guestCount = watch("guestCount") || 0;
+      total += 5 * guestCount; // $5 per guest surcharge
+    }
+    
+    return total;
   };
   
   // Handle appetizer quantity change
