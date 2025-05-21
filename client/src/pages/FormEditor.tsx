@@ -571,6 +571,10 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   const [isRuleEditorOpen, setIsRuleEditorOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<RuleDefinition | null>(null);
   
+  // State for tracking all questions and pages in the form (for rule targets)
+  const [allQuestionsInForm, setAllQuestionsInForm] = useState<PageQuestion[]>([]);
+  const [allPagesInForm, setAllPagesInForm] = useState<FormPage[]>([]);
+  
   // Initialize form for question settings with all override fields
   const questionSettingsSchema = z.object({
     // Basic overrides
@@ -584,10 +588,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     optionsOverrides: z.any().optional(),
   });
 
-  // State for storing all questions in the form (for conditional rule targets)
-  const [allQuestionsInForm, setAllQuestionsInForm] = useState([]);
-  const [allPagesInForm, setAllPagesInForm] = useState([]);
-  
   // Effect to get all questions in the form for rule targeting
   useEffect(() => {
     const fetchAllFormQuestions = async () => {
@@ -775,19 +775,38 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   };
 
   // Handle conditional rules
-  const handleAddRule = () => {
-    setEditingRule(null);
+  const handleOpenRuleDialog = (ruleToEdit = null) => {
+    setEditingRule(ruleToEdit);
     setIsRuleEditorOpen(true);
   };
   
+  const handleAddRule = () => {
+    handleOpenRuleDialog(null);
+  };
+  
   const handleEditRule = (rule: RuleDefinition) => {
-    setEditingRule(rule);
-    setIsRuleEditorOpen(true);
+    handleOpenRuleDialog(rule);
   };
   
   const handleDeleteRule = (ruleId: string) => {
     const updatedRules = conditionalRules.filter(rule => rule.id !== ruleId);
     setConditionalRules(updatedRules);
+    
+    // Later: API call to delete the rule
+    // const deleteRuleMutation = useMutation({
+    //   mutationFn: async (id) => {
+    //     const response = await fetch(`/api/form-builder/rules/${id}`, {
+    //       method: 'DELETE'
+    //     });
+    //     if (!response.ok) throw new Error('Failed to delete rule');
+    //     return await response.json();
+    //   },
+    //   onSuccess: () => {
+    //     // Invalidate and refetch
+    //     queryClient.invalidateQueries(['/api/form-builder/forms', formId, 'rules']);
+    //   }
+    // });
+    
     toast({
       title: "Rule deleted",
       description: "The conditional rule has been removed",
@@ -801,6 +820,24 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         rule.id === editingRule.id ? { ...ruleData, id: rule.id } : rule
       );
       setConditionalRules(updatedRules);
+      
+      // Later: API call to update the rule
+      // const updateRuleMutation = useMutation({
+      //   mutationFn: async (data) => {
+      //     const response = await fetch(`/api/form-builder/rules/${editingRule.id}`, {
+      //       method: 'PUT',
+      //       headers: { 'Content-Type': 'application/json' },
+      //       body: JSON.stringify(data)
+      //     });
+      //     if (!response.ok) throw new Error('Failed to update rule');
+      //     return await response.json();
+      //   },
+      //   onSuccess: () => {
+      //     // Invalidate and refetch
+      //     queryClient.invalidateQueries(['/api/form-builder/forms', formId, 'rules']);
+      //   }
+      // });
+      
       toast({
         title: "Rule updated",
         description: "The conditional rule has been updated",
@@ -812,6 +849,27 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         id: `rule-${Date.now()}`, // Generate a temporary ID
       };
       setConditionalRules([...conditionalRules, newRule]);
+      
+      // Later: API call to create a new rule
+      // const createRuleMutation = useMutation({
+      //   mutationFn: async (data) => {
+      //     const response = await fetch(`/api/form-builder/forms/${formId}/rules`, {
+      //       method: 'POST',
+      //       headers: { 'Content-Type': 'application/json' },
+      //       body: JSON.stringify({
+      //         ...data,
+      //         triggerFormPageQuestionId: question.id,
+      //       })
+      //     });
+      //     if (!response.ok) throw new Error('Failed to create rule');
+      //     return await response.json();
+      //   },
+      //   onSuccess: () => {
+      //     // Invalidate and refetch
+      //     queryClient.invalidateQueries(['/api/form-builder/forms', formId, 'rules']);
+      //   }
+      // });
+      
       toast({
         title: "Rule added",
         description: "A new conditional rule has been added",
@@ -820,6 +878,65 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     setIsRuleEditorOpen(false);
     setEditingRule(null);
   };
+  
+  // Effect to fetch rules when selected question changes
+  useEffect(() => {
+    if (question?.id) {
+      // Clear existing rules when question changes
+      setConditionalRules([]);
+      
+      // For demonstration, we'll add a sample rule
+      // In a real implementation, you would fetch rules from the API
+      if (process.env.NODE_ENV === 'development') {
+        // This is just for demonstration purposes
+        setTimeout(() => {
+          const sampleRule: RuleDefinition = {
+            id: `rule-${Date.now()}`,
+            conditionType: 'equals',
+            conditionValue: 'Yes',
+            actionType: 'show',
+            targets: [
+              {
+                targetType: 'question',
+                targetId: '2' // This is just a placeholder
+              }
+            ],
+            description: 'Sample rule for demonstration'
+          };
+          setConditionalRules([sampleRule]);
+        }, 500);
+      }
+      
+      // Later: API call to fetch rules for the selected question
+      // fetchRules(question.id);
+    }
+  }, [question?.id]);
+  
+  // Effect to collect all form questions and pages for rule targeting
+  useEffect(() => {
+    if (formData?.id && pages) {
+      // Set the pages
+      setAllPagesInForm(pages);
+      
+      // Create an array to hold all questions with their page names
+      const allQuestions: PageQuestion[] = [];
+      
+      // Process each page to get its questions
+      pages.forEach(page => {
+        const questionsForPage = pageQuestions[page.id] || [];
+        
+        // Add page name to each question
+        const questionsWithPage = questionsForPage.map(q => ({
+          ...q,
+          pageName: page.pageTitle || 'Unnamed Page'
+        }));
+        
+        allQuestions.push(...questionsWithPage);
+      });
+      
+      setAllQuestionsInForm(allQuestions);
+    }
+  }, [formData?.id, pages, pageQuestions]);
   
   // Handle adding a new option for choice-based questions
   const handleAddOption = () => {

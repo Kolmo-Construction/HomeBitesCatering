@@ -1,0 +1,45 @@
+Event Handlers & Logic in QuestionSettingsPanel:
+
+handleOpenRuleDialog(ruleToEdit = null): Sets editingRule and opens the dialog.
+handleSaveRule(ruleDataFromDialog):
+If editingRule exists, updates the rule in conditionalRules.
+Else, adds a new rule (with a temporary client-side ID) to conditionalRules.
+Closes the dialog and resets editingRule.
+(Later) This will call the backend API to save the rule.
+handleDeleteRule(ruleId):
+Removes the rule from conditionalRules.
+(Later) This will call the backend API to delete the rule.
+useEffect to Fetch Rules:
+When selectedQuestion (the prop passed to QuestionSettingsPanel) changes, and selectedQuestion.id is valid:
+Clear conditionalRules.
+// API_CALL: Fetch rules for selectedQuestion.id and setConditionalRules(fetchedRules);
+useEffect to Fetch All Form Questions/Pages (or this logic might live higher up in FormEditor.tsx and be passed down):
+When formData.id changes or on component mount if formData.id is already available:
+// API_CALL: Fetch all pages for formData.id -> setAllPagesInForm
+// API_CALL: Fetch all question instances for formData.id (across all pages) -> setAllQuestionsInForm
+This data is crucial for populating the dropdowns in the RuleEditorDialog. Ensure question objects include at least id (formPageQuestion.id), displayText, and pageId.
+Data Structure for API (Conceptual for Backend Dev):
+
+When saving a rule, you'll likely send an object to the backend looking something like:
+JSON
+
+{
+  "formId": /* current form's ID */,
+  "triggerFormPageQuestionId": /* selectedQuestion.id */,
+  "conditionType": "equals",
+  "conditionValue": "Yes",
+  "actionType": "show_question",
+  "targets": [
+    { "targetType": "question", "targetId": /* ID of target formPageQuestion */ },
+    { "targetType": "page", "targetId": /* ID of target formPage */ }
+  ],
+  "description": "Show follow-up if user says yes."
+}
+The backend will then create/update records in formRules and formRuleTargets.
+User Experience Considerations:
+
+Clarity: Make the rule builder as intuitive as possible. Use clear labels.
+Performance: Fetching allQuestionsInForm might be an issue for very large forms. Consider pagination or searching within the target selection dropdowns if needed.
+Preventing Loops: Be cautious about allowing rules that could create infinite loops (e.g., Question A shows Question B, and Question B shows Question A). Simple self-referencing for visibility/requirement is usually disallowed.
+Rule Ordering: If multiple rules could apply, their execution order might matter. Your schema has executionOrder in formRules, which is good. The UI doesn't yet manage this, but it's a future consideration.
+By implementing these details, you'll have a robust UI for defining conditional logic within your form builder, right next to the "Options" and "Advanced" settings for each question. Remember to replace placeholder API calls with actual useMutation and useQuery hooks for backend interaction.
