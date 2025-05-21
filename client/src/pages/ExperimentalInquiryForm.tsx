@@ -2378,9 +2378,48 @@ const MenuSelectionStep = ({
                 })}
               </div>
               
-              <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-md">
+              {/* Summary of all selected items */}
+              <div className="mb-8 p-4 bg-gray-50 rounded-md">
+                <h4 className="text-md font-semibold mb-2">Your Selections</h4>
+                <div className="space-y-2">
+                  {Object.keys(menuSelections || {}).map(categoryKey => {
+                    const categoryItems = menuSelections[categoryKey];
+                    if (!Array.isArray(categoryItems) || categoryItems.length === 0) return null;
+                    
+                    // Find category name for display
+                    const categoryName = customMenuData.categories[categoryKey]?.title || categoryKey;
+                    
+                    return (
+                      <div key={categoryKey} className="pl-2 border-l-2 border-primary/30">
+                        <h5 className="font-medium text-sm">{categoryName}:</h5>
+                        <ul className="list-disc list-inside ml-2">
+                          {categoryItems.map(item => {
+                            if (typeof item !== 'object' || !item || !('id' in item)) return null;
+                            // Find the item name from the menu data
+                            const menuItem = customMenuData.categories[categoryKey]?.items.find(
+                              menuItem => menuItem.id === item.id
+                            );
+                            return (
+                              <li key={item.id} className="text-sm text-gray-600">
+                                {menuItem?.name || item.id}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Show message if nothing selected */}
+                  {Object.keys(menuSelections || {}).length === 0 && (
+                    <p className="text-sm text-gray-500 italic">No items selected yet</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center mt-4 p-4 bg-gray-50 rounded-md">
                 <span className="text-sm">
-                  Selected items: {
+                  Current category selections: {
                     Object.keys(menuSelections || {})
                       .filter(key => selectedActualCategory && key === selectedActualCategory)
                       .reduce((total, key) => {
