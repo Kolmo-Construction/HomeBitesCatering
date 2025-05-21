@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { 
   CalendarHeart, 
@@ -6,11 +7,9 @@ import {
   GlassWater, 
   Cake, 
   Truck, 
-  Wine,
-  Loader2
+  Wine
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
 
 // Define the event types
 type EventType = 'wedding' | 'corporate' | 'engagement' | 'birthday' | 'food-truck' | 'mobile-bartending';
