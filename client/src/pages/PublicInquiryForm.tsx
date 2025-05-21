@@ -2235,14 +2235,13 @@ const AppetizersStep = ({
   
   // Make sure we have the horsDoeurvesSelections structure initialized
   useEffect(() => {
-    if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories) {
-      setValue("horsDoeurvesSelections", {
-        serviceStyle: "stationary",
-        categories: {}
-      });
-    }
+    // Initialize horsDoeurvesSelections with empty structure
+    setValue("horsDoeurvesSelections", {
+      serviceStyle: horsDoeurvesSelections?.serviceStyle || "stationary",
+      categories: horsDoeurvesSelections?.categories || {}
+    });
     
-    // Set requestedTheme to hors_doeuvres if needed
+    // Set requestedTheme to hors_doeuvres to ensure matrix displays properly
     setValue("requestedTheme", "hors_doeuvres");
   }, []);
   
@@ -2348,6 +2347,15 @@ const AppetizersStep = ({
     }
     
     return categoryTotal;
+  };
+  
+  // Count all selected items in a category
+  const getCategorySelectionCount = (categoryId: string): number => {
+    if (!horsDoeurvesSelections?.categories?.[categoryId]?.items) {
+      return 0;
+    }
+    
+    return Object.keys(horsDoeurvesSelections.categories[categoryId].items).length;
   };
   
   // Calculate total for all hors d'oeuvres
