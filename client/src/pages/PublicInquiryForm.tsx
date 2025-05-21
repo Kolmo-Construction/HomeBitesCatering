@@ -1871,7 +1871,154 @@ const themeMenuData = {
   }
 };
 
-// Step 5: Appetizers Selection Component
+// Hors d'oeuvres data for matrix-style selection
+const horsDoeurvesData = {
+  serviceStyles: [
+    { id: "stationary", name: "Stationary buffet" },
+    { id: "passed", name: "Passed" }
+  ],
+  categories: [
+    {
+      id: "tea_sandwiches",
+      name: "Tea Sandwiches",
+      description: "Offered in lots of 48",
+      lotSizes: [36, 48, 96, 144],
+      items: [
+        { id: "pate", name: "Pate with pickled veg", price: 1.95 },
+        { id: "cream_cheese_shrimp", name: "Cream Cheese and Shrimp", price: 2.50 },
+        { id: "blt", name: "BLT - (Bacon Lettuce & Tomato)", price: 1.95 },
+        { id: "caprese", name: "Caprese (Mozzarella, Tomato, & Basil)", price: 1.95 },
+        { id: "gravlax", name: "Gravlax, Cream Cheese & Cucumber", price: 2.75 },
+        { id: "prosciutto_fig", name: "Prosciutto-Fig", price: 2.75 },
+        { id: "crab_salad", name: "Crab Salad", price: 3.00 },
+        { id: "chicken_cranberry", name: "Chicken Cranberry", price: 2.00 },
+        { id: "miso_egg", name: "Miso egg salad", price: 2.25 }
+      ]
+    },
+    {
+      id: "shooters",
+      name: "Shooters",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 96],
+      items: [
+        { id: "chicken_satay", name: "Chicken Satay", price: 2.45 },
+        { id: "greek_village", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
+        { id: "gazpacho", name: "Gazpacho with shrimp", price: 2.75 },
+        { id: "cucumber_jalapeno", name: "Chilled Cucumber/Jalapeno with shrimp", price: 2.75 },
+        { id: "bloody_mary", name: "Bloody Mary with lobster (non-alcoholic)", price: 4.75 },
+        { id: "beet_vichyssoise", name: "Roasted beet Vichyssoise with green bean", price: 2.45 },
+        { id: "peach_soup", name: "Chilled peach soup with Gravlax", price: 2.75 },
+        { id: "avocado_soup", name: "Chilled avocado soup with crab and pico", price: 3.75 }
+      ]
+    }
+  ]
+};
+
+// Matrix-style Hors d'oeuvres component
+const HorsDoeurvesMatrix = ({ 
+  category, 
+  onSelectionChange
+}: { 
+  category: any; 
+  onSelectionChange: (itemId: string, quantity: number | null) => void;
+}) => {
+  const { watch } = useFormContext<EventInquiryFormData>();
+  const horsDoeurvesSelections = watch("horsDoeurvesSelections");
+  
+  // Get selected quantity for an item
+  const getSelectedQuantity = (itemId: string): number | null => {
+    if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories || 
+        !horsDoeurvesSelections.categories[category.id] || 
+        !horsDoeurvesSelections.categories[category.id].items) {
+      return null;
+    }
+    
+    return horsDoeurvesSelections.categories[category.id].items[itemId]?.quantity || null;
+  };
+  
+  // Clear a selection
+  const clearSelection = (itemId: string) => {
+    onSelectionChange(itemId, null);
+  };
+  
+  return (
+    <div className="mt-6">
+      <h3 className="text-xl font-semibold mb-2">{category.name} - {category.description}</h3>
+      
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 border text-left w-1/3">Item</th>
+              {category.lotSizes.map((size: number) => (
+                <th key={size} className="p-2 border text-center">{size}</th>
+              ))}
+              <th className="p-2 border text-center">Clear Choice</th>
+            </tr>
+          </thead>
+          <tbody>
+            {category.items.map((item: any) => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                <td className="p-2 border">
+                  {item.name} (${item.price.toFixed(2)} each)
+                </td>
+                {category.lotSizes.map((size: number) => (
+                  <td key={size} className="p-2 border text-center">
+                    <div 
+                      className={`w-6 h-6 rounded-full border mx-auto cursor-pointer flex items-center justify-center
+                        ${getSelectedQuantity(item.id) === size ? 'bg-primary border-primary' : 'border-gray-300'}`}
+                      onClick={() => onSelectionChange(item.id, size)}
+                    >
+                      {getSelectedQuantity(item.id) === size && <div className="w-3 h-3 rounded-full bg-white"></div>}
+                    </div>
+                  </td>
+                ))}
+                <td className="p-2 border text-center">
+                  <div 
+                    className={`w-6 h-6 rounded-full border mx-auto cursor-pointer flex items-center justify-center
+                      ${getSelectedQuantity(item.id) === null ? 'bg-gray-200 border-gray-400' : 'border-gray-300'}`}
+                    onClick={() => clearSelection(item.id)}
+                  >
+                    {getSelectedQuantity(item.id) === null && <div className="w-3 h-3 rounded-full bg-white"></div>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      <div className="mt-4">
+        <p className="text-sm text-gray-600">
+          Total: ${calculateCategoryTotal(category, horsDoeurvesSelections).toFixed(2)}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// Helper function to calculate total for a category
+const calculateCategoryTotal = (category: any, selections: any): number => {
+  if (!selections || !selections.categories || !selections.categories[category.id]) {
+    return 0;
+  }
+  
+  let total = 0;
+  const categorySelections = selections.categories[category.id].items || {};
+  
+  Object.keys(categorySelections).forEach(itemId => {
+    const item = category.items.find((i: any) => i.id === itemId);
+    const quantity = categorySelections[itemId].quantity;
+    
+    if (item && quantity) {
+      total += item.price * quantity;
+    }
+  });
+  
+  return total;
+};
+
+// Step 5: Appetizers & Hors d'oeuvres Selection Component
 const AppetizersStep = ({ 
   onPrevious,
   onNext 
@@ -1880,10 +2027,12 @@ const AppetizersStep = ({
   onNext: () => void;
 }) => {
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  const [showHorsDoeurvres, setShowHorsDoeurvres] = useState(false);
   
   // Get form values
   const appetizerService = watch("appetizerService");
   const appetizers = watch("appetizers");
+  const horsDoeurvesSelections = watch("horsDoeurvesSelections");
   
   // Initialize appetizers structure if needed
   const initializeCategory = (categoryId: string) => {
