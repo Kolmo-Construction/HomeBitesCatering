@@ -1604,6 +1604,129 @@ const themeMenuData = {
         }
       }
     }
+  },
+  kebab_party: {
+    title: "Kebab Party Selections",
+    packages: [
+      { 
+        id: "bronze",
+        name: "Bronze", 
+        price: 35.00,
+        description: "Pick 3 Proteins, 3 Sides, 2 Salads",
+        minGuestCount: 50
+      },
+      { 
+        id: "silver",
+        name: "Silver", 
+        price: 39.00,
+        description: "Pick 4 Proteins, 3 Sides, 2 Salads",
+        minGuestCount: 0
+      },
+      { 
+        id: "gold",
+        name: "Gold", 
+        price: 49.00,
+        description: "Pick 4 Proteins, 4 Sides, 3 Salads, Includes spreads",
+        minGuestCount: 0
+      },
+      { 
+        id: "diamond",
+        name: "Diamond", 
+        price: 63.00,
+        description: "Pick 5 Proteins, 5 Sides, 3 Salads, Includes spreads and meze grazing board",
+        minGuestCount: 0
+      }
+    ],
+    categories: {
+      proteins: {
+        title: "Proteins",
+        description: "Select your protein options",
+        items: [
+          { id: "pork_tenderloin", name: "Pork Tenderloin", upcharge: 0 },
+          { id: "chicken", name: "Chicken", upcharge: 0 },
+          { id: "beef_tenderloin", name: "Beef Tenderloin", upcharge: 0 },
+          { id: "beef_flank", name: "Beef Flank", upcharge: 0 },
+          { id: "lamb", name: "Lamb", upcharge: 1.50 },
+          { id: "swordfish", name: "Swordfish", upcharge: 0 },
+          { id: "shrimp", name: "Shrimp", upcharge: 0 },
+          { id: "bacon_asparagus", name: "Bacon wrapped Asparagus", upcharge: 0 },
+          { id: "tofu", name: "Tofu (V)", upcharge: 0 },
+          { id: "mushrooms", name: "Mushrooms (V)", upcharge: 0 },
+          { id: "tomato_gnocchi", name: "Tomato & Gnocchi with pesto (V)", upcharge: 0 },
+          { id: "mixed_vegetables", name: "Mixed Vegetables (V)", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 3,
+          "silver": 4,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      sides: {
+        title: "Sides",
+        description: "Select your side dishes",
+        items: [
+          { id: "falafel", name: "Falafel", upcharge: 0 },
+          { id: "spanakopita", name: "Spanakopita", upcharge: 0 },
+          { id: "dolmades", name: "Dolmades", upcharge: 0 },
+          { id: "yellow_rice", name: "Yellow Rice Pilaf", upcharge: 0 },
+          { id: "wild_rice", name: "Wild Rice and Mushroom Pilaf", upcharge: 0 },
+          { id: "patatas_bravas", name: "Patatas Bravas", upcharge: 0 },
+          { id: "potato_croquettes", name: "Potato Croquettes", upcharge: 0 },
+          { id: "roasted_beets", name: "Roasted beets", upcharge: 0 },
+          { id: "brussels_sprouts", name: "Roasted Brussel Sprouts", upcharge: 0 },
+          { id: "moroccan_cauliflower", name: "Moroccan-style roasted Cauliflower", upcharge: 0 },
+          { id: "roasted_carrots", name: "Roasted carrots", upcharge: 0 },
+          { id: "grilled_vegetables", name: "Grilled Vegetables", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 3,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      salads: {
+        title: "Salads",
+        description: "Select your salad options",
+        items: [
+          { id: "tabouli", name: "Tabouli", upcharge: 0 },
+          { id: "fattoush", name: "Fattoush", upcharge: 0 },
+          { id: "couscous", name: "Cous-cous", upcharge: 0 },
+          { id: "lebanese_potato", name: "Lebanese Potato Salad", upcharge: 0 },
+          { id: "greek_village", name: "Greek Village Salad", upcharge: 0 },
+          { id: "tomato_cucumber", name: "Tomato - Cucumber salad", upcharge: 0 },
+          { id: "caprese_pasta", name: "Caprese pasta salad", upcharge: 0 },
+          { id: "caesar", name: "Caesar", upcharge: 0 },
+          { id: "garden_salad", name: "Garden Salad", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 2,
+          "gold": 3,
+          "diamond": 3
+        }
+      },
+      spreads: {
+        title: "Spreads",
+        description: "Gold and Diamond tiers include spreads with pita bread, crudité and breadsticks",
+        items: [
+          { id: "tzatziki", name: "Tzatziki", upcharge: 0 },
+          { id: "hummus", name: "Hummus", upcharge: 0 },
+          { id: "baba_ghanoush", name: "Baba Ghanoush", upcharge: 0 },
+          { id: "spicy_feta", name: "Spicy Feta", upcharge: 0 },
+          { id: "taramasalata", name: "Taramasalata", upcharge: 0 },
+          { id: "muhammara", name: "Muhammara", upcharge: 0 },
+          { id: "lebanese_garlic", name: "Lebanese garlic dip", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 0,
+          "silver": 0,
+          "gold": 3,
+          "diamond": 3
+        }
+      }
+    }
   }
 };
 
