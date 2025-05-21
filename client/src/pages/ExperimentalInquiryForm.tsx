@@ -2239,6 +2239,7 @@ const MenuSelectionStep = ({
   if (selectedTheme === "custom_menu") {
     const [selectedCuisineType, setSelectedCuisineType] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null); // Keep for compatibility
     
     // Reset selections when changing cuisine type
     useEffect(() => {
