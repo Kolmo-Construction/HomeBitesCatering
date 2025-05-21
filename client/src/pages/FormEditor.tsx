@@ -797,8 +797,9 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic">Basic</TabsTrigger>
+          <TabsTrigger value="logic">Logic</TabsTrigger>
           <TabsTrigger 
             value="options" 
             disabled={!['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)}
@@ -1131,6 +1132,78 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     </Button>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+            
+            {/* Logic Tab for conditional visibility rules */}
+            <TabsContent value="logic" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Conditional Logic Rules</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddRule}
+                    className="h-8"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-1" />
+                    Add Rule
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {conditionalRules.length === 0 ? (
+                    <div className="text-center py-4 border rounded-md bg-gray-50">
+                      <p className="text-sm text-muted-foreground">No conditional rules defined</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add rules to show or hide this question based on answers to other questions
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {conditionalRules.map(rule => (
+                        <div 
+                          key={rule.id}
+                          className="p-3 border rounded-md bg-white flex items-center justify-between"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">
+                              {rule.action === 'show' ? 'Show' : 'Hide'} this question when:
+                            </p>
+                            <p className="text-xs">
+                              <span className="font-medium">{rule.targetQuestionText}</span>
+                              {' '}
+                              {rule.operator.replace('_', ' ')} 
+                              {' '}
+                              {(['is_empty', 'is_not_empty'].includes(rule.operator)) 
+                                ? '' 
+                                : <span className="italic">"{rule.value}"</span>
+                              }
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEditRule(rule)}
+                              className="h-7 w-7 p-0"
+                            >
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteRule(rule.id)}
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </TabsContent>
             
