@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useContext, createContext } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -316,20 +316,32 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
   
-  // Get form context to fetch other questions for conditional logic
-  const { formId, selectedPage, pages, questions: currentPageQuestions } = useContext(FormEditorContext) || {};
+  // Get form and page data directly from props/state for conditional logic
+  const formIdFromParams = useParams().formId;
   
   // Get all questions from all pages for conditional logic
   const { data: allFormQuestionsData } = useQuery({
-    queryKey: ['/api/form-builder/forms', formId, 'all-questions'],
+    queryKey: ['/api/form-builder/forms', formIdFromParams, 'all-questions'],
     queryFn: async () => {
-      if (!formId) return [];
+      if (!formIdFromParams) return [];
       
       // Flatten the array of all page questions
       const allQuestions = [];
       
+      // Fetch the form first to get pages
+      const formResponse = await fetch(`/api/form-builder/forms/${formIdFromParams}`);
+      if (!formResponse.ok) return [];
+      
+      const formData = await formResponse.json();
+      
+      // Fetch pages for this form
+      const pagesResponse = await fetch(`/api/form-builder/forms/${formIdFromParams}/pages`);
+      if (!pagesResponse.ok) return [];
+      
+      const pagesData = await pagesResponse.json();
+      
       // Collect questions from each page
-      for (const page of pages || []) {
+      for (const page of pagesData || []) {
         const response = await fetch(`/api/form-builder/pages/${page.id}/questions`);
         if (!response.ok) continue;
         
@@ -344,7 +356,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       
       return allQuestions;
     },
-    enabled: !!formId && !!pages?.length
+    enabled: !!formIdFromParams
   });
   
   // Get existing rules for this question
