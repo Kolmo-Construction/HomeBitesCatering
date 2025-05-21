@@ -612,14 +612,30 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     enabled: !!question?.id // Only fetch if a question is selected
   });
   
+  // Get the parent form data for the current question
+  const { data: parentFormData } = useQuery({
+    queryKey: ['/api/form-builder/forms', question?.formId],
+    queryFn: async () => {
+      if (!question?.formId) return null;
+      const response = await fetch(`/api/form-builder/forms/${question.formId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch parent form data');
+      }
+      return await response.json();
+    },
+    enabled: !!question?.formId,
+  });
+  
   // Effect to collect all questions and pages in the form for rule targeting
   useEffect(() => {
     // Only run when we have a form loaded and a question is selected
-    if (!question || !formData?.id) return;
+    if (!question || !parentFormData) return;
     
     try {
-      // Process form pages
-      const pages = formData.pages || [];
+      // Process form pages from the parent form
+      const formObj = parentFormData.data || parentFormData;
+      const pages = formObj.pages || [];
+      
       const formPages = pages.map(page => ({
         id: String(page.id),
         pageTitle: page.pageTitle || page.title || `Page ${page.pageOrder + 1}`
@@ -648,7 +664,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     } catch (error) {
       console.error("Error preparing rule target data:", error);
     }
-  }, [question, formData]);
+  }, [question, parentFormData]);
 
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
@@ -866,11 +882,18 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   const saveRuleMutation = useMutation({
     mutationFn: async (ruleDataWithTargets: Omit<RuleDefinition, 'id'> & { id?: string }) => {
       const { id: ruleId, ...payload } = ruleDataWithTargets;
-      const formId = question.formId || formData?.id;
+      
+      // Use formId from question or parentFormData
+      const formId = question.formId || 
+                    (parentFormData?.id || parentFormData?.data?.id);
+      
+      if (!formId) {
+        throw new Error("Cannot save rule: Form ID not available");
+      }
       
       const completePayload = {
         ...payload,
-        formId: parseInt(formId), 
+        formId: parseInt(String(formId)), 
         triggerFormPageQuestionId: parseInt(question.id),
         // Ensure targets are correctly formatted with numeric IDs
         targets: payload.targets.map(t => ({
@@ -879,7 +902,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         }))
       };
 
-      if (ruleId && !ruleId.startsWith('temp-')) { 
+      if (ruleId && !ruleId.startsWith('temp-') && !ruleId.startsWith('rule-')) { 
         // Editing an existing rule
         const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
           method: 'PUT',
@@ -891,6 +914,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         return response.json();
       } else { 
         // Creating a new rule
+        console.log("Creating new rule with form ID:", formId);
         const response = await fetch(`/api/form-builder/forms/${formId}/rules`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
