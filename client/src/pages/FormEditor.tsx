@@ -483,7 +483,8 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
           // Then save the new rules
           for (const rule of rules) {
             if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
-              await fetch(`/api/form-builder/questions/${question.id}/rules`, {
+              // Create the rule with our updated API schema format
+              const ruleResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -491,10 +492,14 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                 body: JSON.stringify({
                   sourceQuestionId: rule.sourceQuestionId,
                   conditionType: rule.conditionType,
-                  conditionValue: rule.conditionValue || "",
+                  conditionValue: rule.conditionType === 'is_answered' || rule.conditionType === 'is_not_answered' 
+                    ? null 
+                    : (rule.conditionValue || ""),
                   actionType: rule.actionType
                 }),
               });
+              
+              console.log("Rule created:", await ruleResponse.json());
             }
           }
         } catch (ruleError) {
