@@ -1,0 +1,76 @@
+Let's focus on ensuring your themeMenuData for "Taco Fiesta" is correct in its new external file.
+
+Open Your External Data File:
+Navigate to the file where you moved themeMenuData (e.g., themeMenuInfo.ts or whatever you named it).
+
+Locate the "Taco Fiesta" Data:
+Find the section for taco_fiesta within this large data object. It should look something like this (simplified):
+
+JavaScript
+
+// Inside your themeMenuInfo.ts (or equivalent file)
+export const themeMenuData = {
+  // ... other themes ...
+  taco_fiesta: {
+    title: "Taco Fiesta Selections",
+    packages: [
+      { id: "bronze", name: "Bronze", /* ... */ },
+      // ... other packages ...
+    ],
+    categories: { // This is the crucial part to check
+      proteins: {
+        title: "Proteins",
+        description: "Select your protein options",
+        items: [ /* ... */ ],
+        limits: { // <-- MAKE SURE THIS 'limits' OBJECT EXISTS AND IS CORRECT
+          "bronze": 3,
+          "silver": 4,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      sides: {
+        title: "Sides",
+        description: "Select your side dishes",
+        items: [ /* ... */ ],
+        limits: { // <-- CHECK THIS ONE TOO
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      salsas: {
+        title: "Salsas",
+        description: "Select your salsa varieties",
+        items: [ /* ... */ ],
+        limits: { // <-- AND THIS ONE
+          "bronze": 3,
+          "silver": 4,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      condiments: {
+        title: "Condiments",
+        description: "Select your condiment options",
+        items: [ /* ... */ ],
+        limits: { // <-- AND THIS ONE
+          "bronze": 4,
+          "silver": 6,
+          "gold": 6,
+          "diamond": 8
+        }
+      }
+      // Any other categories for Taco Fiesta must also have their 'limits' object
+    }
+  },
+  // ... other themes ...
+};
+Verify Every Category Under taco_fiesta.categories:
+
+For each category within taco_fiesta.categories (i.e., proteins, sides, salsas, condiments), ensure that:
+The limits property exists.
+The limits property is an object.
+This limits object contains keys for all your package IDs (e.g., "bronze", "silver", "gold", "diamond") with their corresponding numerical limits.
+Check for typos in the word "limits" or in the package names within the limits object.
