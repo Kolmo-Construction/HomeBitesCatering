@@ -840,7 +840,6 @@ const EventDetailsStep = ({
     { value: "taste_of_greece", label: "A Taste of Greece" },
     { value: "kebab_party", label: "Kebab Party" },
     { value: "taste_of_italy", label: "A Taste of Italy" },
-    { value: "sandwich_factory", label: "Sandwich Factory" },
     { value: "custom_menu", label: "Custom Menu" },
     { value: "hors_doeuvres", label: "Hor d'oeuvres only (Cocktail party)" },
     { value: "food_truck", label: "Food Truck" },
@@ -3149,11 +3148,45 @@ const MenuSelectionStep = ({
 };
 
 // Main component
-export default function PublicInquiryForm() {
+// Helper function to validate if a string is a valid event type
+function validateEventType(type: string): boolean {
+  // Convert input to match case-sensitive event types
+  const eventTypeMap: Record<string, EventType> = {
+    "wedding": "Wedding",
+    "corporate": "Corporate",
+    "engagement": "Engagement",
+    "birthday": "Birthday",
+    "foodtruck": "Food Truck",
+    "mobilebartending": "Mobile Bartending",
+    "otherprivateparty": "Other Private Party"
+  };
+  
+  return !!eventTypeMap[type.toLowerCase()];
+}
+
+// Convert URL parameter to actual event type
+function mapUrlToEventType(type: string): EventType | null {
+  const eventTypeMap: Record<string, EventType> = {
+    "wedding": "Wedding",
+    "corporate": "Corporate",
+    "engagement": "Engagement",
+    "birthday": "Birthday",
+    "foodtruck": "Food Truck",
+    "mobilebartending": "Mobile Bartending",
+    "otherprivateparty": "Other Private Party"
+  };
+  
+  return eventTypeMap[type.toLowerCase()] || null;
+}
+
+export default function PublicInquiryForm({ initialEventType = "" }: { initialEventType?: string }) {
+  // Map the URL parameter to a valid event type
+  const mappedEventType = initialEventType ? mapUrlToEventType(initialEventType) : null;
+  
   // Define form with default values
   const methods = useForm<EventInquiryFormData>({
     defaultValues: {
-      eventType: null,
+      eventType: mappedEventType,
       billingAddress: {
         street: "",
         city: "",
@@ -3216,7 +3249,10 @@ export default function PublicInquiryForm() {
   const guestCount = watch("guestCount");
   
   // State for tracking the current step
-  const [currentStep, setCurrentStep] = useState<FormStep>("eventType");
+  // If a valid event type was mapped from the URL, start at the basicInfo step
+  const [currentStep, setCurrentStep] = useState<FormStep>(
+    mappedEventType ? "basicInfo" : "eventType"
+  );
   
   // Calculate step number and total steps
   const steps: FormStep[] = [
