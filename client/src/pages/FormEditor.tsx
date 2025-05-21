@@ -1645,6 +1645,11 @@ export default function FormEditor() {
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage?.id] });
       
+      // ADD THIS: Invalidate the rules query for the current question
+      if (variables.questionId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/form-builder/questions', variables.questionId, 'rules'] });
+      }
+      
       toast({
         title: "Question updated",
         description: "The question settings have been updated successfully.",
