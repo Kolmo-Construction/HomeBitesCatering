@@ -1,0 +1,89 @@
+he current matrix table with radio buttons for each quantity can become visually busy and hard to parse, especially if there are many items or many lot size options. The "Clear choice" implementation was also a point of potential confusion.
+
+Here's a breakdown of a generally more user-friendly approach, followed by other alternatives:
+
+Recommended: Item Card with Dropdown (Select) for Quantity
+This approach replaces the wide matrix with a list of items, where each item has its own dedicated control for quantity selection.
+
+How it would work:
+
+Instead of a table row with multiple radio buttons, each hors d'oeuvre item would be presented in its own "card" or distinct section. Within this card:
+
+Item Information: Display the item name, price per piece, and any relevant description (e.g., "Offered in lots of 48").
+Quantity Selection: Use a Select (dropdown) component.
+The dropdown would list all available lotSizes for that item (e.g., "24", "48", "96").
+Include a "None" or "0" option as the first item in the dropdown to allow users to easily deselect or not choose an item.
+Price Feedback: Optionally, display the calculated price for that item once a quantity is selected (e.g., "Item Total: $X.XX").
+Conceptual Code Structure (using Shadcn UI components from your existing code):
+
+TypeScript
+
+// Within your AppetizersStep component, when mapping through non-spreads categories and items:
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Controller } from "react-hook-form"; // Already imported
+
+// ... inside your map for category.items ...
+<Card key={item.id} className="mb-4">
+  <CardHeader>
+    <CardTitle>{item.name}</CardTitle>
+    <CardDescription>
+      ${item.price.toFixed(2)} each. {category.description /* e.g., "Offered in lots of X" */}
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="flex items-center justify-between">
+      <FormLabel htmlFor={`quantity-${category.id}-${item.id}`} className="text-base">Quantity:</FormLabel>
+      <Controller
+        name={`horsDoeurvesSelections.categories.${category.id}.items.${item.id}.quantity`}
+        control={control} // from useFormContext
+        render={({ field }) => (
+          <Select
+            onValueChange={(value) => {
+              const newQuantity = value === "0" ? null : parseInt(value, 10);
+              // Your existing handleHorsDoeurvesItemSelection can be used here.
+              // It already handles setting name, price, and quantity, or clearing the item.
+              handleHorsDoeurvesItemSelection(category.id, item.id, newQuantity);
+            }}
+            // Ensure field.value is a string for the Select component, or "0" if null/undefined
+            value={field.value ? String(field.value) : "0"}
+          >
+            <SelectTrigger className="w-[150px]" id={`quantity-${category.id}-${item.id}`}>
+              <SelectValue placeholder="Select quantity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">None</SelectItem>
+              {category.lotSizes.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </div>
+    {/* Display item total dynamically */}
+    {watch(`horsDoeurvesSelections.categories.${category.id}.items.${item.id}.quantity`) && (
+      <p className="mt-3 text-sm font-semibold text-right">
+        Item Total: $
+        {(
+          item.price * watch(`horsDoeurvesSelections.categories.${category.id}.items.${item.id}.quantity`)
+        ).toFixed(2)}
+      </p>
+    )}
+  </CardContent>
+</Card>
+Why this is often better for UX:
+
+Clarity per Item: Each item's selection is focused and less overwhelming than a large grid of radio buttons.
+Scalability for Lot Sizes: A dropdown handles a larger number of lotSizes gracefully without widening the interface.
+Mobile-Friendliness: Cards naturally stack vertically, making the layout responsive and easier to use on smaller screens.
+Reduced Visual Noise: Fewer interactive elements are visible at once.
+Explicit "None" Option: Provides a clear and standard way to deselect an item or indicate no quantity is needed.
+Consistency with Form Elements: Leverages standard form components like Select which users are familiar with.
+Integration Notes:
+
+Your handleHorsDoeurvesItemSelection function, which updates the form state by setting the item's name, price, and quantity (or clears the item if quantity is null), would fit well with this approach.
+The getSelectedQuantity function would also remain useful.
+The data structure for horsDoeurvesSelections in your form state would remain the same, ensuring compatibility with your total calculation logic.

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   Cake, Calendar, Gift, Users, Truck, Wine, Utensils, 
@@ -36,6 +36,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 
 // Define event types
 type EventType = 
@@ -2648,74 +2649,58 @@ const AppetizersStep = ({
                   <p className="text-sm text-gray-500">{category.description}</p>
                 </div>
                 
-                {/* Matrix Selection Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="p-2 text-left border border-gray-200 w-1/2">Item</th>
-                        {category.lotSizes?.map((size) => (
-                          <th key={size} className="p-2 text-center border border-gray-200">
-                            {size}
-                          </th>
-                        ))}
-                        <th className="p-2 text-center border border-gray-200">
-                          Clear choice
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {category.items.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="p-2 border border-gray-200">
-                            <div className="font-medium">{item.name}</div>
-                            <div className="text-sm text-gray-600">${item.price.toFixed(2)} each</div>
-                          </td>
-                          
-                          {category.lotSizes?.map((size) => {
-                            const isSelected = getSelectedQuantity(category.id, item.id) === size;
-                            
-                            return (
-                              <td key={size} className="p-2 text-center border border-gray-200">
-                                <RadioGroup 
-                                  value={getSelectedQuantity(category.id, item.id)?.toString() || ""}
-                                  onValueChange={(value) => {
-                                    if (value === "") return;
-                                    handleHorsDoeurvesItemSelection(category.id, item.id, parseInt(value));
-                                  }}
-                                  className="flex justify-center"
-                                >
-                                  <RadioGroupItem 
-                                    value={String(size)} 
-                                    id={`matrix-${category.id}-${item.id}-${size}`} 
-                                    className="h-5 w-5"
-                                  />
-                                </RadioGroup>
-                              </td>
-                            );
-                          })}
-                          
-                          <td className="p-2 text-center border border-gray-200">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleHorsDoeurvesItemSelection(category.id, item.id, null)}
-                              disabled={!getSelectedQuantity(category.id, item.id)}
-                              className="h-5 w-5 p-0 rounded-full"
-                            >
-                              <RadioGroupItem 
-                                value="clear" 
-                                id={`matrix-${category.id}-${item.id}-clear`} 
-                                className="h-5 w-5"
-                                checked={!getSelectedQuantity(category.id, item.id)}
-                              />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                {/* Card-Based Item Selection with Dropdowns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {category.items.map((item) => (
+                    <Card key={item.id} className="mb-2">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">{item.name}</CardTitle>
+                        <CardDescription>
+                          ${item.price.toFixed(2)} each. {category.description || `Offered in lots of ${category.lotSizes.join(', ')}`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`quantity-${category.id}-${item.id}`} className="text-base">Quantity:</Label>
+                          <Controller
+                            name={`horsDoeurvesSelections.categories.${category.id}.items.${item.id}.quantity`}
+                            control={control}
+                            render={({ field }) => (
+                              <Select
+                                onValueChange={(value) => {
+                                  const newQuantity = value === "0" ? null : parseInt(value, 10);
+                                  handleHorsDoeurvesItemSelection(category.id, item.id, newQuantity);
+                                }}
+                                value={getSelectedQuantity(category.id, item.id)?.toString() || "0"}
+                              >
+                                <SelectTrigger className="w-[150px]" id={`quantity-${category.id}-${item.id}`}>
+                                  <SelectValue placeholder="Select quantity" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">None</SelectItem>
+                                  {category.lotSizes.map((size) => (
+                                    <SelectItem key={size} value={String(size)}>
+                                      {size}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        </div>
+                        
+                        {/* Display item total dynamically */}
+                        {getSelectedQuantity(category.id, item.id) && (
+                          <div className="mt-3 text-sm font-semibold text-right">
+                            Item Total: $
+                            {(
+                              item.price * getSelectedQuantity(category.id, item.id)
+                            ).toFixed(2)}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
                 
                 {/* Display total for this category */}
