@@ -663,6 +663,51 @@ const appetizerData = {
   ]
 };
 
+// Hors d'oeuvres data for matrix selection
+const horsDoeurvesData = {
+  categories: [
+    {
+      id: "tea_sandwiches",
+      name: "Tea Sandwiches",
+      description: "Offered in lots of 48",
+      lotSizes: [48, 96, 144],
+      items: [
+        { id: "pate_pickled_veg", name: "Pate with pickled veg", price: 1.95 },
+        { id: "cream_cheese_shrimp", name: "Cream Cheese and Shrimp", price: 2.50 },
+        { id: "blt", name: "BLT - (Bacon Lettuce & Tomato)", price: 1.95 },
+        { id: "caprese", name: "Caprese (Mozzarella, Tomato, & Basil)", price: 1.95 },
+        { id: "gravlax", name: "Gravlax, Cream Cheese & Cucumber", price: 2.75 }
+      ]
+    },
+    {
+      id: "shooters",
+      name: "Shooters",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 72, 96],
+      items: [
+        { id: "chicken_satay", name: "Chicken Satay", price: 2.45 },
+        { id: "greek_village", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
+        { id: "gazpacho_shrimp", name: "Gazpacho with shrimp", price: 2.75 },
+        { id: "cucumber_jalapeno", name: "Chilled Cucumber/Jalapeno with shrimp", price: 2.75 },
+        { id: "bloody_mary_lobster", name: "Bloody Mary with lobster (non-alcoholic)", price: 4.75 }
+      ]
+    },
+    {
+      id: "canapes",
+      name: "Canapes",
+      description: "Offered in lots of 48",
+      lotSizes: [48, 96, 144],
+      items: [
+        { id: "watermelon_radish", name: "Watermelon radish chips with apple chutney", price: 2.75 },
+        { id: "greek_village_canape", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.75 },
+        { id: "onion_tartlets", name: "French onion tartlets with Gruyere and dill", price: 2.75 },
+        { id: "pear_camembert", name: "Pear and Camembert tartlet", price: 2.75 },
+        { id: "mediterranean_shrimp_canape", name: "Mediterranean style shrimp", price: 2.75 }
+      ]
+    }
+  ]
+};
+
 // Step 3: Event Details & Venue Form Component
 const EventDetailsStep = ({ 
   eventType,
@@ -1871,12 +1916,13 @@ const themeMenuData = {
   }
 };
 
-// Hors d'oeuvres data for matrix-style selection
-const horsDoeurvesData = {
+// Defining Hors d'oeuvres component properties for each step
+const horsDoeurvesComponentData = {
   serviceStyles: [
     { id: "stationary", name: "Stationary buffet" },
     { id: "passed", name: "Passed" }
   ],
+  // Using the existing horsDoeurvesData for actual food items
   categories: [
     {
       id: "tea_sandwiches",
