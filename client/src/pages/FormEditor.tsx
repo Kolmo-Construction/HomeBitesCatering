@@ -1154,7 +1154,8 @@ export default function FormEditor() {
   const { data: libraryQuestionsData, isLoading: isLibraryLoading } = useQuery({
     queryKey: ['/api/form-builder/library-questions'],
     queryFn: async () => {
-      const response = await fetch('/api/form-builder/library-questions');
+      // Request a large page size to get all questions at once
+      const response = await fetch('/api/form-builder/library-questions?pageSize=1000');
       if (!response.ok) {
         throw new Error('Failed to fetch library questions');
       }
