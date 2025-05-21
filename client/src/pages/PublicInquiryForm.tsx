@@ -71,6 +71,25 @@ type DessertItem = {
   price: number;
 };
 
+// Dessert items with prices
+const dessertItems: DessertItem[] = [
+  { id: "petit_fours", name: "Petit Fours", price: 2.25 },
+  { id: "macaroons", name: "Macaroons", price: 2.25 },
+  { id: "flourless_chocolate_cake", name: "Flourless Chocolate Cake", price: 4.75 },
+  { id: "cheesecake", name: "Cheesecake", price: 5.75 },
+  { id: "baklava", name: "Baklava", price: 5.25 },
+  { id: "cannolis", name: "Cannolis", price: 4.75 },
+  { id: "mini_cannolis", name: "Mini Cannolis", price: 2.75 },
+  { id: "assorted_dessert_cups", name: "Assorted dessert cups", price: 3.25 },
+  { id: "pate_a_choux", name: "Pâte à Choux with Crème Pâtissière", price: 3.25 },
+  { id: "baklava_rollups", name: "Baklava roll-ups", price: 3.75 },
+  { id: "lemon_tartlets", name: "Lemon Tartlets", price: 2.75 },
+  { id: "mille_feuille", name: "Mille feuille with cream and berries", price: 3.75 }
+];
+
+// Available lot sizes for desserts
+const dessertLotSizes: DessertLotSize[] = [36, 48, 72, 96, 144];
+
 // Event type details including description and icon
 const eventTypes: {
   type: EventType;
@@ -614,6 +633,154 @@ const BasicInformationStep = ({
           className="flex items-center"
         >
           Next <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Dessert Matrix component for selecting quantities
+const DessertMatrix = ({ 
+  item, 
+  onSelectionChange
+}: { 
+  item: DessertItem;
+  onSelectionChange: (itemId: string, quantity: DessertLotSize | null) => void;
+}) => {
+  const { watch } = useFormContext<EventInquiryFormData>();
+  const dessertSelections = watch("dessertSelections");
+  
+  // Get the current selection
+  const currentSelection = dessertSelections[item.id] || null;
+  
+  const handleLotSelect = (lotSize: DessertLotSize) => {
+    if (currentSelection === lotSize) {
+      // Deselect if already selected
+      onSelectionChange(item.id, null);
+    } else {
+      // Select new lot size
+      onSelectionChange(item.id, lotSize);
+    }
+  };
+  
+  return (
+    <div className="mb-4 px-2 py-3 border-b border-gray-100">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex-1">
+          <span className="font-medium text-gray-800">{item.name}</span>
+          <div className="text-sm text-gray-500">${item.price.toFixed(2)} each</div>
+        </div>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 mt-3">
+        {dessertLotSizes.map((lotSize) => (
+          <Button
+            key={`${item.id}-${lotSize}`}
+            type="button"
+            size="sm"
+            variant={currentSelection === lotSize ? "default" : "outline"}
+            onClick={() => handleLotSelect(lotSize)}
+            className="px-2 py-1 h-auto text-xs"
+          >
+            {lotSize} pcs
+            {currentSelection === lotSize && 
+              <span className="ml-1 text-xs">
+                (${(lotSize * item.price).toFixed(2)})
+              </span>
+            }
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Desserts step component
+const DessertsStep = ({ 
+  onPrevious,
+  onNext 
+}: { 
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { setValue, watch } = useFormContext<EventInquiryFormData>();
+  const dessertSelections = watch("dessertSelections");
+  
+  // Handle selection of a dessert item with a specific quantity
+  const handleDessertSelection = (itemId: string, quantity: DessertLotSize | null) => {
+    // If quantity is null, remove the item
+    if (quantity === null) {
+      const updatedSelections = { ...dessertSelections };
+      delete updatedSelections[itemId];
+      setValue("dessertSelections", updatedSelections);
+    } else {
+      // Otherwise update with the new quantity
+      setValue("dessertSelections", {
+        ...dessertSelections,
+        [itemId]: quantity
+      });
+    }
+  };
+  
+  // Calculate total based on selections
+  const calculateTotal = () => {
+    return Object.entries(dessertSelections || {}).reduce((total, [itemId, quantity]) => {
+      const item = dessertItems.find(item => item.id === itemId);
+      if (item && quantity) {
+        return total + (item.price * quantity);
+      }
+      return total;
+    }, 0);
+  };
+  
+  // Count selected items
+  const selectedCount = Object.keys(dessertSelections || {}).length;
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Dessert Selections</h2>
+        <p className="text-lg text-gray-600">
+          Choose your dessert options with quantities
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-4">Dessert Options</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            The dessert selections are offered with options for different quantities (36, 48, 72, 96, 144). 
+            Select the quantity for each dessert item you would like to include.
+          </p>
+          
+          <div className="mt-6 border rounded-md divide-y">
+            {dessertItems.map(item => (
+              <DessertMatrix
+                key={item.id}
+                item={item}
+                onSelectionChange={handleDessertSelection}
+              />
+            ))}
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-gray-50 rounded-md">
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Selected Items: {selectedCount}</span>
+            <span className="font-medium">Total: ${calculateTotal().toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex justify-between mt-8">
+        <Button type="button" onClick={onPrevious} variant="outline">
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+        
+        <Button type="button" onClick={onNext}>
+          Next
+          <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
     </div>
