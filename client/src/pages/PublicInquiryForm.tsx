@@ -840,9 +840,9 @@ const EventDetailsStep = ({
     { value: "taste_of_greece", label: "A Taste of Greece" },
     { value: "kebab_party", label: "Kebab Party" },
     { value: "taste_of_italy", label: "A Taste of Italy" },
+    { value: "sandwich_factory", label: "Sandwich Factory" },
     { value: "custom_menu", label: "Custom Menu" },
     { value: "hors_doeuvres", label: "Hor d'oeuvres only (Cocktail party)" },
-    { value: "food_truck", label: "Food Truck" },
   ];
   
   return (
@@ -1340,6 +1340,163 @@ const EventDetailsStep = ({
 
 // Menu data for different themes
 const themeMenuData = {
+  sandwich_factory: {
+    title: "Sandwich Factory - Catering Packages",
+    packages: [
+      { 
+        id: "bronze",
+        name: "Bronze", 
+        price: 13.00,
+        description: "Includes: Meats, Cheeses, Veggies, & four condiments, White, multigrain, and whole wheat breads.",
+        minGuestCount: 0
+      },
+      { 
+        id: "silver",
+        name: "Silver", 
+        price: 18.00,
+        description: "Includes: Meats, cheeses, veggies, & five condiments, White, Multigrain, and whole wheat breads, croissants, bagels, and two salads.",
+        minGuestCount: 0
+      },
+      { 
+        id: "gold",
+        name: "Gold", 
+        price: 23.00,
+        description: "Includes: Premium meats & cheeses, veggies, fruits & six condiments, White, multigrain, whole wheat sliced breads, croissants, bagels, and two salads.",
+        minGuestCount: 0
+      },
+      { 
+        id: "diamond",
+        name: "Diamond", 
+        price: 28.00,
+        description: "Includes: Premium meats & cheeses, veggies, & six condiments, White, multigrain, and whole wheat breads, croissants, bagels and rolls, three salads, and fresh fruit grazing board.",
+        minGuestCount: 0
+      }
+    ],
+    categories: {
+      meats: {
+        title: "Meats",
+        description: "Select your desired meats",
+        items: [
+          { id: "smoked_turkey", name: "Smoked Turkey", upcharge: 0 },
+          { id: "black_forest_ham", name: "Black Forest Ham", upcharge: 0 },
+          { id: "pepperoni", name: "Pepperoni", upcharge: 0 },
+          { id: "salami", name: "Salami", upcharge: 0 },
+          { id: "roast_beef", name: "Roast Beef", upcharge: 0 },
+          { id: "pastrami", name: "Pastrami", upcharge: 0 }
+        ]
+      },
+      cheeses: {
+        title: "Cheeses",
+        description: "Select your desired cheeses",
+        items: [
+          { id: "cheddar", name: "Cheddar Cheese", upcharge: 0 },
+          { id: "swiss", name: "Swiss Cheese", upcharge: 0 },
+          { id: "monterey", name: "Monterey Cheese", upcharge: 0 },
+          { id: "havarti", name: "Havarti", upcharge: 0 },
+          { id: "brie", name: "Brie", upcharge: 0 },
+          { id: "gouda", name: "Gouda", upcharge: 0 },
+          { id: "cream_cheese", name: "Cream Cheese", upcharge: 0 }
+        ]
+      },
+      veggies: {
+        title: "Sandwich Veggies",
+        description: "Select your desired vegetables",
+        items: [
+          { id: "lettuce", name: "Lettuce", upcharge: 0 },
+          { id: "tomato", name: "Tomato", upcharge: 0 },
+          { id: "onion", name: "Onion", upcharge: 0 },
+          { id: "avocado", name: "Avocado", upcharge: 0 },
+          { id: "spinach", name: "Spinach", upcharge: 0 },
+          { id: "arugula", name: "Arugula", upcharge: 0 },
+          { id: "pickle", name: "Pickle", upcharge: 0 },
+          { id: "bell_pepper", name: "Bell Pepper", upcharge: 0 },
+          { id: "cucumber", name: "Cucumber", upcharge: 0 },
+          { id: "olives", name: "Olives", upcharge: 0 },
+          { id: "sprouts", name: "Sprouts", upcharge: 0 }
+        ]
+      },
+      breads: {
+        title: "Breads",
+        description: "Select your desired bread types",
+        items: [
+          { id: "sourdough", name: "Sourdough", upcharge: 0 },
+          { id: "rye", name: "Rye", upcharge: 0 },
+          { id: "multigrain", name: "Multigrain Bread", upcharge: 0 },
+          { id: "whole_wheat", name: "Whole Wheat Bread", upcharge: 0 },
+          { id: "white", name: "White Bread", upcharge: 0 },
+          { id: "bagels", name: "Bagels", upcharge: 0 },
+          { id: "croissants", name: "Croissants", upcharge: 0 },
+          { id: "rolls", name: "Rolls", upcharge: 0 }
+        ]
+      },
+      spreads: {
+        title: "Sandwich Spreads/Condiments",
+        description: "Bronze: Choose 4, Silver: Choose 5, Gold/Diamond: Choose 6",
+        items: [
+          { id: "classic_mayo", name: "Classic Mayo", upcharge: 0 },
+          { id: "vegan_mayo", name: "Vegan Mayo", upcharge: 0 },
+          { id: "chipotle_mayo", name: "Chipotle Mayo", upcharge: 0 },
+          { id: "dijon_mustard", name: "Dijon Mustard", upcharge: 0 },
+          { id: "honey_mustard", name: "Honey Mustard", upcharge: 0 },
+          { id: "stone_ground_mustard", name: "Stone Ground Mustard", upcharge: 0 },
+          { id: "pesto", name: "Pesto (contains nuts)", upcharge: 0 },
+          { id: "vegan_pesto", name: "Vegan Pesto (contains nuts)", upcharge: 0 },
+          { id: "vegan_caesar", name: "Vegan Caesar (contains cashews)", upcharge: 0 },
+          { id: "hummus", name: "Hummus", upcharge: 0 },
+          { id: "baba_ganoush", name: "Baba Ganoush", upcharge: 0 },
+          { id: "olive_tapenade", name: "Olive Tapenade", upcharge: 0 },
+          { id: "sun_dried_tomato_pesto", name: "Sun-dried Tomato Pesto", upcharge: 0 },
+          { id: "ranch_dressing", name: "Ranch Dressing", upcharge: 0 },
+          { id: "italian_dressing", name: "Italian Dressing", upcharge: 0 },
+          { id: "balsamic_vinaigrette", name: "Balsamic Vinaigrette", upcharge: 0 },
+          { id: "fig_jam", name: "Fig Jam", upcharge: 0 },
+          { id: "red_pepper_jelly", name: "Red Pepper Jelly", upcharge: 0 },
+          { id: "cranberry_sauce", name: "Cranberry Sauce", upcharge: 0 },
+          { id: "horseradish_aioli", name: "Horseradish Aioli", upcharge: 0 },
+          { id: "garlic_aioli", name: "Garlic Aioli", upcharge: 0 },
+          { id: "spicy_aioli", name: "Spicy Aioli", upcharge: 0 },
+          { id: "tahini_sauce", name: "Tahini Sauce", upcharge: 0 },
+          { id: "guacamole", name: "Guacamole", upcharge: 0 },
+          { id: "salsa", name: "Salsa", upcharge: 0 },
+          { id: "artichoke_dip", name: "Artichoke Dip", upcharge: 0 },
+          { id: "caramelized_onion_jam", name: "Caramelized Onion Jam", upcharge: 0 },
+          { id: "roasted_red_pepper_spread", name: "Roasted Red Pepper Spread", upcharge: 0 }
+        ]
+      },
+      salads: {
+        title: "Salads",
+        description: "Silver & Gold: Pick 2, Diamond: Pick 3",
+        items: [
+          { id: "side_salad", name: "Side Salad", upcharge: 0 },
+          { id: "greek_salad", name: "Greek Village Salad", upcharge: 0 },
+          { id: "caesar_salad", name: "Caesar Salad", upcharge: 0 },
+          { id: "mediterranean_quinoa", name: "Mediterranean Quinoa Salad", upcharge: 0 },
+          { id: "pasta_salad", name: "Pasta Salad", upcharge: 0 },
+          { id: "potato_salad", name: "Potato Salad", upcharge: 0 },
+          { id: "coleslaw", name: "Coleslaw", upcharge: 0 },
+          { id: "fruit_salad", name: "Fruit Salad", upcharge: 0 },
+          { id: "caprese_salad", name: "Caprese Salad", upcharge: 0 },
+          { id: "asian_noodle_salad", name: "Asian Noodle Salad", upcharge: 0 },
+          { id: "beet_salad", name: "Beet Salad", upcharge: 0 },
+          { id: "lentil_salad", name: "Lentil Salad", upcharge: 0 },
+          { id: "chickpea_salad", name: "Chickpea Salad", upcharge: 0 },
+          { id: "waldorf_salad", name: "Waldorf Salad", upcharge: 0 },
+          { id: "israeli_couscous_salad", name: "Israeli Couscous Salad", upcharge: 0 },
+          { id: "tabbouleh_salad", name: "Tabbouleh Salad", upcharge: 0 },
+          { id: "black_bean_corn_salad", name: "Black Bean and Corn Salad", upcharge: 0 },
+          { id: "spinach_strawberry_salad", name: "Spinach Salad with Strawberries", upcharge: 0 },
+          { id: "arugula_parmesan_salad", name: "Arugula Salad with Parmesan", upcharge: 0 }
+        ]
+      },
+      add_ons: {
+        title: "Add-ons",
+        description: "Optional extras",
+        items: [
+          { id: "gluten_free_bread", name: "Gluten Free Bread ($0.50 / each)", upcharge: 0.5 }
+        ]
+      }
+    }
+  },
   taco_fiesta: {
     title: "Taco Fiesta Selections",
     packages: [
