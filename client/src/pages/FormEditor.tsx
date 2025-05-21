@@ -1141,9 +1141,9 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                                 <SelectItem value="equals">Equals</SelectItem>
                                 <SelectItem value="not_equals">Does not equal</SelectItem>
                                 <SelectItem value="contains">Contains</SelectItem>
-                                <SelectItem value="not_contains">Does not contain</SelectItem>
-                                <SelectItem value="is_answered">Is answered</SelectItem>
-                                <SelectItem value="is_not_answered">Is not answered</SelectItem>
+                                <SelectItem value="does_not_contain">Does not contain</SelectItem>
+                                <SelectItem value="is_filled">Is filled</SelectItem>
+                                <SelectItem value="is_not_filled">Is not filled</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
