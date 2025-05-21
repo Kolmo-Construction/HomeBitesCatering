@@ -3123,7 +3123,6 @@ const MenuSelectionStep = ({
           type="button" 
           onClick={onNext}
           className="flex items-center"
-          disabled={!selectedPackage}
         >
           Next <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
@@ -3174,6 +3173,11 @@ export default function PublicInquiryForm() {
         spreads: []
       },
       appetizerService: "stationary", // Default service style
+      // Initialize horsDoeurvesSelections with empty structure
+      horsDoeurvesSelections: {
+        serviceStyle: "stationary",
+        categories: {}
+      },
       dessertSelections: {},
       servingAlcohol: [],
       additionalCocktails: false,
