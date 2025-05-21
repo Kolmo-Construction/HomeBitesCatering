@@ -145,18 +145,33 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
     // Default to visible if no rules apply
     if (!question.rules || question.rules.length === 0) return true;
     
+    console.log(`Evaluating visibility for question ${question.id} with ${question.rules.length} rules`);
+    
+    // Variables to track rule evaluation
+    let shouldBeVisible = true; // Default to visible
+    let hasShowRule = false; // Flag to check if we have any "show" rules
+    
     // Process each rule that affects this question
     for (const rule of question.rules) {
+      console.log(`Evaluating rule:`, rule);
+      
       // Find the source question that triggers this rule
-      const sourceQuestion = pagesWithQuestions.flatMap(p => p.questions).find(
-        q => q.id === rule.triggerFormPageQuestionId || q.questionInstanceId === rule.triggerFormPageQuestionId
+      const sourceQuestion = pagesWithQuestions.flatMap(p => p.questions || []).find(
+        q => q.pageQuestionId === rule.triggerFormPageQuestionId || q.id === rule.triggerFormPageQuestionId
       );
       
-      if (!sourceQuestion) continue;
+      if (!sourceQuestion) {
+        console.log(`Source question not found for rule:`, rule);
+        continue;
+      }
+      
+      console.log(`Source question found:`, sourceQuestion);
       
       // Get the source question's current value
-      const sourceKey = sourceQuestion.questionKey || `${sourceQuestion.pageId}_${sourceQuestion.id}`;
+      const sourceKey = sourceQuestion.questionKey || `${sourceQuestion.formPageId || sourceQuestion.pageId}_${sourceQuestion.pageQuestionId || sourceQuestion.id}`;
       const sourceValue = formValues[sourceKey];
+      
+      console.log(`Source value for ${sourceKey}:`, sourceValue);
       
       // Default to not matching if we don't have a value yet
       let conditionMatched = false;
@@ -167,13 +182,23 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
           conditionMatched = sourceValue === rule.conditionValue;
           break;
         case 'notEquals':
-          conditionMatched = sourceValue !== rule.conditionValue;
+          conditionMatched = sourceValue !== rule.conditionValue && sourceValue !== undefined;
           break;
         case 'contains':
-          conditionMatched = Array.isArray(sourceValue) && sourceValue.includes(rule.conditionValue);
+          if (Array.isArray(sourceValue)) {
+            conditionMatched = sourceValue.includes(rule.conditionValue);
+          } else if (typeof sourceValue === 'string') {
+            conditionMatched = sourceValue.includes(rule.conditionValue);
+          }
           break;
         case 'notContains':
-          conditionMatched = !Array.isArray(sourceValue) || !sourceValue.includes(rule.conditionValue);
+          if (Array.isArray(sourceValue)) {
+            conditionMatched = !sourceValue.includes(rule.conditionValue);
+          } else if (typeof sourceValue === 'string') {
+            conditionMatched = !sourceValue.includes(rule.conditionValue);
+          } else {
+            conditionMatched = true; // If not array or string, it definitely doesn't contain the value
+          }
           break;
         case 'greaterThan':
           conditionMatched = Number(sourceValue) > Number(rule.conditionValue);
@@ -188,20 +213,40 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
           conditionMatched = sourceValue === undefined || sourceValue === null || sourceValue === '';
           break;
         default:
-          // Unknown condition type, default to visible
-          conditionMatched = true;
+          console.warn(`Unknown condition type: ${rule.conditionType}`);
+          conditionMatched = true; // Unknown condition type, default to true
       }
       
+      console.log(`Condition matched: ${conditionMatched}`);
+      
       // Apply the rule based on its action
-      if (rule.actionType === 'show' && conditionMatched) {
-        return true; // Show the question if condition matched
+      if (rule.actionType === 'show') {
+        hasShowRule = true;
+        if (conditionMatched) {
+          // Show the question if condition matched
+          shouldBeVisible = true;
+          console.log(`Show rule matched, question should be visible`);
+          return true; // Early return since we have a definitive show
+        } else {
+          // If we have any show rules but none matched, hide by default
+          shouldBeVisible = false;
+        }
       } else if (rule.actionType === 'hide' && conditionMatched) {
-        return false; // Hide the question if condition matched
+        // Hide the question if condition matched - this takes priority
+        console.log(`Hide rule matched, question should be hidden`);
+        return false; // Early return since we have a definitive hide
       }
     }
     
-    // If we've evaluated all rules and none applied, default to visible
-    return true;
+    // If we have show rules but none matched, hide the question
+    if (hasShowRule && !shouldBeVisible) {
+      console.log(`No show rules matched, question should be hidden`);
+      return false;
+    }
+    
+    // If we've evaluated all rules and no definitive action was taken, default to visible
+    console.log(`No definitive rules applied, defaulting to visible: ${shouldBeVisible}`);
+    return shouldBeVisible;
   };
 
   // Filter questions based on conditional logic
