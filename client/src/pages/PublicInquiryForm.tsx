@@ -3654,6 +3654,13 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
                 />
               )}
               
+              {currentStep === "appetizerQuestion" && eventType && (
+                <AppetizersQuestionStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
               {currentStep === "appetizers" && eventType && (
                 <AppetizersStep
                   onPrevious={handlePrevious}
@@ -3668,6 +3675,7 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
                currentStep !== "basicInfo" && 
                currentStep !== "eventDetails" &&
                currentStep !== "menuSelection" &&
+               currentStep !== "appetizerQuestion" &&
                currentStep !== "appetizers" && (
                 <div className="container mx-auto px-4 max-w-3xl text-center py-12">
                   <h2 className="text-2xl font-bold">Step {currentStepNumber} - {currentStep}</h2>
