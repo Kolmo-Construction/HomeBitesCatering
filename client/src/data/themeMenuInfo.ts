@@ -20,9 +20,11 @@ export type MenuCategory = {
 };
 
 export type MenuPackage = {
-  title: string;
+  id: string;
+  name: string;
   price: number;
   description: string;
+  minGuestCount?: number;
   limits?: {
     proteins?: number;
     mains?: number;
@@ -38,9 +40,7 @@ export type ThemeMenu = {
   title: string;
   description: string;
   customizable?: boolean;
-  packages?: {
-    [key: string]: MenuPackage;
-  };
+  packages?: MenuPackage[];
   categories?: {
     [key: string]: MenuCategory;
   };
@@ -345,11 +345,13 @@ export const themeMenuData = {
   taco_fiesta: {
     title: "Taco Fiesta",
     description: "A festive Mexican-inspired menu perfect for casual gatherings and celebrations",
-    packages: {
-      bronze: {
-        title: "Bronze Package",
+    packages: [
+      {
+        id: "bronze",
+        name: "Bronze Package",
         price: 32.00,
         description: "Basic taco bar setup",
+        minGuestCount: 0,
         limits: {
           proteins: 2,
           sides: 2,
@@ -357,10 +359,12 @@ export const themeMenuData = {
           condiments: 3
         }
       },
-      silver: {
-        title: "Silver Package",
+      {
+        id: "silver",
+        name: "Silver Package",
         price: 37.00,
         description: "Enhanced taco bar with more variety",
+        minGuestCount: 0,
         limits: {
           proteins: 3,
           sides: 3,
@@ -368,10 +372,12 @@ export const themeMenuData = {
           condiments: 5
         }
       },
-      gold: {
-        title: "Gold Package",
+      {
+        id: "gold",
+        name: "Gold Package",
         price: 45.00,
         description: "Premium taco bar with maximum variety",
+        minGuestCount: 0,
         limits: {
           proteins: 4,
           sides: 4,
@@ -379,7 +385,7 @@ export const themeMenuData = {
           condiments: 8
         }
       }
-    },
+    ],
     categories: {
       taco_fiesta: {
         title: "Taco Fiesta",
@@ -458,11 +464,13 @@ export const themeMenuData = {
   american_bbq: {
     title: "American BBQ",
     description: "Classic American BBQ menu with smoky flavors and comfort food favorites",
-    packages: {
-      bronze: {
-        title: "Bronze Package",
+    packages: [
+      {
+        id: "bronze",
+        name: "Bronze Package",
         price: 29.00,
         description: "Basic BBQ setup",
+        minGuestCount: 0,
         limits: {
           mains: 2,
           sides: 2,
@@ -471,10 +479,12 @@ export const themeMenuData = {
           condiments: 3
         }
       },
-      silver: {
-        title: "Silver Package",
+      {
+        id: "silver",
+        name: "Silver Package",
         price: 36.00,
         description: "Enhanced BBQ with more variety",
+        minGuestCount: 0,
         limits: {
           mains: 3,
           sides: 3,
@@ -483,10 +493,12 @@ export const themeMenuData = {
           condiments: 5
         }
       },
-      gold: {
-        title: "Gold Package",
+      {
+        id: "gold",
+        name: "Gold Package",
         price: 45.00,
         description: "Premium BBQ with maximum variety",
+        minGuestCount: 0,
         limits: {
           mains: 4,
           sides: 4,
@@ -495,7 +507,7 @@ export const themeMenuData = {
           condiments: 8
         }
       }
-    },
+    ],
     categories: {
       american_bbq: {
         title: "American BBQ",
@@ -605,38 +617,44 @@ export const themeMenuData = {
   taste_of_greece: {
     title: "A Taste of Greece",
     description: "Mediterranean flavors from Greece with authentic dishes and fresh ingredients",
-    packages: {
-      bronze: {
-        title: "Bronze Package",
+    packages: [
+      {
+        id: "bronze",
+        name: "Bronze Package",
         price: 32.00,
         description: "Basic Greek menu",
+        minGuestCount: 0,
         limits: {
           mains: 2,
           sides: 3,
           salads: 1
         }
       },
-      silver: {
-        title: "Silver Package",
+      {
+        id: "silver",
+        name: "Silver Package",
         price: 38.00,
         description: "Enhanced Greek menu with more variety",
+        minGuestCount: 0,
         limits: {
           mains: 3,
           sides: 4,
           salads: 2
         }
       },
-      gold: {
-        title: "Gold Package",
+      {
+        id: "gold",
+        name: "Gold Package",
         price: 45.00,
         description: "Premium Greek menu with maximum variety",
+        minGuestCount: 0,
         limits: {
           mains: 4,
           sides: 5,
           salads: 3
         }
       }
-    },
+    ],
     categories: {
       taste_of_greece: {
         title: "A Taste of Greece",
@@ -699,38 +717,44 @@ export const themeMenuData = {
   kebab_party: {
     title: "Kebab Party",
     description: "Skewered delights featuring global flavors and grilled perfection",
-    packages: {
-      bronze: {
-        title: "Bronze Package",
+    packages: [
+      {
+        id: "bronze",
+        name: "Bronze Package",
         price: 29.00,
         description: "Basic kebab selection",
+        minGuestCount: 0,
         limits: {
           proteins: 2,
           sides: 2,
           sauces: 2
         }
       },
-      silver: {
-        title: "Silver Package",
+      {
+        id: "silver",
+        name: "Silver Package",
         price: 36.00,
         description: "Enhanced kebab selection with more variety",
+        minGuestCount: 0,
         limits: {
           proteins: 3,
           sides: 3,
           sauces: 3
         }
       },
-      gold: {
-        title: "Gold Package",
+      {
+        id: "gold",
+        name: "Gold Package",
         price: 42.00,
         description: "Premium kebab selection with maximum variety",
+        minGuestCount: 0,
         limits: {
           proteins: 4,
           sides: 4,
           sauces: 4
         }
       }
-    },
+    ],
     categories: {
       kebab_party: {
         title: "Kebab Party",
