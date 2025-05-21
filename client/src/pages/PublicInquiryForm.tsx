@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Cake, Calendar, Gift, Users, Truck, Wine, Utensils, 
   ChevronRight, ChevronLeft, Check, Building, Phone,
-  MapPin, Clock, Send, Users2, LayoutGrid
+  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff
 } from "lucide-react";
 import { Helmet } from "react-helmet";
 import { useForm, FormProvider, useFormContext, Controller } from "react-hook-form";
@@ -2092,6 +2092,19 @@ const AppetizersStep = ({
   const appetizerService = watch("appetizerService");
   const appetizers = watch("appetizers");
   const horsDoeurvesSelections = watch("horsDoeurvesSelections");
+  
+  // Function to get selected quantity for an item in the matrix
+  const getSelectedQuantity = (categoryId: string, itemId: string): number | null => {
+    if (!horsDoeurvesSelections || 
+        !horsDoeurvesSelections.categories || 
+        !horsDoeurvesSelections.categories[categoryId] ||
+        !horsDoeurvesSelections.categories[categoryId].items ||
+        !horsDoeurvesSelections.categories[categoryId].items[itemId]) {
+      return null;
+    }
+    
+    return horsDoeurvesSelections.categories[categoryId].items[itemId].quantity || null;
+  };
   
   // Initialize appetizers structure if needed
   const initializeCategory = (categoryId: string) => {
