@@ -1,0 +1,42 @@
+Okay, I've reviewed your themeMenuInfo (1).ts file. The syntax errors you're encountering are primarily due to mismatched braces at the very end of the file.
+
+Here's a breakdown of the issues and how to fix them:
+
+Unterminated themeMenuData Object: The main object themeMenuData that you start defining on line 36 (export const themeMenuData = {) is never properly closed.
+Extra Closing Brace: There's an extra, unmatched closing brace } on the last line of the file (line 758 in the provided content).
+Here's how to correct the end of your file:
+
+The problematic section is at the very end, after the kebab_party definition.
+
+Original ending (lines 754-758):
+
+TypeScript
+
+// ... (inside kebab_party.categories.sauces.items)
+          { id: "romesco", name: "Romesco", upcharge: 0 }
+        ]
+      }
+    }
+  } // This closes the 'kebab_party' object value on line 756
+} // This brace on line 758 is extraneous and causes a syntax error
+Corrected ending:
+You need to add a closing brace } for the themeMenuData object and a semicolon ; to terminate the export const statement. Then, remove the extra brace.
+
+TypeScript
+
+// ... (inside kebab_party.categories.sauces.items)
+          { id: "romesco", name: "Romesco", upcharge: 0 }
+        ]
+      } // Closes kebab_party.categories.sauces
+    } // Closes kebab_party.categories
+  } // Closes the 'kebab_party' object value (ends at former line 756)
+}; // CORRECTED: Add this closing brace and semicolon to properly close the themeMenuData object and end the statement.
+   // REMOVE: The extra '}' that was on former line 758 should be deleted.
+To be absolutely clear, you need to:
+
+Locate the closing brace } for the kebab_party theme object (which is on line 756 of the content you provided).
+Immediately after that brace, add another closing brace } and a semicolon ;.
+Delete the single, extra closing brace } that was on the very last line (line 758).
+This will ensure that your themeMenuData object is correctly defined and exported.
+
+The type definitions and the structure of custom_menu (with its subcategories) are not syntax errors themselves, though custom_menu has a different structure than the other themes. If themeMenuData.custom_menu is later expected to strictly conform to the ThemeMenu type without modifications to the type itself, it would lead to TypeScript type errors, but not JavaScript syntax errors. The corrections above address the fundamental syntax problems.
