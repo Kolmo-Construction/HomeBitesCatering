@@ -47,7 +47,7 @@ import {
 } from "@/types/form-types";
 
 // Import externalized data
-import { dessertItems, dessertLotSizes } from "@/data/dessert-data";
+import { dessertItems, dessertLotSizes } from "@/data/dessertData";
 import { eventTypes, mapUrlToEventType, validateEventType } from "@/data/event-types";
 
 // Using EventInquiryFormData imported from form-types.ts
