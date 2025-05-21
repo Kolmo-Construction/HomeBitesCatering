@@ -1543,31 +1543,7 @@ COPY public.events (id, client_id, estimate_id, event_date, start_time, end_time
 --
 
 COPY public.form_page_questions (id, form_page_id, library_question_id, display_order, display_text_override, is_required_override, is_hidden_override, placeholder_override, helper_text_override, metadata_overrides, options_overrides, created_at, updated_at, temp_display_order) FROM stdin;
-118	28	34	1	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:17:09.354735	2025-05-20 04:17:09.354735	\N
-127	28	58	3	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:19:37.717203	2025-05-20 04:19:37.717203	\N
-130	25	62	10	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:24:43.746612	2025-05-20 04:24:43.746612	\N
-96	25	13	1	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:11:20.637599	2025-05-20 04:11:25.732	\N
-97	25	14	2	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:11:32.164357	2025-05-20 04:11:32.164357	\N
-98	25	47	3	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:01.551961	2025-05-20 04:12:01.551961	\N
-99	25	15	4	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:05.883477	2025-05-20 04:12:05.883477	\N
-100	25	16	5	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:11.433749	2025-05-20 04:12:11.433749	\N
-101	25	17	6	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:16.083221	2025-05-20 04:12:16.083221	\N
-102	25	18	7	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:20.608503	2025-05-20 04:12:20.608503	\N
-103	25	19	8	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:25.363282	2025-05-20 04:12:25.363282	\N
-104	25	20	9	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:31.185242	2025-05-20 04:12:31.185242	\N
-105	26	21	1	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:38.465068	2025-05-20 04:12:38.465068	\N
-106	26	22	2	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:44.314388	2025-05-20 04:12:44.314388	\N
-107	26	23	3	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:12:54.105689	2025-05-20 04:12:54.105689	\N
-108	26	24	4	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:23.213452	2025-05-20 04:13:23.213452	\N
-109	26	25	5	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:28.04506	2025-05-20 04:13:28.04506	\N
-110	26	26	6	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:32.87237	2025-05-20 04:13:32.87237	\N
-111	26	27	7	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:13:37.920348	2025-05-20 04:13:37.920348	\N
-112	26	42	8	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:07.725332	2025-05-20 04:14:07.725332	\N
-113	26	28	9	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:15.708693	2025-05-20 04:14:15.708693	\N
-114	26	29	10	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:21.105016	2025-05-20 04:14:21.105016	\N
-115	26	30	11	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:26.083104	2025-05-20 04:14:26.083104	\N
-116	26	31	12	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:31.573945	2025-05-20 04:14:31.573945	\N
-117	26	32	13	\N	\N	\N	\N	\N	{}	[]	2025-05-20 04:14:37.245413	2025-05-20 04:14:37.245413	\N
+134	36	14	1	Company Name	\N	\N	\N	\N	{}	[]	2025-05-21 02:38:56.876271	2025-05-21 02:38:56.876271	\N
 \.
 
 
@@ -1576,10 +1552,7 @@ COPY public.form_page_questions (id, form_page_id, library_question_id, display_
 --
 
 COPY public.form_pages (id, form_id, page_title, page_order, description, created_at, updated_at, temp_new_order) FROM stdin;
-26	11	Event Details	1	Information about your wedding event timing and logistics	2025-05-20 04:10:57.042618	2025-05-20 05:34:42.749589	\N
-25	11	Basic Information	2	Contact and event details	2025-05-20 04:10:53.363144	2025-05-20 05:34:42.749589	\N
-27	11	Venue Information	3	Details about your wedding venue	2025-05-20 04:11:00.965159	2025-05-20 05:34:42.749589	\N
-28	11	Service Information	4	Details about your catering service needs	2025-05-20 04:11:04.891412	2025-05-20 05:34:42.749589	\N
+36	13	Basic information 	1	Basic information about the client and the event they are planning	2025-05-20 22:16:07.444742	2025-05-20 22:16:07.444742	\N
 \.
 
 
@@ -1588,7 +1561,6 @@ COPY public.form_pages (id, form_id, page_title, page_order, description, create
 --
 
 COPY public.form_rule_targets (id, rule_id, target_type, target_id, created_at) FROM stdin;
-6	6	question	104	2025-05-20 04:24:51.340607
 \.
 
 
@@ -1597,7 +1569,6 @@ COPY public.form_rule_targets (id, rule_id, target_type, target_id, created_at) 
 --
 
 COPY public.form_rules (id, form_id, trigger_form_page_question_id, condition_type, condition_value, action_type, rule_description, execution_order, created_at, updated_at) FROM stdin;
-6	11	130	equals	Yes	show_question	Show promo code entry field when user has a promo code	6	2025-05-20 04:24:51.294551	2025-05-20 04:24:51.294551
 \.
 
 
@@ -1622,7 +1593,7 @@ COPY public.form_submissions (id, form_id, form_version, user_id, client_id, opp
 --
 
 COPY public.forms (id, form_key, form_title, description, version, status, created_at, updated_at) FROM stdin;
-11	wedding-catering-form	Wedding Catering Questionnaire	Comprehensive wedding catering questionnaire with all package options, menu selections, and service details	1	draft	2025-05-20 04:10:49.279181	2025-05-20 04:10:49.279181
+13	wedding-questionnaire	Wedding questionnaire	This will be used to display questions to the customer to gather information about their events	1	draft	2025-05-20 22:14:10.446983	2025-05-20 22:14:10.446983
 \.
 
 
@@ -1732,7 +1703,6 @@ COPY public.question_library (id, library_question_key, default_text, question_t
 25	event_end_time	What is the end time of your event?	time	\N	\N	timing_info	2025-05-20 03:46:10.057139	2025-05-20 03:46:10.057139
 26	ceremony_start_time	What is the start time of your ceremony?	time	\N	\N	timing_info	2025-05-20 03:46:15.386409	2025-05-20 03:46:15.386409
 27	ceremony_end_time	What is the end time of your ceremony?	time	\N	\N	timing_info	2025-05-20 03:46:20.217253	2025-05-20 03:46:20.217253
-28	cocktail_hour	Cocktail Hour?	radio_group	\N	\N	timing_info	2025-05-20 03:46:25.478677	2025-05-20 03:46:25.478677
 29	cocktail_start_time	What is the start time of your Cocktail/Appetizer service?	time	\N	\N	timing_info	2025-05-20 03:46:30.868699	2025-05-20 03:46:30.868699
 30	cocktail_end_time	What is the end time of your Cocktail/Appetizer service?	time	\N	\N	timing_info	2025-05-20 03:46:35.358241	2025-05-20 03:46:35.358241
 31	main_course_service	Main Course Service	radio_group	\N	\N	service_info	2025-05-20 03:47:14.407906	2025-05-20 03:47:14.407906
@@ -1755,6 +1725,7 @@ COPY public.question_library (id, library_question_key, default_text, question_t
 35	service_style	Service Style	radio_group	{"helperText": null, "placeholder": null, "defaultRequired": false}	[{"label": "Drop-off", "value": "drop-off"}, {"label": "Buffet Standard", "value": "buffet_standard"}, {"label": "Buffet Full Service – no setup", "value": "buffet_full_service_–_no_setup"}, {"label": "Buffet Full Service", "value": "buffet_full_service"}, {"label": "Family Style Service- (not available for Taco Fiesta)", "value": "family_style_service-_(not_available_for_taco_fiesta)"}, {"label": "Plated Dinner", "value": "plated_dinner"}, {"label": "Cocktail Party", "value": "cocktail_party"}, {"label": "Food Truck", "value": "food_truck"}]	service_info	2025-05-20 03:47:36.15069	2025-05-20 13:41:23.437
 13	event_type	Event Type?	radio_group	\N	[{"label": "Wedding", "value": "wedding"}, {"label": "Corporate Event", "value": "corporate_event"}, {"label": "Birthday Party", "value": "birthday_party"}, {"label": "Anniversary", "value": "anniversary"}, {"label": "Holiday Party", "value": "holiday_party"}, {"label": "Graduation", "value": "graduation"}, {"label": "Reunion", "value": "reunion"}, {"label": "Conference", "value": "conference"}, {"label": "Other", "value": "other"}]	basic_info	2025-05-20 03:44:47.783464	2025-05-20 03:44:47.783464
 36	menu_selection	What would like a quote for:	radio_group	{"helperText": null, "placeholder": null, "defaultRequired": false}	[{"label": "Taco Fiesta", "value": "taco_fiesta"}, {"label": "American BBQ", "value": "american_bbq"}, {"label": "A taste of Greece", "value": "a_taste_of_greece"}, {"label": "Kebab Party", "value": "kebab_party"}, {"label": "A taste of Italy", "value": "a_taste_of_italy"}, {"label": "Custom Menu", "value": "custom_menu"}, {"label": "Hor d' oeuvres only (Cocktail party)", "value": "hor_d'_oeuvres_only_(cocktail_party)"}, {"label": "Food Truck", "value": "food_truck"}]	menu_info	2025-05-20 03:47:51.828747	2025-05-20 13:51:11.797
+28	cocktail_hour	Cocktail Hour?	toggle_switch	{"helperText": null, "placeholder": null, "defaultRequired": false}	\N	timing_info	2025-05-20 03:46:25.478677	2025-05-20 22:05:27.211
 58	equipment_rentals	Do you need equipment rentals?	checkbox_group	\N	["Tables ($12 each)", "Chairs ($3 each)", "Linens ($15 each)", "Place settings ($4 per person)", "Glassware ($3 per person)", "Serving equipment ($2 per person)", "None - venue provides all equipment"]	service_info	2025-05-20 04:19:32.586011	2025-05-20 04:19:32.586011
 60	dietary_requirements	Do you have any dietary requirements or allergies we should be aware of?	textarea	\N	[]	menu_info	2025-05-20 04:20:18.249778	2025-05-20 04:20:18.249778
 61	additional_notes	Any additional notes or special requests for your event?	textarea	\N	[]	service_info	2025-05-20 04:20:30.077586	2025-05-20 04:20:30.077586
@@ -1800,11 +1771,7 @@ COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
 odqEPayEvCId8FtCjAayx37nYqS6Edxn	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-20T06:36:08.295Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 06:33:11
-CSOZSXgdUeSH08I5lPL0lIQiFSINRCX4	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:43:40.193Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:43:41
-04gHD9PYFFdsf2-xHOe95Knd0pozXZCD	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:55:06.789Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:55:07
-q5F8B3hBiR45XkZG0RxUzemw1_WZBXsI	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:47:07.709Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:47:08
-zdUC4xTQOk5tg5SgEImAFvrt8QFOsa4e	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T13:33:07.727Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 18:05:17
-hWojm7dk84ALBhHPan0F6VkU9wEDdD3v	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T03:48:38.303Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-21 03:48:39
+zdUC4xTQOk5tg5SgEImAFvrt8QFOsa4e	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-21T13:33:07.727Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-22 04:23:21
 \.
 
 
@@ -1856,14 +1823,14 @@ SELECT pg_catalog.setval('public.events_id_seq', 1, false);
 -- Name: form_page_questions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_page_questions_id_seq', 133, true);
+SELECT pg_catalog.setval('public.form_page_questions_id_seq', 134, true);
 
 
 --
 -- Name: form_pages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.form_pages_id_seq', 35, true);
+SELECT pg_catalog.setval('public.form_pages_id_seq', 36, true);
 
 
 --
@@ -1898,7 +1865,7 @@ SELECT pg_catalog.setval('public.form_submissions_id_seq', 1, false);
 -- Name: forms_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.forms_id_seq', 12, true);
+SELECT pg_catalog.setval('public.forms_id_seq', 14, true);
 
 
 --
@@ -1912,14 +1879,14 @@ SELECT pg_catalog.setval('public.leads_id_seq', 5, true);
 -- Name: library_matrix_columns_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.library_matrix_columns_id_seq', 8, true);
+SELECT pg_catalog.setval('public.library_matrix_columns_id_seq', 9, true);
 
 
 --
 -- Name: library_matrix_rows_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.library_matrix_rows_id_seq', 6, true);
+SELECT pg_catalog.setval('public.library_matrix_rows_id_seq', 7, true);
 
 
 --
@@ -1947,7 +1914,7 @@ SELECT pg_catalog.setval('public.processed_emails_id_seq', 1, false);
 -- Name: question_library_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.question_library_id_seq', 92, true);
+SELECT pg_catalog.setval('public.question_library_id_seq', 93, true);
 
 
 --
