@@ -1534,7 +1534,7 @@ const themeMenuData = {
           diamond: 3
         },
         items: [
-          { id: "gluten_free_bread", name: "Gluten Free Bread ($0.50 / each)", upcharge: 0.5 }
+          { id: "gluten_free_bread", name: "Gluten-Free Bread slices ($0.25 ea)", upcharge: 0.25 }
         ]
       }
     }
