@@ -143,6 +143,11 @@ export const defaultFormValues: EventInquiryFormData = {
   // Event details
   guestCount: 50,
   
+  // Menu selections
+  selectedMenuTheme: "",
+  selectedPackage: "",
+  menuSelections: {},
+  
   // Appetizers
   wantsAppetizers: false,
   appetizers: {},
@@ -153,7 +158,7 @@ export const defaultFormValues: EventInquiryFormData = {
   
   // Desserts
   wantsDesserts: false,
-  dessertSelections: [],
+  dessertSelections: {},
   
   // Special requests
   hasAllergies: false,
