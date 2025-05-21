@@ -588,13 +588,19 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic">Basic</TabsTrigger>
           <TabsTrigger 
             value="options" 
             disabled={!['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)}
           >
             Options
+          </TabsTrigger>
+          <TabsTrigger 
+            value="rules"
+            disabled={questionType === 'header' || questionType === 'text_display'}
+          >
+            Rules
           </TabsTrigger>
           <TabsTrigger 
             value="advanced"
@@ -922,6 +928,156 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     </Button>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+            
+            {/* Rules Tab for conditional logic */}
+            <TabsContent value="rules" className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Conditional Display Rules</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Set up conditions for when this question should appear or be hidden based on answers to other questions.
+                </p>
+                
+                {rules.length === 0 ? (
+                  <div className="text-center p-4 border border-dashed rounded-md">
+                    <p className="text-sm text-muted-foreground">No rules defined yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Add a rule to show or hide this question based on responses to other questions.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {rules.map((rule, idx) => (
+                      <Card key={idx} className="p-3 relative">
+                        <Button
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          className="absolute right-2 top-2 h-6 w-6"
+                          onClick={() => {
+                            const updatedRules = [...rules];
+                            updatedRules.splice(idx, 1);
+                            setRules(updatedRules);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        
+                        <div className="grid gap-3 grid-cols-1">
+                          <div>
+                            <label className="text-xs font-medium">Source Question</label>
+                            <Select
+                              value={rule.sourceQuestionId?.toString() || ""}
+                              onValueChange={(value) => {
+                                const updatedRules = [...rules];
+                                updatedRules[idx].sourceQuestionId = parseInt(value);
+                                // Clear condition value since question changed
+                                updatedRules[idx].conditionValue = "";
+                                setRules(updatedRules);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select question" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(allFormQuestionsData || [])
+                                  .filter(q => q.id !== question?.id) // Don't show current question
+                                  .map(q => (
+                                    <SelectItem key={q.id} value={q.id.toString()}>
+                                      {q.displayTextOverride || q.libraryDefaultText || 'Question ' + q.id}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <label className="text-xs font-medium">Condition</label>
+                            <Select
+                              value={rule.conditionType || ""}
+                              onValueChange={(value) => {
+                                const updatedRules = [...rules];
+                                updatedRules[idx].conditionType = value;
+                                setRules(updatedRules);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select condition" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="equals">Equals</SelectItem>
+                                <SelectItem value="not_equals">Does not equal</SelectItem>
+                                <SelectItem value="contains">Contains</SelectItem>
+                                <SelectItem value="not_contains">Does not contain</SelectItem>
+                                <SelectItem value="is_answered">Is answered</SelectItem>
+                                <SelectItem value="is_not_answered">Is not answered</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          {rule.conditionType && 
+                           rule.conditionType !== 'is_answered' && 
+                           rule.conditionType !== 'is_not_answered' && (
+                            <div>
+                              <label className="text-xs font-medium">Value</label>
+                              <Input
+                                value={rule.conditionValue || ""}
+                                placeholder="Enter value"
+                                onChange={(e) => {
+                                  const updatedRules = [...rules];
+                                  updatedRules[idx].conditionValue = e.target.value;
+                                  setRules(updatedRules);
+                                }}
+                              />
+                            </div>
+                          )}
+                          
+                          <div>
+                            <label className="text-xs font-medium">Action</label>
+                            <Select
+                              value={rule.actionType || ""}
+                              onValueChange={(value) => {
+                                const updatedRules = [...rules];
+                                updatedRules[idx].actionType = value;
+                                setRules(updatedRules);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select action" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="show">Show this question</SelectItem>
+                                <SelectItem value="hide">Hide this question</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setRules([
+                      ...rules, 
+                      {
+                        sourceQuestionId: null,
+                        conditionType: "",
+                        conditionValue: "",
+                        actionType: "show"
+                      }
+                    ]);
+                  }}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Rule
+                </Button>
               </div>
             </TabsContent>
             
