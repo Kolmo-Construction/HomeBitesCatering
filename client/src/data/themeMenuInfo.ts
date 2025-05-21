@@ -63,7 +63,8 @@ export const themeMenuData = {
       }
     ],
     categories: {
-      mexican_proteins: {
+      // Taco Fiesta - Custom
+      taco_proteins: {
         title: "Taco Fiesta - Proteins",
         description: "Select protein options from our Mexican offerings",
         limits: {},
@@ -81,7 +82,7 @@ export const themeMenuData = {
           { id: "roasted_vegetables", name: "Roasted Vegetables", upcharge: 0 }
         ]
       },
-      mexican_sides: {
+      taco_sides: {
         title: "Taco Fiesta - Sides",
         description: "Select side dishes from our Mexican offerings",
         limits: {},
@@ -100,7 +101,7 @@ export const themeMenuData = {
           { id: "vegetarian_empanadas", name: "Vegetarian Empanadas", upcharge: 0 }
         ]
       },
-      mexican_salsas: {
+      taco_salsas: {
         title: "Taco Fiesta - Salsas",
         description: "Select salsas from our Mexican offerings",
         limits: {},
@@ -114,7 +115,7 @@ export const themeMenuData = {
           { id: "creamy_salsa_verde", name: "Creamy Salsa Verde (green sauce)", upcharge: 0 }
         ]
       },
-      mexican_condiments: {
+      taco_condiments: {
         title: "Taco Fiesta - Condiments",
         description: "Select condiments from our Mexican offerings",
         limits: {},
@@ -204,20 +205,6 @@ export const themeMenuData = {
           { id: "fruit_salad", name: "Fruit Salad", upcharge: 0 }
         ]
       },
-      bbq_sauces: {
-        title: "American BBQ - Sauces",
-        description: "Select sauces from our American BBQ offerings",
-        limits: {},
-        items: [
-          { id: "kansas_city_bbq", name: "Kansas City BBQ Sauce", upcharge: 0 },
-          { id: "south_carolina_gold", name: "South Carolina Gold BBQ Sauce", upcharge: 0 },
-          { id: "north_carolina_vinegar", name: "North Carolina Vinegar based BBQ Sauce", upcharge: 0 },
-          { id: "alabama_white", name: "Alabama White BBQ Sauce", upcharge: 0 },
-          { id: "texas_bbq", name: "Texas BBQ Sauce", upcharge: 0 },
-          { id: "very_berry_bbq", name: "Very Berry BBQ Sauce", upcharge: 0 },
-          { id: "smoky_bourbon_bbq", name: "Smoky bourbon BBQ Sauce", upcharge: 0 }
-        ]
-      },
       
       // Greek Menu Items
       greek_mains: {
@@ -257,20 +244,6 @@ export const themeMenuData = {
           { id: "saganaki_cheese", name: "Saganaki Cheese (Family style only)", upcharge: 2.00 },
           { id: "greek_rice_pilaf", name: "Greek Rice Pilaf", upcharge: 0 },
           { id: "baked_vegetables", name: "Baked Vegetables- Briam", upcharge: 0 }
-        ]
-      },
-      greek_salads: {
-        title: "Greek - Salads",
-        description: "Select salads from our Greek menu",
-        limits: {},
-        items: [
-          { id: "salata_horiatiki", name: "Salata Horiatiki", upcharge: 0 },
-          { id: "lahanosalata", name: "Lahanosalata (Greek Coleslaw)", upcharge: 0 },
-          { id: "maroulosalata", name: "Maroulosalata (Greek Romaine Salad)", upcharge: 0 },
-          { id: "patatosalata", name: "Patatosalata", upcharge: 0 },
-          { id: "dakos_bread_salad", name: "Dakos Bread Salad", upcharge: 0 },
-          { id: "garden_salad", name: "Garden Salad", upcharge: 0 },
-          { id: "tabouli", name: "Tabouli", upcharge: 0 }
         ]
       },
       
@@ -838,13 +811,7 @@ export const themeMenuData = {
           { id: "pastitsio", name: "Pastitsio", upcharge: 0 },
           { id: "kotopoulo_lemonato", name: "Kotopoulo lemonato", upcharge: 0 },
           { id: "paidakia", name: "Paidakia", upcharge: 4.00 },
-          { id: "kotsi_arni", name: "Kotsi Arni", upcharge: 0 },
-          { id: "bifteki_gemisto", name: "Bifteki Gemisto", upcharge: 0 },
-          { id: "psari_plaki", name: "Psari Plaki", upcharge: 0 },
-          { id: "brizola_solomou", name: "Brizola Solomou", upcharge: 0 },
-          { id: "bakaliaros_plaki", name: "Bakaliaros Plaki", upcharge: 0 },
-          { id: "aginares_vegan", name: "Aginares -Ala Polita - Vegan", upcharge: 0 },
-          { id: "gemista_vegan", name: "Gemista - Vegan", upcharge: 0 }
+          { id: "kotsi_arni", name: "Kotsi Arni", upcharge: 0 }
         ]
       },
       sides: {
@@ -862,11 +829,7 @@ export const themeMenuData = {
           { id: "fasolakia", name: "Fasolakia", upcharge: 0 },
           { id: "gigandes_plaki", name: "Gigandes Plaki", upcharge: 0 },
           { id: "tyrokroketes", name: "Tyrokroketes", upcharge: 0 },
-          { id: "octapodi", name: "Octapodi (Spanish octopus)", upcharge: 7.00 },
-          { id: "dolmades", name: "Dolmades", upcharge: 0 },
-          { id: "saganaki_cheese", name: "Saganaki Cheese (Family style only)", upcharge: 2.00 },
-          { id: "greek_rice_pilaf", name: "Greek Rice Pilaf", upcharge: 0 },
-          { id: "baked_vegetables", name: "Baked Vegetables- Briam", upcharge: 0 }
+          { id: "octapodi", name: "Octapodi (Spanish octopus)", upcharge: 7.00 }
         ]
       },
       salads: {
@@ -882,9 +845,7 @@ export const themeMenuData = {
           { id: "lahanosalata", name: "Lahanosalata (Greek Coleslaw)", upcharge: 0 },
           { id: "maroulosalata", name: "Maroulosalata (Greek Romaine Salad)", upcharge: 0 },
           { id: "patatosalata", name: "Patatosalata", upcharge: 0 },
-          { id: "dakos_bread_salad", name: "Dakos Bread Salad", upcharge: 0 },
-          { id: "garden_salad", name: "Garden Salad", upcharge: 0 },
-          { id: "tabouli", name: "Tabouli", upcharge: 0 }
+          { id: "dakos_bread_salad", name: "Dakos Bread Salad", upcharge: 0 }
         ]
       }
     }
@@ -892,61 +853,61 @@ export const themeMenuData = {
   
   kebab_party: {
     title: "Kebab Party",
-    description: "A variety of skewered and grilled options from across the Mediterranean",
+    description: "Skewered delights featuring global flavors and grilled perfection",
     packages: [
       {
         id: "bronze",
         name: "Bronze Package",
         price: 29.00,
-        description: "Basic kebab setup",
+        description: "Basic kebab selection",
         minGuestCount: 0,
         limits: {
           proteins: 2,
           sides: 2,
-          salads: 1
+          sauces: 2
         }
       },
       {
         id: "silver",
         name: "Silver Package",
         price: 36.00,
-        description: "Enhanced kebab menu with more variety",
+        description: "Enhanced kebab selection with more variety",
         minGuestCount: 0,
         limits: {
           proteins: 3,
           sides: 3,
-          salads: 2
+          sauces: 3
         }
       },
       {
         id: "gold",
         name: "Gold Package",
-        price: 45.00,
-        description: "Premium kebab menu with maximum variety",
+        price: 42.00,
+        description: "Premium kebab selection with maximum variety",
         minGuestCount: 0,
         limits: {
           proteins: 4,
           sides: 4,
-          salads: 3
+          sauces: 4
         }
       },
       {
         id: "diamond",
         name: "Diamond Package",
-        price: 55.00,
-        description: "Ultimate kebab feast with premium options",
+        price: 52.00,
+        description: "Ultimate kebab feast with maximum selection and premium options",
         minGuestCount: 0,
         limits: {
           proteins: 5,
           sides: 5,
-          salads: 4
+          sauces: 5
         }
       }
     ],
     categories: {
       proteins: {
         title: "Proteins",
-        description: "Select your protein options for kebabs",
+        description: "Select your desired protein options",
         limits: {
           "bronze": 2,
           "silver": 3,
@@ -994,277 +955,6 @@ export const themeMenuData = {
           { id: "muhammara", name: "Muhammara", upcharge: 0 },
           { id: "chimichurri", name: "Chimichurri", upcharge: 0 },
           { id: "romesco", name: "Romesco", upcharge: 0 }
-        ]
-      }
-    }
-  },
-  
-  taste_of_italy: {
-    title: "A Taste of Italy",
-    description: "Authentic Italian cuisine featuring pasta dishes, meats, and more",
-    packages: [
-      {
-        id: "bronze",
-        name: "Bronze Package",
-        price: 32.00,
-        description: "Basic Italian menu",
-        minGuestCount: 0,
-        limits: {
-          mains: 2,
-          sides: 3,
-          pasta: 1,
-          salads: 1
-        }
-      },
-      {
-        id: "silver",
-        name: "Silver Package",
-        price: 38.00,
-        description: "Enhanced Italian menu with more variety",
-        minGuestCount: 0,
-        limits: {
-          mains: 3,
-          sides: 4,
-          pasta: 2,
-          salads: 2
-        }
-      },
-      {
-        id: "gold",
-        name: "Gold Package",
-        price: 45.00,
-        description: "Premium Italian menu with maximum variety",
-        minGuestCount: 0,
-        limits: {
-          mains: 4,
-          sides: 5,
-          pasta: 3,
-          salads: 3
-        }
-      },
-      {
-        id: "diamond",
-        name: "Diamond Package",
-        price: 55.00,
-        description: "Ultimate Italian feast with maximum selection and premium options",
-        minGuestCount: 0,
-        limits: {
-          mains: 5,
-          sides: 6,
-          pasta: 3,
-          salads: 4
-        }
-      }
-    ],
-    categories: {
-      mains: {
-        title: "Mains",
-        description: "Select your desired main dishes",
-        limits: {
-          "bronze": 2,
-          "silver": 3,
-          "gold": 4
-        },
-        items: [
-          { id: "chicken_saltimbocca", name: "Chicken Saltimbocca", upcharge: 0 },
-          { id: "chicken_florentine", name: "Chicken Florentine", upcharge: 0 },
-          { id: "chicken_piccata", name: "Chicken Piccata", upcharge: 0 },
-          { id: "chicken_cacciatore", name: "Chicken Cacciatore", upcharge: 0 },
-          { id: "chicken_parmesan_white", name: "Chicken parmesan White", upcharge: 0 },
-          { id: "chicken_parmesan_red", name: "Chicken Parmesan Red", upcharge: 0 },
-          { id: "chicken_marsala", name: "Chicken Marsala", upcharge: 0 },
-          { id: "chicken_puttanesca", name: "Chicken Puttanesca", upcharge: 0 },
-          { id: "beef_pizzaiola", name: "Beef Pizzaiola", upcharge: 0 },
-          { id: "beef_braciole", name: "Beef Braciole", upcharge: 0 },
-          { id: "lasagna", name: "Lasagna", upcharge: 0 },
-          { id: "osso_bucco", name: "Osso Bucco", upcharge: 8.00 },
-          { id: "brasato_al_barolo", name: "Brasato Al Barolo", upcharge: 0 },
-          { id: "italian_meatballs", name: "Italian Meatballs", upcharge: 0 },
-          { id: "vegetarian_lasagna", name: "Vegetarian Lasagna", upcharge: 0 },
-          { id: "spinach_ricotta_cannelloni", name: "Spinach and Ricotta Cannelloni", upcharge: 0 }
-        ]
-      },
-      sides: {
-        title: "Sides",
-        description: "Select your desired side dishes",
-        limits: {
-          "bronze": 3,
-          "silver": 4,
-          "gold": 5
-        },
-        items: [
-          { id: "rosemary_potatoes", name: "Rosemary roasted Potatoes", upcharge: 0 },
-          { id: "green_beans_almondine", name: "Green Beans Almondine", upcharge: 0 },
-          { id: "baked_cauliflower", name: "Baked Cauliflower with bechamel and Parmesan", upcharge: 0 },
-          { id: "asiago_zucchini", name: "Asiago Zucchini bites", upcharge: 0 },
-          { id: "eggplant_parmesan", name: "Eggplant Parmesan", upcharge: 0 },
-          { id: "cannellini_caponata", name: "Cannellini Beans with caponata", upcharge: 0 },
-          { id: "peas_pancetta", name: "Peas with Pancetta", upcharge: 0 },
-          { id: "tuscan_carrots", name: "Tuscan Roasted Carrots", upcharge: 0 }
-        ]
-      },
-      pasta: {
-        title: "Pasta",
-        description: "Select your desired pasta options",
-        limits: {
-          "bronze": 1,
-          "silver": 2,
-          "gold": 3
-        },
-        items: [
-          { id: "penne_butter", name: "Penne Pasta with butter", upcharge: 0 },
-          { id: "penne_pesto", name: "Penne Pasta with Pesto", upcharge: 0 },
-          { id: "penne_marinara", name: "Penne Pasta with Marinara", upcharge: 0 },
-          { id: "rigatoni_butter", name: "Rigatoni with butter", upcharge: 0 },
-          { id: "rigatoni_pesto", name: "Rigatoni with Pesto", upcharge: 0 },
-          { id: "rigatoni_marinara", name: "Rigatoni with Marinara", upcharge: 0 },
-          { id: "conchiglie_butter", name: "Conchiglie with butter", upcharge: 0 },
-          { id: "conchiglie_pesto", name: "Conchiglie with Pesto", upcharge: 0 },
-          { id: "conchiglie_marinara", name: "Conchiglie with Marinara", upcharge: 0 }
-        ]
-      },
-      salads: {
-        title: "Salads",
-        description: "Select your desired salads",
-        limits: {
-          "bronze": 1,
-          "silver": 2,
-          "gold": 3
-        },
-        items: [
-          { id: "caprese_avocado", name: "Caprese Stuffed Avocado", upcharge: 0 },
-          { id: "panzanella", name: "Panzanella Bread Salad", upcharge: 0 },
-          { id: "italian_cobb", name: "Tossed Italian Cobb Salad", upcharge: 0 },
-          { id: "sicilian_fennel", name: "Sicilian Fennel Salad", upcharge: 0 },
-          { id: "rigatoni_pesto_salad", name: "Rigatoni with Pesto", upcharge: 0 },
-          { id: "roasted_beets_burrata", name: "Roasted Beets with Burrata", upcharge: 0 },
-          { id: "caprese", name: "Caprese", upcharge: 0 },
-          { id: "pasta_salad", name: "Pasta Salad", upcharge: 0 },
-          { id: "tuscan_orzo", name: "Tuscan Orzo Pesto Salad", upcharge: 0 }
-        ]
-      }
-    }
-  },
-  
-  vegan_menu: {
-    title: "Vegan Menu",
-    description: "Delicious plant-based options for your event",
-    packages: [
-      {
-        id: "bronze",
-        name: "Bronze Package",
-        price: 28.00,
-        description: "Basic vegan menu",
-        minGuestCount: 0,
-        limits: {
-          mains: 2,
-          sides: 3,
-          salads: 1
-        }
-      },
-      {
-        id: "silver",
-        name: "Silver Package",
-        price: 34.00,
-        description: "Enhanced vegan menu with more variety",
-        minGuestCount: 0,
-        limits: {
-          mains: 3,
-          sides: 4,
-          salads: 2
-        }
-      },
-      {
-        id: "gold",
-        name: "Gold Package",
-        price: 42.00,
-        description: "Premium vegan menu with maximum variety",
-        minGuestCount: 0,
-        limits: {
-          mains: 4,
-          sides: 5,
-          salads: 3
-        }
-      },
-      {
-        id: "diamond",
-        name: "Diamond Package",
-        price: 52.00,
-        description: "Ultimate vegan feast with premium options",
-        minGuestCount: 0,
-        limits: {
-          mains: 5,
-          sides: 6,
-          salads: 4
-        }
-      }
-    ],
-    categories: {
-      mains: {
-        title: "Mains",
-        description: "Select your desired plant-based main dishes",
-        limits: {
-          "bronze": 2,
-          "silver": 3,
-          "gold": 4
-        },
-        items: [
-          { id: "cabbage_rolls", name: "Cabbage rolls with rice, dried figs, pine nuts and herbs", upcharge: 0 },
-          { id: "eggplant_imam", name: "Eggplant Imam Baildi- Topped with stewed tomato and peppers", upcharge: 0 },
-          { id: "indian_stuffed_peppers", name: "Indian style stuffed Peppers with curried chickpeas", upcharge: 0 },
-          { id: "eggplant_napolean", name: "Eggplant Napolean with roasted red peppers", upcharge: 0 },
-          { id: "artichoke_polita", name: "Artichoke Ala Polita with lemon tahini sauce", upcharge: 0 },
-          { id: "stuffed_portabella", name: "Stuffed Portabella Mushroom with stewed lentils", upcharge: 0 },
-          { id: "wild_rice_squash", name: "Wild Rice Stuffed Acorn Squash", upcharge: 0 },
-          { id: "tofu_vindaloo", name: "Tofu Vindaloo", upcharge: 0 },
-          { id: "greek_stuffed_peppers", name: "Greek style stuffed Peppers with jasmine rice", upcharge: 0 },
-          { id: "vegan_moussaka", name: "Vegan Moussaka with stewed lentils and cauliflower", upcharge: 0 },
-          { id: "stuffed_poblano", name: "Stuffed Poblano peppers with rice and beans", upcharge: 0 }
-        ]
-      },
-      sides: {
-        title: "Sides",
-        description: "Select your desired plant-based side dishes",
-        limits: {
-          "bronze": 3,
-          "silver": 4,
-          "gold": 5
-        },
-        items: [
-          { id: "lemon_potatoes", name: "Lemon Potatoes", upcharge: 0 },
-          { id: "green_beans_almondine", name: "Green Beans Almondine", upcharge: 0 },
-          { id: "fasolakia", name: "Fasolakia", upcharge: 0 },
-          { id: "gigante_beans", name: "Gigante Beans", upcharge: 0 },
-          { id: "vegan_dolmades", name: "Dolmades with bulgur and dried figs", upcharge: 0 },
-          { id: "cannellini_caponata", name: "Cannellini Beans with caponata", upcharge: 0 },
-          { id: "roasted_brussel_sprouts", name: "Roasted Brussel Sprouts with balsamic", upcharge: 0 },
-          { id: "moroccan_cauliflower", name: "Moroccan-style roasted Cauliflower", upcharge: 0 },
-          { id: "tuscan_carrots", name: "Tuscan carrots", upcharge: 0 },
-          { id: "moroccan_wild_rice", name: "Moroccan wild rice", upcharge: 0 },
-          { id: "cilantro_lime_rice", name: "Cilantro-Lime rice", upcharge: 0 },
-          { id: "greek_rice_pilaf", name: "Greek rice pilaf", upcharge: 0 },
-          { id: "southwest_spring_rolls", name: "Southwest style Spring Rolls", upcharge: 0 },
-          { id: "crispy_falafel", name: "Crispy Falafel", upcharge: 0 }
-        ]
-      },
-      salads: {
-        title: "Salads",
-        description: "Select your desired plant-based salads",
-        limits: {
-          "bronze": 1,
-          "silver": 2,
-          "gold": 3
-        },
-        items: [
-          { id: "panzanella", name: "Panzanella Bread Salad", upcharge: 0 },
-          { id: "sicilian_fennel", name: "Sicilian Fennel Salad", upcharge: 0 },
-          { id: "bowtie_pasta", name: "Bowtie Pasta Salad", upcharge: 0 },
-          { id: "tuscan_orzo", name: "Tuscan Orzo Pesto Salad", upcharge: 0 },
-          { id: "garden_salad", name: "Garden Salad", upcharge: 0 },
-          { id: "greek_village", name: "Greek Village Salad", upcharge: 0 },
-          { id: "tomato_cucumber", name: "Tomato - Cucumber salad", upcharge: 0 },
-          { id: "tabouli", name: "Tabouli", upcharge: 0 },
-          { id: "lebanese_potato", name: "Lebanese Potato Salad", upcharge: 0 }
         ]
       }
     }
