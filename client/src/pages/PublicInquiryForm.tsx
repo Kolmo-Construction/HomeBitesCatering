@@ -3148,12 +3148,25 @@ const MenuSelectionStep = ({
     return getCategoryLimits(categoryKey) > 0;
   };
   
-  // Count selected items in a category
-  const getSelectedCount = (categoryKey: string) => {
-    if (!menuSelections || !menuSelections[categoryKey as keyof typeof menuSelections]) {
+  // Get quantity for an item in the menu selections
+  const getItemQuantity = (categoryKey: string, itemId: string): number => {
+    if (!menuSelections || !menuSelections[categoryKey]) {
       return 0;
     }
-    return menuSelections[categoryKey as keyof typeof menuSelections].length;
+    
+    const selectedItems = menuSelections[categoryKey];
+    const item = selectedItems.find(item => item.id === itemId);
+    return item ? (item.quantity || 1) : 0;
+  };
+  
+  // Count selected items in a category
+  const getSelectedCount = (categoryKey: string) => {
+    if (!menuSelections || !menuSelections[categoryKey]) {
+      return 0;
+    }
+    return Array.isArray(menuSelections[categoryKey]) 
+      ? menuSelections[categoryKey].length 
+      : 0;
   };
   
   // Check if selection limit is reached for a category
@@ -3164,24 +3177,39 @@ const MenuSelectionStep = ({
   };
   
   // Handle selection of an item in a category
-  const handleItemSelection = (categoryKey: string, itemId: string, isSelected: boolean) => {
-    const currentSelections = menuSelections[categoryKey as keyof typeof menuSelections] || [];
+  const handleItemSelection = (categoryKey: string, itemId: string, isSelected: boolean, quantity: number = 1) => {
+    // Make sure menuSelections[categoryKey] is initialized as an array
+    const currentSelections = Array.isArray(menuSelections?.[categoryKey]) 
+      ? [...menuSelections[categoryKey]] 
+      : [];
     
-    let newSelections;
+    // Find if item already exists
+    const existingItemIndex = currentSelections.findIndex(item => 
+      typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
+    );
+    
     if (isSelected) {
-      // Add item if not at limit
-      if (!isSelectionLimitReached(categoryKey)) {
-        newSelections = [...currentSelections, itemId];
+      if (existingItemIndex >= 0) {
+        // Update existing item with new quantity
+        currentSelections[existingItemIndex] = {
+          ...currentSelections[existingItemIndex],
+          id: itemId,
+          quantity: quantity
+        };
       } else {
-        // At limit, don't add
-        newSelections = currentSelections;
+        // Add new item if not at limit
+        if (!isSelectionLimitReached(categoryKey)) {
+          currentSelections.push({ id: itemId, quantity: quantity });
+        }
       }
     } else {
       // Remove item
-      newSelections = currentSelections.filter(id => id !== itemId);
+      if (existingItemIndex >= 0) {
+        currentSelections.splice(existingItemIndex, 1);
+      }
     }
     
-    setValue(`menuSelections.${categoryKey}`, newSelections);
+    setValue(`menuSelections.${categoryKey}`, currentSelections);
   };
   
   // Set hors d'oeuvres as the theme if no other theme is selected
@@ -3193,8 +3221,14 @@ const MenuSelectionStep = ({
   
   // Check if an item is selected
   const isItemSelected = (categoryKey: string, itemId: string) => {
-    const currentSelections = menuSelections[categoryKey as keyof typeof menuSelections] || [];
-    return currentSelections.includes(itemId);
+    if (!menuSelections || !menuSelections[categoryKey]) {
+      return false;
+    }
+    
+    const selectedItems = menuSelections[categoryKey];
+    return selectedItems.some(item => 
+      typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
+    );
   };
   
   return (
