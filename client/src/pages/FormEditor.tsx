@@ -316,81 +316,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
   
-  // Get form and page data directly from props/state for conditional logic
-  const formIdFromParams = useParams().formId;
-  
-  // Get all questions from all pages for conditional logic
-  const { data: allFormQuestionsData } = useQuery({
-    queryKey: ['/api/form-builder/forms', formIdFromParams, 'all-questions'],
-    queryFn: async () => {
-      if (!formIdFromParams) return [];
-      
-      // Flatten the array of all page questions
-      const allQuestions = [];
-      
-      // Fetch the form first to get pages
-      const formResponse = await fetch(`/api/form-builder/forms/${formIdFromParams}`);
-      if (!formResponse.ok) return [];
-      
-      const formData = await formResponse.json();
-      
-      // Fetch pages for this form
-      const pagesResponse = await fetch(`/api/form-builder/forms/${formIdFromParams}/pages`);
-      if (!pagesResponse.ok) return [];
-      
-      const pagesData = await pagesResponse.json();
-      
-      // Collect questions from each page
-      for (const page of pagesData || []) {
-        const response = await fetch(`/api/form-builder/pages/${page.id}/questions`);
-        if (!response.ok) continue;
-        
-        const pageQuestions = await response.json();
-        if (Array.isArray(pageQuestions)) {
-          allQuestions.push(...pageQuestions.map(q => ({
-            ...q,
-            pageTitle: page.pageTitle || page.title
-          })));
-        }
-      }
-      
-      return allQuestions;
-    },
-    enabled: !!formIdFromParams
-  });
-  
-  // Get existing rules for this question
-  const { data: questionRules, isLoading: isRulesLoading } = useQuery({
-    queryKey: ['/api/form-builder/questions', question?.id, 'rules'],
-    queryFn: async () => {
-      if (!question?.id) return [];
-      const response = await fetch(`/api/form-builder/questions/${question.id}/rules`);
-      if (!response.ok) {
-        return [];
-      }
-      return await response.json();
-    },
-    enabled: !!question?.id
-  });
-  
-  // State for managing rules
-  const [rules, setRules] = useState([]);
-  
-  // Initialize rules when data is loaded
-  useEffect(() => {
-    if (questionRules && questionRules.length > 0) {
-      // Convert backend rule format to the UI format
-      const formattedRules = questionRules.map(rule => ({
-        sourceQuestionId: rule.triggerFormPageQuestionId,
-        conditionType: rule.conditionType,
-        conditionValue: rule.conditionValue,
-        actionType: rule.actionType
-      }));
-      console.log("Formatted rules for UI:", formattedRules);
-      setRules(formattedRules);
-    }
-  }, [questionRules]);
-  
   // Initialize form for question settings with all override fields
   const questionSettingsSchema = z.object({
     // Basic overrides
@@ -465,9 +390,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   // Handle form submission with all overrides
   const handleSubmit = async (data) => {
-    let rulesTaskSuccess = true;
-    let rulesErrorMessage = "";
-
     try {
       // Handle options overrides for choice-based questions
       if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
@@ -480,120 +402,11 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
         }
       }
       
-      // Save the main question data first
       await onSave(data);
-      
-      // Now save the conditional logic rules separately
-      if (question?.id) {
-        console.log(`Proceeding to save ${rules.length} rules for question ${question.id}`);
-        try {
-          // First get existing rules
-          const getRulesResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`);
-          const existingRules = await getRulesResponse.json();
-          
-          // Delete each existing rule individually
-          let deleteResponse = { ok: true };
-          for (const rule of existingRules) {
-            const ruleId = rule.id;
-            const formId = formIdFromParams; // Get the form ID from URL
-            if (ruleId && formId) {
-              deleteResponse = await fetch(`/api/form-builder/forms/${formId}/rules/${ruleId}`, {
-                method: 'DELETE',
-              });
-              
-              if (!deleteResponse.ok) {
-                console.error(`Failed to delete rule ${ruleId}`);
-                break;
-              }
-            }
-          }
-          
-          if (!deleteResponse.ok) {
-            const errorData = await deleteResponse.json().catch(() => ({ message: "Failed to delete existing rules" }));
-            console.error("Error deleting rules:", errorData);
-            rulesTaskSuccess = false;
-            rulesErrorMessage = errorData.message || "Failed to clear existing rules.";
-          } else {
-            console.log(`Successfully deleted existing rules for question ${question.id}`);
-          }
-          
-          // If deletion was successful (or if there were no rules to delete), save new rules
-          if (rulesTaskSuccess && rules.length > 0) {
-            console.log('CLIENT: Rules state before POSTing:', JSON.stringify(rules, null, 2));
-            console.log(`CLIENT: Attempting to save ${rules.length} rules for question ID: ${question?.id}`);
-            
-            for (const rule of rules) {
-              // Log each rule being processed
-              console.log("CLIENT: Processing rule for POST:", JSON.stringify(rule, null, 2));
-              
-              if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
-                const formId = formIdFromParams;
-                if (!formId) {
-                  console.error("Cannot save rule - missing form ID");
-                  continue;
-                }
-                
-                const rulePayload = {
-                  triggerFormPageQuestionId: rule.sourceQuestionId,
-                  conditionType: rule.conditionType,
-                  conditionValue: rule.conditionType === 'is_answered' || rule.conditionType === 'is_not_answered'
-                    ? null
-                    : (rule.conditionValue || ""),
-                  actionType: rule.actionType,
-                  ruleDescription: `Rule for question ${question.id}`,
-                  executionOrder: 0,
-                  targets: [
-                    { targetType: 'question', targetId: question.id }
-                  ]
-                };
-                console.log(`CLIENT: POSTing rule payload:`, JSON.stringify(rulePayload, null, 2));
-                
-                const ruleResponse = await fetch(`/api/form-builder/forms/${formId}/rules`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(rulePayload),
-                });
-
-                const ruleResponseData = await ruleResponse.json().catch(() => ({ message: `Rule POST failed with status ${ruleResponse.status}` }));
-                if (!ruleResponse.ok) {
-                  console.error("Error saving a rule:", ruleResponseData);
-                  rulesTaskSuccess = false;
-                  rulesErrorMessage = ruleResponseData.message || `Failed to save a rule for question ${question.id}. Status: ${ruleResponse.status}`;
-                  break; // Stop processing further rules if one fails
-                }
-                console.log("Rule created/updated successfully:", ruleResponseData);
-              } else {
-                console.warn("Skipping incomplete rule:", rule);
-              }
-            }
-          } else if (rules.length === 0 && rulesTaskSuccess) {
-            console.log("No rules to save for this question.");
-          }
-        } catch (err) {
-          rulesTaskSuccess = false;
-          rulesErrorMessage = err instanceof Error ? err.message : "An unknown error occurred while managing rules.";
-          console.error("Error in rules processing block:", err);
-        }
-      }
-      
-      // Determine overall success and show appropriate toast
-      if (!rulesTaskSuccess) {
-        toast({
-          variant: "destructive",
-          title: "Rule Saving Error",
-          description: rulesErrorMessage || "Failed to save one or more rules.",
-        });
-        // Main question settings likely saved successfully
-        toast({
-          title: "Question updated (with rule issues)",
-          description: "Main question settings saved, but there was an issue with the rules.",
-        });
-      } else {
-        toast({
-          title: "Question settings updated",
-          description: "All changes, including rules, have been saved successfully.",
-        });
-      }
+      toast({
+        title: "Question updated",
+        description: "The question settings have been updated successfully.",
+      });
     } catch (error) {
       toast({
         variant: "destructive",
@@ -720,19 +533,13 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="basic">Basic</TabsTrigger>
           <TabsTrigger 
             value="options" 
             disabled={!['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)}
           >
             Options
-          </TabsTrigger>
-          <TabsTrigger 
-            value="rules"
-            disabled={questionType === 'header' || questionType === 'text_display'}
-          >
-            Rules
           </TabsTrigger>
           <TabsTrigger 
             value="advanced"
@@ -1060,160 +867,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     </Button>
                   </div>
                 )}
-              </div>
-            </TabsContent>
-            
-            {/* Rules Tab for conditional logic */}
-            <TabsContent value="rules" className="space-y-4">
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Conditional Display Rules</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Set up conditions for when this question should appear or be hidden based on answers to other questions.
-                </p>
-                
-                {rules.length === 0 ? (
-                  <div className="text-center p-4 border border-dashed rounded-md">
-                    <p className="text-sm text-muted-foreground">No rules defined yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Add a rule to show or hide this question based on responses to other questions.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {rules.map((rule, idx) => (
-                      <Card key={idx} className="p-3 relative">
-                        <Button
-                          type="button" 
-                          variant="ghost" 
-                          size="icon"
-                          className="absolute right-2 top-2 h-6 w-6"
-                          onClick={() => {
-                            const updatedRules = [...rules];
-                            updatedRules.splice(idx, 1);
-                            setRules(updatedRules);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        
-                        <div className="grid gap-3 grid-cols-1">
-                          <div>
-                            <label className="text-xs font-medium">Source Question</label>
-                            <Select
-                              value={rule.sourceQuestionId?.toString() || ""}
-                              onValueChange={(value) => {
-                                const updatedRules = [...rules];
-                                updatedRules[idx].sourceQuestionId = parseInt(value);
-                                // Clear condition value since question changed
-                                updatedRules[idx].conditionValue = "";
-                                setRules(updatedRules);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select question" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(allFormQuestionsData || [])
-                                  .filter(q => q.id !== question?.id) // Don't show current question
-                                  .map(q => (
-                                    <SelectItem key={q.id} value={q.id.toString()}>
-                                      {q.displayTextOverride || q.libraryDefaultText || 'Question ' + q.id}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div>
-                            <label className="text-xs font-medium">Condition</label>
-                            <Select
-                              value={rule.conditionType || ""}
-                              onValueChange={(value) => {
-                                const updatedRules = [...rules];
-                                updatedRules[idx].conditionType = value;
-                                setRules(updatedRules);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select condition" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="equals">Equals</SelectItem>
-                                <SelectItem value="not_equals">Does not equal</SelectItem>
-                                <SelectItem value="contains">Contains</SelectItem>
-                                <SelectItem value="does_not_contain">Does not contain</SelectItem>
-                                <SelectItem value="is_filled">Is filled</SelectItem>
-                                <SelectItem value="is_not_filled">Is not filled</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          {rule.conditionType && 
-                           rule.conditionType !== 'is_answered' && 
-                           rule.conditionType !== 'is_not_answered' && (
-                            <div>
-                              <label className="text-xs font-medium">Value</label>
-                              <Input
-                                value={rule.conditionValue || ""}
-                                placeholder="Enter value"
-                                onChange={(e) => {
-                                  const updatedRules = [...rules];
-                                  updatedRules[idx].conditionValue = e.target.value;
-                                  setRules(updatedRules);
-                                }}
-                              />
-                            </div>
-                          )}
-                          
-                          <div>
-                            <label className="text-xs font-medium">Action</label>
-                            <Select
-                              value={rule.actionType || ""}
-                              onValueChange={(value) => {
-                                const updatedRules = [...rules];
-                                updatedRules[idx].actionType = value;
-                                setRules(updatedRules);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select action" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="show_question">Show this question</SelectItem>
-                                <SelectItem value="hide_question">Hide this question</SelectItem>
-                                <SelectItem value="require_question">Make required</SelectItem>
-                                <SelectItem value="unrequire_question">Make optional</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    setRules([
-                      ...rules, 
-                      {
-                        sourceQuestionId: null,
-                        conditionType: "",
-                        conditionValue: "",
-                        actionType: "show"
-                      }
-                    ]);
-                  }}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Rule
-                </Button>
-                
-                {/* Rule save button intentionally removed to avoid duplication with the main form save button */}
               </div>
             </TabsContent>
             
@@ -1720,11 +1373,6 @@ export default function FormEditor() {
       // Invalidate both query key formats to ensure consistent UI updates
       queryClient.invalidateQueries({ queryKey: ['/api/form-builder/pages', selectedPage?.id, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['pageQuestions', selectedPage?.id] });
-      
-      // ADD THIS: Invalidate the rules query for the current question
-      if (variables.questionId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/form-builder/questions', variables.questionId, 'rules'] });
-      }
       
       toast({
         title: "Question updated",

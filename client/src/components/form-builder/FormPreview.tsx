@@ -65,37 +65,9 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
               const questionsData = await response.json();
               console.log(`PREVIEW: Fetched questions for page ${page.id}:`, questionsData);
               
-              // Fetch rules for each question to enable conditional logic
-              const questionsWithRules = await Promise.all(
-                questionsData.map(async (question) => {
-                  try {
-                    const questionId = question.pageQuestionId || question.id;
-                    const rulesResponse = await fetch(`/api/form-builder/questions/${questionId}/rules`);
-                    
-                    if (rulesResponse.ok) {
-                      const rules = await rulesResponse.json();
-                      return {
-                        ...question,
-                        questionKey: `${page.id}_${questionId}`,
-                        rules: rules
-                      };
-                    }
-                  } catch (ruleError) {
-                    console.warn(`Error fetching rules for question ${question.id}:`, ruleError);
-                  }
-                  
-                  // Return the question with an empty rules array if fetch failed
-                  return {
-                    ...question,
-                    questionKey: `${page.id}_${question.pageQuestionId || question.id}`,
-                    rules: []
-                  };
-                })
-              );
-              
               return {
                 ...page,
-                questions: questionsWithRules
+                questions: questionsData
               };
             } catch (err) {
               console.error(`Error fetching questions for page ${page.id}:`, err);
@@ -142,111 +114,27 @@ export function FormPreview({ isOpen, onClose, formData, pages }: FormPreviewPro
   
   // Function to check if a question should be visible based on conditional logic
   const isQuestionVisible = (question: any) => {
-    // Default to visible if no rules apply
-    if (!question.rules || question.rules.length === 0) return true;
+    if (!question.conditionalLogic) return true;
     
-    console.log(`Evaluating visibility for question ${question.id} with ${question.rules.length} rules`);
+    const { targetQuestionKey, operator, value } = question.conditionalLogic;
+    const targetValue = formValues[targetQuestionKey];
     
-    // Variables to track rule evaluation
-    let shouldBeVisible = true; // Default to visible
-    let hasShowRule = false; // Flag to check if we have any "show" rules
-    
-    // Process each rule that affects this question
-    for (const rule of question.rules) {
-      console.log(`Evaluating rule:`, rule);
-      
-      // Find the source question that triggers this rule
-      const sourceQuestion = pagesWithQuestions.flatMap(p => p.questions || []).find(
-        q => q.pageQuestionId === rule.triggerFormPageQuestionId || q.id === rule.triggerFormPageQuestionId
-      );
-      
-      if (!sourceQuestion) {
-        console.log(`Source question not found for rule:`, rule);
-        continue;
-      }
-      
-      console.log(`Source question found:`, sourceQuestion);
-      
-      // Get the source question's current value
-      const sourceKey = sourceQuestion.questionKey || `${sourceQuestion.formPageId || sourceQuestion.pageId}_${sourceQuestion.pageQuestionId || sourceQuestion.id}`;
-      const sourceValue = formValues[sourceKey];
-      
-      console.log(`Source value for ${sourceKey}:`, sourceValue);
-      
-      // Default to not matching if we don't have a value yet
-      let conditionMatched = false;
-      
-      // Check if the condition is met
-      switch (rule.conditionType) {
-        case 'equals':
-          conditionMatched = sourceValue === rule.conditionValue;
-          break;
-        case 'notEquals':
-          conditionMatched = sourceValue !== rule.conditionValue && sourceValue !== undefined;
-          break;
-        case 'contains':
-          if (Array.isArray(sourceValue)) {
-            conditionMatched = sourceValue.includes(rule.conditionValue);
-          } else if (typeof sourceValue === 'string') {
-            conditionMatched = sourceValue.includes(rule.conditionValue);
-          }
-          break;
-        case 'notContains':
-          if (Array.isArray(sourceValue)) {
-            conditionMatched = !sourceValue.includes(rule.conditionValue);
-          } else if (typeof sourceValue === 'string') {
-            conditionMatched = !sourceValue.includes(rule.conditionValue);
-          } else {
-            conditionMatched = true; // If not array or string, it definitely doesn't contain the value
-          }
-          break;
-        case 'greaterThan':
-          conditionMatched = Number(sourceValue) > Number(rule.conditionValue);
-          break;
-        case 'lessThan':
-          conditionMatched = Number(sourceValue) < Number(rule.conditionValue);
-          break;
-        case 'is_answered':
-          conditionMatched = sourceValue !== undefined && sourceValue !== null && sourceValue !== '';
-          break;
-        case 'is_not_answered':
-          conditionMatched = sourceValue === undefined || sourceValue === null || sourceValue === '';
-          break;
-        default:
-          console.warn(`Unknown condition type: ${rule.conditionType}`);
-          conditionMatched = true; // Unknown condition type, default to true
-      }
-      
-      console.log(`Condition matched: ${conditionMatched}`);
-      
-      // Apply the rule based on its action
-      if (rule.actionType === 'show') {
-        hasShowRule = true;
-        if (conditionMatched) {
-          // Show the question if condition matched
-          shouldBeVisible = true;
-          console.log(`Show rule matched, question should be visible`);
-          return true; // Early return since we have a definitive show
-        } else {
-          // If we have any show rules but none matched, hide by default
-          shouldBeVisible = false;
-        }
-      } else if (rule.actionType === 'hide' && conditionMatched) {
-        // Hide the question if condition matched - this takes priority
-        console.log(`Hide rule matched, question should be hidden`);
-        return false; // Early return since we have a definitive hide
-      }
+    switch (operator) {
+      case 'equals':
+        return targetValue === value;
+      case 'notEquals':
+        return targetValue !== value;
+      case 'contains':
+        return Array.isArray(targetValue) && targetValue.includes(value);
+      case 'notContains':
+        return !Array.isArray(targetValue) || !targetValue.includes(value);
+      case 'greaterThan':
+        return Number(targetValue) > Number(value);
+      case 'lessThan':
+        return Number(targetValue) < Number(value);
+      default:
+        return true;
     }
-    
-    // If we have show rules but none matched, hide the question
-    if (hasShowRule && !shouldBeVisible) {
-      console.log(`No show rules matched, question should be hidden`);
-      return false;
-    }
-    
-    // If we've evaluated all rules and no definitive action was taken, default to visible
-    console.log(`No definitive rules applied, defaulting to visible: ${shouldBeVisible}`);
-    return shouldBeVisible;
   };
 
   // Filter questions based on conditional logic
