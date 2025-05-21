@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,16 @@ import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from "@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { questionTypeLabels, getQuestionTypeLabel } from "@shared/form-utils";
+
+// Define types for conditional logic
+interface RuleDefinition {
+  id?: string;
+  targetQuestionId: string;
+  action: 'show' | 'hide';
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'is_empty' | 'is_not_empty';
+  value: string;
+  targetQuestionText?: string; // For display purposes
+}
 
 // Schema for form page definition
 const formPageSchema = z.object({
@@ -315,6 +325,11 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
+  
+  // State for conditional logic rules
+  const [conditionalRules, setConditionalRules] = useState([]);
+  const [isRuleEditorOpen, setIsRuleEditorOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState(null);
   
   // Initialize form for question settings with all override fields
   const questionSettingsSchema = z.object({
