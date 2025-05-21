@@ -1192,46 +1192,75 @@ const themeMenuData = {
     packages: [
       { 
         id: "bronze",
-        name: "Bronze Package", 
-        price: 19.95,
-        description: "2 proteins, 2 sides, salsa bar, chips & soft corn tortillas",
+        name: "Bronze", 
+        price: 28.00,
+        description: "Choose 3 Proteins, 2 Sides, 3 Salsas, 4 Condiments",
         minGuestCount: 50
       },
       { 
         id: "silver",
-        name: "Silver Package", 
-        price: 24.95,
-        description: "3 proteins, 2 sides, 1 salad, salsa bar, chips & soft corn tortillas",
+        name: "Silver", 
+        price: 34.00,
+        description: "Choose 4 Proteins, 3 Sides, 4 Salsas, 6 Condiments",
         minGuestCount: 0
       },
       { 
         id: "gold",
-        name: "Gold Package", 
-        price: 29.95,
-        description: "4 proteins, 3 sides, 1 salad, salsa bar, chips & soft corn tortillas",
+        name: "Gold", 
+        price: 40.00,
+        description: "Choose 4 Proteins, 4 Sides, 4 Salsas, 6 Condiments",
         minGuestCount: 0
       },
       { 
         id: "diamond",
-        name: "Diamond Package", 
-        price: 34.95,
-        description: "5 proteins, 3 sides, 2 salads, enhanced salsa bar, chips & soft corn tortillas",
+        name: "Diamond", 
+        price: 46.00,
+        description: "Choose 5 Proteins, 5 Sides, 5 Salsas, 8 Condiments",
         minGuestCount: 0
       }
     ],
     categories: {
       proteins: {
         title: "Proteins",
+        description: "Select your protein options",
         items: [
-          { id: "chicken_tinga", name: "Chicken Tinga", upcharge: 0 },
-          { id: "pork_carnitas", name: "Pork Carnitas", upcharge: 0 },
-          { id: "ground_beef", name: "Ground Beef", upcharge: 0 },
           { id: "barbacoa", name: "Barbacoa", upcharge: 0 },
-          { id: "grilled_chicken", name: "Grilled Chicken", upcharge: 0 },
-          { id: "flank_steak", name: "Flank Steak Fajitas", upcharge: 2.00 },
-          { id: "shrimp", name: "Shrimp", upcharge: 3.00 },
-          { id: "fish", name: "Fish (Grilled or Fried)", upcharge: 2.00 },
-          { id: "vegetarian", name: "Vegetarian Option (Cauliflower)", upcharge: 0 }
+          { id: "flank_steak", name: "Flank steak Fajitas", upcharge: 2.00 },
+          { id: "ground_beef", name: "Ground Beef", upcharge: 0 },
+          { id: "pork_carnitas", name: "Pork Carnitas", upcharge: 0 },
+          { id: "pork_belly", name: "Pork Belly", upcharge: 0 },
+          { id: "chorizo", name: "Chorizo", upcharge: 0 },
+          { id: "beef_birria", name: "Beef Birria", upcharge: 0 },
+          { id: "mexican_chicken", name: "Mexican Chicken", upcharge: 0 },
+          { id: "cod", name: "Cod", upcharge: 0 },
+          { id: "shrimp", name: "Shrimp", upcharge: 1.50 },
+          { id: "tofu", name: "Tofu (V)", upcharge: 0 },
+          { id: "roasted_vegetables", name: "Roasted Vegetables (V)", upcharge: 0 },
+          { id: "escabeche", name: "Escabeche - House-made picked vegetable medley (V)", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 3,
+          "silver": 4,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      sides: {
+        title: "Sides",
+        description: "Select your side dishes",
+        items: [
+          { id: "refried_beans", name: "Refried Beans", upcharge: 0 },
+          { id: "street_corn", name: "Mexican Street corn (Elotes)", upcharge: 0 },
+          { id: "queso_dip", name: "Queso Dip", upcharge: 0 },
+          { id: "chorizo_queso", name: "Chorizo Queso Dip", upcharge: 0.50 },
+          { id: "poblano_peppers", name: "Stuffed Poblano peppers", upcharge: 1.00 },
+          { id: "mexican_rice", name: "Mexican Rice", upcharge: 0 },
+          { id: "cilantro_lime_rice", name: "Cilantro Lime Rice", upcharge: 0 },
+          { id: "rice_beans", name: "Rice and Beans", upcharge: 0 },
+          { id: "cornbread", name: "Jalapeno cornbread", upcharge: 0 },
+          { id: "grilled_vegetables", name: "Grilled Vegetables", upcharge: 0 },
+          { id: "mexican_slaw", name: "Mexican Slaw with Mango", upcharge: 0 },
+          { id: "vegetarian_empanadas", name: "Vegetarian Empanadas", upcharge: 1.50 }
         ],
         limits: {
           "bronze": 2,
@@ -1240,54 +1269,50 @@ const themeMenuData = {
           "diamond": 5
         }
       },
-      sides: {
-        title: "Sides",
-        items: [
-          { id: "mexican_rice", name: "Mexican Rice", upcharge: 0 },
-          { id: "cilantro_lime_rice", name: "Cilantro Lime Rice", upcharge: 0 },
-          { id: "refried_beans", name: "Refried Beans", upcharge: 0 },
-          { id: "black_beans", name: "Black Beans", upcharge: 0 },
-          { id: "elote", name: "Mexican Street Corn (Elote)", upcharge: 1.50 },
-          { id: "guacamole", name: "Guacamole", upcharge: 2.00 },
-          { id: "queso", name: "Queso", upcharge: 1.50 }
-        ],
-        limits: {
-          "bronze": 2,
-          "silver": 2,
-          "gold": 3,
-          "diamond": 3
-        }
-      },
-      salads: {
-        title: "Salads",
-        items: [
-          { id: "mexican_caesar", name: "Mexican Caesar Salad", upcharge: 0 },
-          { id: "southwest", name: "Southwest Salad", upcharge: 0 },
-          { id: "mixed_green", name: "Mixed Green Salad", upcharge: 0 },
-          { id: "cucumber_tomato", name: "Cucumber & Tomato Salad", upcharge: 0 }
-        ],
-        limits: {
-          "bronze": 0,
-          "silver": 1,
-          "gold": 1,
-          "diamond": 2
-        }
-      },
       salsas: {
         title: "Salsas",
+        description: "Select your salsa varieties",
         items: [
-          { id: "pico", name: "Pico de Gallo", upcharge: 0 },
-          { id: "salsa_verde", name: "Salsa Verde", upcharge: 0 },
-          { id: "chipotle", name: "Chipotle Salsa", upcharge: 0 },
-          { id: "roja", name: "Salsa Roja", upcharge: 0 },
-          { id: "corn", name: "Corn Salsa", upcharge: 0 },
-          { id: "mango", name: "Mango Salsa", upcharge: 1.00 }
+          { id: "pico_de_gallo", name: "Classic Pico de Gallo", upcharge: 0 },
+          { id: "mango_salsa", name: "Fresh Mango Salsa", upcharge: 0 },
+          { id: "pineapple_habanero", name: "Pineapple Habanero Salsa", upcharge: 0 },
+          { id: "cucumber_apple", name: "Cucumber & Apple Salsa", upcharge: 0 },
+          { id: "jicama_papaya", name: "Jicama and Papaya Salsa", upcharge: 0 },
+          { id: "salsa_roja", name: "Salsa Roja (red sauce)", upcharge: 0 },
+          { id: "salsa_verde", name: "Salsa Verde (green sauce)", upcharge: 0 },
+          { id: "creamy_salsa_verde", name: "Creamy Salsa Verde (green sauce)", upcharge: 0 },
+          { id: "salsa_macha", name: "Salsa Macha (contains peanuts and sesame seeds)", upcharge: 0 }
         ],
         limits: {
-          "bronze": 2,
-          "silver": 3,
+          "bronze": 3,
+          "silver": 4,
           "gold": 4,
-          "diamond": 6
+          "diamond": 5
+        }
+      },
+      condiments: {
+        title: "Condiments",
+        description: "Select your condiment options",
+        items: [
+          { id: "shredded_cheese", name: "Shredded cheese", upcharge: 0 },
+          { id: "vegan_cheese", name: "Shredded vegan cheese", upcharge: 0.50 },
+          { id: "onions", name: "Diced Onions", upcharge: 0 },
+          { id: "lime_wedges", name: "Lime wedges", upcharge: 0 },
+          { id: "jalapenos", name: "Jalapeños", upcharge: 0 },
+          { id: "sour_cream", name: "Sour Cream", upcharge: 0 },
+          { id: "bell_peppers", name: "Diced bell peppers", upcharge: 0 },
+          { id: "guacamole", name: "Guacamole", upcharge: 1.00 },
+          { id: "fire_roasted_peppers", name: "Fire roasted bell peppers", upcharge: 0 },
+          { id: "radish", name: "Sliced radish", upcharge: 0 },
+          { id: "cilantro", name: "Cilantro", upcharge: 0 },
+          { id: "pickled_cabbage", name: "Pickled cabbage", upcharge: 0 },
+          { id: "escabeche_condiment", name: "Escabeche - House-made picked vegetable medley", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 4,
+          "silver": 6,
+          "gold": 6,
+          "diamond": 8
         }
       }
     }
