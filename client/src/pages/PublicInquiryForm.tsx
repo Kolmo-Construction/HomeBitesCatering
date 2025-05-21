@@ -231,7 +231,7 @@ const PublicFormHeader = () => {
   return (
     <div className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 mb-8">
       <div className="container mx-auto">
-        <h1 className="text-5xl font-extrabold mb-4 text-center">Elite Catering Services</h1>
+        <h1 className="text-5xl font-extrabold mb-4 text-center">Home Bites Catering Services</h1>
         <p className="text-xl text-center max-w-2xl mx-auto">
           Exceptional cuisine for extraordinary moments
         </p>
@@ -3685,7 +3685,7 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
   return (
     <>
       <Helmet>
-        <title>Event Inquiry | Elite Catering Services</title>
+        <title>Event Inquiry | Home Bites Catering Services</title>
         <meta name="description" content="Tell us about your event and get a personalized catering quote. We offer services for weddings, corporate events, birthdays, and more special occasions." />
       </Helmet>
       
