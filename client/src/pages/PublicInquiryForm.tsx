@@ -2425,7 +2425,91 @@ const calculateCategoryTotal = (category: any, selections: any): number => {
   return total;
 };
 
-// Step 5: Appetizers & Hors d'oeuvres Selection Component
+// Step 5: Appetizers Question Step
+const AppetizersQuestionStep = ({ 
+  onPrevious, 
+  onNext 
+}: { 
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control, watch, setValue } = useFormContext<EventInquiryFormData>();
+  const wantsAppetizers = watch("wantsAppetizers");
+  
+  // Handle appetizer selection
+  const handleAppetizerSelection = (value: boolean) => {
+    setValue("wantsAppetizers", value);
+  };
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Appetizers</h2>
+        <p className="text-lg text-gray-600">
+          Would you like to add any appetizers to your quote?
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card 
+            className={`
+              overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+              ${wantsAppetizers ? 'ring-4 ring-primary ring-offset-2' : ''}
+            `}
+            onClick={() => handleAppetizerSelection(true)}
+          >
+            <CardContent className="p-6 text-center">
+              <div className="mb-4 flex justify-center">
+                <Check className={`h-16 w-16 ${wantsAppetizers ? 'text-primary' : 'text-gray-300'}`} />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Yes</h3>
+              <p className="text-gray-600">I would like to add appetizers to my event.</p>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`
+              overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+              ${wantsAppetizers === false ? 'ring-4 ring-primary ring-offset-2' : ''}
+            `}
+            onClick={() => handleAppetizerSelection(false)}
+          >
+            <CardContent className="p-6 text-center">
+              <div className="mb-4 flex justify-center">
+                <X className={`h-16 w-16 ${wantsAppetizers === false ? 'text-primary' : 'text-gray-300'}`} />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No</h3>
+              <p className="text-gray-600">I don't need appetizers for this event.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onPrevious}
+          className="flex items-center"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onNext}
+          className="flex items-center"
+        >
+          Next <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Step 6: Appetizers & Hors d'oeuvres Selection Component
 const AppetizersStep = ({ 
   onPrevious,
   onNext 
