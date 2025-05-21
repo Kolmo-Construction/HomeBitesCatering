@@ -1,9 +1,15 @@
-import React from "react";
+import * as React from "react";
 import { Calendar, Users, Gift, Cake, Truck, Wine, Utensils } from "lucide-react";
-import { EventTypeCard } from "./types";
+import type { EventType } from "./types";
 
 // Event type details including description and icon
-export const eventTypes: EventTypeCard[] = [
+export const eventTypes: Array<{
+  type: EventType;
+  description: string;
+  icon: JSX.Element;
+  gradient: string;
+  image?: string;
+}> = [
   {
     type: "Wedding",
     description: "Elegant food service for your special day.",

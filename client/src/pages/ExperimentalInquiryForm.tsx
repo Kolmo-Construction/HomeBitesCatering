@@ -38,201 +38,21 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
-// Define event types
-type EventType = 
-  | "Wedding" 
-  | "Corporate" 
-  | "Engagement" 
-  | "Birthday" 
-  | "Food Truck" 
-  | "Mobile Bartending" 
-  | "Other Private Party";
-
-// Form steps definition
-type FormStep = 
-  | "eventType" 
-  | "basicInfo" 
-  | "eventDetails" 
-  | "menuSelection" 
-  | "appetizerQuestion" 
-  | "appetizers" 
-  | "desserts" 
-  | "beverages"
-  | "equipment"
-  | "review";
-
-// Dessert lot sizes for quantity selection
-type DessertLotSize = 36 | 48 | 72 | 96 | 144;
-
-// Import dessert-related data from external file
+// Import data types and external data files
+import type { 
+  EventType, 
+  FormStep, 
+  DessertLotSize, 
+  DessertItem, 
+  EventInquiryFormData 
+} from "../data/experimental-inquiry/types";
 import { dessertItems, dessertLotSizes } from "../data/experimental-inquiry/desserts";
-import type { DessertItem } from "../data/experimental-inquiry/types";
+import { eventTypes } from "../data/experimental-inquiry/eventTypes";
+import { steps } from "../data/experimental-inquiry/formSteps";
+import { serviceStyleOptions, themeOptions } from "../data/experimental-inquiry/formOptions";
+import { themeMenuData } from "../data/experimental-inquiry/themeMenuData";
 
-// Event type details including description and icon
-const eventTypes: {
-  type: EventType;
-  description: string;
-  icon: React.ReactNode;
-  gradient: string;
-  image?: string;
-}[] = [
-  {
-    type: "Wedding",
-    description: "Elegant food service for your special day.",
-    icon: <Calendar className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-pink-500 to-rose-500",
-  },
-  {
-    type: "Corporate",
-    description: "Professional catering for business events.",
-    icon: <Users className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-blue-500 to-indigo-600",
-  },
-  {
-    type: "Engagement",
-    description: "Celebrate your engagement with delicious food.",
-    icon: <Gift className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-purple-500 to-pink-500",
-  },
-  {
-    type: "Birthday",
-    description: "Make your birthday celebration memorable.",
-    icon: <Cake className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-amber-500 to-orange-500",
-  },
-  {
-    type: "Food Truck",
-    description: "Mobile food service for any outdoor event.",
-    icon: <Truck className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-green-500 to-emerald-600",
-  },
-  {
-    type: "Mobile Bartending",
-    description: "Professional bartending services at your venue.",
-    icon: <Wine className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-violet-500 to-purple-600",
-  },
-  {
-    type: "Other Private Party",
-    description: "Custom catering for your unique gathering.",
-    icon: <Utensils className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-teal-500 to-cyan-600",
-  },
-];
-
-// Define the form data type
-type EventInquiryFormData = {
-  // Step 1: Event Type
-  eventType: EventType | null;
-  
-  // Step 2: Basic Information
-  companyName?: string;
-  billingAddress: {
-    street: string;
-    street2?: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  contactName: {
-    firstName: string;
-    lastName: string;
-  };
-  email: string;
-  phone?: string;
-  eventDate: string;
-  hasPromoCode: boolean;
-  promoCode?: string;
-  
-  // Step 3: Event Details & Venue
-  venueSecured: boolean;
-  venueName?: string;
-  venueLocation?: {
-    street: string;
-    street2?: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  eventStartTime?: string;
-  eventEndTime?: string;
-  ceremonyStartTime?: string;
-  ceremonyEndTime?: string;
-  setupBeforeCeremony?: boolean;
-  hasCocktailHour: boolean;
-  cocktailStartTime?: string;
-  cocktailEndTime?: string;
-  hasMainCourse: boolean;
-  foodServiceStartTime?: string;
-  foodServiceEndTime?: string;
-  guestCount: number;
-  serviceStyle: string;
-  serviceDuration?: number;
-  laborHours?: number;
-  requestedTheme: string;
-  
-  // Step 4: Menu Selection
-  selectedPackage?: string;
-  menuSelections: {
-    proteins: string[];
-    sides: string[];
-    salads: string[];
-    salsas: string[];
-    desserts: string[];
-    addons: string[];
-    [key: string]: Array<{id: string, quantity: number}> | string[];
-  };
-  
-  // Step 5: Appetizer Question
-  wantsAppetizers: boolean;
-  
-  // Step 6: Appetizers
-  appetizerService?: "stationary" | "passed";
-  appetizers: Record<string, { name: string, quantity: number, price: number }[]>;
-  
-  // Hors d'oeuvres selections with matrix selection
-  horsDoeurvesSelections: {
-    serviceStyle?: "stationary" | "passed";
-    categories: Record<string, {
-      items: Record<string, {
-        name: string;
-        price: number;
-        quantity: 24 | 36 | 48 | 96 | 144 | null;
-      }>;
-    }>;
-  };
-  
-  // Step 6: Desserts
-  dessertSelections: Record<string, number>;
-  
-  // Step 7: Beverages
-  beverageServiceType?: "alcoholic" | "non_alcoholic" | "both";
-  bartendingServiceType?: "dry_hire" | "wet_hire";
-  servingAlcohol: string[];
-  additionalCocktails: boolean;
-  additionalCocktailsCount?: number;
-  liquorQuality?: "well" | "mid_shelf" | "top_shelf";
-  spiritBrands?: string;
-  barEquipment: Record<string, number>;
-  nonAlcoholicBeverages: Record<string, string>;
-  tableWaterService: boolean;
-  
-  // Step 8: Equipment
-  equipment: {
-    furniture: Record<string, number>;
-    linens: Record<string, number>;
-    servingWare: Record<string, number>;
-  };
-  
-  // Step 9: Notes & Final Review
-  adminFee?: number;
-  otherFeesDescription?: string;
-  otherFeesAmount?: number;
-  dietaryNotes?: string;
-  beverageNotes?: string;
-  specialRequests?: string;
-  generalNotes?: string;
-};
+// Using the EventInquiryFormData type imported from types.ts
 
 // Experimental Form Header component
 const PublicFormHeader = () => {
@@ -1499,7 +1319,8 @@ const EventDetailsStep = ({
 };
 
 // Menu data for different themes
-const themeMenuData = {
+// Using imported themeMenuData from external file
+const unusedVariable = {
   custom_menu: {
     title: "Custom Menu - Flexible Selection",
     description: "Build your own menu by selecting items from different cuisine styles",
@@ -4511,19 +4332,6 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
   );
   
   // Calculate step number and total steps
-  const steps: FormStep[] = [
-    "eventType", 
-    "basicInfo", 
-    "eventDetails", 
-    "menuSelection", // Keep menuSelection as step 4 (for regular themes)
-    "appetizerQuestion", // New step to ask if user wants appetizers
-    "appetizers",    // Only show if user wants appetizers
-    "desserts", 
-    "beverages",
-    "equipment",
-    "review"
-  ];
-  
   const currentStepNumber = steps.indexOf(currentStep) + 1;
   const totalSteps = steps.length;
   

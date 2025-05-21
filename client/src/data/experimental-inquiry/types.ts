@@ -35,7 +35,7 @@ export type DessertItem = {
 export type EventTypeCard = {
   type: EventType;
   description: string;
-  icon: React.ReactNode;
+  icon: JSX.Element;
   gradient: string;
   image?: string;
 };
