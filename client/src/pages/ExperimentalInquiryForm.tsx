@@ -49,6 +49,7 @@ import {
 // Import externalized data
 import { dessertItems, dessertLotSizes } from "@/data/dessertData";
 import { eventTypes, mapUrlToEventType, validateEventType } from "@/data/event-types";
+import { appetizerData, horsDoeurvesData } from "@/data/appetizerInfo";
 
 // Using EventInquiryFormData imported from form-types.ts
 
@@ -583,122 +584,9 @@ const DessertsStep = ({
   );
 };
 
-// Appetizer data for standard appetizers
-const appetizerData = {
-  categories: [
-    {
-      id: "tea_sandwiches",
-      name: "Tea Sandwiches",
-      note: "Offered in lots of 36",
-      items: [
-        { id: "cucumber", name: "Cucumber & Cream Cheese", price: 1.95 },
-        { id: "egg_salad", name: "Egg Salad", price: 1.95 },
-        { id: "turkey", name: "Turkey & Cheese", price: 1.95 },
-        { id: "ham", name: "Ham & Cheese", price: 1.95 },
-        { id: "chicken_salad", name: "Chicken Salad", price: 1.95 }
-      ],
-      lotSizes: [36, 48, 96, 144]
-    },
-    {
-      id: "shooters",
-      name: "Shooters",
-      note: "Offered in lots of 24",
-      items: [
-        { id: "gazpacho", name: "Gazpacho", price: 2.50 },
-        { id: "shrimp", name: "Shrimp Cocktail", price: 3.25 },
-        { id: "ceviche", name: "Ceviche", price: 3.50 },
-        { id: "bloody_mary", name: "Bloody Mary", price: 3.00 }
-      ],
-      lotSizes: [24, 48, 72, 96]
-    },
-    {
-      id: "canapes",
-      name: "Canapes",
-      note: "Offered in lots of 24",
-      items: [
-        { id: "bruschetta", name: "Bruschetta", price: 2.25 },
-        { id: "endive", name: "Endive with Blue Cheese & Walnuts", price: 2.50 },
-        { id: "smoked_salmon", name: "Smoked Salmon on Crostini", price: 3.00 },
-        { id: "prosciutto", name: "Prosciutto-Wrapped Melon", price: 2.75 }
-      ],
-      lotSizes: [24, 48, 72, 96]
-    },
-    {
-      id: "spreads",
-      name: "Spreads Platter",
-      note: "Select 3 spreads",
-      items: [
-        { id: "hummus", name: "Classic Hummus", price: 0 },
-        { id: "baba_ganoush", name: "Baba Ganoush", price: 0 },
-        { id: "tzatziki", name: "Tzatziki", price: 0 },
-        { id: "spinach_dip", name: "Spinach & Artichoke Dip", price: 0 },
-        { id: "olive_tapenade", name: "Olive Tapenade", price: 0 },
-        { id: "guacamole", name: "Guacamole", price: 0 }
-      ],
-      servingSizes: [24, 36, 48, 60],
-      selectLimit: 3,
-      basePrice: 4.50 // per person
-    }
-  ]
-};
+// Using appetizerData imported from appetizerInfo.ts
 
-// Hors d'oeuvres data for matrix selection
-const horsDoeurvesData = {
-  categories: [
-    {
-      id: "tea_sandwiches",
-      name: "Tea Sandwiches",
-      description: "Offered in lots of 48",
-      lotSizes: [36, 48, 96, 144],
-      items: [
-        { id: "pate_pickled_veg", name: "Pate with pickled veg", price: 1.95 },
-        { id: "cream_cheese_shrimp", name: "Cream Cheese and Shrimp", price: 2.50 },
-        { id: "blt", name: "BLT - (Bacon Lettuce & Tomato)", price: 1.95 },
-        { id: "caprese", name: "Caprese (Mozzarella, Tomato, & Basil)", price: 1.95 },
-        { id: "gravlax", name: "Gravlax, Cream Cheese & Cucumber", price: 2.75 },
-        { id: "prosciutto_fig", name: "Prosciutto-Fig", price: 2.75 },
-        { id: "crab_salad", name: "Crab Salad", price: 3.00 },
-        { id: "chicken_cranberry", name: "Chicken Cranberry", price: 2.00 },
-        { id: "miso_egg_salad", name: "Miso egg salad", price: 2.25 }
-      ]
-    },
-    {
-      id: "shooters",
-      name: "Shooters",
-      description: "Offered in lots of 24",
-      lotSizes: [24, 48, 72, 96],
-      items: [
-        { id: "chicken_satay", name: "Chicken Satay", price: 2.45 },
-        { id: "greek_village", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
-        { id: "gazpacho_shrimp", name: "Gazpacho with shrimp", price: 2.75 },
-        { id: "cucumber_jalapeno", name: "Chilled Cucumber/Jalapeno with shrimp", price: 2.75 },
-        { id: "bloody_mary_lobster", name: "Bloody Mary with lobster (non-alcoholic)", price: 4.75 },
-        { id: "roasted_beet", name: "Roasted beet Vichyssoise with green bean", price: 2.45 },
-        { id: "chilled_peach", name: "Chilled peach soup with Gravlax", price: 2.75 },
-        { id: "avocado_soup", name: "Chilled avocado soup with crab and pico", price: 3.75 }
-      ]
-    },
-    {
-      id: "mini_skewers",
-      name: "Mini Skewers",
-      description: "Offered in lots of 24",
-      lotSizes: [24, 48, 72, 96],
-      items: [
-        { id: "korean_bbq", name: "Korean BBQ pork belly", price: 2.75 },
-        { id: "greek_village_skewer", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
-        { id: "chicken_teriyaki", name: "Chicken Teriyaki", price: 2.75 },
-        { id: "moroccan_flank", name: "Grilled Moroccan style Flank steak", price: 2.75 },
-        { id: "mediterranean_shrimp", name: "Mediterranean style shrimp", price: 2.75 },
-        { id: "caprese_skewer", name: "Caprese - Tomato, Basil and Mozzarella - cold", price: 2.25 },
-        { id: "prosciutto_melon", name: "Prosciutto, Melon and Basil - cold", price: 2.75 },
-        { id: "tofu_hoisin", name: "Tofu with Hoisin plum sauce", price: 2.25 },
-        { id: "antipasto_bites", name: "Antipasto Bites", price: 2.75 }
-      ]
-    },
-    {
-      id: "canapes",
-      name: "Canapes",
-      description: "Offered in lots of 48",
+// Dessert Matrix component
       lotSizes: [48, 96, 144],
       items: [
         { id: "watermelon_radish", name: "Watermelon radish chips with apple chutney", price: 2.75 },
