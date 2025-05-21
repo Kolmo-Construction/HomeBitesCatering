@@ -768,6 +768,16 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   return (
     <div className="p-4 h-full overflow-y-auto">
+      {/* Rule Editor Dialog */}
+      <RuleEditorDialog
+        isOpen={isRuleEditorOpen}
+        onOpenChange={setIsRuleEditorOpen}
+        initialRule={editingRule}
+        onSave={handleSaveRule}
+        questionId={question?.id}
+        availableQuestions={allQuestionsInForm}
+      />
+      
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Question Settings</h3>
