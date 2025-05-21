@@ -378,8 +378,16 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
   
   // Initialize rules when data is loaded
   useEffect(() => {
-    if (questionRules) {
-      setRules(questionRules);
+    if (questionRules && questionRules.length > 0) {
+      // Convert backend rule format to the UI format
+      const formattedRules = questionRules.map(rule => ({
+        sourceQuestionId: rule.triggerFormPageQuestionId,
+        conditionType: rule.conditionType,
+        conditionValue: rule.conditionValue,
+        actionType: rule.actionType
+      }));
+      console.log("Formatted rules for UI:", formattedRules);
+      setRules(formattedRules);
     }
   }, [questionRules]);
   
