@@ -1476,9 +1476,11 @@ const AppetizersStep = ({
   
   // Get quantity for an item
   const getItemQuantity = (categoryId: string, itemName: string): number => {
-    if (!appetizers || !appetizers[categoryId]) return 0;
+    if (!appetizers || !appetizers[categoryId] || !Array.isArray(appetizers[categoryId])) {
+      return 0;
+    }
     
-    const item = appetizers[categoryId].find(item => item.name === itemName);
+    const item = appetizers[categoryId].find(item => item && item.name === itemName);
     return item ? item.quantity : 0;
   };
   
@@ -1530,15 +1532,15 @@ const AppetizersStep = ({
   // Check if a spread is selected
   const isSpreadSelected = (itemName: string): boolean => {
     const categoryId = "spreads";
-    if (!appetizers || !appetizers[categoryId]) return false;
+    if (!appetizers || !appetizers[categoryId] || !Array.isArray(appetizers[categoryId])) return false;
     
-    return appetizers[categoryId].some(item => item.name === itemName);
+    return appetizers[categoryId].some(item => item && item.name === itemName);
   };
   
   // Count selected spreads
   const getSelectedSpreadsCount = (): number => {
     const categoryId = "spreads";
-    if (!appetizers || !appetizers[categoryId]) return 0;
+    if (!appetizers || !appetizers[categoryId] || !Array.isArray(appetizers[categoryId])) return 0;
     
     return appetizers[categoryId].length;
   };
@@ -1546,10 +1548,12 @@ const AppetizersStep = ({
   // Get the spreads serving size
   const getSpreadsServingSize = (): number => {
     const categoryId = "spreads";
-    if (!appetizers || !appetizers[categoryId] || appetizers[categoryId].length === 0) return 0;
+    if (!appetizers || !appetizers[categoryId] || !Array.isArray(appetizers[categoryId]) || appetizers[categoryId].length === 0) {
+      return 24; // Default to first serving size
+    }
     
     // All spreads have the same quantity/serving size
-    return appetizers[categoryId][0].quantity;
+    return appetizers[categoryId][0].quantity || 24;
   };
   
   // Check if spreads selection limit is reached
@@ -1558,7 +1562,8 @@ const AppetizersStep = ({
     const spreadsCategory = appetizerData.categories.find(cat => cat.id === categoryId);
     if (!spreadsCategory) return false;
     
-    return getSelectedSpreadsCount() >= spreadsCategory.selectLimit;
+    const selectedCount = getSelectedSpreadsCount();
+    return selectedCount >= (spreadsCategory.selectLimit || 3);
   };
   
   return (
@@ -1683,7 +1688,8 @@ const AppetizersStep = ({
                         </Label>
                         
                         <Select
-                          value={String(getItemQuantity(category.id, item.name))}
+                          defaultValue="0"
+                          value={String(getItemQuantity(category.id, item.name) || 0)}
                           onValueChange={(value) => handleQuantityChange(category.id, item.id, item.name, Number(value))}
                         >
                           <SelectTrigger className="w-[100px]">
@@ -1691,11 +1697,13 @@ const AppetizersStep = ({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="0">None</SelectItem>
-                            {category.lotSizes.map((size) => (
+                            {category.lotSizes?.map((size) => (
                               <SelectItem key={size} value={String(size)}>
                                 {size}
                               </SelectItem>
-                            ))}
+                            )) || (
+                              <SelectItem value="24">24</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         
@@ -2026,7 +2034,14 @@ export default function PublicInquiryForm() {
         desserts: [],
         addons: []
       },
-      appetizers: {},
+      // Initialize with empty arrays for each category
+      appetizers: {
+        tea_sandwiches: [],
+        shooters: [],
+        canapes: [],
+        spreads: []
+      },
+      appetizerService: "stationary", // Default service style
       dessertSelections: {},
       servingAlcohol: [],
       additionalCocktails: false,
