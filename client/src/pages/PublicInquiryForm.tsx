@@ -3177,100 +3177,6 @@ const AppetizersStep = ({
 };
 
 // Step 4: Menu Selection Component
-// Custom Menu Data Component
-const CustomMenuInfo = ({ isVisible = false }: { isVisible: boolean }) => {
-  if (!isVisible) return null;
-  
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="text-xl text-center">Custom Menu Options</CardTitle>
-        <CardDescription className="text-center">
-          Build your own menu by selecting items from different cuisine styles
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px] rounded-md border p-4">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold flex items-center">
-                <Utensils className="h-5 w-5 mr-2 text-orange-500" />
-                Taco Fiesta
-              </h3>
-              <p className="text-sm text-muted-foreground mb-2">Create your perfect taco bar experience</p>
-              <div className="ml-4 text-sm">
-                <p className="font-medium mb-1">Proteins include:</p>
-                <p className="text-gray-600 mb-2">Barbacoa, Flank steak Fajitas (upcharge of $2.00 pp), Ground Beef, Pork Carnitas, Chorizo, Mexican Chicken, and more</p>
-                
-                <p className="font-medium mb-1">Sides include:</p>
-                <p className="text-gray-600">Refried Beans, Mexican Street corn, Queso Dip, Mexican Rice, Cilantro Lime Rice, and more</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-bold flex items-center">
-                <Utensils className="h-5 w-5 mr-2 text-blue-500" />
-                American BBQ
-              </h3>
-              <p className="text-sm text-muted-foreground mb-2">Classic American barbecue favorites</p>
-              <div className="ml-4 text-sm">
-                <p className="font-medium mb-1">Mains include:</p>
-                <p className="text-gray-600 mb-2">Smoked Brisket, Beef Ribs, Flank Steak with Chimichurri, Pulled Pork, BBQ Chicken, and more</p>
-                
-                <p className="font-medium mb-1">Sides include:</p>
-                <p className="text-gray-600">Mac n' Cheese, Baked Beans, Corn on the Cob, Creamed Corn, Corn Bread, and more</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-bold flex items-center">
-                <Utensils className="h-5 w-5 mr-2 text-purple-500" />
-                A Taste of Greece
-              </h3>
-              <p className="text-sm text-muted-foreground mb-2">Mediterranean-inspired dishes</p>
-              <div className="ml-4 text-sm">
-                <p className="font-medium mb-1">Mains include:</p>
-                <p className="text-gray-600 mb-2">Pastitsio, Kotopoulo lemonato, Psari Plaki, and more</p>
-                
-                <p className="font-medium mb-1">Sides include:</p>
-                <p className="text-gray-600">Lemon Potatoes, Spanakopita, Dolmades, Greek Rice Pilaf, and more</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-bold flex items-center">
-                <Utensils className="h-5 w-5 mr-2 text-green-500" />
-                Vegan Menu
-              </h3>
-              <p className="text-sm text-muted-foreground mb-2">Delicious plant-based options</p>
-              <div className="ml-4 text-sm">
-                <p className="font-medium mb-1">Main choices include:</p>
-                <p className="text-gray-600 mb-2">Cabbage rolls with rice and dried figs, Eggplant Imam Baildi, Indian style stuffed Peppers, and more</p>
-                
-                <p className="font-medium mb-1">Side choices include:</p>
-                <p className="text-gray-600">Lemon Potatoes, Green Beans Almondine, Dolmades, Roasted Brussels sprouts, and more</p>
-              </div>
-            </div>
-          </div>
-        </ScrollArea>
-        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <h4 className="font-medium text-amber-800 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Wedding Custom Menu Note
-          </h4>
-          <p className="text-sm text-amber-700 mt-1">
-            For wedding events, our culinary team can create a personalized menu that combines elements 
-            from different cuisines to perfectly match your vision. We'll work with you directly after 
-            submission to craft your ideal wedding menu.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 const MenuSelectionStep = ({ 
   selectedTheme,
   guestCount,
@@ -3284,13 +3190,9 @@ const MenuSelectionStep = ({
 }) => {
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
   
-  // Watch the selected package and event type
+  // Watch the selected package
   const selectedPackage = watch("selectedPackage");
   const menuSelections = watch("menuSelections");
-  const eventType = watch("eventType");
-  
-  // State for custom menu option
-  const [showCustomMenu, setShowCustomMenu] = useState(false);
   
   // Get the theme menu data or show default message if theme not found
   const themeData = themeMenuData[selectedTheme as keyof typeof themeMenuData];
@@ -3427,197 +3329,63 @@ const MenuSelectionStep = ({
       </div>
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        {/* What would you like a quote for? - Only shown for Wedding events */}
-        {eventType === "Wedding" && (
-          <div className="mb-8 border-b pb-6">
-            <h3 className="text-xl font-semibold mb-4">What would you like a quote for?</h3>
-            
-            <div className="space-y-4">
-              {/* Fixed Package Option */}
-              <div 
-                className={`border rounded-md p-4 cursor-pointer transition-all duration-200 ${
-                  !showCustomMenu 
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary' 
-                    : 'border-gray-200 hover:border-primary/50'
-                }`}
-                onClick={() => setShowCustomMenu(false)}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="text-lg font-medium">Fixed Wedding Packages</h4>
-                    <p className="text-sm text-gray-600">Choose from our pre-designed wedding menu packages</p>
-                  </div>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    !showCustomMenu
-                      ? 'bg-primary text-white' 
-                      : 'border border-gray-300'
-                  }`}>
-                    {!showCustomMenu && <Check className="h-4 w-4" />}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Custom Menu Option */}
-              <div 
-                className={`border rounded-md p-4 cursor-pointer transition-all duration-200 ${
-                  showCustomMenu 
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary' 
-                    : 'border-gray-200 hover:border-primary/50'
-                }`}
-                onClick={() => setShowCustomMenu(true)}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="text-lg font-medium">Custom Wedding Menu</h4>
-                    <p className="text-sm text-gray-600">Create a personalized menu tailored to your vision</p>
-                  </div>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    showCustomMenu
-                      ? 'bg-primary text-white' 
-                      : 'border border-gray-300'
-                  }`}>
-                    {showCustomMenu && <Check className="h-4 w-4" />}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Show Custom Menu Information when selected */}
-        <CustomMenuInfo isVisible={eventType === "Wedding" && showCustomMenu} />
-        
-        {/* Package Selection - Only show if not choosing custom menu */}
-        {(!eventType || eventType !== "Wedding" || !showCustomMenu) && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4">Select a Package</h3>
-            
-            <div className="grid grid-cols-1 gap-4">
-              {themeData.packages.map((pkg) => (
-                <div key={pkg.id}>
-                  {pkg.minGuestCount > 0 && guestCount < pkg.minGuestCount ? (
-                    // Disabled package with warning
-                    <div className="border border-gray-200 rounded-md p-4 opacity-60 cursor-not-allowed">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-medium text-gray-500">{pkg.name}</h4>
-                        <span className="text-lg font-semibold text-gray-500">${pkg.price} / person</span>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-2">{pkg.description}</p>
-                      <div className="flex items-center text-amber-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm">
-                          Minimum {pkg.minGuestCount} guests required for this package
-                        </span>
-                      </div>
+        {/* Package Selection */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Select a Package</h3>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {themeData.packages.map((pkg) => (
+              <div key={pkg.id}>
+                {pkg.minGuestCount > 0 && guestCount < pkg.minGuestCount ? (
+                  // Disabled package with warning
+                  <div className="border border-gray-200 rounded-md p-4 opacity-60 cursor-not-allowed">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-lg font-medium text-gray-500">{pkg.name}</h4>
+                      <span className="text-lg font-semibold text-gray-500">${pkg.price} / person</span>
                     </div>
-                  ) : (
-                    // Active package
-                    <div 
-                      className={`border rounded-md p-4 cursor-pointer transition-all duration-200 ${
+                    <p className="text-sm text-gray-500 mb-2">{pkg.description}</p>
+                    <div className="flex items-center text-amber-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm">
+                        Minimum {pkg.minGuestCount} guests required for this package
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  // Active package
+                  <div 
+                    className={`border rounded-md p-4 cursor-pointer transition-all duration-200 ${
+                      selectedPackage === pkg.id 
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary' 
+                        : 'border-gray-200 hover:border-primary/50'
+                    }`}
+                    onClick={() => setValue("selectedPackage", pkg.id)}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-lg font-medium">{pkg.name}</h4>
+                      <span className="text-lg font-semibold">${pkg.price} / person</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{pkg.description}</p>
+                    <div className="flex justify-end">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                         selectedPackage === pkg.id 
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary' 
-                          : 'border-gray-200 hover:border-primary/50'
-                      }`}
-                      onClick={() => setValue("selectedPackage", pkg.id)}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-lg font-medium">{pkg.name}</h4>
-                        <span className="text-lg font-semibold">${pkg.price} / person</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">{pkg.description}</p>
-                      <div className="flex justify-end">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                          selectedPackage === pkg.id 
-                            ? 'bg-primary text-white' 
-                            : 'border border-gray-300'
-                        }`}>
-                          {selectedPackage === pkg.id && <Check className="h-4 w-4" />}
-                        </div>
+                          ? 'bg-primary text-white' 
+                          : 'border border-gray-300'
+                      }`}>
+                        {selectedPackage === pkg.id && <Check className="h-4 w-4" />}
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Custom Menu Form for Wedding */}
-        {eventType === "Wedding" && showCustomMenu && (
-          <div className="space-y-6">
-            <div className="p-5 border border-primary/20 bg-primary/5 rounded-lg">
-              <h4 className="text-xl font-semibold text-primary mb-2 flex items-center">
-                <Gift className="h-5 w-5 mr-2" />
-                Custom Wedding Menu Request
-              </h4>
-              <p className="mb-4">
-                Your custom wedding menu will be created with our culinary team's expertise based on your preferences.
-                After submitting this form, our wedding specialist will contact you to discuss your specific menu desires.
-              </p>
-              
-              <FormField
-                control={control}
-                name="specialRequests"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Menu Preferences & Special Requests</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Please describe your ideal wedding menu, favorite cuisines, or any specific dishes you'd like us to include..."
-                        className="min-h-[120px]"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  </div>
                 )}
-              />
-              
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={control}
-                  name="dietaryNotes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dietary Restrictions</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Any allergies or dietary restrictions we should know about?"
-                          className="min-h-[80px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={control}
-                  name="beverageNotes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Beverage Preferences</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Any specific beverage requests or preferences?"
-                          className="min-h-[80px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
         
-        {/* Food Categories - Only show if a package is selected and not in custom menu mode */}
-        {selectedPackage && (!eventType || eventType !== "Wedding" || !showCustomMenu) && (
+        {/* Food Categories - Only show if a package is selected */}
+        {selectedPackage && (
           <div className="space-y-8">
             {/* Map through available categories */}
             {Object.entries(themeData.categories).map(([categoryKey, category]) => {
