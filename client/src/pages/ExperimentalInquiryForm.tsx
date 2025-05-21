@@ -38,6 +38,10 @@ const StepLoader = () => (
   </div>
 );
 
+interface ExperimentalInquiryFormProps {
+  initialEventType?: string;
+}
+
 /**
  * Experimental Inquiry Form
  * 
@@ -46,10 +50,31 @@ const StepLoader = () => (
  * 2. Modular step components with lazy loading
  * 3. Separation of data from UI components
  */
-const ExperimentalInquiryForm: React.FC = () => {
-  // Get params from URL
-  const [, params] = useRoute('/experimental-inquiry/:eventType*');
-  const eventTypeFromUrl = params?.eventType as EventType | undefined;
+const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initialEventType }) => {
+  // Get URL path and initialize variables
+  const [location] = useLocation();
+  
+  // Get event type from either route or prop
+  let eventTypeFromUrl: EventType | undefined;
+  
+  // Extract event type from URL if available
+  if (location.startsWith('/experimental-inquiry/')) {
+    const pathSegments = location.split('/');
+    if (pathSegments.length >= 3) {
+      const typeFromPath = pathSegments[2];
+      if (typeFromPath && eventTypes.some(e => e.type === typeFromPath)) {
+        eventTypeFromUrl = typeFromPath as EventType;
+      }
+    }
+  }
+  
+  // Fallback to the initialEventType prop if URL doesn't have a valid event type
+  if (!eventTypeFromUrl && initialEventType) {
+    // Verify that initialEventType is a valid EventType before using it
+    if (eventTypes.some(e => e.type === initialEventType)) {
+      eventTypeFromUrl = initialEventType as EventType;
+    }
+  }
   
   // Form state
   const [currentStep, setCurrentStep] = useState<FormStep>(
@@ -59,11 +84,17 @@ const ExperimentalInquiryForm: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   
+  // Validate event type
+  const isValidEventType = (type: string | undefined): type is EventType => {
+    if (!type) return false;
+    return eventTypes.some(event => event.type === type);
+  };
+  
   // Setup form with default values
   const methods = useForm<EventInquiryFormData>({
     defaultValues: {
       ...defaultFormValues,
-      eventType: eventTypeFromUrl || null
+      eventType: isValidEventType(eventTypeFromUrl) ? eventTypeFromUrl : null
     }
   });
   
@@ -72,8 +103,8 @@ const ExperimentalInquiryForm: React.FC = () => {
   
   // Set event type from URL parameter
   useEffect(() => {
-    if (eventTypeFromUrl && eventTypeFromUrl !== selectedEventType) {
-      setValue('eventType', eventTypeFromUrl as EventType);
+    if (eventTypeFromUrl && isValidEventType(eventTypeFromUrl) && eventTypeFromUrl !== selectedEventType) {
+      setValue('eventType', eventTypeFromUrl);
     }
   }, [eventTypeFromUrl, setValue, selectedEventType]);
   

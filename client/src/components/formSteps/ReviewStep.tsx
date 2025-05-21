@@ -19,7 +19,8 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
   const formData = getValues();
   
   // Helper function to format date strings
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "";
     try {
       return format(new Date(dateString), "MMMM d, yyyy");
     } catch (e) {
@@ -28,7 +29,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
   };
   
   // Helper function to format time strings
-  const formatTime = (timeString: string) => {
+  const formatTime = (timeString: string | undefined) => {
     if (!timeString) return "";
     return timeString;
   };

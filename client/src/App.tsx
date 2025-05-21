@@ -70,7 +70,16 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Toaster />
-        <ExperimentalInquiryForm initialEventType={eventType} />
+        <Switch>
+          <Route path="/experimental-inquiry" exact>
+            <ExperimentalInquiryForm />
+          </Route>
+          <Route path="/experimental-inquiry/:eventType">
+            {(params) => (
+              <ExperimentalInquiryForm initialEventType={params.eventType} />
+            )}
+          </Route>
+        </Switch>
       </div>
     );
   }
