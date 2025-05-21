@@ -670,13 +670,17 @@ const horsDoeurvesData = {
       id: "tea_sandwiches",
       name: "Tea Sandwiches",
       description: "Offered in lots of 48",
-      lotSizes: [48, 96, 144],
+      lotSizes: [36, 48, 96, 144],
       items: [
         { id: "pate_pickled_veg", name: "Pate with pickled veg", price: 1.95 },
         { id: "cream_cheese_shrimp", name: "Cream Cheese and Shrimp", price: 2.50 },
         { id: "blt", name: "BLT - (Bacon Lettuce & Tomato)", price: 1.95 },
         { id: "caprese", name: "Caprese (Mozzarella, Tomato, & Basil)", price: 1.95 },
-        { id: "gravlax", name: "Gravlax, Cream Cheese & Cucumber", price: 2.75 }
+        { id: "gravlax", name: "Gravlax, Cream Cheese & Cucumber", price: 2.75 },
+        { id: "prosciutto_fig", name: "Prosciutto-Fig", price: 2.75 },
+        { id: "crab_salad", name: "Crab Salad", price: 3.00 },
+        { id: "chicken_cranberry", name: "Chicken Cranberry", price: 2.00 },
+        { id: "miso_egg_salad", name: "Miso egg salad", price: 2.25 }
       ]
     },
     {
@@ -689,7 +693,27 @@ const horsDoeurvesData = {
         { id: "greek_village", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
         { id: "gazpacho_shrimp", name: "Gazpacho with shrimp", price: 2.75 },
         { id: "cucumber_jalapeno", name: "Chilled Cucumber/Jalapeno with shrimp", price: 2.75 },
-        { id: "bloody_mary_lobster", name: "Bloody Mary with lobster (non-alcoholic)", price: 4.75 }
+        { id: "bloody_mary_lobster", name: "Bloody Mary with lobster (non-alcoholic)", price: 4.75 },
+        { id: "roasted_beet", name: "Roasted beet Vichyssoise with green bean", price: 2.45 },
+        { id: "chilled_peach", name: "Chilled peach soup with Gravlax", price: 2.75 },
+        { id: "avocado_soup", name: "Chilled avocado soup with crab and pico", price: 3.75 }
+      ]
+    },
+    {
+      id: "mini_skewers",
+      name: "Mini Skewers",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 72, 96],
+      items: [
+        { id: "korean_bbq", name: "Korean BBQ pork belly", price: 2.75 },
+        { id: "greek_village_skewer", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.25 },
+        { id: "chicken_teriyaki", name: "Chicken Teriyaki", price: 2.75 },
+        { id: "moroccan_flank", name: "Grilled Moroccan style Flank steak", price: 2.75 },
+        { id: "mediterranean_shrimp", name: "Mediterranean style shrimp", price: 2.75 },
+        { id: "caprese_skewer", name: "Caprese - Tomato, Basil and Mozzarella - cold", price: 2.25 },
+        { id: "prosciutto_melon", name: "Prosciutto, Melon and Basil - cold", price: 2.75 },
+        { id: "tofu_hoisin", name: "Tofu with Hoisin plum sauce", price: 2.25 },
+        { id: "antipasto_bites", name: "Antipasto Bites", price: 2.75 }
       ]
     },
     {
@@ -702,7 +726,78 @@ const horsDoeurvesData = {
         { id: "greek_village_canape", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.75 },
         { id: "onion_tartlets", name: "French onion tartlets with Gruyere and dill", price: 2.75 },
         { id: "pear_camembert", name: "Pear and Camembert tartlet", price: 2.75 },
-        { id: "mediterranean_shrimp_canape", name: "Mediterranean style shrimp", price: 2.75 }
+        { id: "mediterranean_shrimp_canape", name: "Mediterranean style shrimp", price: 2.75 },
+        { id: "miso_maple_eggs", name: "Miso maple deviled eggs", price: 2.75 },
+        { id: "beet_chips", name: "Beet chips with goat cheese and asparagus tips", price: 2.75 },
+        { id: "vegan_bruschetta", name: "Vegan Bruschetta with olive tapenade and mint coulis", price: 2.75 }
+      ]
+    },
+    {
+      id: "vol_au_vents",
+      name: "Vol au vents",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 72, 96],
+      items: [
+        { id: "gravlax_cream", name: "Gravlax with cream cheese", price: 3.00 },
+        { id: "spinach_feta", name: "Spinach, feta and leek", price: 3.00 },
+        { id: "chicken_teriyaki_vol", name: "Chicken Teriyaki", price: 3.00 },
+        { id: "brie_cranberry", name: "Melted Brie with cranberry relish", price: 3.50 },
+        { id: "curried_chicken", name: "Curried chicken salad", price: 3.00 },
+        { id: "tuna_tartare", name: "Tuna tartare", price: 3.75 },
+        { id: "brie_walnut", name: "Brie with walnuts and mushrooms", price: 3.25 },
+        { id: "pulled_pork", name: "Pulled pork with prunes and apple", price: 3.25 }
+      ]
+    },
+    {
+      id: "simple_fare",
+      name: "Simple fare",
+      description: "Offered in lots of 48",
+      lotSizes: [48, 96, 144],
+      items: [
+        { id: "potato_skins", name: "Loaded Potato Skins", price: 1.95 },
+        { id: "stuffed_mushrooms", name: "Stuffed mushrooms", price: 2.25 },
+        { id: "chicken_wings", name: "Chicken wings", price: 2.65 },
+        { id: "deviled_eggs", name: "Deviled eggs with bacon bits and chives", price: 2.25 },
+        { id: "meatballs", name: "Meatballs in a blanket", price: 2.50 },
+        { id: "mac_cheese", name: "Mac n' cheese bites", price: 2.50 },
+        { id: "lumpia", name: "Lumpia (Filipino Spring Rolls) Vegetarian", price: 2.75 },
+        { id: "lobster_rolls", name: "Lobster Rolls", price: 6.50 },
+        { id: "cheeseburger_bites", name: "Tater tot cheeseburger Bites", price: 2.50 }
+      ]
+    },
+    {
+      id: "charcuterie",
+      name: "Charcuterie boards",
+      description: "Offered in lots of 24",
+      lotSizes: [24, 48, 72, 96],
+      perPersonPricing: true,
+      items: [
+        { id: "cheese_fruit", name: "Cheese and fruit Grazing Board", price: 8.00 },
+        { id: "meat_cheese", name: "Meat, cheese and fruit grazing Board", price: 9.00 },
+        { id: "mexican_board", name: "Mexican Grazing Board", price: 10.00 },
+        { id: "mediterranean_board", name: "Mediterranean grazing board", price: 11.00 },
+        { id: "premium_board", name: "Premium Grazing Board", price: 15.00 },
+        { id: "chips_salsa", name: "Chips and salsa bar as an appetizer. Includes an array of corn and flour tortillas, salsas and queso.", price: 5.50 },
+        { id: "charcuterie_cones", name: "Charcuterie Cones", price: 4.75 }
+      ]
+    },
+    {
+      id: "spreads",
+      name: "Spreads",
+      description: "Served with Pita bread, and crudité. Select 3 spreads for 24 or more guests",
+      note: "$6.50 per person",
+      basePrice: 6.50,
+      selectLimit: 3,
+      servingSizes: [24, 36, 48, 60],
+      items: [
+        { id: "tzatziki", name: "Tzatziki" },
+        { id: "hummus", name: "Hummus" },
+        { id: "beet_hummus", name: "Beet Hummus" },
+        { id: "baba_ghanoush", name: "Baba Ghannoush" },
+        { id: "spicy_feta", name: "Spicy Feta" },
+        { id: "taramasalata", name: "Taramasalata" },
+        { id: "muhammara", name: "Muhammara" },
+        { id: "lebanese_garlic", name: "Lebanese garlic dip" }
       ]
     }
   ]
