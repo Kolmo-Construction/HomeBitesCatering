@@ -2237,32 +2237,52 @@ const MenuSelectionStep = ({
   
   // Handle Custom Menu selection differently
   if (selectedTheme === "custom_menu") {
+    const [selectedCuisineType, setSelectedCuisineType] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
     
-    // Initialize custom menu selections if not already set
+    // Reset selections when changing cuisine type
     useEffect(() => {
-      // Reset selections when changing categories
-      if (selectedCategory) {
-        setSelectedSubcategory(null);
+      if (selectedCuisineType) {
+        setSelectedCategory(null);
       }
-    }, [selectedCategory]);
+    }, [selectedCuisineType]);
+    
+    // Cuisine types are the main keys in our data structure (Taco, BBQ, Greek, etc.)
+    // Group the category keys by cuisine type prefix (taco_, bbq_, etc.)
+    const cuisineTypes = Object.keys(themeData.categories).reduce((acc, key) => {
+      // Extract cuisine type from the category key (e.g., "taco_proteins" -> "taco")
+      const cuisineType = key.split('_')[0];
+      
+      if (!acc[cuisineType]) {
+        acc[cuisineType] = [];
+      }
+      
+      acc[cuisineType].push(key);
+      return acc;
+    }, {} as Record<string, string[]>);
+    
+    // Get display names for cuisine types
+    const cuisineTypeDisplayNames: Record<string, string> = {
+      taco: "Taco Fiesta",
+      bbq: "American BBQ",
+      greek: "A Taste of Greece",
+      kebab: "Kebab Party",
+      italian: "A Taste of Italy",
+      vegan: "Vegan Menu"
+    };
+    
+    const handleCuisineTypeSelect = (cuisine: string) => {
+      setSelectedCuisineType(cuisine);
+    };
     
     const handleCategorySelect = (categoryKey: string) => {
       setSelectedCategory(categoryKey);
     };
     
-    const handleSubcategorySelect = (subcategoryKey: string) => {
-      setSelectedSubcategory(subcategoryKey);
-    };
-    
-    const handleCustomItemSelection = (categoryKey: string, subcategoryKey: string, itemId: string, isSelected: boolean) => {
-      // Create nested path for menu selections
-      const selectionPath = `${categoryKey}_${subcategoryKey}`;
-      
+    const handleCustomItemSelection = (categoryKey: string, itemId: string, isSelected: boolean) => {
       // Initialize array if it doesn't exist
-      const currentSelections = Array.isArray(menuSelections?.[selectionPath]) 
-        ? [...menuSelections[selectionPath]] 
+      const currentSelections = Array.isArray(menuSelections?.[categoryKey]) 
+        ? [...menuSelections[categoryKey]] 
         : [];
       
       if (isSelected) {
@@ -2286,17 +2306,15 @@ const MenuSelectionStep = ({
         }
       }
       
-      setValue(`menuSelections.${selectionPath}`, currentSelections);
+      setValue(`menuSelections.${categoryKey}`, currentSelections);
     };
     
-    const isCustomItemSelected = (categoryKey: string, subcategoryKey: string, itemId: string) => {
-      const selectionPath = `${categoryKey}_${subcategoryKey}`;
-      
-      if (!menuSelections || !menuSelections[selectionPath]) {
+    const isCustomItemSelected = (categoryKey: string, itemId: string) => {
+      if (!menuSelections || !menuSelections[categoryKey]) {
         return false;
       }
       
-      const selectedItems = menuSelections[selectionPath];
+      const selectedItems = menuSelections[categoryKey];
       return selectedItems.some(item => 
         typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
       );
