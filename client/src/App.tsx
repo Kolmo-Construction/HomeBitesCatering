@@ -23,6 +23,7 @@ import FormEditor from "@/pages/FormEditor";
 import CalculatorTest from "@/pages/CalculatorTest";
 // Public Questionnaire
 import PublicQuestionnaire from "@/pages/PublicQuestionnaire";
+import PublicQuestionnaireView from "@/pages/PublicQuestionnaireView";
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
@@ -41,14 +42,17 @@ function AppContent() {
   }
   
   // Check if the route is for public questionnaire
-  const isPublicRoute = window.location.pathname === "/questionnaire";
+  const isPublicRoute = window.location.pathname.startsWith("/questionnaire");
   
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster />
       
       {isPublicRoute ? (
-        <PublicQuestionnaire />
+        <Switch>
+          <Route path="/questionnaire" component={PublicQuestionnaire} />
+          <Route path="/questionnaire/:formKey" component={PublicQuestionnaireView} />
+        </Switch>
       ) : !user ? (
         <Login />
       ) : (
@@ -88,8 +92,6 @@ function AppContent() {
             <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
             {/* Calculator Test Route */}
             <Route path="/calculator-test" component={CalculatorTest} />
-            {/* Public Route */}
-            <Route path="/questionnaire" component={PublicQuestionnaire} />
             {/* Fallback Route */}
             <Route>
               <Dashboard />
