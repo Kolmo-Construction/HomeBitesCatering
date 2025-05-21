@@ -592,6 +592,65 @@ const BasicInformationStep = ({
   );
 };
 
+// Appetizer data
+const appetizerData = {
+  categories: [
+    {
+      id: "tea_sandwiches",
+      name: "Tea Sandwiches",
+      note: "Offered in lots of 36",
+      items: [
+        { id: "cucumber", name: "Cucumber & Cream Cheese", price: 1.95 },
+        { id: "egg_salad", name: "Egg Salad", price: 1.95 },
+        { id: "turkey", name: "Turkey & Cheese", price: 1.95 },
+        { id: "ham", name: "Ham & Cheese", price: 1.95 },
+        { id: "chicken_salad", name: "Chicken Salad", price: 1.95 }
+      ],
+      lotSizes: [36, 48, 96, 144]
+    },
+    {
+      id: "shooters",
+      name: "Shooters",
+      note: "Offered in lots of 24",
+      items: [
+        { id: "gazpacho", name: "Gazpacho", price: 2.50 },
+        { id: "shrimp", name: "Shrimp Cocktail", price: 3.25 },
+        { id: "ceviche", name: "Ceviche", price: 3.50 },
+        { id: "bloody_mary", name: "Bloody Mary", price: 3.00 }
+      ],
+      lotSizes: [24, 48, 72, 96]
+    },
+    {
+      id: "canapes",
+      name: "Canapes",
+      note: "Offered in lots of 24",
+      items: [
+        { id: "bruschetta", name: "Bruschetta", price: 2.25 },
+        { id: "endive", name: "Endive with Blue Cheese & Walnuts", price: 2.50 },
+        { id: "smoked_salmon", name: "Smoked Salmon on Crostini", price: 3.00 },
+        { id: "prosciutto", name: "Prosciutto-Wrapped Melon", price: 2.75 }
+      ],
+      lotSizes: [24, 48, 72, 96]
+    },
+    {
+      id: "spreads",
+      name: "Spreads Platter",
+      note: "Select 3 spreads",
+      items: [
+        { id: "hummus", name: "Classic Hummus", price: 0 },
+        { id: "baba_ganoush", name: "Baba Ganoush", price: 0 },
+        { id: "tzatziki", name: "Tzatziki", price: 0 },
+        { id: "spinach_dip", name: "Spinach & Artichoke Dip", price: 0 },
+        { id: "olive_tapenade", name: "Olive Tapenade", price: 0 },
+        { id: "guacamole", name: "Guacamole", price: 0 }
+      ],
+      servingSizes: [24, 36, 48, 60],
+      selectLimit: 3,
+      basePrice: 4.50 // per person
+    }
+  ]
+};
+
 // Step 3: Event Details & Venue Form Component
 const EventDetailsStep = ({ 
   eventType,
@@ -1357,6 +1416,327 @@ const themeMenuData = {
   }
 };
 
+// Step 5: Appetizers Selection Component
+const AppetizersStep = ({ 
+  onPrevious,
+  onNext 
+}: { 
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  
+  // Get form values
+  const appetizerService = watch("appetizerService");
+  const appetizers = watch("appetizers");
+  
+  // Initialize appetizers structure if needed
+  const initializeCategory = (categoryId: string) => {
+    if (!appetizers[categoryId]) {
+      setValue(`appetizers.${categoryId}`, []);
+    }
+  };
+
+  // Handle service style selection
+  const handleServiceStyleChange = (value: string) => {
+    setValue("appetizerService", value as "stationary" | "passed");
+  };
+  
+  // Handle appetizer quantity change
+  const handleQuantityChange = (categoryId: string, itemId: string, itemName: string, quantity: number) => {
+    // Make sure the category exists
+    if (!appetizers[categoryId]) {
+      setValue(`appetizers.${categoryId}`, []);
+    }
+    
+    // Find if the item already exists
+    const existingItems = appetizers[categoryId] || [];
+    const existingItemIndex = existingItems.findIndex(item => item.name === itemName);
+    
+    if (quantity === 0) {
+      // Remove item if quantity is 0
+      if (existingItemIndex !== -1) {
+        const newItems = [...existingItems];
+        newItems.splice(existingItemIndex, 1);
+        setValue(`appetizers.${categoryId}`, newItems);
+      }
+    } else {
+      // Update or add item
+      if (existingItemIndex !== -1) {
+        // Update existing item
+        const newItems = [...existingItems];
+        newItems[existingItemIndex] = { name: itemName, quantity };
+        setValue(`appetizers.${categoryId}`, newItems);
+      } else {
+        // Add new item
+        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity }]);
+      }
+    }
+  };
+  
+  // Get quantity for an item
+  const getItemQuantity = (categoryId: string, itemName: string): number => {
+    if (!appetizers || !appetizers[categoryId]) return 0;
+    
+    const item = appetizers[categoryId].find(item => item.name === itemName);
+    return item ? item.quantity : 0;
+  };
+  
+  // Handle spread selection
+  const handleSpreadSelection = (itemId: string, itemName: string, isSelected: boolean) => {
+    const categoryId = "spreads";
+    initializeCategory(categoryId);
+    
+    const spreadsCategory = appetizerData.categories.find(cat => cat.id === categoryId);
+    if (!spreadsCategory) return;
+    
+    const existingItems = appetizers[categoryId] || [];
+    const existingItemIndex = existingItems.findIndex(item => item.name === itemName);
+    
+    if (isSelected) {
+      // Check if we're at the selection limit
+      if (existingItems.length >= spreadsCategory.selectLimit && existingItemIndex === -1) {
+        return; // At limit, don't add
+      }
+      
+      // Add item with default quantity of 1 (will be updated later with serving size)
+      if (existingItemIndex === -1) {
+        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity: 1 }]);
+      }
+    } else {
+      // Remove item
+      if (existingItemIndex !== -1) {
+        const newItems = [...existingItems];
+        newItems.splice(existingItemIndex, 1);
+        setValue(`appetizers.${categoryId}`, newItems);
+      }
+    }
+  };
+  
+  // Handle spread serving size change
+  const handleSpreadServingSizeChange = (servingSize: number) => {
+    const categoryId = "spreads";
+    const existingItems = appetizers[categoryId] || [];
+    
+    // Update quantity for all selected spreads
+    const updatedItems = existingItems.map(item => ({
+      ...item,
+      quantity: servingSize
+    }));
+    
+    setValue(`appetizers.${categoryId}`, updatedItems);
+  };
+  
+  // Check if a spread is selected
+  const isSpreadSelected = (itemName: string): boolean => {
+    const categoryId = "spreads";
+    if (!appetizers || !appetizers[categoryId]) return false;
+    
+    return appetizers[categoryId].some(item => item.name === itemName);
+  };
+  
+  // Count selected spreads
+  const getSelectedSpreadsCount = (): number => {
+    const categoryId = "spreads";
+    if (!appetizers || !appetizers[categoryId]) return 0;
+    
+    return appetizers[categoryId].length;
+  };
+  
+  // Get the spreads serving size
+  const getSpreadsServingSize = (): number => {
+    const categoryId = "spreads";
+    if (!appetizers || !appetizers[categoryId] || appetizers[categoryId].length === 0) return 0;
+    
+    // All spreads have the same quantity/serving size
+    return appetizers[categoryId][0].quantity;
+  };
+  
+  // Check if spreads selection limit is reached
+  const isSpreadsLimitReached = (): boolean => {
+    const categoryId = "spreads";
+    const spreadsCategory = appetizerData.categories.find(cat => cat.id === categoryId);
+    if (!spreadsCategory) return false;
+    
+    return getSelectedSpreadsCount() >= spreadsCategory.selectLimit;
+  };
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Hors d'oeuvres</h2>
+        <p className="text-lg text-gray-600">
+          Select appetizers to enhance your event
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* Service Style Selection */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Service Style</h3>
+          
+          <RadioGroup 
+            value={appetizerService} 
+            onValueChange={handleServiceStyleChange}
+            className="flex flex-col space-y-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="stationary" id="stationary" />
+              <Label htmlFor="stationary">Stationary Buffet</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="passed" id="passed" />
+              <Label htmlFor="passed">Passed by Servers</Label>
+            </div>
+          </RadioGroup>
+          
+          {appetizerService === "passed" && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-amber-800 text-sm">
+                <strong>Note:</strong> Passed service includes a minimum $5.00 per guest surcharge for additional service staff.
+              </p>
+            </div>
+          )}
+        </div>
+        
+        {/* Appetizer Categories */}
+        <div className="space-y-10">
+          {appetizerData.categories.map((category) => {
+            // Special handling for spreads
+            if (category.id === "spreads") {
+              return (
+                <div key={category.id} className="border-t pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">{category.name}</h3>
+                      <p className="text-sm text-gray-500">{category.note} ({getSelectedSpreadsCount()} of {category.selectLimit} selected)</p>
+                    </div>
+                    <div className="text-lg font-medium">${category.basePrice.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    {category.items.map((item) => (
+                      <div key={item.id} className="relative">
+                        <label className={`
+                          flex items-center p-3 border rounded-md cursor-pointer
+                          ${isSpreadSelected(item.name) ? 'border-primary bg-primary/5' : 'border-gray-200'}
+                          ${(!isSpreadSelected(item.name) && isSpreadsLimitReached()) ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/50'}
+                        `}>
+                          <Checkbox
+                            checked={isSpreadSelected(item.name)}
+                            onCheckedChange={(checked) => {
+                              if (checked === "indeterminate") return;
+                              handleSpreadSelection(item.id, item.name, !!checked);
+                            }}
+                            disabled={!isSpreadSelected(item.name) && isSpreadsLimitReached()}
+                            className="mr-3"
+                          />
+                          <div className="font-medium">{item.name}</div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Serving Size Selection - only show if some spreads are selected */}
+                  {getSelectedSpreadsCount() > 0 && (
+                    <div className="mt-4 p-4 border border-gray-200 rounded-md">
+                      <h4 className="font-medium mb-2">Select serving size:</h4>
+                      <RadioGroup 
+                        value={String(getSpreadsServingSize())} 
+                        onValueChange={(value) => handleSpreadServingSizeChange(Number(value))}
+                        className="flex flex-wrap gap-4"
+                      >
+                        {category.servingSizes.map((size) => (
+                          <div key={size} className="flex items-center space-x-2">
+                            <RadioGroupItem value={String(size)} id={`serving-${size}`} />
+                            <Label htmlFor={`serving-${size}`}>{size} servings</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // Regular appetizer categories
+            return (
+              <div key={category.id} className="border-t pt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{category.name}</h3>
+                    <p className="text-sm text-gray-500">{category.note}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {category.items.map((item) => (
+                    <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between p-3 border rounded-md">
+                      <div className="mb-2 md:mb-0">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-sm text-gray-600">${item.price.toFixed(2)} each</div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        <Label htmlFor={`qty-${category.id}-${item.id}`} className="text-sm whitespace-nowrap">
+                          Quantity:
+                        </Label>
+                        
+                        <Select
+                          value={String(getItemQuantity(category.id, item.name))}
+                          onValueChange={(value) => handleQuantityChange(category.id, item.id, item.name, Number(value))}
+                        >
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue placeholder="Qty" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">None</SelectItem>
+                            {category.lotSizes.map((size) => (
+                              <SelectItem key={size} value={String(size)}>
+                                {size}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        {getItemQuantity(category.id, item.name) > 0 && (
+                          <div className="text-sm font-medium">
+                            Total: ${(item.price * getItemQuantity(category.id, item.name)).toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onPrevious}
+          className="flex items-center"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onNext}
+          className="flex items-center"
+        >
+          Next <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Step 4: Menu Selection Component
 const MenuSelectionStep = ({ 
   selectedTheme,
@@ -1763,13 +2143,21 @@ export default function PublicInquiryForm() {
                 />
               )}
               
+              {currentStep === "appetizers" && eventType && (
+                <AppetizersStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
               {/* Additional steps will be rendered here */}
-              {/* For now, we've implemented the first four steps */}
+              {/* For now, we've implemented the first five steps */}
               
               {currentStep !== "eventType" && 
                currentStep !== "basicInfo" && 
                currentStep !== "eventDetails" &&
-               currentStep !== "menuSelection" && (
+               currentStep !== "menuSelection" &&
+               currentStep !== "appetizers" && (
                 <div className="container mx-auto px-4 max-w-3xl text-center py-12">
                   <h2 className="text-2xl font-bold">Step {currentStepNumber} - {currentStep}</h2>
                   <p className="text-gray-600 mt-4">This step is under construction...</p>
