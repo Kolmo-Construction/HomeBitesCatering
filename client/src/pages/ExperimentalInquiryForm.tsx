@@ -2237,47 +2237,11 @@ const MenuSelectionStep = ({
   
   // Handle Custom Menu selection differently
   if (selectedTheme === "custom_menu") {
-    const [selectedCuisineType, setSelectedCuisineType] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null); // Keep for compatibility
+    // Update: Using selectedActualCategory instead of the previous multi-level selection approach
+    const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null);
     
-    // Reset selections when changing cuisine type
-    useEffect(() => {
-      if (selectedCuisineType) {
-        setSelectedCategory(null);
-      }
-    }, [selectedCuisineType]);
-    
-    // Cuisine types are the main keys in our data structure (Taco, BBQ, Greek, etc.)
-    // Group the category keys by cuisine type prefix (taco_, bbq_, etc.)
-    const cuisineTypes = Object.keys(themeData.categories).reduce((acc, key) => {
-      // Extract cuisine type from the category key (e.g., "taco_proteins" -> "taco")
-      const cuisineType = key.split('_')[0];
-      
-      if (!acc[cuisineType]) {
-        acc[cuisineType] = [];
-      }
-      
-      acc[cuisineType].push(key);
-      return acc;
-    }, {} as Record<string, string[]>);
-    
-    // Get display names for cuisine types
-    const cuisineTypeDisplayNames: Record<string, string> = {
-      taco: "Taco Fiesta",
-      bbq: "American BBQ",
-      greek: "A Taste of Greece",
-      kebab: "Kebab Party",
-      italian: "A Taste of Italy",
-      vegan: "Vegan Menu"
-    };
-    
-    const handleCuisineTypeSelect = (cuisine: string) => {
-      setSelectedCuisineType(cuisine);
-    };
-    
-    const handleCategorySelect = (categoryKey: string) => {
-      setSelectedCategory(categoryKey);
+    const handleActualCategorySelect = (categoryKey: string) => {
+      setSelectedActualCategory(categoryKey);
     };
     
     const handleCustomItemSelection = (categoryKey: string, itemId: string, isSelected: boolean) => {
@@ -2321,18 +2285,19 @@ const MenuSelectionStep = ({
       );
     };
     
+    // Get the theme data for custom_menu
+    const customMenuData = themeMenuData.custom_menu;
+    
     return (
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-3 text-gray-900">{themeData.title}</h2>
-          <p className="text-lg text-gray-600">
-            {themeData.description}
-          </p>
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">{customMenuData.title}</h2>
+          <p className="text-lg text-gray-600">{customMenuData.description}</p>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           {/* Main Category Selection */}
-          {!selectedCategory ? (
+          {!selectedActualCategory ? (
             <div className="mb-8">
               <h3 className="text-xl font-semibold mb-4">Select a Cuisine Category</h3>
               <p className="text-sm text-gray-600 mb-4">
@@ -2340,125 +2305,84 @@ const MenuSelectionStep = ({
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                {Object.keys(themeData.categories).map((categoryKey) => {
-                  const category = themeData.categories[categoryKey];
+                {Object.keys(customMenuData.categories).map((categoryKey) => {
+                  const categoryDetails = customMenuData.categories[categoryKey];
+                  if (!categoryDetails) return null; // Should not happen if data is well-formed
                   return (
-                    <div 
+                    <div
                       key={categoryKey}
                       className="border rounded-md p-4 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
-                      onClick={() => handleCategorySelect(categoryKey)}
+                      onClick={() => handleActualCategorySelect(categoryKey)}
                     >
-                      <h4 className="text-lg font-medium mb-2">{category.title}</h4>
-                      <p className="text-sm text-gray-600">{category.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : !selectedSubcategory ? (
-            // Subcategory Selection
-            <div>
-              <div className="flex items-center mb-6">
-                <button 
-                  className="text-primary hover:underline flex items-center mr-2"
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" /> Back to Cuisine Categories
-                </button>
-                <span className="text-gray-500">→</span>
-                <span className="ml-2 font-medium">{themeData.categories[selectedCategory].title}</span>
-              </div>
-              
-              <h3 className="text-xl font-semibold mb-4">Select a Food Category</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Choose the type of items you want to add from {themeData.categories[selectedCategory].title}
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                {Object.keys(themeData.categories[selectedCategory].subcategories).map((subcategoryKey) => {
-                  const subcategory = themeData.categories[selectedCategory].subcategories[subcategoryKey];
-                  return (
-                    <div 
-                      key={subcategoryKey}
-                      className="border rounded-md p-4 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
-                      onClick={() => handleSubcategorySelect(subcategoryKey)}
-                    >
-                      <h4 className="text-lg font-medium mb-2">{subcategory.title}</h4>
-                      <p className="text-sm text-gray-600">{subcategory.description}</p>
+                      <h4 className="text-lg font-medium mb-2">{categoryDetails.title}</h4>
+                      <p className="text-sm text-gray-600">{categoryDetails.description}</p>
                     </div>
                   );
                 })}
               </div>
             </div>
           ) : (
-            // Item Selection
+            // STAGE 2: Display items for the selectedActualCategory
             <div>
               <div className="flex items-center mb-6">
-                <button 
+                <button
                   className="text-primary hover:underline flex items-center mr-2"
-                  onClick={() => setSelectedSubcategory(null)}
+                  onClick={() => setSelectedActualCategory(null)} // Go back to category list
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" /> Back to Categories
                 </button>
                 <span className="text-gray-500">→</span>
-                <span className="ml-2 font-medium">{selectedCategory && themeData.categories[selectedCategory]?.title}</span>
-                <span className="text-gray-500 mx-2">→</span>
-                <span className="font-medium">{selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}</span>
+                <span className="ml-2 font-medium">
+                  {customMenuData.categories[selectedActualCategory]?.title}
+                </span>
               </div>
-              
+
               <h3 className="text-xl font-semibold mb-4">
-                {selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}
+                {customMenuData.categories[selectedActualCategory]?.title}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                {selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.description}
+                {customMenuData.categories[selectedActualCategory]?.description}
               </p>
-              
+
               <div className="grid grid-cols-1 gap-3 mt-4">
-                {selectedCategory && selectedSubcategory && 
-                  themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.items?.map((item) => {
-                    if (!item || !selectedCategory || !selectedSubcategory) return null;
-                    const isSelected = isCustomItemSelected(selectedCategory, selectedSubcategory, item.id);
-                    
-                    return (
-                      <div 
-                        key={item.id} 
-                        className={`border rounded-md p-3 cursor-pointer ${
-                          isSelected 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-gray-200 hover:border-primary/30'
-                        }`}
-                        onClick={() => handleCustomItemSelection(
-                          selectedCategory, 
-                          selectedSubcategory, 
-                          item.id, 
-                          !isSelected
-                        )}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <span className="font-medium">{item.name}</span>
-                            {item.upcharge > 0 && (
-                              <span className="text-amber-600 text-sm ml-2">
-                                (+${item.upcharge.toFixed(2)} upcharge per person)
-                              </span>
-                            )}
-                          </div>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            isSelected ? 'bg-primary text-white' : 'border border-gray-300'
-                          }`}>
-                            {isSelected && <Check className="h-4 w-4" />}
-                          </div>
+                {customMenuData.categories[selectedActualCategory]?.items?.map((item) => {
+                  if (!item) return null;
+                  const isSelected = isCustomItemSelected(selectedActualCategory, item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`border rounded-md p-3 cursor-pointer ${
+                        isSelected
+                          ? 'border-primary bg-primary/5'
+                          : 'border-gray-200 hover:border-primary/30'
+                      }`}
+                      onClick={() => handleCustomItemSelection(selectedActualCategory, item.id, !isSelected)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-medium">{item.name}</span>
+                          {item.upcharge && item.upcharge > 0 && (
+                            <span className="text-amber-600 text-sm ml-2">
+                              (+${item.upcharge.toFixed(2)} upcharge per person)
+                            </span>
+                          )}
+                        </div>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                          isSelected ? 'bg-primary text-white' : 'border border-gray-300'
+                        }`}>
+                          {isSelected && <Check className="h-4 w-4" />}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
               </div>
               
               <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-md">
                 <span className="text-sm">
                   Selected items: {
                     Object.keys(menuSelections || {})
-                      .filter(key => selectedCategory && key.startsWith(`${selectedCategory}_`))
+                      .filter(key => selectedActualCategory && key === selectedActualCategory)
                       .reduce((total, key) => {
                         const selections = menuSelections[key];
                         return total + (Array.isArray(selections) ? selections.length : 0);
@@ -2468,7 +2392,7 @@ const MenuSelectionStep = ({
                 <Button 
                   type="button"
                   variant="outline"
-                  onClick={() => setSelectedCategory(null)}
+                  onClick={() => setSelectedActualCategory(null)}
                 >
                   Choose Another Category
                 </Button>

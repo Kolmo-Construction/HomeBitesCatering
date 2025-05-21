@@ -1,0 +1,53 @@
+It appears you're encountering a syntax error within the MenuSelectionStep component, specifically in the logic for selectedTheme === "custom_menu".
+
+The error message: [vite] Pre-transform error: /home/runner/workspace/client/src/pages/ExperimentalInquiryForm.tsx: Unexpected token, expected "}" (2359:12) indicates that the Vite build tool encountered a ) token where it was expecting a } token to close a JavaScript expression block within your JSX.
+
+Looking at the error snippet and your uploaded ExperimentalInquiryForm (4).tsx file:
+The error points to the transition between the "true" part and the "false" part of your main ternary operator within the custom_menu logic:
+
+TypeScript
+
+// Simplified structure based on your file and the error context
+// Inside MenuSelectionStep, for selectedTheme === "custom_menu"
+
+{!selectedActualCategory ? (
+  // This is the "true" branch of the ternary.
+  // It renders the list of cuisine categories.
+  <div className="mb-8">
+    {/* ...other JSX... */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      {Object.keys(customMenuData.categories).map((categoryKey) => { // JS expression block starts here
+        const categoryDetails = customMenuData.categories[categoryKey];
+        if (!categoryDetails) return null;
+        return (
+          <div /* ...props... */ >
+            {/* ...content... */}
+          </div> // This is Vite's line ~2357 (closing div of map item)
+        );
+      })} {/* This is where the JS expression block for the map should end */}
+    </div> {/* This is Vite's line ~2358 (closing grid div) */}
+  </div> // This is the closing div for the "true" branch
+) : ( // <<<< Vite points to this line (its line 2359, around your file's line 2355).
+      // The error means the ')' here was unexpected, and a '}' was expected instead.
+  // This is the "false" branch, rendering subcategories/items.
+  // ...
+)}
+The most likely cause for this specific error ("Unexpected token, expected '}'" when a ) is found) is that the JavaScript expression block {Object.keys(...).map(...)} is not being correctly closed with a } before the JSX parser expects the "true" branch of the ternary to conclude with its closing ).
+
+In your ExperimentalInquiryForm (4).tsx file, line 2352 is:
+})}
+
+This line is intended to:
+
+Close the arrow function of the .map() with ).
+Close the JavaScript expression block embedded in JSX with }.
+This looks syntactically correct. However, Vite's pre-transform step is very sensitive.
+
+Things to double-check meticulously around lines 2341-2354 of your ExperimentalInquiryForm (4).tsx:
+
+Examine Line 2352 Closely:
+
+Is it exactly })} with no other characters, no typos, and no strange invisible characters?
+Sometimes, an editor might auto-correct or insert something unexpected.
+Parentheses and Braces Balance:
+Carefully trace every opening {, (, [ and ensure it has a corresponding closing }, ), ], especially within the .map() callback and the JSX it returns.
