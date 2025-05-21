@@ -54,6 +54,7 @@ type FormStep =
   | "basicInfo" 
   | "eventDetails" 
   | "menuSelection" 
+  | "appetizerQuestion" 
   | "appetizers" 
   | "desserts" 
   | "beverages"
