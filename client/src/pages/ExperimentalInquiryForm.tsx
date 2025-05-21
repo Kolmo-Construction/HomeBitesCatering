@@ -49,7 +49,7 @@ import {
 // Import externalized data
 import { dessertItems, dessertLotSizes } from "@/data/dessertData";
 import { eventTypes, mapUrlToEventType, validateEventType } from "@/data/event-types";
-import { appetizerData, horsDoeurvesData } from "@/data/appetizerInfo";
+import { appetizerData, horsDoeurvesData } from "@/data/appetizerData";
 
 // Using EventInquiryFormData imported from form-types.ts
 
@@ -587,12 +587,6 @@ const DessertsStep = ({
 // Using appetizerData imported from appetizerInfo.ts
 
 // Dessert Matrix component
-      lotSizes: [48, 96, 144],
-      items: [
-        { id: "watermelon_radish", name: "Watermelon radish chips with apple chutney", price: 2.75 },
-        { id: "greek_village_canape", name: "Greek Village - Tomato, feta, cucumber and olive", price: 2.75 },
-        { id: "onion_tartlets", name: "French onion tartlets with Gruyere and dill", price: 2.75 },
-        { id: "pear_camembert", name: "Pear and Camembert tartlet", price: 2.75 },
         { id: "mediterranean_shrimp_canape", name: "Mediterranean style shrimp", price: 2.75 },
         { id: "miso_maple_eggs", name: "Miso maple deviled eggs", price: 2.75 },
         { id: "beet_chips", name: "Beet chips with goat cheese and asparagus tips", price: 2.75 },
