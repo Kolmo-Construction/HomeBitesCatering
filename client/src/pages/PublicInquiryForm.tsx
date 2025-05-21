@@ -175,7 +175,10 @@ type EventInquiryFormData = {
     addons: string[];
   };
   
-  // Step 5: Appetizers
+  // Step 5: Appetizer Question
+  wantsAppetizers: boolean;
+  
+  // Step 6: Appetizers
   appetizerService?: "stationary" | "passed";
   appetizers: Record<string, { name: string, quantity: number, price: number }[]>;
   
@@ -3493,6 +3496,7 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
         desserts: [],
         addons: []
       },
+      wantsAppetizers: false,
       // Initialize with empty arrays for each category
       appetizers: {
         tea_sandwiches: [],
@@ -3538,7 +3542,8 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
     "basicInfo", 
     "eventDetails", 
     "menuSelection", // Keep menuSelection as step 4 (for regular themes)
-    "appetizers",    // Keep appetizers as step 5
+    "appetizerQuestion", // New step to ask if user wants appetizers
+    "appetizers",    // Only show if user wants appetizers
     "desserts", 
     "beverages",
     "equipment",
@@ -3565,6 +3570,7 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
   const handleNext = () => {
     const currentIndex = steps.indexOf(currentStep);
     const currentFormTheme = watch("requestedTheme"); // Get current theme
+    const wantsAppetizers = watch("wantsAppetizers"); // Get appetizer preference
     
     if (currentIndex < steps.length - 1) {
       let nextStep = steps[currentIndex + 1];
@@ -3580,6 +3586,12 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
           }
         }
         // For all other themes, proceed normally to menuSelection
+      } else if (currentStep === "appetizerQuestion" && !wantsAppetizers) {
+        // Skip the appetizers step if user doesn't want appetizers
+        const dessertsIndex = steps.indexOf("desserts");
+        if (dessertsIndex > -1) {
+          nextStep = "desserts";
+        }
       }
       
       setCurrentStep(nextStep);
