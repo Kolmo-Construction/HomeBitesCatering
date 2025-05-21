@@ -2227,12 +2227,21 @@ const AppetizersStep = ({
   onNext: () => void;
 }) => {
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
-  const [showHorsDoeurvres, setShowHorsDoeurvres] = useState(false);
   
   // Get form values
   const appetizerService = watch("appetizerService");
   const appetizers = watch("appetizers");
   const horsDoeurvesSelections = watch("horsDoeurvesSelections");
+  
+  // Make sure we have the horsDoeurvesSelections structure initialized
+  React.useEffect(() => {
+    if (!horsDoeurvesSelections) {
+      setValue("horsDoeurvesSelections", {
+        serviceStyle: "stationary",
+        categories: {}
+      });
+    }
+  }, [horsDoeurvesSelections, setValue]);
   
   // Initialize appetizers structure if needed
   const initializeCategory = (categoryId: string) => {
@@ -2972,6 +2981,13 @@ const MenuSelectionStep = ({
     
     setValue(`menuSelections.${categoryKey}`, newSelections);
   };
+  
+  // Set hors d'oeuvres as the theme if no other theme is selected
+  React.useEffect(() => {
+    if (!selectedTheme || selectedTheme === "") {
+      setValue("requestedTheme", "hors_doeuvres");
+    }
+  }, [selectedTheme, setValue]);
   
   // Check if an item is selected
   const isItemSelected = (categoryKey: string, itemId: string) => {
