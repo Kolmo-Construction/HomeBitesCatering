@@ -604,7 +604,7 @@ const BasicInformationStep = ({
   );
 };
 
-// Appetizer data
+// Appetizer data for standard appetizers
 const appetizerData = {
   categories: [
     {
