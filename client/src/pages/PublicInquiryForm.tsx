@@ -162,7 +162,51 @@ type EventInquiryFormData = {
   laborHours?: number;
   requestedTheme: string;
   
-  // Additional steps will be added as needed
+  // Step 4: Menu Selection
+  selectedPackage?: string;
+  menuSelections: {
+    proteins: string[];
+    sides: string[];
+    salads: string[];
+    salsas: string[];
+    desserts: string[];
+    addons: string[];
+  };
+  
+  // Step 5: Appetizers
+  appetizerService?: "stationary" | "passed";
+  appetizers: Record<string, { name: string, quantity: number }[]>;
+  
+  // Step 6: Desserts
+  dessertSelections: Record<string, number>;
+  
+  // Step 7: Beverages
+  beverageServiceType?: "alcoholic" | "non_alcoholic" | "both";
+  bartendingServiceType?: "dry_hire" | "wet_hire";
+  servingAlcohol: string[];
+  additionalCocktails: boolean;
+  additionalCocktailsCount?: number;
+  liquorQuality?: "well" | "mid_shelf" | "top_shelf";
+  spiritBrands?: string;
+  barEquipment: Record<string, number>;
+  nonAlcoholicBeverages: Record<string, string>;
+  tableWaterService: boolean;
+  
+  // Step 8: Equipment
+  equipment: {
+    furniture: Record<string, number>;
+    linens: Record<string, number>;
+    servingWare: Record<string, number>;
+  };
+  
+  // Step 9: Notes & Final Review
+  adminFee?: number;
+  otherFeesDescription?: string;
+  otherFeesAmount?: number;
+  dietaryNotes?: string;
+  beverageNotes?: string;
+  specialRequests?: string;
+  generalNotes?: string;
 };
 
 // Public Form Header component
@@ -1082,6 +1126,492 @@ const EventDetailsStep = ({
   );
 };
 
+// Menu data for different themes
+const themeMenuData = {
+  taco_fiesta: {
+    title: "Taco Fiesta Selections",
+    packages: [
+      { 
+        id: "bronze",
+        name: "Bronze Package", 
+        price: 19.95,
+        description: "2 proteins, 2 sides, salsa bar, chips & soft corn tortillas",
+        minGuestCount: 50
+      },
+      { 
+        id: "silver",
+        name: "Silver Package", 
+        price: 24.95,
+        description: "3 proteins, 2 sides, 1 salad, salsa bar, chips & soft corn tortillas",
+        minGuestCount: 0
+      },
+      { 
+        id: "gold",
+        name: "Gold Package", 
+        price: 29.95,
+        description: "4 proteins, 3 sides, 1 salad, salsa bar, chips & soft corn tortillas",
+        minGuestCount: 0
+      },
+      { 
+        id: "diamond",
+        name: "Diamond Package", 
+        price: 34.95,
+        description: "5 proteins, 3 sides, 2 salads, enhanced salsa bar, chips & soft corn tortillas",
+        minGuestCount: 0
+      }
+    ],
+    categories: {
+      proteins: {
+        title: "Proteins",
+        items: [
+          { id: "chicken_tinga", name: "Chicken Tinga", upcharge: 0 },
+          { id: "pork_carnitas", name: "Pork Carnitas", upcharge: 0 },
+          { id: "ground_beef", name: "Ground Beef", upcharge: 0 },
+          { id: "barbacoa", name: "Barbacoa", upcharge: 0 },
+          { id: "grilled_chicken", name: "Grilled Chicken", upcharge: 0 },
+          { id: "flank_steak", name: "Flank Steak Fajitas", upcharge: 2.00 },
+          { id: "shrimp", name: "Shrimp", upcharge: 3.00 },
+          { id: "fish", name: "Fish (Grilled or Fried)", upcharge: 2.00 },
+          { id: "vegetarian", name: "Vegetarian Option (Cauliflower)", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 5
+        }
+      },
+      sides: {
+        title: "Sides",
+        items: [
+          { id: "mexican_rice", name: "Mexican Rice", upcharge: 0 },
+          { id: "cilantro_lime_rice", name: "Cilantro Lime Rice", upcharge: 0 },
+          { id: "refried_beans", name: "Refried Beans", upcharge: 0 },
+          { id: "black_beans", name: "Black Beans", upcharge: 0 },
+          { id: "elote", name: "Mexican Street Corn (Elote)", upcharge: 1.50 },
+          { id: "guacamole", name: "Guacamole", upcharge: 2.00 },
+          { id: "queso", name: "Queso", upcharge: 1.50 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 2,
+          "gold": 3,
+          "diamond": 3
+        }
+      },
+      salads: {
+        title: "Salads",
+        items: [
+          { id: "mexican_caesar", name: "Mexican Caesar Salad", upcharge: 0 },
+          { id: "southwest", name: "Southwest Salad", upcharge: 0 },
+          { id: "mixed_green", name: "Mixed Green Salad", upcharge: 0 },
+          { id: "cucumber_tomato", name: "Cucumber & Tomato Salad", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 0,
+          "silver": 1,
+          "gold": 1,
+          "diamond": 2
+        }
+      },
+      salsas: {
+        title: "Salsas",
+        items: [
+          { id: "pico", name: "Pico de Gallo", upcharge: 0 },
+          { id: "salsa_verde", name: "Salsa Verde", upcharge: 0 },
+          { id: "chipotle", name: "Chipotle Salsa", upcharge: 0 },
+          { id: "roja", name: "Salsa Roja", upcharge: 0 },
+          { id: "corn", name: "Corn Salsa", upcharge: 0 },
+          { id: "mango", name: "Mango Salsa", upcharge: 1.00 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4,
+          "diamond": 6
+        }
+      }
+    }
+  },
+  american_bbq: {
+    title: "American BBQ Selections",
+    packages: [
+      { 
+        id: "bronze",
+        name: "Bronze Package", 
+        price: 21.95,
+        description: "2 proteins, 2 sides, cornbread & butter",
+        minGuestCount: 50
+      },
+      { 
+        id: "silver",
+        name: "Silver Package", 
+        price: 26.95,
+        description: "3 proteins, 3 sides, cornbread & butter",
+        minGuestCount: 0
+      },
+      { 
+        id: "gold",
+        name: "Gold Package", 
+        price: 31.95,
+        description: "4 proteins, 4 sides, cornbread & butter, 1 dessert",
+        minGuestCount: 0
+      }
+    ],
+    categories: {
+      proteins: {
+        title: "Proteins",
+        items: [
+          { id: "pulled_pork", name: "Pulled Pork", upcharge: 0 },
+          { id: "brisket", name: "Brisket", upcharge: 3.00 },
+          { id: "chicken", name: "BBQ Chicken", upcharge: 0 },
+          { id: "ribs", name: "Ribs", upcharge: 3.00 },
+          { id: "sausage", name: "Sausage", upcharge: 0 },
+          { id: "burnt_ends", name: "Burnt Ends", upcharge: 4.00 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4
+        }
+      },
+      sides: {
+        title: "Sides",
+        items: [
+          { id: "mac_cheese", name: "Mac & Cheese", upcharge: 0 },
+          { id: "baked_beans", name: "Baked Beans", upcharge: 0 },
+          { id: "coleslaw", name: "Coleslaw", upcharge: 0 },
+          { id: "potato_salad", name: "Potato Salad", upcharge: 0 },
+          { id: "green_beans", name: "Green Beans", upcharge: 0 },
+          { id: "corn", name: "Corn on the Cob", upcharge: 0 },
+          { id: "collard_greens", name: "Collard Greens", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4
+        }
+      }
+    }
+  },
+  taste_of_greece: {
+    title: "A Taste of Greece Selections",
+    packages: [
+      { 
+        id: "bronze",
+        name: "Bronze Package", 
+        price: 22.95,
+        description: "2 proteins, 2 sides, pita bread & tzatziki",
+        minGuestCount: 40
+      },
+      { 
+        id: "silver",
+        name: "Silver Package", 
+        price: 27.95,
+        description: "3 proteins, 3 sides, pita bread, tzatziki & hummus",
+        minGuestCount: 0
+      },
+      { 
+        id: "gold",
+        name: "Gold Package", 
+        price: 32.95,
+        description: "4 proteins, 4 sides, pita bread, dips platter",
+        minGuestCount: 0
+      }
+    ],
+    categories: {
+      proteins: {
+        title: "Proteins",
+        items: [
+          { id: "chicken_souvlaki", name: "Chicken Souvlaki", upcharge: 0 },
+          { id: "pork_souvlaki", name: "Pork Souvlaki", upcharge: 0 },
+          { id: "gyro_meat", name: "Gyro Meat (Beef/Lamb)", upcharge: 2.00 },
+          { id: "lamb_chops", name: "Lamb Chops", upcharge: 5.00 },
+          { id: "moussaka", name: "Moussaka", upcharge: 0 },
+          { id: "pastitsio", name: "Pastitsio", upcharge: 0 },
+          { id: "stuffed_peppers", name: "Vegetarian Stuffed Peppers", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4
+        }
+      },
+      sides: {
+        title: "Sides",
+        items: [
+          { id: "greek_salad", name: "Greek Salad", upcharge: 0 },
+          { id: "lemon_potatoes", name: "Lemon Potatoes", upcharge: 0 },
+          { id: "rice_pilaf", name: "Greek Rice Pilaf", upcharge: 0 },
+          { id: "spanakopita", name: "Spanakopita", upcharge: 1.50 },
+          { id: "dolmades", name: "Dolmades (Stuffed Grape Leaves)", upcharge: 1.50 },
+          { id: "orzo_salad", name: "Orzo Salad", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 3,
+          "gold": 4
+        }
+      }
+    }
+  }
+};
+
+// Step 4: Menu Selection Component
+const MenuSelectionStep = ({ 
+  selectedTheme,
+  guestCount,
+  onPrevious,
+  onNext 
+}: { 
+  selectedTheme: string;
+  guestCount: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  
+  // Watch the selected package
+  const selectedPackage = watch("selectedPackage");
+  const menuSelections = watch("menuSelections");
+  
+  // Get the theme menu data or show default message if theme not found
+  const themeData = themeMenuData[selectedTheme as keyof typeof themeMenuData];
+  
+  if (!themeData) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">Menu Selection</h2>
+          <p className="text-lg text-gray-600">
+            Please complete the previous steps to select a menu theme.
+          </p>
+        </div>
+        
+        <div className="flex justify-between mt-8">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onPrevious}
+            className="flex items-center"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Get category selection limits based on the selected package
+  const getCategoryLimits = (categoryKey: string) => {
+    if (!selectedPackage || !themeData.categories[categoryKey as keyof typeof themeData.categories]) {
+      return 0;
+    }
+    
+    const category = themeData.categories[categoryKey as keyof typeof themeData.categories];
+    return category.limits[selectedPackage as keyof typeof category.limits] || 0;
+  };
+  
+  // Check if a category is available for the selected package
+  const isCategoryAvailable = (categoryKey: string) => {
+    return getCategoryLimits(categoryKey) > 0;
+  };
+  
+  // Count selected items in a category
+  const getSelectedCount = (categoryKey: string) => {
+    if (!menuSelections || !menuSelections[categoryKey as keyof typeof menuSelections]) {
+      return 0;
+    }
+    return menuSelections[categoryKey as keyof typeof menuSelections].length;
+  };
+  
+  // Check if selection limit is reached for a category
+  const isSelectionLimitReached = (categoryKey: string) => {
+    const limit = getCategoryLimits(categoryKey);
+    const count = getSelectedCount(categoryKey);
+    return count >= limit;
+  };
+  
+  // Handle selection of an item in a category
+  const handleItemSelection = (categoryKey: string, itemId: string, isSelected: boolean) => {
+    const currentSelections = menuSelections[categoryKey as keyof typeof menuSelections] || [];
+    
+    let newSelections;
+    if (isSelected) {
+      // Add item if not at limit
+      if (!isSelectionLimitReached(categoryKey)) {
+        newSelections = [...currentSelections, itemId];
+      } else {
+        // At limit, don't add
+        newSelections = currentSelections;
+      }
+    } else {
+      // Remove item
+      newSelections = currentSelections.filter(id => id !== itemId);
+    }
+    
+    setValue(`menuSelections.${categoryKey}`, newSelections);
+  };
+  
+  // Check if an item is selected
+  const isItemSelected = (categoryKey: string, itemId: string) => {
+    const currentSelections = menuSelections[categoryKey as keyof typeof menuSelections] || [];
+    return currentSelections.includes(itemId);
+  };
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">{themeData.title}</h2>
+        <p className="text-lg text-gray-600">
+          Select your preferred package and menu items
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* Package Selection */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Select a Package</h3>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {themeData.packages.map((pkg) => (
+              <div key={pkg.id}>
+                {pkg.minGuestCount > 0 && guestCount < pkg.minGuestCount ? (
+                  // Disabled package with warning
+                  <div className="border border-gray-200 rounded-md p-4 opacity-60 cursor-not-allowed">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-lg font-medium text-gray-500">{pkg.name}</h4>
+                      <span className="text-lg font-semibold text-gray-500">${pkg.price} / person</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-2">{pkg.description}</p>
+                    <div className="flex items-center text-amber-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm">
+                        Minimum {pkg.minGuestCount} guests required for this package
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  // Active package
+                  <div 
+                    className={`border rounded-md p-4 cursor-pointer transition-all duration-200 ${
+                      selectedPackage === pkg.id 
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary' 
+                        : 'border-gray-200 hover:border-primary/50'
+                    }`}
+                    onClick={() => setValue("selectedPackage", pkg.id)}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-lg font-medium">{pkg.name}</h4>
+                      <span className="text-lg font-semibold">${pkg.price} / person</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{pkg.description}</p>
+                    <div className="flex justify-end">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        selectedPackage === pkg.id 
+                          ? 'bg-primary text-white' 
+                          : 'border border-gray-300'
+                      }`}>
+                        {selectedPackage === pkg.id && <Check className="h-4 w-4" />}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Food Categories - Only show if a package is selected */}
+        {selectedPackage && (
+          <div className="space-y-8">
+            {/* Map through available categories */}
+            {Object.entries(themeData.categories).map(([categoryKey, category]) => {
+              // Skip categories not available for this package
+              if (!isCategoryAvailable(categoryKey)) return null;
+              
+              const selectionLimit = getCategoryLimits(categoryKey);
+              const selectedCount = getSelectedCount(categoryKey);
+              
+              return (
+                <div key={categoryKey} className="border-t pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">{category.title}</h3>
+                    <div className="text-sm font-medium px-3 py-1 bg-gray-100 rounded-full">
+                      {selectedCount} of {selectionLimit} selected
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {category.items.map((item) => (
+                      <div key={item.id} className="relative">
+                        <label className={`
+                          flex items-center justify-between p-3 border rounded-md
+                          ${isItemSelected(categoryKey, item.id) ? 'border-primary bg-primary/5' : 'border-gray-200'}
+                          ${(!isItemSelected(categoryKey, item.id) && isSelectionLimitReached(categoryKey)) 
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : 'cursor-pointer hover:border-primary/50'}
+                        `}>
+                          <div className="flex items-start">
+                            <Checkbox
+                              checked={isItemSelected(categoryKey, item.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked === "indeterminate") return;
+                                handleItemSelection(categoryKey, item.id, !!checked);
+                              }}
+                              disabled={!isItemSelected(categoryKey, item.id) && isSelectionLimitReached(categoryKey)}
+                              className="mr-3 mt-0.5"
+                            />
+                            <div>
+                              <div className="font-medium">{item.name}</div>
+                              {item.upcharge > 0 && (
+                                <div className="text-sm text-amber-600">+${item.upcharge.toFixed(2)} per person</div>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {!selectedPackage && (
+          <div className="text-center p-8 bg-gray-50 rounded-md">
+            <p className="text-gray-500">Please select a package above to view food options.</p>
+          </div>
+        )}
+      </div>
+      
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onPrevious}
+          className="flex items-center"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onNext}
+          className="flex items-center"
+          disabled={!selectedPackage}
+        >
+          Next <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Main component
 export default function PublicInquiryForm() {
   // Define form with default values
@@ -1108,12 +1638,34 @@ export default function PublicInquiryForm() {
       guestCount: 50,
       serviceStyle: "",
       requestedTheme: "",
+      menuSelections: {
+        proteins: [],
+        sides: [],
+        salads: [],
+        salsas: [],
+        desserts: [],
+        addons: []
+      },
+      appetizers: {},
+      dessertSelections: {},
+      servingAlcohol: [],
+      additionalCocktails: false,
+      barEquipment: {},
+      nonAlcoholicBeverages: {},
+      tableWaterService: false,
+      equipment: {
+        furniture: {},
+        linens: {},
+        servingWare: {}
+      }
     }
   });
   
   // Get form state
   const { watch, setValue } = methods;
   const eventType = watch("eventType");
+  const requestedTheme = watch("requestedTheme");
+  const guestCount = watch("guestCount");
   
   // State for tracking the current step
   const [currentStep, setCurrentStep] = useState<FormStep>("eventType");
@@ -1202,12 +1754,22 @@ export default function PublicInquiryForm() {
                 />
               )}
               
+              {currentStep === "menuSelection" && eventType && (
+                <MenuSelectionStep
+                  selectedTheme={requestedTheme}
+                  guestCount={guestCount}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
               {/* Additional steps will be rendered here */}
-              {/* For now, we've implemented the first three steps */}
+              {/* For now, we've implemented the first four steps */}
               
               {currentStep !== "eventType" && 
                currentStep !== "basicInfo" && 
-               currentStep !== "eventDetails" && (
+               currentStep !== "eventDetails" &&
+               currentStep !== "menuSelection" && (
                 <div className="container mx-auto px-4 max-w-3xl text-center py-12">
                   <h2 className="text-2xl font-bold">Step {currentStepNumber} - {currentStep}</h2>
                   <p className="text-gray-600 mt-4">This step is under construction...</p>
