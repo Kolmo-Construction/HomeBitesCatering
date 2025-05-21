@@ -457,6 +457,9 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   // Handle form submission with all overrides
   const handleSubmit = async (data) => {
+    let rulesTaskSuccess = true;
+    let rulesErrorMessage = "";
+
     try {
       // Handle options overrides for choice-based questions
       if (['checkbox_group', 'radio_group', 'dropdown'].includes(questionType)) {
@@ -473,45 +476,84 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       await onSave(data);
       
       // Now save the conditional logic rules separately
-      if (rules.length > 0 && question?.id) {
+      if (question?.id) {
+        console.log(`Proceeding to save ${rules.length} rules for question ${question.id}`);
         try {
           // First delete existing rules
-          await fetch(`/api/form-builder/questions/${question.id}/rules`, {
+          const deleteResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
             method: 'DELETE',
           });
           
-          // Then save the new rules
-          for (const rule of rules) {
-            if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
-              // Create the rule with our updated API schema format
-              const ruleResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+          if (!deleteResponse.ok) {
+            const errorData = await deleteResponse.json().catch(() => ({ message: "Failed to delete existing rules" }));
+            console.error("Error deleting rules:", errorData);
+            rulesTaskSuccess = false;
+            rulesErrorMessage = errorData.message || "Failed to clear existing rules.";
+          } else {
+            console.log(`Successfully deleted existing rules for question ${question.id}`);
+          }
+          
+          // If deletion was successful (or if there were no rules to delete), save new rules
+          if (rulesTaskSuccess && rules.length > 0) {
+            console.log(`Attempting to save ${rules.length} new/updated rules.`);
+            for (const rule of rules) {
+              if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
+                const rulePayload = {
                   sourceQuestionId: rule.sourceQuestionId,
                   conditionType: rule.conditionType,
-                  conditionValue: rule.conditionType === 'is_answered' || rule.conditionType === 'is_not_answered' 
-                    ? null 
+                  conditionValue: rule.conditionType === 'is_answered' || rule.conditionType === 'is_not_answered'
+                    ? null
                     : (rule.conditionValue || ""),
-                  actionType: rule.actionType
-                }),
-              });
-              
-              console.log("Rule created:", await ruleResponse.json());
+                  actionType: rule.actionType,
+                };
+                console.log(`POSTing rule to /api/form-builder/questions/${question.id}/rules with payload:`, rulePayload);
+                
+                const ruleResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(rulePayload),
+                });
+
+                const ruleResponseData = await ruleResponse.json().catch(() => ({ message: `Rule POST failed with status ${ruleResponse.status}` }));
+                if (!ruleResponse.ok) {
+                  console.error("Error saving a rule:", ruleResponseData);
+                  rulesTaskSuccess = false;
+                  rulesErrorMessage = ruleResponseData.message || `Failed to save a rule for question ${question.id}. Status: ${ruleResponse.status}`;
+                  break; // Stop processing further rules if one fails
+                }
+                console.log("Rule created/updated successfully:", ruleResponseData);
+              } else {
+                console.warn("Skipping incomplete rule:", rule);
+              }
             }
+          } else if (rules.length === 0 && rulesTaskSuccess) {
+            console.log("No rules to save for this question.");
           }
-        } catch (ruleError) {
-          console.error("Error saving rules:", ruleError);
-          // Continue execution - we don't want to fail the whole save if rules fail
+        } catch (err) {
+          rulesTaskSuccess = false;
+          rulesErrorMessage = err instanceof Error ? err.message : "An unknown error occurred while managing rules.";
+          console.error("Error in rules processing block:", err);
         }
       }
       
-      toast({
-        title: "Question updated",
-        description: "The question settings have been updated successfully.",
-      });
+      // Determine overall success and show appropriate toast
+      if (!rulesTaskSuccess) {
+        toast({
+          variant: "destructive",
+          title: "Rule Saving Error",
+          description: rulesErrorMessage || "Failed to save one or more rules.",
+        });
+        // Main question settings likely saved successfully
+        toast({
+          title: "Question updated (with rule issues)",
+          description: "Main question settings saved, but there was an issue with the rules.",
+        });
+      } else {
+        toast({
+          title: "Question settings updated",
+          description: "All changes, including rules, have been saved successfully.",
+        });
+      }
     } catch (error) {
       toast({
         variant: "destructive",
