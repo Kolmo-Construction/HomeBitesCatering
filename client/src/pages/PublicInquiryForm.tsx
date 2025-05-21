@@ -3947,8 +3947,11 @@ const MenuSelectionStep = ({
                 <span className="text-sm">
                   Selected items: {
                     Object.keys(menuSelections || {})
-                      .filter(key => key.startsWith(`${selectedCategory}_`))
-                      .reduce((total, key) => total + (menuSelections[key]?.length || 0), 0)
+                      .filter(key => selectedCategory && key.startsWith(`${selectedCategory}_`))
+                      .reduce((total, key) => {
+                        const selections = menuSelections[key];
+                        return total + (Array.isArray(selections) ? selections.length : 0);
+                      }, 0)
                   }
                 </span>
                 <Button 
