@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -2234,14 +2234,17 @@ const AppetizersStep = ({
   const horsDoeurvesSelections = watch("horsDoeurvesSelections");
   
   // Make sure we have the horsDoeurvesSelections structure initialized
-  React.useEffect(() => {
-    if (!horsDoeurvesSelections) {
+  useEffect(() => {
+    if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories) {
       setValue("horsDoeurvesSelections", {
         serviceStyle: "stationary",
         categories: {}
       });
     }
-  }, [horsDoeurvesSelections, setValue]);
+    
+    // Set requestedTheme to hors_doeuvres if needed
+    setValue("requestedTheme", "hors_doeuvres");
+  }, []);
   
   // Initialize appetizers structure if needed
   const initializeCategory = (categoryId: string) => {
