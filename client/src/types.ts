@@ -91,7 +91,7 @@ export interface EventInquiryFormData {
   
   // Desserts
   wantsDesserts: boolean;
-  dessertSelections: string[];
+  dessertSelections: Record<string, number | null>;
   
   // Special requests
   hasAllergies: boolean;

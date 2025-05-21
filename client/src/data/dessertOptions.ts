@@ -1,53 +1,30 @@
 // client/src/data/dessertOptions.ts
 
-// Dessert options data
-export const dessertOptions = [
-  {
-    id: "chocolate_cake",
-    name: "Chocolate Cake",
-    description: "Rich chocolate layer cake with ganache frosting",
-    price: 5.99
-  },
-  {
-    id: "cheesecake",
-    name: "Classic New York Cheesecake",
-    description: "Creamy cheesecake with graham cracker crust",
-    price: 6.99
-  },
-  {
-    id: "tiramisu",
-    name: "Tiramisu",
-    description: "Italian dessert with coffee-soaked ladyfingers and mascarpone cream",
-    price: 7.50
-  },
-  {
-    id: "apple_pie",
-    name: "Apple Pie",
-    description: "Traditional apple pie with cinnamon and flaky crust",
-    price: 5.50
-  },
-  {
-    id: "chocolate_mousse",
-    name: "Chocolate Mousse",
-    description: "Light and airy chocolate mousse in individual cups",
-    price: 4.99
-  },
-  {
-    id: "mini_dessert_trio",
-    name: "Mini Dessert Trio",
-    description: "Assortment of mini desserts - perfect for sampling",
-    price: 8.99
-  },
-  {
-    id: "fruit_tarts",
-    name: "Fresh Fruit Tarts",
-    description: "Buttery tart shells filled with pastry cream and topped with fresh seasonal fruit",
-    price: 6.50
-  },
-  {
-    id: "cookies_brownies",
-    name: "Assorted Cookies & Brownies",
-    description: "A selection of freshly baked cookies and fudge brownies",
-    price: 4.50
-  }
+// Dessert lot sizes for quantity selection
+export type DessertLotSize = 36 | 48 | 72 | 96 | 144;
+
+// Dessert item type definition
+export type DessertItem = {
+  id: string;
+  name: string;
+  price: number;
+};
+
+// Available lot sizes for desserts
+export const dessertLotSizes: DessertLotSize[] = [36, 48, 72, 96, 144];
+
+// Dessert options data - matches the original implementation
+export const dessertOptions: DessertItem[] = [
+  { id: "petit_fours", name: "Petit Fours", price: 2.25 },
+  { id: "macaroons", name: "Macaroons", price: 2.25 },
+  { id: "flourless_chocolate_cake", name: "Flourless Chocolate Cake", price: 4.75 },
+  { id: "cheesecake", name: "Cheesecake", price: 5.75 },
+  { id: "baklava", name: "Baklava", price: 5.25 },
+  { id: "cannolis", name: "Cannolis", price: 4.75 },
+  { id: "mini_cannolis", name: "Mini Cannolis", price: 2.75 },
+  { id: "assorted_dessert_cups", name: "Assorted dessert cups", price: 3.25 },
+  { id: "pate_a_choux", name: "Pâte à Choux with Crème Pâtissière", price: 3.25 },
+  { id: "baklava_rollups", name: "Baklava roll-ups", price: 3.75 },
+  { id: "lemon_tartlets", name: "Lemon Tartlets", price: 2.75 },
+  { id: "mille_feuille", name: "Mille feuille with cream and berries", price: 3.75 }
 ];
