@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext, createContext } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -315,6 +315,61 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
+  
+  // Get form context to fetch other questions for conditional logic
+  const { formId, selectedPage, pages, questions: currentPageQuestions } = useContext(FormEditorContext) || {};
+  
+  // Get all questions from all pages for conditional logic
+  const { data: allFormQuestionsData } = useQuery({
+    queryKey: ['/api/form-builder/forms', formId, 'all-questions'],
+    queryFn: async () => {
+      if (!formId) return [];
+      
+      // Flatten the array of all page questions
+      const allQuestions = [];
+      
+      // Collect questions from each page
+      for (const page of pages || []) {
+        const response = await fetch(`/api/form-builder/pages/${page.id}/questions`);
+        if (!response.ok) continue;
+        
+        const pageQuestions = await response.json();
+        if (Array.isArray(pageQuestions)) {
+          allQuestions.push(...pageQuestions.map(q => ({
+            ...q,
+            pageTitle: page.pageTitle || page.title
+          })));
+        }
+      }
+      
+      return allQuestions;
+    },
+    enabled: !!formId && !!pages?.length
+  });
+  
+  // Get existing rules for this question
+  const { data: questionRules, isLoading: isRulesLoading } = useQuery({
+    queryKey: ['/api/form-builder/questions', question?.id, 'rules'],
+    queryFn: async () => {
+      if (!question?.id) return [];
+      const response = await fetch(`/api/form-builder/questions/${question.id}/rules`);
+      if (!response.ok) {
+        return [];
+      }
+      return await response.json();
+    },
+    enabled: !!question?.id
+  });
+  
+  // State for managing rules
+  const [rules, setRules] = useState([]);
+  
+  // Initialize rules when data is loaded
+  useEffect(() => {
+    if (questionRules) {
+      setRules(questionRules);
+    }
+  }, [questionRules]);
   
   // Initialize form for question settings with all override fields
   const questionSettingsSchema = z.object({
