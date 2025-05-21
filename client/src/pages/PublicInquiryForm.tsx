@@ -3148,11 +3148,25 @@ const MenuSelectionStep = ({
 };
 
 // Main component
-export default function PublicInquiryForm() {
+// Helper function to validate if a string is a valid event type
+function validateEventType(type: string): boolean {
+  const validEventTypes = [
+    "Wedding", 
+    "Corporate", 
+    "Engagement", 
+    "Birthday", 
+    "Food Truck", 
+    "Mobile Bartending", 
+    "Other Private Party"
+  ];
+  return validEventTypes.includes(type);
+}
+
+export default function PublicInquiryForm({ initialEventType = "" }: { initialEventType?: string }) {
   // Define form with default values
   const methods = useForm<EventInquiryFormData>({
     defaultValues: {
-      eventType: null,
+      eventType: initialEventType as EventType || null,
       billingAddress: {
         street: "",
         city: "",
@@ -3215,7 +3229,10 @@ export default function PublicInquiryForm() {
   const guestCount = watch("guestCount");
   
   // State for tracking the current step
-  const [currentStep, setCurrentStep] = useState<FormStep>("eventType");
+  // If an initial event type is provided in the URL, start at the basicInfo step
+  const [currentStep, setCurrentStep] = useState<FormStep>(
+    initialEventType && validateEventType(initialEventType) ? "basicInfo" : "eventType"
+  );
   
   // Calculate step number and total steps
   const steps: FormStep[] = [

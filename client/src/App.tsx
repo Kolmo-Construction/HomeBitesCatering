@@ -41,14 +41,17 @@ function AppContent() {
     );
   }
   
-  // Check if the current path is /inquiry to show only the inquiry form
+  // Check if the path starts with /inquiry to show only the inquiry form
   const [location] = useState(window.location.pathname);
   
-  if (location === "/inquiry") {
+  if (location.startsWith("/inquiry")) {
+    // Extract the event type from the URL if present
+    const eventType = location.split("/inquiry/")[1] || "";
+    
     return (
       <div className="min-h-screen bg-gray-50">
         <Toaster />
-        <PublicInquiryForm />
+        <PublicInquiryForm initialEventType={eventType} />
       </div>
     );
   }
