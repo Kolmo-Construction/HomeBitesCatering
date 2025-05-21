@@ -52,6 +52,7 @@ export const themeMenuData = {
     title: "Custom Menu - Flexible Selection",
     description: "Build your own menu by selecting items from different cuisine styles",
     customizable: true,
+    packages: [],
     categories: {
       taco_fiesta: {
         title: "Taco Fiesta - Custom",
