@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +59,7 @@ import {
   Loader2
 } from "lucide-react";
 import FormPreview from "@/components/form-builder/FormPreview";
+import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,20 +68,6 @@ import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from "@
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { questionTypeLabels, getQuestionTypeLabel } from "@shared/form-utils";
-
-// Define types for conditional logic
-interface RuleDefinition {
-  id: string; // Unique ID for the rule (can be temp client-side ID initially)
-  // triggerQuestionId: string; // Implicitly the selectedQuestion.id for this design
-  conditionType: string; // Using string type for now, will use enum when implemented in schema
-  conditionValue?: string; // Value to check against the selectedQuestion's answer
-  actionType: string; // Using string type for now, will use enum when implemented in schema
-  targets: Array<{
-    targetType: 'question' | 'page';
-    targetId: string; // ID of the formPageQuestion or formPage
-  }>;
-  description?: string; // Optional internal description
-}
 
 // Schema for form page definition
 const formPageSchema = z.object({
@@ -224,271 +211,6 @@ const SortableQuestion = ({ question, isSelected, onSelect }) => {
   );
 };
 
-// Rule Editor Dialog component for adding/editing conditional rules
-const RuleEditorDialog = ({
-  isOpen,
-  onOpenChange,
-  initialRule = null,
-  onSave,
-  questionId,
-  availableQuestions = [],
-  availablePages = []
-}) => {
-  // Define the condition types and action types that would normally come from the schema
-  const conditionTypes = [
-    { value: 'equals', label: 'Equals' },
-    { value: 'not_equals', label: 'Not Equals' },
-    { value: 'contains', label: 'Contains' },
-    { value: 'not_contains', label: 'Does Not Contain' },
-    { value: 'greater_than', label: 'Greater Than' },
-    { value: 'less_than', label: 'Less Than' },
-    { value: 'is_empty', label: 'Is Empty' },
-    { value: 'is_not_empty', label: 'Is Not Empty' },
-    { value: 'is_filled', label: 'Is Filled' },
-    { value: 'is_not_filled', label: 'Is Not Filled' }
-  ];
-  
-  const actionTypes = [
-    { value: 'show', label: 'Show' },
-    { value: 'hide', label: 'Hide' }
-  ];
-  
-  const defaultRule = initialRule || {
-    conditionType: 'equals',
-    conditionValue: '',
-    actionType: 'show',
-    targets: [],
-    description: ''
-  };
-  
-  const [targetType, setTargetType] = useState<'question' | 'page'>(
-    initialRule?.targets?.[0]?.targetType || 'question'
-  );
-  
-  const ruleForm = useForm({
-    defaultValues: defaultRule
-  });
-  
-  // Reset form when initialRule changes
-  useEffect(() => {
-    if (initialRule) {
-      ruleForm.reset(initialRule);
-      setTargetType(initialRule.targets?.[0]?.targetType || 'question');
-    } else {
-      ruleForm.reset(defaultRule);
-      setTargetType('question');
-    }
-  }, [initialRule]);
-  
-  // Watch condition type to determine if we need to show the value input
-  const conditionType = ruleForm.watch('conditionType');
-  const needsValue = !['is_empty', 'is_not_empty', 'is_filled', 'is_not_filled'].includes(conditionType);
-  
-  // Handler for target type change
-  const handleTargetTypeChange = (value: 'question' | 'page') => {
-    setTargetType(value);
-    // Clear selected targets when changing target type
-    ruleForm.setValue('targets', []);
-  };
-  
-  // Handler for target selection
-  const handleTargetChange = (selectedIds: string[]) => {
-    const targets = selectedIds.map(id => ({
-      targetType,
-      targetId: id
-    }));
-    ruleForm.setValue('targets', targets);
-  };
-  
-  // Get current selected target IDs
-  const selectedTargetIds = ruleForm.watch('targets')?.map(t => t.targetId) || [];
-  
-  const handleSubmit = async (data) => {
-    try {
-      await onSave(data);
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving rule:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save rule",
-      });
-    }
-  };
-  
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{initialRule ? "Edit Rule" : "Add New Rule"}</DialogTitle>
-          <DialogDescription>
-            Define when questions or pages should be shown or hidden based on answers to this question.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={ruleForm.handleSubmit(handleSubmit)} className="space-y-4 py-2">
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-3 rounded-md mb-4">
-              <p className="text-sm font-medium">Condition based on: <span className="font-bold">{availableQuestions.find(q => q.id === questionId)?.displayText || 'Current Question'}</span></p>
-            </div>
-            
-            {/* Condition Type */}
-            <FormItem>
-              <FormLabel>Condition Type</FormLabel>
-              <Select
-                onValueChange={(value) => ruleForm.setValue('conditionType', value)}
-                defaultValue={ruleForm.getValues('conditionType')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a condition" />
-                </SelectTrigger>
-                <SelectContent>
-                  {conditionTypes.map(condition => (
-                    <SelectItem key={condition.value} value={condition.value}>
-                      {condition.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-            
-            {/* Condition Value - only show for conditions that need a value */}
-            {needsValue && (
-              <FormItem>
-                <FormLabel>Condition Value</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter the value to compare against"
-                    {...ruleForm.register('conditionValue')}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-            
-            {/* Action Type */}
-            <FormItem>
-              <FormLabel>Action Type</FormLabel>
-              <Select
-                onValueChange={(value) => ruleForm.setValue('actionType', value)}
-                defaultValue={ruleForm.getValues('actionType')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {actionTypes.map(action => (
-                    <SelectItem key={action.value} value={action.value}>
-                      {action.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-            
-            {/* Target Type */}
-            <FormItem>
-              <FormLabel>Target Type</FormLabel>
-              <Select
-                onValueChange={(value: any) => handleTargetTypeChange(value)}
-                value={targetType}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="question">Question</SelectItem>
-                  <SelectItem value="page">Page</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormItem>
-            
-            {/* Target Selection */}
-            <div className="space-y-2">
-              <FormLabel>Select Targets</FormLabel>
-              <div className="max-h-[200px] overflow-y-auto border rounded-md p-3">
-                {targetType === 'question' ? (
-                  availableQuestions.length > 0 ? (
-                    availableQuestions
-                      .filter(q => q.id !== questionId) // Don't allow self-reference
-                      .map(question => (
-                        <div key={question.id} className="flex items-center mb-2">
-                          <input
-                            type="checkbox"
-                            id={`target-${question.id}`}
-                            className="mr-2"
-                            checked={selectedTargetIds.includes(question.id)}
-                            onChange={(e) => {
-                              const isChecked = e.target.checked;
-                              const newSelectedIds = isChecked
-                                ? [...selectedTargetIds, question.id]
-                                : selectedTargetIds.filter(id => id !== question.id);
-                              handleTargetChange(newSelectedIds);
-                            }}
-                          />
-                          <label htmlFor={`target-${question.id}`} className="text-sm">
-                            {question.displayText} (Page: {question.pageName})
-                          </label>
-                        </div>
-                      ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No other questions available in this form.</p>
-                  )
-                ) : (
-                  // Display page targets
-                  availablePages.length > 0 ? (
-                    availablePages.map(page => (
-                      <div key={page.id} className="flex items-center mb-2">
-                        <input
-                          type="checkbox"
-                          id={`target-page-${page.id}`}
-                          className="mr-2"
-                          checked={selectedTargetIds.includes(page.id)}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            const newSelectedIds = isChecked
-                              ? [...selectedTargetIds, page.id]
-                              : selectedTargetIds.filter(id => id !== page.id);
-                            handleTargetChange(newSelectedIds);
-                          }}
-                        />
-                        <label htmlFor={`target-page-${page.id}`} className="text-sm">
-                          {page.pageTitle || 'Untitled Page'}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No pages available in this form.</p>
-                  )
-                )}
-              </div>
-            </div>
-            
-            {/* Description */}
-            <FormItem>
-              <FormLabel>Description (Optional)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Add a note about this rule..."
-                  {...ruleForm.register('description')}
-                  className="resize-none h-[80px]"
-                />
-              </FormControl>
-            </FormItem>
-          </div>
-          
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Save Rule</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 // Page Form Dialog
 const PageFormDialog = ({ 
   isOpen, 
@@ -590,92 +312,9 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     },
     enabled: !!question?.libraryQuestionId,
   });
-  
-  // Fetch rules for the selected question using React Query
-  const { data: conditionalRules = [], refetch: refetchConditionalRules } = useQuery({
-    queryKey: ['formQuestionRules', question?.id],
-    queryFn: async () => {
-      if (!question?.id) return [];
-      
-      try {
-        const response = await fetch(`/api/form-builder/form-page-questions/${question.id}/rules`);
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch conditional rules: ${errorText}`);
-        }
-        return response.json();
-      } catch (error) {
-        console.error("Error fetching rules:", error);
-        return [];
-      }
-    },
-    enabled: !!question?.id // Only fetch if a question is selected
-  });
-  
-  // Get the parent form data for the current question
-  const { data: parentFormData } = useQuery({
-    queryKey: ['/api/form-builder/forms', question?.formId],
-    queryFn: async () => {
-      if (!question?.formId) return null;
-      const response = await fetch(`/api/form-builder/forms/${question.formId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch parent form data');
-      }
-      return await response.json();
-    },
-    enabled: !!question?.formId,
-  });
-  
-  // Effect to collect all questions and pages in the form for rule targeting
-  useEffect(() => {
-    // Only run when we have a form loaded and a question is selected
-    if (!question || !parentFormData) return;
-    
-    try {
-      // Process form pages from the parent form
-      const formObj = parentFormData.data || parentFormData;
-      const pages = formObj.pages || [];
-      
-      const formPages = pages.map(page => ({
-        id: String(page.id),
-        pageTitle: page.pageTitle || page.title || `Page ${page.pageOrder + 1}`
-      }));
-      setAvailablePages(formPages);
-      
-      // Process form questions
-      let allQuestions = [];
-      pages.forEach(page => {
-        const pageQuestions = page.questions || [];
-        
-        pageQuestions.forEach(q => {
-          // Skip the current question (no self-referencing)
-          if (q.id === question.id) return;
-          
-          allQuestions.push({
-            id: String(q.id),
-            displayText: q.displayText || q.displayTextOverride || 'Unnamed Question',
-            pageId: String(page.id),
-            pageName: page.pageTitle || `Page ${page.pageOrder + 1}`
-          });
-        });
-      });
-      
-      setAvailableQuestions(allQuestions);
-    } catch (error) {
-      console.error("Error preparing rule target data:", error);
-    }
-  }, [question, parentFormData]);
 
   // Initialize tabs for organizing the settings
   const [activeTab, setActiveTab] = useState("basic");
-  
-  // State for rule editor dialog
-  const [isRuleEditorOpen, setIsRuleEditorOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<RuleDefinition | null>(null);
-  
-  // State for tracking all questions and pages in the form (for rule targets)
-  const [availableQuestions, setAvailableQuestions] = useState<any[]>([]);
-  const [availablePages, setAvailablePages] = useState<any[]>([]);
   
   // Initialize form for question settings with all override fields
   const questionSettingsSchema = z.object({
@@ -689,33 +328,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     metadataOverrides: z.any().optional(),
     optionsOverrides: z.any().optional(),
   });
-
-  // Effect to collect all questions and pages in the form for rule targets
-  useEffect(() => {
-    // If we have formData and pages, we can build the list of all form questions
-    if (formData?.id && pages) {
-      // First, set all pages in the form
-      setAllPagesInForm(pages);
-      
-      // Then collect all questions from all pages with their page names
-      const allQuestions: PageQuestion[] = [];
-      
-      pages.forEach(page => {
-        // Get questions for this page from the pageQuestions map
-        const questionsForPage = pageQuestions[page.id] || [];
-        
-        // Add page name to each question for better display in rule editor
-        const questionsWithPageInfo = questionsForPage.map(q => ({
-          ...q,
-          pageName: page.pageTitle || 'Unnamed Page'
-        }));
-        
-        allQuestions.push(...questionsWithPageInfo);
-      });
-      
-      setAllQuestionsInForm(allQuestions);
-    }
-  }, [formData?.id, pages, pageQuestions]);
 
   // Extract question type for conditional fields
   const questionType = question?.questionType || question?.question_type || 
@@ -855,182 +467,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
     return typeMap[type] || type;
   };
 
-  // Handle conditional rules
-  const handleOpenRuleDialog = (ruleToEdit = null) => {
-    setEditingRule(ruleToEdit);
-    setIsRuleEditorOpen(true);
-  };
-  
-  const handleAddRule = () => {
-    handleOpenRuleDialog(null);
-  };
-  
-  const handleEditRule = (rule: RuleDefinition) => {
-    handleOpenRuleDialog(rule);
-  };
-  
-  const handleDeleteRule = (ruleId: string) => {
-    // Confirm deletion with user
-    if (window.confirm("Are you sure you want to delete this rule?")) {
-      deleteRuleMutation.mutate(ruleId);
-    }
-  };
-  
-
-
-  // Mutation for saving and updating rules
-  const saveRuleMutation = useMutation({
-    mutationFn: async (ruleDataWithTargets: Omit<RuleDefinition, 'id'> & { id?: string }) => {
-      const { id: ruleId, ...payload } = ruleDataWithTargets;
-      
-      // Use formId from question or parentFormData
-      const formId = question.formId || 
-                    (parentFormData?.id || parentFormData?.data?.id);
-      
-      if (!formId) {
-        throw new Error("Cannot save rule: Form ID not available");
-      }
-      
-      const completePayload = {
-        ...payload,
-        formId: parseInt(String(formId)), 
-        triggerFormPageQuestionId: parseInt(question.id),
-        // Ensure targets are correctly formatted with numeric IDs
-        targets: payload.targets.map(t => ({
-          ...t,
-          targetId: parseInt(t.targetId, 10)
-        }))
-      };
-
-      if (ruleId && !ruleId.startsWith('temp-') && !ruleId.startsWith('rule-')) { 
-        // Editing an existing rule
-        const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(completePayload),
-        });
-        
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-      } else { 
-        // Creating a new rule
-        console.log("Creating new rule with form ID:", formId);
-        const response = await fetch(`/api/form-builder/forms/${formId}/rules`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(completePayload),
-        });
-        
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-      }
-    },
-    onSuccess: () => {
-      toast({ 
-        title: "Rule saved", 
-        description: "Conditional rule has been successfully saved to the server." 
-      });
-      refetchConditionalRules(); // Refetch rules for the current question
-      setIsRuleEditorOpen(false);
-      setEditingRule(null);
-    },
-    onError: (error: Error) => {
-      toast({ 
-        variant: "destructive", 
-        title: "Error saving rule", 
-        description: error.message 
-      });
-    },
-  });
-
-  // Mutation for deleting rules
-  const deleteRuleMutation = useMutation({
-    mutationFn: async (ruleId: string) => {
-      if (ruleId.startsWith('temp-')) {
-        // For locally added, unsaved rules
-        return Promise.resolve({ message: "Local rule removed" });
-      }
-      
-      const response = await fetch(`/api/form-builder/rules/${ruleId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) throw new Error(await response.text());
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ 
-        title: "Rule deleted", 
-        description: "Conditional rule has been deleted." 
-      });
-      refetchConditionalRules(); // Refetch rules
-    },
-    onError: (error: Error) => {
-      toast({ 
-        variant: "destructive", 
-        title: "Error deleting rule", 
-        description: error.message 
-      });
-    },
-  });
-
-  const handleSaveRule = (ruleDataFromDialog: any) => {
-    const ruleToSave = {
-      ...(editingRule || {}), // Spread existing rule if editing (contains its ID)
-      ...ruleDataFromDialog, // Spread new/updated data from dialog
-    };
-    saveRuleMutation.mutate(ruleToSave);
-  };
-  
-  // Fetch rules for the selected question
-  const { 
-    data: fetchedRules = [], 
-    isLoading: isLoadingRules, 
-    refetch: refetchRules 
-  } = useQuery({
-    queryKey: ['formQuestionRules', question?.id],
-    queryFn: async () => {
-      if (!question?.id) return [];
-      const response = await fetch(`/api/form-builder/form-page-questions/${question.id}/rules`);
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch conditional rules: ${errorText}`);
-      }
-      return response.json();
-    },
-    enabled: !!question?.id, // Only fetch if a question is selected
-  });
-  
-
-  
-
-  
-  // Effect to collect all form questions and pages for rule targeting
-  useEffect(() => {
-    if (formData?.id && pages) {
-      // Set the pages
-      setAllPagesInForm(pages);
-      
-      // Create an array to hold all questions with their page names
-      const allQuestions: PageQuestion[] = [];
-      
-      // Process each page to get its questions
-      pages.forEach(page => {
-        const questionsForPage = pageQuestions[page.id] || [];
-        
-        // Add page name to each question
-        const questionsWithPage = questionsForPage.map(q => ({
-          ...q,
-          pageName: page.pageTitle || 'Unnamed Page'
-        }));
-        
-        allQuestions.push(...questionsWithPage);
-      });
-      
-      setAllQuestionsInForm(allQuestions);
-    }
-  }, [formData?.id, pages, pageQuestions]);
-  
   // Handle adding a new option for choice-based questions
   const handleAddOption = () => {
     // Only allow adding if we have active overrides
@@ -1068,17 +504,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
 
   return (
     <div className="p-4 h-full overflow-y-auto">
-      {/* Rule Editor Dialog */}
-      <RuleEditorDialog
-        isOpen={isRuleEditorOpen}
-        onOpenChange={setIsRuleEditorOpen}
-        initialRule={editingRule}
-        onSave={handleSaveRule}
-        questionId={question?.id}
-        availableQuestions={availableQuestions}
-        availablePages={availablePages}
-      />
-      
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Question Settings</h3>
@@ -1108,7 +533,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="basic">Basic</TabsTrigger>
           <TabsTrigger 
             value="options" 
@@ -1122,124 +547,10 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
           >
             Advanced
           </TabsTrigger>
-          <TabsTrigger value="logic" disabled={!question}>Logic</TabsTrigger>
         </TabsList>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {/* Logic Tab Content */}
-            <TabsContent value="logic" className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Conditional Logic Rules</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleAddRule}
-                    className="h-8"
-                    disabled={!question}
-                  >
-                    <PlusCircle className="h-4 w-4 mr-1" />
-                    Add New Rule
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {conditionalRules.length === 0 ? (
-                    <div className="text-center py-4 border rounded-md bg-gray-50">
-                      <p className="text-sm text-muted-foreground">No conditional rules defined for this question.</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Rules defined here are triggered by the answer provided to this question.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {conditionalRules.map(rule => {
-                        // Helper function to get target names
-                        const getTargetNames = () => {
-                          const targets = rule.targets || [];
-                          return targets.map(target => {
-                            if (target.targetType === 'question') {
-                              const question = allQuestionsInForm.find(q => q.id === target.targetId);
-                              return question ? question.displayText : 'Unknown Question';
-                            } else if (target.targetType === 'page') {
-                              const page = allPagesInForm.find(p => p.id === target.targetId);
-                              return page ? page.pageTitle : 'Unknown Page';
-                            }
-                            return 'Unknown Target';
-                          }).join(', ');
-                        };
-                        
-                        // Get condition type label
-                        const getConditionLabel = (condType) => {
-                          const condMap = {
-                            'equals': 'equals',
-                            'not_equals': 'does not equal',
-                            'contains': 'contains',
-                            'not_contains': 'does not contain',
-                            'greater_than': 'is greater than',
-                            'less_than': 'is less than',
-                            'is_empty': 'is empty',
-                            'is_not_empty': 'is not empty',
-                            'is_filled': 'is filled',
-                            'is_not_filled': 'is not filled'
-                          };
-                          return condMap[condType] || condType;
-                        };
-                        
-                        return (
-                          <div 
-                            key={rule.id}
-                            className="p-3 border rounded-md bg-white"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <p className="text-sm font-medium">
-                                  IF this question's answer {getConditionLabel(rule.conditionType)}
-                                  {rule.conditionValue && 
-                                    <span className="ml-1 font-semibold">"{rule.conditionValue}"</span>
-                                  }
-                                </p>
-                                <p className="text-sm">
-                                  THEN {rule.actionType === 'show' ? 'show' : 'hide'}:
-                                </p>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  <span className="font-medium">Targets:</span> {getTargetNames()}
-                                </p>
-                                {rule.description && (
-                                  <p className="text-xs italic text-gray-500 mt-1">
-                                    Note: {rule.description}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleEditRule(rule)}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Settings className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleDeleteRule(rule.id)}
-                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-            
             {/* Basic Tab Content */}
             <TabsContent value="basic" className="space-y-4">
               <FormField
@@ -1556,78 +867,6 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     </Button>
                   </div>
                 )}
-              </div>
-            </TabsContent>
-            
-            {/* Logic Tab for conditional visibility rules */}
-            <TabsContent value="logic" className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Conditional Logic Rules</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleAddRule}
-                    className="h-8"
-                  >
-                    <PlusCircle className="h-4 w-4 mr-1" />
-                    Add Rule
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {conditionalRules.length === 0 ? (
-                    <div className="text-center py-4 border rounded-md bg-gray-50">
-                      <p className="text-sm text-muted-foreground">No conditional rules defined</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Add rules to show or hide this question based on answers to other questions
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {conditionalRules.map(rule => (
-                        <div 
-                          key={rule.id}
-                          className="p-3 border rounded-md bg-white flex items-center justify-between"
-                        >
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">
-                              {rule.action === 'show' ? 'Show' : 'Hide'} this question when:
-                            </p>
-                            <p className="text-xs">
-                              <span className="font-medium">{rule.targetQuestionText}</span>
-                              {' '}
-                              {rule.operator.replace('_', ' ')} 
-                              {' '}
-                              {(['is_empty', 'is_not_empty'].includes(rule.operator)) 
-                                ? '' 
-                                : <span className="italic">"{rule.value}"</span>
-                              }
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleEditRule(rule)}
-                              className="h-7 w-7 p-0"
-                            >
-                              <Settings className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleDeleteRule(rule.id)}
-                              className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             </TabsContent>
             
