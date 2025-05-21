@@ -1565,6 +1565,43 @@ const themeMenuData = {
           "gold": 4,
           "diamond": 4
         }
+      },
+      salads: {
+        title: "Salads",
+        description: "Select your salad options",
+        items: [
+          { id: "horiatiki", name: "Salata Horiatiki - Traditional Greek salad with feta and olives", upcharge: 0 },
+          { id: "lahanosalata", name: "Lahanosalata - Greek coleslaw with cabbage and carrots", upcharge: 0 },
+          { id: "maroulosalata", name: "Maroulosalata - Greek romaine salad with scallions", upcharge: 0 },
+          { id: "patatosalata", name: "Patatosalata - Warm potato salad with red onions and olives", upcharge: 0 },
+          { id: "dakos", name: "Dakos Bread Salad - Fresh tomatoes, barley rusks, and feta", upcharge: 0 },
+          { id: "garden_salad", name: "Garden Salad - Mixed greens with vegetables", upcharge: 0 },
+          { id: "tabouli", name: "Tabouli - Chopped parsley, couscous, and vegetables", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 2,
+          "silver": 2,
+          "gold": 2,
+          "diamond": 3
+        }
+      },
+      spreads: {
+        title: "Spreads",
+        description: "Gold and Diamond tiers include a selection of spreads",
+        items: [
+          { id: "tzatziki", name: "Tzatziki - Yogurt, garlic, cucumber, herbs", upcharge: 0 },
+          { id: "hummus", name: "Hummus - Chickpea, tahini, lemon", upcharge: 0 },
+          { id: "melitzanosalata", name: "Melitzanosalata - Eggplant, garlic, tahini, cilantro", upcharge: 0 },
+          { id: "spicy_feta", name: "Spicy Feta - Feta cheese puree with spicy peppers", upcharge: 0 },
+          { id: "taramasalata", name: "Taramasalata - Cod roe, potato, extra virgin olive oil", upcharge: 0 },
+          { id: "beet_hummus", name: "Beet Hummus - Roasted beets, chickpea, garlic, tahini", upcharge: 0 }
+        ],
+        limits: {
+          "bronze": 0,
+          "silver": 0,
+          "gold": 3,
+          "diamond": 4
+        }
       }
     }
   }
