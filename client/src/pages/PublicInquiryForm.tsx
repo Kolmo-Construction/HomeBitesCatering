@@ -840,6 +840,7 @@ const EventDetailsStep = ({
     { value: "taste_of_greece", label: "A Taste of Greece" },
     { value: "kebab_party", label: "Kebab Party" },
     { value: "taste_of_italy", label: "A Taste of Italy" },
+    { value: "sandwich_factory", label: "Sandwich Factory" },
     { value: "custom_menu", label: "Custom Menu" },
     { value: "hors_doeuvres", label: "Hor d'oeuvres only (Cocktail party)" },
     { value: "food_truck", label: "Food Truck" },
