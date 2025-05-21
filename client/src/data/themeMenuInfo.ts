@@ -131,6 +131,19 @@ export const themeMenuData = {
           salsas: 4,
           condiments: 8
         }
+      },
+      {
+        id: "diamond",
+        name: "Diamond Package",
+        price: 55.00,
+        description: "Ultimate taco bar experience with maximum selection and premium options",
+        minGuestCount: 0,
+        limits: {
+          proteins: 5,
+          sides: 5,
+          salsas: 5,
+          condiments: 10
+        }
       }
     ],
     categories: {
@@ -267,6 +280,20 @@ export const themeMenuData = {
           salads: 3,
           sauces: 4,
           condiments: 8
+        }
+      },
+      {
+        id: "diamond",
+        name: "Diamond Package",
+        price: 52.00,
+        description: "Ultimate BBQ experience with maximum selection and premium options",
+        minGuestCount: 0,
+        limits: {
+          mains: 5,
+          sides: 5,
+          salads: 4,
+          sauces: 5,
+          condiments: 10
         }
       }
     ],
@@ -408,6 +435,18 @@ export const themeMenuData = {
           sides: 5,
           salads: 3
         }
+      },
+      {
+        id: "diamond",
+        name: "Diamond Package",
+        price: 55.00,
+        description: "Ultimate Greek feast with maximum selection and premium options",
+        minGuestCount: 0,
+        limits: {
+          mains: 5,
+          sides: 6,
+          salads: 4
+        }
       }
     ],
     categories: {
@@ -505,6 +544,18 @@ export const themeMenuData = {
           proteins: 4,
           sides: 4,
           sauces: 4
+        }
+      },
+      {
+        id: "diamond",
+        name: "Diamond Package",
+        price: 52.00,
+        description: "Ultimate kebab feast with maximum selection and premium options",
+        minGuestCount: 0,
+        limits: {
+          proteins: 5,
+          sides: 5,
+          sauces: 5
         }
       }
     ],
