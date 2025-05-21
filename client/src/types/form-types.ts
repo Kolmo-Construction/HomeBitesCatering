@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 // Event types
 export type EventType = 
   | "Wedding" 
@@ -35,7 +37,7 @@ export type DessertItem = {
 export interface EventTypeDetails {
   type: EventType;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   gradient: string;
   image?: string;
 }

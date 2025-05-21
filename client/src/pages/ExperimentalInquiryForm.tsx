@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Cake, Calendar, Gift, Users, Truck, Wine, Utensils, 
   ChevronRight, ChevronLeft, Check, Building, Phone,
-  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff,X
+  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X
 } from "lucide-react";
 import { Helmet } from "react-helmet";
 import { useForm, FormProvider, useFormContext, Controller } from "react-hook-form";
@@ -38,223 +37,20 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
-// Define event types
-type EventType = 
-  | "Wedding" 
-  | "Corporate" 
-  | "Engagement" 
-  | "Birthday" 
-  | "Food Truck" 
-  | "Mobile Bartending" 
-  | "Other Private Party";
+// Import externalized types
+import { 
+  EventType, 
+  FormStep, 
+  DessertLotSize, 
+  DessertItem, 
+  EventInquiryFormData 
+} from "@/types/form-types";
 
-// Form steps definition
-type FormStep = 
-  | "eventType" 
-  | "basicInfo" 
-  | "eventDetails" 
-  | "menuSelection" 
-  | "appetizerQuestion" 
-  | "appetizers" 
-  | "desserts" 
-  | "beverages"
-  | "equipment"
-  | "review";
+// Import externalized data
+import { dessertItems, dessertLotSizes } from "@/data/dessert-data";
+import { eventTypes, mapUrlToEventType } from "@/data/event-types";
 
-// Dessert lot sizes for quantity selection
-type DessertLotSize = 36 | 48 | 72 | 96 | 144;
-
-// Dessert item type definition
-type DessertItem = {
-  id: string;
-  name: string;
-  price: number;
-};
-
-// Dessert items with prices
-const dessertItems: DessertItem[] = [
-  { id: "petit_fours", name: "Petit Fours", price: 2.25 },
-  { id: "macaroons", name: "Macaroons", price: 2.25 },
-  { id: "flourless_chocolate_cake", name: "Flourless Chocolate Cake", price: 4.75 },
-  { id: "cheesecake", name: "Cheesecake", price: 5.75 },
-  { id: "baklava", name: "Baklava", price: 5.25 },
-  { id: "cannolis", name: "Cannolis", price: 4.75 },
-  { id: "mini_cannolis", name: "Mini Cannolis", price: 2.75 },
-  { id: "assorted_dessert_cups", name: "Assorted dessert cups", price: 3.25 },
-  { id: "pate_a_choux", name: "Pâte à Choux with Crème Pâtissière", price: 3.25 },
-  { id: "baklava_rollups", name: "Baklava roll-ups", price: 3.75 },
-  { id: "lemon_tartlets", name: "Lemon Tartlets", price: 2.75 },
-  { id: "mille_feuille", name: "Mille feuille with cream and berries", price: 3.75 }
-];
-
-// Available lot sizes for desserts
-const dessertLotSizes: DessertLotSize[] = [36, 48, 72, 96, 144];
-
-// Event type details including description and icon
-const eventTypes: {
-  type: EventType;
-  description: string;
-  icon: React.ReactNode;
-  gradient: string;
-  image?: string;
-}[] = [
-  {
-    type: "Wedding",
-    description: "Elegant food service for your special day.",
-    icon: <Calendar className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-pink-500 to-rose-500",
-  },
-  {
-    type: "Corporate",
-    description: "Professional catering for business events.",
-    icon: <Users className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-blue-500 to-indigo-600",
-  },
-  {
-    type: "Engagement",
-    description: "Celebrate your engagement with delicious food.",
-    icon: <Gift className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-purple-500 to-pink-500",
-  },
-  {
-    type: "Birthday",
-    description: "Make your birthday celebration memorable.",
-    icon: <Cake className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-amber-500 to-orange-500",
-  },
-  {
-    type: "Food Truck",
-    description: "Mobile food service for any outdoor event.",
-    icon: <Truck className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-green-500 to-emerald-600",
-  },
-  {
-    type: "Mobile Bartending",
-    description: "Professional bartending services at your venue.",
-    icon: <Wine className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-violet-500 to-purple-600",
-  },
-  {
-    type: "Other Private Party",
-    description: "Custom catering for your unique gathering.",
-    icon: <Utensils className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-teal-500 to-cyan-600",
-  },
-];
-
-// Define the form data type
-type EventInquiryFormData = {
-  // Step 1: Event Type
-  eventType: EventType | null;
-  
-  // Step 2: Basic Information
-  companyName?: string;
-  billingAddress: {
-    street: string;
-    street2?: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  contactName: {
-    firstName: string;
-    lastName: string;
-  };
-  email: string;
-  phone?: string;
-  eventDate: string;
-  hasPromoCode: boolean;
-  promoCode?: string;
-  
-  // Step 3: Event Details & Venue
-  venueSecured: boolean;
-  venueName?: string;
-  venueLocation?: {
-    street: string;
-    street2?: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  eventStartTime?: string;
-  eventEndTime?: string;
-  ceremonyStartTime?: string;
-  ceremonyEndTime?: string;
-  setupBeforeCeremony?: boolean;
-  hasCocktailHour: boolean;
-  cocktailStartTime?: string;
-  cocktailEndTime?: string;
-  hasMainCourse: boolean;
-  foodServiceStartTime?: string;
-  foodServiceEndTime?: string;
-  guestCount: number;
-  serviceStyle: string;
-  serviceDuration?: number;
-  laborHours?: number;
-  requestedTheme: string;
-  
-  // Step 4: Menu Selection
-  selectedPackage?: string;
-  menuSelections: {
-    proteins: string[];
-    sides: string[];
-    salads: string[];
-    salsas: string[];
-    desserts: string[];
-    addons: string[];
-    [key: string]: Array<{id: string, quantity: number}> | string[];
-  };
-  
-  // Step 5: Appetizer Question
-  wantsAppetizers: boolean;
-  
-  // Step 6: Appetizers
-  appetizerService?: "stationary" | "passed";
-  appetizers: Record<string, { name: string, quantity: number, price: number }[]>;
-  
-  // Hors d'oeuvres selections with matrix selection
-  horsDoeurvesSelections: {
-    serviceStyle?: "stationary" | "passed";
-    categories: Record<string, {
-      items: Record<string, {
-        name: string;
-        price: number;
-        quantity: 24 | 36 | 48 | 96 | 144 | null;
-      }>;
-    }>;
-  };
-  
-  // Step 6: Desserts
-  dessertSelections: Record<string, number>;
-  
-  // Step 7: Beverages
-  beverageServiceType?: "alcoholic" | "non_alcoholic" | "both";
-  bartendingServiceType?: "dry_hire" | "wet_hire";
-  servingAlcohol: string[];
-  additionalCocktails: boolean;
-  additionalCocktailsCount?: number;
-  liquorQuality?: "well" | "mid_shelf" | "top_shelf";
-  spiritBrands?: string;
-  barEquipment: Record<string, number>;
-  nonAlcoholicBeverages: Record<string, string>;
-  tableWaterService: boolean;
-  
-  // Step 8: Equipment
-  equipment: {
-    furniture: Record<string, number>;
-    linens: Record<string, number>;
-    servingWare: Record<string, number>;
-  };
-  
-  // Step 9: Notes & Final Review
-  adminFee?: number;
-  otherFeesDescription?: string;
-  otherFeesAmount?: number;
-  dietaryNotes?: string;
-  beverageNotes?: string;
-  specialRequests?: string;
-  generalNotes?: string;
-};
+// Using EventInquiryFormData imported from form-types.ts
 
 // Experimental Form Header component
 const PublicFormHeader = () => {
@@ -4377,20 +4173,7 @@ function validateEventType(type: string): boolean {
   return !!eventTypeMap[type.toLowerCase()];
 }
 
-// Convert URL parameter to actual event type
-function mapUrlToEventType(type: string): EventType | null {
-  const eventTypeMap: Record<string, EventType> = {
-    "wedding": "Wedding",
-    "corporate": "Corporate",
-    "engagement": "Engagement",
-    "birthday": "Birthday",
-    "foodtruck": "Food Truck",
-    "mobilebartending": "Mobile Bartending",
-    "otherprivateparty": "Other Private Party"
-  };
-  
-  return eventTypeMap[type.toLowerCase()] || null;
-}
+// Using imported mapUrlToEventType from event-types.tsx
 
 export default function ExperimentalInquiryForm({ initialEventType = "" }: { initialEventType?: string }) {
   // For navigation after event type selection
