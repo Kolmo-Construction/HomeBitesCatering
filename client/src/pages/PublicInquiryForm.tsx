@@ -173,6 +173,7 @@ type EventInquiryFormData = {
     salsas: string[];
     desserts: string[];
     addons: string[];
+    [key: string]: Array<{id: string, quantity: number}> | string[];
   };
   
   // Step 5: Appetizer Question
@@ -3609,6 +3610,8 @@ const MenuSelectionStep = ({
   onPrevious: () => void;
   onNext: () => void;
 }) => {
+  // Add missing import
+  const { useState, useEffect } = React;
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
   
   // Watch the selected package
@@ -3740,6 +3743,248 @@ const MenuSelectionStep = ({
     );
   };
   
+  // Handle Custom Menu selection differently
+  if (selectedTheme === "custom_menu") {
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+    
+    // Initialize custom menu selections if not already set
+    useEffect(() => {
+      // Reset selections when changing categories
+      if (selectedCategory) {
+        setSelectedSubcategory(null);
+      }
+    }, [selectedCategory]);
+    
+    const handleCategorySelect = (categoryKey: string) => {
+      setSelectedCategory(categoryKey);
+    };
+    
+    const handleSubcategorySelect = (subcategoryKey: string) => {
+      setSelectedSubcategory(subcategoryKey);
+    };
+    
+    const handleCustomItemSelection = (categoryKey: string, subcategoryKey: string, itemId: string, isSelected: boolean) => {
+      // Create nested path for menu selections
+      const selectionPath = `${categoryKey}_${subcategoryKey}`;
+      
+      // Initialize array if it doesn't exist
+      const currentSelections = Array.isArray(menuSelections?.[selectionPath]) 
+        ? [...menuSelections[selectionPath]] 
+        : [];
+      
+      if (isSelected) {
+        // Check if item already exists
+        const existingItemIndex = currentSelections.findIndex(item => 
+          typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
+        );
+        
+        if (existingItemIndex === -1) {
+          // Add new item
+          currentSelections.push({ id: itemId, quantity: 1 });
+        }
+      } else {
+        // Remove item
+        const existingItemIndex = currentSelections.findIndex(item => 
+          typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
+        );
+        
+        if (existingItemIndex >= 0) {
+          currentSelections.splice(existingItemIndex, 1);
+        }
+      }
+      
+      setValue(`menuSelections.${selectionPath}`, currentSelections);
+    };
+    
+    const isCustomItemSelected = (categoryKey: string, subcategoryKey: string, itemId: string) => {
+      const selectionPath = `${categoryKey}_${subcategoryKey}`;
+      
+      if (!menuSelections || !menuSelections[selectionPath]) {
+        return false;
+      }
+      
+      const selectedItems = menuSelections[selectionPath];
+      return selectedItems.some(item => 
+        typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
+      );
+    };
+    
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">{themeData.title}</h2>
+          <p className="text-lg text-gray-600">
+            {themeData.description}
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          {/* Main Category Selection */}
+          {!selectedCategory ? (
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4">Select a Cuisine Category</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Choose which cuisine style you'd like to select from first. You can add more items from different categories later.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {Object.keys(themeData.categories).map((categoryKey) => {
+                  const category = themeData.categories[categoryKey];
+                  return (
+                    <div 
+                      key={categoryKey}
+                      className="border rounded-md p-4 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
+                      onClick={() => handleCategorySelect(categoryKey)}
+                    >
+                      <h4 className="text-lg font-medium mb-2">{category.title}</h4>
+                      <p className="text-sm text-gray-600">{category.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : !selectedSubcategory ? (
+            // Subcategory Selection
+            <div>
+              <div className="flex items-center mb-6">
+                <button 
+                  className="text-primary hover:underline flex items-center mr-2"
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Back to Cuisine Categories
+                </button>
+                <span className="text-gray-500">→</span>
+                <span className="ml-2 font-medium">{themeData.categories[selectedCategory].title}</span>
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-4">Select a Food Category</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Choose the type of items you want to add from {themeData.categories[selectedCategory].title}
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {Object.keys(themeData.categories[selectedCategory].subcategories).map((subcategoryKey) => {
+                  const subcategory = themeData.categories[selectedCategory].subcategories[subcategoryKey];
+                  return (
+                    <div 
+                      key={subcategoryKey}
+                      className="border rounded-md p-4 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
+                      onClick={() => handleSubcategorySelect(subcategoryKey)}
+                    >
+                      <h4 className="text-lg font-medium mb-2">{subcategory.title}</h4>
+                      <p className="text-sm text-gray-600">{subcategory.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            // Item Selection
+            <div>
+              <div className="flex items-center mb-6">
+                <button 
+                  className="text-primary hover:underline flex items-center mr-2"
+                  onClick={() => setSelectedSubcategory(null)}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Back to Categories
+                </button>
+                <span className="text-gray-500">→</span>
+                <span className="ml-2 font-medium">{themeData.categories[selectedCategory].title}</span>
+                <span className="text-gray-500 mx-2">→</span>
+                <span className="font-medium">{themeData.categories[selectedCategory].subcategories[selectedSubcategory].title}</span>
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-4">
+                {themeData.categories[selectedCategory].subcategories[selectedSubcategory].title}
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                {themeData.categories[selectedCategory].subcategories[selectedSubcategory].description}
+              </p>
+              
+              <div className="grid grid-cols-1 gap-3 mt-4">
+                {themeData.categories[selectedCategory].subcategories[selectedSubcategory].items.map((item) => {
+                  const isSelected = isCustomItemSelected(selectedCategory, selectedSubcategory, item.id);
+                  
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`border rounded-md p-3 cursor-pointer ${
+                        isSelected 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-gray-200 hover:border-primary/30'
+                      }`}
+                      onClick={() => handleCustomItemSelection(
+                        selectedCategory, 
+                        selectedSubcategory, 
+                        item.id, 
+                        !isSelected
+                      )}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-medium">{item.name}</span>
+                          {item.upcharge > 0 && (
+                            <span className="text-amber-600 text-sm ml-2">
+                              (+${item.upcharge.toFixed(2)} upcharge per person)
+                            </span>
+                          )}
+                        </div>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                          isSelected ? 'bg-primary text-white' : 'border border-gray-300'
+                        }`}>
+                          {isSelected && <Check className="h-4 w-4" />}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-md">
+                <span className="text-sm">
+                  Selected items: {
+                    Object.keys(menuSelections || {})
+                      .filter(key => key.startsWith(`${selectedCategory}_`))
+                      .reduce((total, key) => total + (menuSelections[key]?.length || 0), 0)
+                  }
+                </span>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  Choose Another Category
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-8">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onPrevious}
+            className="flex items-center"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+          
+          <Button 
+            type="button" 
+            onClick={onNext}
+            className="flex items-center"
+          >
+            Next <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // For other menu themes, use the original implementation
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="text-center mb-8">
@@ -3755,7 +4000,7 @@ const MenuSelectionStep = ({
           <h3 className="text-xl font-semibold mb-4">Select a Package</h3>
           
           <div className="grid grid-cols-1 gap-4">
-            {themeData.packages.map((pkg) => (
+            {themeData.packages && themeData.packages.map((pkg) => (
               <div key={pkg.id}>
                 {pkg.minGuestCount > 0 && guestCount < pkg.minGuestCount ? (
                   // Disabled package with warning
