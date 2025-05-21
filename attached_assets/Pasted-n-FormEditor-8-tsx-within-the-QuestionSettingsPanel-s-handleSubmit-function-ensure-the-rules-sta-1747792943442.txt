@@ -1,0 +1,80 @@
+n FormEditor (8).tsx, within the QuestionSettingsPanel's handleSubmit function, ensure the rules state (the one managed by useState for the rules UI) accurately reflects the rules configured by the user just before the loop that POSTs these rules.
+Crucial Log:
+JavaScript
+
+// Inside handleSubmit, before the rule POSTing loop:
+console.log('CLIENT: Rules state before POSTing:', JSON.stringify(rules, null, 2));
+console.log(`CLIENT: Attempting to save ${rules.length} rules for question ID: ${question?.id}`);
+
+for (const rule of rules) {
+  // Log each rule being processed
+  console.log("CLIENT: Processing rule for POST:", JSON.stringify(rule, null, 2));
+  if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
+    // ... existing rulePayload and fetch POST logic ...
+    console.log(`CLIENT: POSTing rule payload:`, JSON.stringify(rulePayload, null, 2));
+  } else {
+    console.warn("CLIENT: Skipping incomplete rule (sourceQuestionId, conditionType, or actionType missing):", JSON.stringify(rule, null, 2));
+    // rulesTaskSuccess = false; // Decide if an incomplete rule should make the overall rule saving fail.
+    // rulesErrorMessage = rulesErrorMessage || "One or more rules were incomplete and not saved.";
+  }
+}
+Check this log carefully. If sourceQuestionId is null or conditionType is an empty string for rules you expect to be saved, the issue lies in how the UI (the Select components for choosing source question and condition) is updating the rules state.
+Verify Server-Side Reception and DB Insertion (POST /questions/:questionId/rules):
+
+In formBuilderRoutes.ts, for the POST route:
+TypeScript
+
+router.post("/questions/:questionId/rules", async (req, res) => {
+  try {
+    const questionId = parseInt(req.params.questionId); // This is the TARGET question ID
+    const ruleDataFromClient = req.body; // This is rulePayload from client
+    console.log(`SERVER POST /rules: Received for target questionId ${questionId}, payload:`, JSON.stringify(ruleDataFromClient, null, 2));
+
+    // ... (existing validation for questionId and page) ...
+    // const [question] = await db.select()...
+    // const [page] = await db.select()...
+
+    const ruleSchema = z.object({
+      sourceQuestionId: z.number(),
+      conditionType: z.string().min(1), // Ensure conditionType is not empty
+      conditionValue: z.string().nullable().optional(), // Allow null or optional string
+      actionType: z.string().min(1) // Ensure actionType is not empty
+    });
+    const parsed = ruleSchema.safeParse(ruleDataFromClient);
+
+    if (!parsed.success) {
+      console.error("SERVER POST /rules: Payload validation failed:", parsed.error.format());
+      return res.status(400).json({ message: "Invalid rule data", errors: parsed.error.format() });
+    }
+    console.log(`SERVER POST /rules: Parsed rule data for DB:`, JSON.stringify(parsed.data, null, 2));
+
+    // Create the rule in the form_rules table
+    const [newRule] = await db.insert(formSchema.formRules)
+      .values({
+        formId: page.formId,
+        triggerFormPageQuestionId: parsed.data.sourceQuestionId,
+        conditionType: parsed.data.conditionType,
+        conditionValue: parsed.data.conditionValue, // Already handled null from client
+        actionType: parsed.data.actionType,
+        executionOrder: 0, // Or calculate next order
+      })
+      .returning();
+    console.log(`SERVER POST /rules: CREATED formRules entry ID: ${newRule.id}, formId: ${page.formId}, triggerQId: ${parsed.data.sourceQuestionId}`);
+
+    // Now create the target entry in the form_rule_targets table
+    const [newTarget] = await db.insert(formSchema.formRuleTargets)
+      .values({
+        ruleId: newRule.id,
+        targetType: 'question',
+        targetId: questionId, // This is the questionInstanceId from the URL param
+      })
+      .returning();
+    console.log(`SERVER POST /rules: CREATED formRuleTargets entry ID: ${newTarget.id}, linking ruleId ${newRule.id} to targetId ${questionId}`);
+
+    return res.status(201).json({ ...newRule, targetId: newTarget.id }); // Return combined info
+  } catch (error) {
+    console.error(`SERVER POST /rules: Error processing rule for target questionId ${req.params.questionId}:`, error);
+    return res.status(500).json({ message: "Failed to create rule", error: error.message });
+  }
+});
+This adds logging for the received payload and parsed data, and ensures basic validation on conditionType and actionType.

@@ -2141,12 +2141,15 @@ router.post("/questions/:questionId/rules", async (req, res) => {
       return res.status(400).json({ message: "Invalid question ID" });
     }
     
+    console.log(`SERVER POST rule: Received for target questionId ${questionId}, payload:`, JSON.stringify(req.body, null, 2));
+    
     // Find the form page question to get the form ID
     const [question] = await db.select()
       .from(formSchema.formPageQuestions)
       .where(eq(formSchema.formPageQuestions.id, questionId));
       
     if (!question) {
+      console.log(`SERVER POST rule: Question ID ${questionId} not found`);
       return res.status(404).json({ message: "Question not found" });
     }
     
@@ -2156,6 +2159,7 @@ router.post("/questions/:questionId/rules", async (req, res) => {
       .where(eq(formSchema.formPages.id, question.formPageId));
       
     if (!page) {
+      console.log(`SERVER POST rule: Page ID ${question.formPageId} not found for question ${questionId}`);
       return res.status(404).json({ message: "Page not found" });
     }
     
@@ -2170,11 +2174,14 @@ router.post("/questions/:questionId/rules", async (req, res) => {
     const parsed = ruleSchema.safeParse(req.body);
     
     if (!parsed.success) {
+      console.log(`SERVER POST rule: Validation failed for rule data:`, parsed.error.format());
       return res.status(400).json({ 
         message: "Invalid rule data", 
         errors: parsed.error.format() 
       });
     }
+    
+    console.log(`SERVER POST rule: Valid rule data received for form ${page.formId}, sourceQuestion: ${parsed.data.sourceQuestionId}, condition: ${parsed.data.conditionType}`);
     
     // Create the rule in the form_rules table
     const [newRule] = await db.insert(formSchema.formRules)
@@ -2188,6 +2195,8 @@ router.post("/questions/:questionId/rules", async (req, res) => {
       })
       .returning();
       
+    console.log(`SERVER POST rule: Created new rule with ID ${newRule.id}`);
+    
     // Now create the target entry in the form_rule_targets table
     const [newTarget] = await db.insert(formSchema.formRuleTargets)
       .values({
@@ -2197,6 +2206,8 @@ router.post("/questions/:questionId/rules", async (req, res) => {
       })
       .returning();
       
+    console.log(`SERVER POST rule: Created rule target with ID ${newTarget.id}, linking rule ${newRule.id} to question ${questionId}`);
+    
     return res.status(201).json(newRule);
   } catch (error) {
     console.error("Error creating rule:", error);
@@ -2213,37 +2224,66 @@ router.delete("/questions/:questionId/rules", async (req, res) => {
       return res.status(400).json({ message: "Invalid question ID" });
     }
     
-    // Find rules associated with this question
+    console.log(`SERVER: Deleting rules for question ID: ${questionId}`);
+    
+    // Find rules associated with this question as a target
     const ruleTargets = await db.select()
       .from(formSchema.formRuleTargets)
       .where(eq(formSchema.formRuleTargets.targetId, questionId));
       
     // Get the rule IDs
     const ruleIds = ruleTargets.map(target => target.ruleId);
+    console.log(`SERVER: Found ${ruleIds.length} rules where question ${questionId} is a target`);
+    
+    let targetsDeleted = 0;
+    let rulesDeleted = 0;
     
     if (ruleIds.length > 0) {
       // Delete the rule targets first (foreign key constraint)
-      await db.delete(formSchema.formRuleTargets)
-        .where(eq(formSchema.formRuleTargets.targetId, questionId));
+      const deletedTargets = await db.delete(formSchema.formRuleTargets)
+        .where(eq(formSchema.formRuleTargets.targetId, questionId))
+        .returning();
+      
+      targetsDeleted = deletedTargets.length;
+      console.log(`SERVER: Deleted ${targetsDeleted} rule targets for question ${questionId}`);
       
       // Then delete the rules
       for (const ruleId of ruleIds) {
-        await db.delete(formSchema.formRules)
-          .where(eq(formSchema.formRules.id, ruleId));
+        const deletedRule = await db.delete(formSchema.formRules)
+          .where(eq(formSchema.formRules.id, ruleId))
+          .returning();
+          
+        if (deletedRule.length > 0) {
+          rulesDeleted++;
+          console.log(`SERVER: Deleted rule ID ${ruleId}`);
+        }
       }
     }
     
     // Also delete rules where this question is the trigger
-    await db.delete(formSchema.formRules)
-      .where(eq(formSchema.formRules.triggerFormPageQuestionId, questionId));
+    const deletedTriggerRules = await db.delete(formSchema.formRules)
+      .where(eq(formSchema.formRules.triggerFormPageQuestionId, questionId))
+      .returning();
+      
+    const triggerRulesDeleted = deletedTriggerRules.length;
+    console.log(`SERVER: Deleted ${triggerRulesDeleted} rules where question ${questionId} is the trigger`);
       
     return res.status(200).json({ 
       success: true,
-      message: "Rules deleted successfully" 
+      message: "Rules deleted successfully",
+      details: {
+        targetsDeleted,
+        rulesDeleted,
+        triggerRulesDeleted,
+        totalRulesDeleted: rulesDeleted + triggerRulesDeleted
+      }
     });
   } catch (error) {
-    console.error("Error deleting rules:", error);
-    return res.status(500).json({ message: "Failed to delete rules" });
+    console.error("Error deleting rules for question ID:", req.params.questionId, error);
+    return res.status(500).json({ 
+      message: "Failed to delete rules", 
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });
 

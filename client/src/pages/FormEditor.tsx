@@ -495,8 +495,13 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
           
           // If deletion was successful (or if there were no rules to delete), save new rules
           if (rulesTaskSuccess && rules.length > 0) {
-            console.log(`Attempting to save ${rules.length} new/updated rules.`);
+            console.log('CLIENT: Rules state before POSTing:', JSON.stringify(rules, null, 2));
+            console.log(`CLIENT: Attempting to save ${rules.length} rules for question ID: ${question?.id}`);
+            
             for (const rule of rules) {
+              // Log each rule being processed
+              console.log("CLIENT: Processing rule for POST:", JSON.stringify(rule, null, 2));
+              
               if (rule.sourceQuestionId && rule.conditionType && rule.actionType) {
                 const rulePayload = {
                   sourceQuestionId: rule.sourceQuestionId,
@@ -506,7 +511,7 @@ const QuestionSettingsPanel = ({ question, onSave, onDelete }) => {
                     : (rule.conditionValue || ""),
                   actionType: rule.actionType,
                 };
-                console.log(`POSTing rule to /api/form-builder/questions/${question.id}/rules with payload:`, rulePayload);
+                console.log(`CLIENT: POSTing rule payload:`, JSON.stringify(rulePayload, null, 2));
                 
                 const ruleResponse = await fetch(`/api/form-builder/questions/${question.id}/rules`, {
                   method: 'POST',
