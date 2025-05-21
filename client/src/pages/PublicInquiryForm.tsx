@@ -3890,55 +3890,57 @@ const MenuSelectionStep = ({
                   <ChevronLeft className="h-4 w-4 mr-1" /> Back to Categories
                 </button>
                 <span className="text-gray-500">→</span>
-                <span className="ml-2 font-medium">{themeData.categories[selectedCategory].title}</span>
+                <span className="ml-2 font-medium">{selectedCategory && themeData.categories[selectedCategory]?.title}</span>
                 <span className="text-gray-500 mx-2">→</span>
-                <span className="font-medium">{themeData.categories[selectedCategory].subcategories[selectedSubcategory].title}</span>
+                <span className="font-medium">{selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}</span>
               </div>
               
               <h3 className="text-xl font-semibold mb-4">
-                {themeData.categories[selectedCategory].subcategories[selectedSubcategory].title}
+                {selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                {themeData.categories[selectedCategory].subcategories[selectedSubcategory].description}
+                {selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.description}
               </p>
               
               <div className="grid grid-cols-1 gap-3 mt-4">
-                {themeData.categories[selectedCategory].subcategories[selectedSubcategory].items.map((item) => {
-                  const isSelected = isCustomItemSelected(selectedCategory, selectedSubcategory, item.id);
-                  
-                  return (
-                    <div 
-                      key={item.id} 
-                      className={`border rounded-md p-3 cursor-pointer ${
-                        isSelected 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-gray-200 hover:border-primary/30'
-                      }`}
-                      onClick={() => handleCustomItemSelection(
-                        selectedCategory, 
-                        selectedSubcategory, 
-                        item.id, 
-                        !isSelected
-                      )}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="font-medium">{item.name}</span>
-                          {item.upcharge > 0 && (
-                            <span className="text-amber-600 text-sm ml-2">
-                              (+${item.upcharge.toFixed(2)} upcharge per person)
-                            </span>
-                          )}
-                        </div>
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                          isSelected ? 'bg-primary text-white' : 'border border-gray-300'
-                        }`}>
-                          {isSelected && <Check className="h-4 w-4" />}
+                {selectedCategory && selectedSubcategory && 
+                  themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.items?.map((item) => {
+                    if (!item || !selectedCategory || !selectedSubcategory) return null;
+                    const isSelected = isCustomItemSelected(selectedCategory, selectedSubcategory, item.id);
+                    
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`border rounded-md p-3 cursor-pointer ${
+                          isSelected 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-gray-200 hover:border-primary/30'
+                        }`}
+                        onClick={() => handleCustomItemSelection(
+                          selectedCategory, 
+                          selectedSubcategory, 
+                          item.id, 
+                          !isSelected
+                        )}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-medium">{item.name}</span>
+                            {item.upcharge > 0 && (
+                              <span className="text-amber-600 text-sm ml-2">
+                                (+${item.upcharge.toFixed(2)} upcharge per person)
+                              </span>
+                            )}
+                          </div>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            isSelected ? 'bg-primary text-white' : 'border border-gray-300'
+                          }`}>
+                            {isSelected && <Check className="h-4 w-4" />}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
               
               <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-md">
