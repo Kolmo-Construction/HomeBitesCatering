@@ -13,6 +13,7 @@ import { FormStep, EventInquiryFormData, defaultFormValues } from '../types';
 const EventTypeSelectionStep = lazy(() => import('../components/formSteps/EventTypeSelectionStep'));
 const BasicInformationStep = lazy(() => import('../components/formSteps/BasicInformationStep'));
 const EventDetailsStep = lazy(() => import('../components/formSteps/EventDetailsStep'));
+const MenuSelectionStep = lazy(() => import('../components/formSteps/MenuSelectionStep'));
 const AppetizersQuestionStep = lazy(() => import('../components/formSteps/AppetizersQuestionStep'));
 const AppetizersStep = lazy(() => import('../components/formSteps/AppetizersStep'));
 const DessertStep = lazy(() => import('../components/formSteps/DessertStep'));
@@ -131,6 +132,9 @@ const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initi
         setCurrentStep(FormStep.EVENT_DETAILS);
         break;
       case FormStep.EVENT_DETAILS:
+        setCurrentStep(FormStep.MENU_SELECTION);
+        break;
+      case FormStep.MENU_SELECTION:
         setCurrentStep(FormStep.APPETIZERS_QUESTION);
         break;
       case FormStep.APPETIZERS_QUESTION:
@@ -166,8 +170,11 @@ const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initi
       case FormStep.EVENT_DETAILS:
         setCurrentStep(FormStep.BASIC_INFORMATION);
         break;
-      case FormStep.APPETIZERS_QUESTION:
+      case FormStep.MENU_SELECTION:
         setCurrentStep(FormStep.EVENT_DETAILS);
+        break;
+      case FormStep.APPETIZERS_QUESTION:
+        setCurrentStep(FormStep.MENU_SELECTION);
         break;
       case FormStep.APPETIZERS:
         setCurrentStep(FormStep.APPETIZERS_QUESTION);
@@ -289,6 +296,13 @@ const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initi
           />
         )}
         
+        {currentStep === FormStep.MENU_SELECTION && (
+          <MenuSelectionStep 
+            onPrevious={goToPreviousStep}
+            onNext={goToNextStep}
+          />
+        )}
+        
         {currentStep === FormStep.APPETIZERS_QUESTION && (
           <AppetizersQuestionStep 
             onPrevious={goToPreviousStep}
@@ -340,6 +354,7 @@ const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initi
       FormStep.EVENT_TYPE_SELECTION,
       FormStep.BASIC_INFORMATION,
       FormStep.EVENT_DETAILS,
+      FormStep.MENU_SELECTION,
       FormStep.APPETIZERS_QUESTION,
       FormStep.DESSERT,
       FormStep.SPECIAL_REQUESTS,
@@ -348,7 +363,7 @@ const ExperimentalInquiryForm: React.FC<ExperimentalInquiryFormProps> = ({ initi
     
     // Skip appetizers step if not wanted
     if (currentStep !== FormStep.APPETIZERS && currentStep !== FormStep.APPETIZERS_QUESTION && !watch('wantsAppetizers')) {
-      steps.splice(4, 1);
+      steps.splice(5, 1);
     }
     
     const currentIndex = steps.indexOf(currentStep);

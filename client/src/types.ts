@@ -6,6 +6,7 @@ export enum FormStep {
   EVENT_TYPE_SELECTION = "EVENT_TYPE_SELECTION",
   BASIC_INFORMATION = "BASIC_INFORMATION",
   EVENT_DETAILS = "EVENT_DETAILS",
+  MENU_SELECTION = "MENU_SELECTION",
   APPETIZERS_QUESTION = "APPETIZERS_QUESTION",
   APPETIZERS = "APPETIZERS",
   DESSERT = "DESSERT",
@@ -67,6 +68,11 @@ export interface EventInquiryFormData {
   serviceDuration?: number;
   laborHours?: number;
   requestedTheme?: string;
+  
+  // Menu selections
+  selectedMenuTheme?: string;
+  selectedPackage?: string;
+  menuSelections: Record<string, Record<string, string[]>>;
   
   // Appetizers
   wantsAppetizers: boolean;
