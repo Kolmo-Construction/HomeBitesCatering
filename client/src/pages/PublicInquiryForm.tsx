@@ -2304,7 +2304,41 @@ const AppetizersStep = ({
     return horsDoeurvesSelections.categories[categoryId].items[itemId].quantity;
   };
   
-  // Calculate total for hors d'oeuvres
+  // Calculate total for specific hors d'oeuvres category
+  const calculateCategoryTotal = (categoryId: string): number => {
+    if (!horsDoeurvesSelections?.categories?.[categoryId]?.items) {
+      return 0;
+    }
+    
+    let categoryTotal = 0;
+    const category = horsDoeurvesData.categories.find(c => c.id === categoryId);
+    const items = horsDoeurvesSelections.categories[categoryId].items;
+    
+    // For per-person pricing (like charcuterie)
+    if (category?.perPersonPricing) {
+      const guestCount = watch("guestCount") || 0;
+      
+      Object.keys(items).forEach(itemId => {
+        const item = items[itemId];
+        if (item && item.price) {
+          categoryTotal += item.price * guestCount;
+        }
+      });
+    } 
+    // For item-based pricing (standard options)
+    else {
+      Object.keys(items).forEach(itemId => {
+        const item = items[itemId];
+        if (item && item.quantity && item.price) {
+          categoryTotal += item.price * item.quantity;
+        }
+      });
+    }
+    
+    return categoryTotal;
+  };
+  
+  // Calculate total for all hors d'oeuvres
   const calculateHorsDoeurvesTotal = (): number => {
     if (!horsDoeurvesSelections || !horsDoeurvesSelections.categories) {
       return 0;
@@ -2312,17 +2346,9 @@ const AppetizersStep = ({
     
     let total = 0;
     
-    // Calculate item totals
+    // Calculate total for each category
     Object.keys(horsDoeurvesSelections.categories).forEach(categoryId => {
-      const category = horsDoeurvesSelections.categories[categoryId];
-      if (category?.items) {
-        Object.keys(category.items).forEach(itemId => {
-          const item = category.items[itemId];
-          if (item && item.quantity && item.price) {
-            total += item.price * item.quantity;
-          }
-        });
-      }
+      total += calculateCategoryTotal(categoryId);
     });
     
     // Add passed service surcharge if applicable
@@ -2468,26 +2494,36 @@ const AppetizersStep = ({
       </div>
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* General Notes and Instructions */}
+        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+          <h3 className="text-lg font-medium mb-2">General Notes for Hors d'oeuvres:</h3>
+          <ul className="list-disc pl-5 space-y-1 text-gray-700">
+            <li>When selecting a service style, there is a minimum $5.00 per guest surcharge for "Passed" service, depending on the number of guests and service duration.</li>
+            <li>Items are offered in specific lot sizes as indicated for each category.</li>
+            <li>Click the radio buttons to select the quantity for each item you want.</li>
+          </ul>
+        </div>
+        
         {/* Service Style Selection */}
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-4">Service Style</h3>
           
           <RadioGroup 
-            value={appetizerService} 
-            onValueChange={handleServiceStyleChange}
+            value={horsDoeurvesSelections?.serviceStyle || "stationary"} 
+            onValueChange={handleHorsDoeurvesServiceStyleChange}
             className="flex flex-col space-y-2"
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="stationary" id="stationary" />
-              <Label htmlFor="stationary">Stationary Buffet</Label>
+              <RadioGroupItem value="stationary" id="stationary-buffet" />
+              <Label htmlFor="stationary-buffet">Stationary buffet</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="passed" id="passed" />
-              <Label htmlFor="passed">Passed by Servers</Label>
+              <RadioGroupItem value="passed" id="passed-service" />
+              <Label htmlFor="passed-service">Passed by Servers</Label>
             </div>
           </RadioGroup>
           
-          {appetizerService === "passed" && (
+          {horsDoeurvesSelections?.serviceStyle === "passed" && (
             <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
               <p className="text-amber-800 text-sm">
                 <strong>Note:</strong> Passed service includes a minimum $5.00 per guest surcharge for additional service staff.
@@ -2496,7 +2532,211 @@ const AppetizersStep = ({
           )}
         </div>
         
-        {/* Appetizer Categories */}
+        {/* Matrix Selection for Hors d'oeuvres */}
+        <div className="space-y-12">
+          {horsDoeurvesData.categories.map((category) => {
+            // Special handling for spreads which uses a different UI
+            if (category.id === "spreads") {
+              return (
+                <div key={category.id} className="border-t pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">{category.name}</h3>
+                      <p className="text-sm text-gray-500">{category.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">Select up to {category.selectLimit} options</p>
+                    </div>
+                    {category.basePrice && (
+                      <div className="text-lg font-medium">${category.basePrice.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    {category.items.map((item) => {
+                      const isSelected = horsDoeurvesSelections?.categories?.[category.id]?.items?.[item.id] !== undefined;
+                      const selectedCount = horsDoeurvesSelections?.categories?.[category.id]?.items ? 
+                        Object.keys(horsDoeurvesSelections.categories[category.id].items).length : 0;
+                      const isAtLimit = selectedCount >= (category.selectLimit || 3) && !isSelected;
+                      
+                      return (
+                        <div key={item.id} className="relative">
+                          <label className={`
+                            flex items-center p-3 border rounded-md cursor-pointer
+                            ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-200'}
+                            ${isAtLimit ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/50'}
+                          `}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                if (checked === "indeterminate") return;
+                                if (checked) {
+                                  if (selectedCount < (category.selectLimit || 3)) {
+                                    handleHorsDoeurvesItemSelection(category.id, item.id, category.servingSizes?.[0] || 24);
+                                  }
+                                } else {
+                                  handleHorsDoeurvesItemSelection(category.id, item.id, null);
+                                }
+                              }}
+                              disabled={isAtLimit}
+                              className="mr-3"
+                            />
+                            <div className="font-medium">{item.name}</div>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Serving Size Selection for spreads */}
+                  {selectedCount > 0 && category.servingSizes && (
+                    <div className="mt-4 p-4 border border-gray-200 rounded-md">
+                      <h4 className="font-medium mb-2">Select serving size:</h4>
+                      <RadioGroup 
+                        value={String(
+                          horsDoeurvesSelections?.categories?.[category.id]?.items?.[
+                            Object.keys(horsDoeurvesSelections?.categories?.[category.id]?.items || {})[0]
+                          ]?.quantity || category.servingSizes[0]
+                        )} 
+                        onValueChange={(value) => {
+                          const quantity = Number(value);
+                          // Update all selected items with the same quantity
+                          if (horsDoeurvesSelections?.categories?.[category.id]?.items) {
+                            Object.keys(horsDoeurvesSelections.categories[category.id].items).forEach(itemId => {
+                              handleHorsDoeurvesItemSelection(category.id, itemId, quantity);
+                            });
+                          }
+                        }}
+                        className="flex flex-wrap gap-4"
+                      >
+                        {category.servingSizes.map((size) => (
+                          <div key={size} className="flex items-center space-x-2">
+                            <RadioGroupItem value={String(size)} id={`serving-${category.id}-${size}`} />
+                            <Label htmlFor={`serving-${category.id}-${size}`}>{size} servings</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // Matrix-style selection for other hors d'oeuvres categories
+            return (
+              <div key={category.id} className="border-t pt-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold">{category.name}</h3>
+                  <p className="text-sm text-gray-500">{category.description}</p>
+                </div>
+                
+                {/* Matrix Selection Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="p-2 text-left border border-gray-200 w-1/2">Item</th>
+                        {category.lotSizes?.map((size) => (
+                          <th key={size} className="p-2 text-center border border-gray-200">
+                            {size}
+                          </th>
+                        ))}
+                        <th className="p-2 text-center border border-gray-200">
+                          Clear choice
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {category.items.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="p-2 border border-gray-200">
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-sm text-gray-600">${item.price.toFixed(2)} each</div>
+                          </td>
+                          
+                          {category.lotSizes?.map((size) => {
+                            const isSelected = getSelectedQuantity(category.id, item.id) === size;
+                            
+                            return (
+                              <td key={size} className="p-2 text-center border border-gray-200">
+                                <RadioGroup 
+                                  value={getSelectedQuantity(category.id, item.id)?.toString() || ""}
+                                  onValueChange={(value) => {
+                                    if (value === "") return;
+                                    handleHorsDoeurvesItemSelection(category.id, item.id, parseInt(value));
+                                  }}
+                                  className="flex justify-center"
+                                >
+                                  <RadioGroupItem 
+                                    value={String(size)} 
+                                    id={`matrix-${category.id}-${item.id}-${size}`} 
+                                    className="h-5 w-5"
+                                  />
+                                </RadioGroup>
+                              </td>
+                            );
+                          })}
+                          
+                          <td className="p-2 text-center border border-gray-200">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleHorsDoeurvesItemSelection(category.id, item.id, null)}
+                              disabled={!getSelectedQuantity(category.id, item.id)}
+                              className="h-5 w-5 p-0 rounded-full"
+                            >
+                              <RadioGroupItem 
+                                value="clear" 
+                                id={`matrix-${category.id}-${item.id}-clear`} 
+                                className="h-5 w-5"
+                                checked={!getSelectedQuantity(category.id, item.id)}
+                              />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Display total for this category */}
+                {horsDoeurvesSelections?.categories?.[category.id]?.items && 
+                 Object.keys(horsDoeurvesSelections.categories[category.id].items).length > 0 && (
+                  <div className="mt-4 flex justify-end">
+                    <div className="p-2 bg-gray-50 border border-gray-200 rounded-md">
+                      <span className="font-medium">
+                        Category Total: ${calculateCategoryTotal(category.id).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          
+          {/* Total for all selections */}
+          <div className="border-t pt-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold">Total for Hors d'oeuvres</h3>
+              <div className="text-xl font-bold text-primary">
+                ${calculateHorsDoeurvesTotal().toFixed(2)}
+              </div>
+            </div>
+            
+            {horsDoeurvesSelections?.serviceStyle === "passed" && (
+              <div className="mt-2 text-sm text-gray-600">
+                Includes ${(5 * (watch("guestCount") || 0)).toFixed(2)} service charge for passed service
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Traditional Appetizers Section Header */}
+        <div className="mt-12 mb-6 border-t pt-8">
+          <h3 className="text-xl font-semibold mb-2">Traditional Appetizers</h3>
+          <p className="text-gray-600">You can also select from our traditional appetizer options below:</p>
+        </div>
+        
+        {/* Traditional Appetizer Categories */}
         <div className="space-y-10">
           {appetizerData.categories.map((category) => {
             // Special handling for spreads
