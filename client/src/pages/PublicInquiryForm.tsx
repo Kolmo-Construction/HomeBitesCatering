@@ -175,7 +175,19 @@ type EventInquiryFormData = {
   
   // Step 5: Appetizers
   appetizerService?: "stationary" | "passed";
-  appetizers: Record<string, { name: string, quantity: number }[]>;
+  appetizers: Record<string, { name: string, quantity: number, price: number }[]>;
+  
+  // Hors d'oeuvres selections with matrix selection
+  horsDoeurvesSelections: {
+    serviceStyle?: "stationary" | "passed";
+    categories: Record<string, {
+      items: Record<string, {
+        name: string;
+        price: number;
+        quantity: 24 | 36 | 48 | 96 | 144 | null;
+      }>;
+    }>;
+  };
   
   // Step 6: Desserts
   dessertSelections: Record<string, number>;
