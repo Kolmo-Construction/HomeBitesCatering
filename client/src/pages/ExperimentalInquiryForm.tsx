@@ -2361,11 +2361,11 @@ const MenuSelectionStep = ({
                       <div className="flex justify-between items-center">
                         <div>
                           <span className="font-medium">{item.name}</span>
-                          {item.upcharge && item.upcharge > 0 && (
+                          {item.upcharge > 0 ? (
                             <span className="text-amber-600 text-sm ml-2">
                               (+${item.upcharge.toFixed(2)} upcharge per person)
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                           isSelected ? 'bg-primary text-white' : 'border border-gray-300'
