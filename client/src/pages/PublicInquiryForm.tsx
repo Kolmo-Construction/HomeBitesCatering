@@ -3222,8 +3222,8 @@ export default function PublicInquiryForm() {
     "eventType", 
     "basicInfo", 
     "eventDetails", 
+    "appetizers", // Moved appetizers (hors d'oeuvres) to step 4
     "menuSelection", 
-    "appetizers", 
     "desserts", 
     "beverages",
     "equipment",
