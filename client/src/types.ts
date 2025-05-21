@@ -1,24 +1,29 @@
 // client/src/types.ts
 import { EventType } from "./data/eventOptions";
 
-export type FormStep = 
-  | "eventType" 
-  | "basicInfo" 
-  | "eventDetails" 
-  | "menuSelection" 
-  | "appetizerQuestion" 
-  | "appetizers" 
-  | "desserts" 
-  | "beverages"
-  | "equipment"
-  | "review";
+// Form step enums
+export enum FormStep {
+  EVENT_TYPE_SELECTION = "EVENT_TYPE_SELECTION",
+  BASIC_INFORMATION = "BASIC_INFORMATION",
+  EVENT_DETAILS = "EVENT_DETAILS",
+  APPETIZERS_QUESTION = "APPETIZERS_QUESTION",
+  APPETIZERS = "APPETIZERS",
+  DESSERT = "DESSERT",
+  SPECIAL_REQUESTS = "SPECIAL_REQUESTS",
+  REVIEW = "REVIEW"
+}
 
-export type EventInquiryFormData = {
-  // Step 1: Event Type
+// Form data interface for the event inquiry form
+export interface EventInquiryFormData {
+  // Basic information
   eventType: EventType | null;
-  
-  // Step 2: Basic Information
   companyName?: string;
+  contactName: {
+    firstName: string;
+    lastName: string;
+  };
+  email: string;
+  phone: string;
   billingAddress: {
     street: string;
     street2?: string;
@@ -26,17 +31,11 @@ export type EventInquiryFormData = {
     state: string;
     zipCode: string;
   };
-  contactName: {
-    firstName: string;
-    lastName: string;
-  };
-  email: string;
-  phone?: string;
   eventDate: string;
   hasPromoCode: boolean;
   promoCode?: string;
   
-  // Step 3: Event Details & Venue
+  // Venue information
   venueSecured: boolean;
   venueName?: string;
   venueLocation?: {
@@ -46,82 +45,112 @@ export type EventInquiryFormData = {
     state: string;
     zipCode: string;
   };
-  eventStartTime?: string;
-  eventEndTime?: string;
-  ceremonyStartTime?: string;
-  ceremonyEndTime?: string;
-  setupBeforeCeremony?: boolean;
+  
+  // Event timeline
+  eventStartTime: string;
+  eventEndTime: string;
   hasCocktailHour: boolean;
   cocktailStartTime?: string;
   cocktailEndTime?: string;
   hasMainCourse: boolean;
   foodServiceStartTime?: string;
   foodServiceEndTime?: string;
+  
+  // Wedding specific
+  ceremonyStartTime?: string;
+  ceremonyEndTime?: string;
+  setupBeforeCeremony?: boolean;
+  
+  // Event details
   guestCount: number;
-  serviceStyle: string;
+  serviceStyle?: string;
   serviceDuration?: number;
   laborHours?: number;
-  requestedTheme: string;
+  requestedTheme?: string;
   
-  // Step 4: Menu Selection
-  selectedPackage?: string;
-  menuSelections: {
-    proteins: string[];
-    sides: string[];
-    salads: string[];
-    salsas: string[];
-    desserts: string[];
-    addons: string[];
-    [key: string]: Array<{id: string, quantity: number}> | string[];
-  };
-  
-  // Step 5: Appetizer Question
+  // Appetizers
   wantsAppetizers: boolean;
-  
-  // Step 6: Appetizers
   appetizerService?: "stationary" | "passed";
-  appetizers: Record<string, { name: string, quantity: number, price: number }[]>;
+  appetizers: Record<string, Array<{
+    name: string;
+    quantity: number;
+    price: number;
+  }>>;
   
-  // Hors d'oeuvres selections with matrix selection
+  // Hors d'oeuvres
   horsDoeurvesSelections: {
-    serviceStyle?: "stationary" | "passed";
+    serviceStyle: "stationary" | "passed";
     categories: Record<string, {
       items: Record<string, {
         name: string;
         price: number;
-        quantity: 24 | 36 | 48 | 96 | 144 | null;
+        quantity: number | null;
       }>;
     }>;
   };
   
-  // Step 6: Desserts
-  dessertSelections: Record<string, number>;
+  // Desserts
+  wantsDesserts: boolean;
+  dessertSelections: string[];
   
-  // Step 7: Beverages
-  beverageServiceType?: "alcoholic" | "non_alcoholic" | "both";
-  bartendingServiceType?: "dry_hire" | "wet_hire";
-  servingAlcohol: string[];
-  additionalCocktails: boolean;
-  additionalCocktailsCount?: number;
-  liquorQuality?: "well" | "mid_shelf" | "top_shelf";
-  spiritBrands?: string;
-  barEquipment: Record<string, number>;
-  nonAlcoholicBeverages: Record<string, string>;
-  tableWaterService: boolean;
+  // Special requests
+  hasAllergies: boolean;
+  allergiesDescription?: string;
+  hasDietaryRestrictions: boolean;
+  dietaryRestrictionsDescription?: string;
+  hasSpecialRequests: boolean;
+  specialRequestsDescription?: string;
+  additionalComments?: string;
   
-  // Step 8: Equipment
-  equipment: {
-    furniture: Record<string, number>;
-    linens: Record<string, number>;
-    servingWare: Record<string, number>;
-  };
-  
-  // Step 9: Notes & Final Review
-  adminFee?: number;
-  otherFeesDescription?: string;
-  otherFeesAmount?: number;
-  dietaryNotes?: string;
-  beverageNotes?: string;
-  specialRequests?: string;
+  // Submission details
   generalNotes?: string;
+}
+
+// Default form values
+export const defaultFormValues: EventInquiryFormData = {
+  // Basic information
+  eventType: null,
+  contactName: {
+    firstName: "",
+    lastName: ""
+  },
+  email: "",
+  phone: "",
+  billingAddress: {
+    street: "",
+    city: "",
+    state: "",
+    zipCode: ""
+  },
+  eventDate: "",
+  hasPromoCode: false,
+  
+  // Venue information
+  venueSecured: false,
+  
+  // Event timeline
+  eventStartTime: "",
+  eventEndTime: "",
+  hasCocktailHour: false,
+  hasMainCourse: true,
+  
+  // Event details
+  guestCount: 50,
+  
+  // Appetizers
+  wantsAppetizers: false,
+  appetizers: {},
+  horsDoeurvesSelections: {
+    serviceStyle: "stationary",
+    categories: {}
+  },
+  
+  // Desserts
+  wantsDesserts: false,
+  dessertSelections: [],
+  
+  // Special requests
+  hasAllergies: false,
+  hasDietaryRestrictions: false,
+  hasSpecialRequests: false
 };
