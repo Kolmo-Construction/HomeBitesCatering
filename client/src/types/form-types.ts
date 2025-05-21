@@ -21,6 +21,7 @@ export type FormStep =
   | "desserts" 
   | "beverages"
   | "equipment"
+  | "dietaryRestrictions"
   | "review";
 
 // Dessert lot sizes for quantity selection
