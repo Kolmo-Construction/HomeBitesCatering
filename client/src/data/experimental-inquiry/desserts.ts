@@ -1,4 +1,4 @@
-import { DessertItem, DessertLotSize } from "./types";
+import type { DessertItem, DessertLotSize } from "./types";
 
 // Dessert items with prices
 export const dessertItems: DessertItem[] = [
