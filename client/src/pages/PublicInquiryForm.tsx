@@ -4615,7 +4615,8 @@ export default function PublicInquiryForm({ initialEventType = "" }: { initialEv
                currentStep !== "eventDetails" &&
                currentStep !== "menuSelection" &&
                currentStep !== "appetizerQuestion" &&
-               currentStep !== "appetizers" && (
+               currentStep !== "appetizers" &&
+               currentStep !== "desserts" && (
                 <div className="container mx-auto px-4 max-w-3xl text-center py-12">
                   <h2 className="text-2xl font-bold">Step {currentStepNumber} - {currentStep}</h2>
                   <p className="text-gray-600 mt-4">This step is under construction...</p>
