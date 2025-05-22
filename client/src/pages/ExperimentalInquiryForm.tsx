@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { 
   ChevronRight, ChevronLeft, Check, Building, Phone,
-  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X
+  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X,
+  Info as InfoIcon
 } from "lucide-react";
 import FoodTruckMenu from "@/components/FoodTruckMenu";
 import { Helmet } from "react-helmet";
@@ -1223,37 +1224,17 @@ const EventDetailsStep = ({
           </div>
         </div>
         
-        {/* Menu Theme Selection */}
+        {/* Service Style Section - Extra Guidance */}
         <div className="mb-4">
-          <h3 className="text-xl font-semibold mb-4">Menu Selection</h3>
-          
-          <FormField
-            control={control}
-            name="requestedTheme"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What would you like a quote for?</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select menu theme" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {themeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+            <h4 className="text-amber-800 font-medium mb-2 flex items-center">
+              <InfoIcon className="h-5 w-5 mr-2" /> 
+              Next Steps
+            </h4>
+            <p className="text-sm text-amber-700">
+              After completing these details, you'll be able to select your menu options in the next step.
+            </p>
+          </div>
         </div>
       </div>
       
