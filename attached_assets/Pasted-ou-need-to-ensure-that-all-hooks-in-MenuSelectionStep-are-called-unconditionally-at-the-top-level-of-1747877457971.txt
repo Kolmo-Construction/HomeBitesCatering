@@ -1,0 +1,53 @@
+ou need to ensure that all hooks in MenuSelectionStep are called unconditionally at the top level of the component.
+
+Steps:
+Move the useState Hook:
+Relocate the useState hook for selectedActualCategory from its conditional position to the top level of the MenuSelectionStep component. Place it right after the useFormContext hook.
+
+Current problematic code (line 2436):
+
+TypeScript
+
+// Inside if (selectedTheme === "custom_menu") { ... }
+const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null);
+Corrected code (move to approx. line 2288, after useFormContext):
+
+TypeScript
+
+// At the top level of MenuSelectionStep
+const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>(); // Existing line
+const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null); // Moved hook
+Consolidate and correctly place the useEffect Hook:
+Remove the redundant useEffect hooks at lines 2369 and 2427. Keep only the first instance of this hook, which is already well-placed near the top of the component (line 2297), before any conditional return statements that could affect its execution.
+
+Remove these useEffect blocks:
+
+The one starting at line 2369:
+TypeScript
+
+// Set hors d'oeuvres as the theme if no other theme is selected
+React.useEffect(() => {
+  if (!selectedTheme || selectedTheme === "") {
+    setValue("requestedTheme", "hors_doeuvres");
+  }
+}, [selectedTheme, setValue]);
+The one starting at line 2427:
+TypeScript
+
+// Set hors d'oeuvres as the theme if no other theme is selected
+React.useEffect(() => {
+  if (!selectedTheme || selectedTheme === "") {
+    setValue("requestedTheme", "hors_doeuvres");
+  }
+}, [selectedTheme, setValue]);
+Keep this useEffect block (already present at line 2297):
+
+TypeScript
+
+// Set hors d'oeuvres as the theme if no other theme is selected
+useEffect(() => {
+  if (!selectedTheme || selectedTheme === "") {
+    setValue("requestedTheme", "hors_doeuvres");
+  }
+}, [selectedTheme, setValue]);
+By making these changes, you'll ensure that hooks are called in the same order on every render of the MenuSelectionStep component, resolving the "Rendered more hooks than during the previous render" error.
