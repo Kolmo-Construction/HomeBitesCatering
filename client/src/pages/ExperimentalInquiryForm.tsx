@@ -3011,25 +3011,34 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           }
         }
         // For all other themes, proceed normally to appetizerQuestion
-      } else if (currentStep === "appetizerQuestion" && !wantsAppetizers) {
-        // Skip the appetizers step if user doesn't want appetizers
-        
-        // If Food Truck is selected, go to the Food Truck menu step
-        if (serviceStyle === "Food Truck") {
-          const foodTruckIndex = steps.indexOf("foodTruckMenu");
-          if (foodTruckIndex > -1) {
-            nextStep = "foodTruckMenu";
+      } else if (currentStep === "appetizerQuestion") {
+        // Check if this is Cocktail - Appetizers Only service type
+        if (serviceStyle === "cocktail_party") {
+          // Always go to appetizers for Cocktail - Appetizers Only service type
+          const appetizersIndex = steps.indexOf("appetizers");
+          if (appetizersIndex > -1) {
+            nextStep = "appetizers";
           }
-        } else {
-          // For other service styles, go directly to desserts
-          const dessertsIndex = steps.indexOf("desserts");
-          if (dessertsIndex > -1) {
-            nextStep = "desserts";
+        } else if (!wantsAppetizers) {
+          // Skip the appetizers step if user doesn't want appetizers (for other service types)
+          
+          // If Food Truck is selected, go to the Food Truck menu step
+          if (serviceStyle === "food_truck") {
+            const foodTruckIndex = steps.indexOf("foodTruckMenu");
+            if (foodTruckIndex > -1) {
+              nextStep = "foodTruckMenu";
+            }
+          } else {
+            // For other service styles, go directly to desserts
+            const dessertsIndex = steps.indexOf("desserts");
+            if (dessertsIndex > -1) {
+              nextStep = "desserts";
+            }
           }
         }
       } else if (currentStep === "appetizers") {
         // After appetizers, check if Food Truck menu should be shown
-        if (serviceStyle === "Food Truck") {
+        if (serviceStyle === "food_truck") {
           const foodTruckIndex = steps.indexOf("foodTruckMenu");
           if (foodTruckIndex > -1) {
             nextStep = "foodTruckMenu";
