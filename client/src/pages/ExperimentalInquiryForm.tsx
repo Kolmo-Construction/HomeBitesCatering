@@ -2976,6 +2976,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
       
       // Handle special navigation based on current step and theme selection
       if (currentStep === "eventDetails") {
+        console.log("Service style selected:", serviceStyle);
         // If Food Truck is selected as service style, go directly to Food Truck menu
         if (serviceStyle === "food_truck") {
           const foodTruckIndex = steps.indexOf("foodTruckMenu");
