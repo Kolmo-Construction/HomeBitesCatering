@@ -3,11 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { 
   ChevronRight, ChevronLeft, Check, Building, Phone,
-  MapPin, Clock, Send, Users, Users2, LayoutGrid, Radio, CircleOff, X,
+  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X,
   Info as InfoIcon, Truck as TruckIcon, Package as PackageIcon,
-  Utensils as UtensilsIcon, Table as TableIcon, Wine, CalendarHeart,
-  UtensilsCrossed as UtensilsCrossedIcon, GlassWater as GlassWaterIcon,
-  Contact, UserRound, HeartHandshake, MenuSquare
+  Utensils as UtensilsIcon, Table as TableIcon,
+  UtensilsCrossed as UtensilsCrossedIcon, GlassWater as GlassWaterIcon
 } from "lucide-react";
 import FoodTruckMenu from "@/components/FoodTruckMenu";
 import { Helmet } from "react-helmet";
@@ -1143,182 +1142,136 @@ const BasicInformationStep = ({
   const { control, watch, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3 text-gray-900">Let's Plan Your {eventType}</h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          We're excited to help create an unforgettable experience for you and your guests. Let's start with some basic information.
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Basic Information</h2>
+        <p className="text-lg text-gray-600">
+          Let's get to know you and your {eventType.toLowerCase()} event
         </p>
       </div>
       
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        {/* Header Banner */}
-        <div className="bg-gradient-to-r from-primary/80 to-primary text-white p-6">
-          <h3 className="text-2xl font-semibold">Contact Information</h3>
-          <p className="text-white/80 mt-1">Tell us who you are and how we can reach you</p>
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="mb-6 flex items-center justify-center bg-gray-100 py-3 rounded-md">
+          <div className={`inline-flex items-center px-4 py-2 rounded-md bg-primary/10 border border-primary/20`}>
+            <span className="text-primary font-medium">{eventType}</span>
+          </div>
         </div>
         
-        <div className="p-8">
-          {/* Event Type Badge */}
-          <div className="mb-8 flex justify-center">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-              <span className="text-primary font-medium mr-2">{eventType}</span>
-              <CalendarHeart className="h-4 w-4 text-primary" />
-            </div>
+        {/* Company Name - Only show for Corporate events */}
+        {eventType === "Corporate" && (
+          <div className="mb-6">
+            <FormField
+              control={control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter company name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
-                    
-          {/* Company Name - Only show for Corporate events */}
-          {eventType === "Corporate" && (
-            <div className="mb-8 bg-gray-50 p-5 rounded-lg border border-gray-100">
-              <FormField
-                control={control}
-                name="companyName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-medium">Company Name</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter company name" 
-                        {...field} 
-                        className="bg-white" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          )}
+        )}
+        
+        {/* Contact Name */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <FormField
+            control={control}
+            name="contactName.firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter first name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
-          {/* Contact Information Section */}
-          <div className="space-y-8">
-            {/* Contact Name */}
-            <div>
-              <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
-                <UserRound className="h-4 w-4 mr-2 text-primary" />
-                Your Name
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={control}
-                  name="contactName.firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name*</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter first name" {...field} className="bg-white" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={control}
-                  name="contactName.lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name*</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter last name" {...field} className="bg-white" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            
-            {/* Contact Details */}
-            <div>
-              <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
-                <Contact className="h-4 w-4 mr-2 text-primary" />
-                Contact Details
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address*</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="email@example.com" 
-                          {...field} 
-                          className="bg-white"
-                          type="email"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="(123) 456-7890" 
-                          {...field} 
-                          className="bg-white"
-                          type="tel"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Billing Address Card */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-amber-500/80 to-amber-600 text-white p-6">
-          <h3 className="text-2xl font-semibold">Billing Address</h3>
-          <p className="text-white/80 mt-1">Where should we send your invoice?</p>
+          <FormField
+            control={control}
+            name="contactName.lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter last name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         
-        <div className="p-8">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-5">
-              <FormField
-                control={control}
-                name="billingAddress.street"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Street Address*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St" {...field} className="bg-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={control}
-                name="billingAddress.street2"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Apartment, Suite, Unit, etc. (optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Apt #123" {...field} className="bg-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+        {/* Email and Phone */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <FormField
+            control={control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email Address*</FormLabel>
+                <FormControl>
+                  <Input placeholder="email@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="(123) 456-7890" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        {/* Billing Address */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-3">Billing Address</h3>
+          
+          <div className="space-y-4">
+            <FormField
+              control={control}
+              name="billingAddress.street"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Street Address*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main St" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <FormField
+              control={control}
+              name="billingAddress.street2"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Street Address Line 2</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Apt, Suite, Unit, etc. (optional)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <FormField
                 control={control}
                 name="billingAddress.city"
@@ -1326,7 +1279,7 @@ const BasicInformationStep = ({
                   <FormItem>
                     <FormLabel>City*</FormLabel>
                     <FormControl>
-                      <Input placeholder="City" {...field} className="bg-white" />
+                      <Input placeholder="City" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1340,7 +1293,7 @@ const BasicInformationStep = ({
                   <FormItem>
                     <FormLabel>State/Province*</FormLabel>
                     <FormControl>
-                      <Input placeholder="State" {...field} className="bg-white" />
+                      <Input placeholder="State" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1354,7 +1307,7 @@ const BasicInformationStep = ({
                   <FormItem>
                     <FormLabel>Postal/Zip Code*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Zip Code" {...field} className="bg-white" />
+                      <Input placeholder="Zip Code" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1362,38 +1315,23 @@ const BasicInformationStep = ({
               />
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Event Date Card */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-blue-500/80 to-blue-600 text-white p-6">
-          <h3 className="text-2xl font-semibold">Event Date</h3>
-          <p className="text-white/80 mt-1">When is your special day?</p>
         </div>
         
-        <div className="p-8">
-          <div className="flex justify-center">
-            <div className="w-full max-w-md">
-              <FormField
-                control={control}
-                name="eventDate"
-                render={({ field }) => (
-                  <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-                    <FormLabel className="text-lg font-medium mb-3 block">Select Your Event Date*</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        className="text-center text-lg p-6 h-auto bg-white" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
+        {/* Event Date */}
+        <div className="mb-6">
+          <FormField
+            control={control}
+            name="eventDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Event Date*</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </div>
       
@@ -1403,19 +1341,17 @@ const BasicInformationStep = ({
           type="button" 
           variant="outline" 
           onClick={onPrevious}
-          className="flex items-center px-6 py-5 text-base"
-          size="lg"
+          className="flex items-center"
         >
-          <ChevronLeft className="mr-2 h-5 w-5" /> Back
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         
         <Button 
           type="button" 
           onClick={onNext}
-          className="flex items-center px-8 py-5 text-base bg-primary hover:bg-primary/90"
-          size="lg"
+          className="flex items-center"
         >
-          Continue <ChevronRight className="ml-2 h-5 w-5" />
+          Next <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -1771,104 +1707,31 @@ const EventDetailsStep = ({
   ];
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-3 text-gray-900">Event Details & Venue</h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Help us understand your {eventType.toLowerCase()} needs so we can create a perfect experience
+        <p className="text-lg text-gray-600">
+          Tell us more about your venue and event timing
         </p>
       </div>
       
-      {/* Guest Count Card */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-teal-500/80 to-teal-600 text-white p-6">
-          <h3 className="text-2xl font-semibold">Guest Information</h3>
-          <p className="text-white/80 mt-1">Tell us about your party size</p>
-        </div>
-        
-        <div className="p-8">
-          <div className="space-y-6">
-            <FormField
-              control={control}
-              name="guestCount"
-              render={({ field }) => (
-                <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-                  <div className="flex items-center mb-3">
-                    <Users2 className="h-5 w-5 mr-2 text-primary" />
-                    <FormLabel className="text-lg font-medium">Guest Count*</FormLabel>
-                  </div>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="1" 
-                      placeholder="Enter number of guests" 
-                      className="bg-white text-lg p-4"
-                      {...field} 
-                      onChange={(e) => field.onChange(Number(e.target.value) || '')}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-sm text-gray-500 mt-2">This helps us plan portion sizes and staffing</p>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={control}
-              name="childrenCount"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center mb-2">
-                    <FormLabel>Children Count (if applicable)</FormLabel>
-                  </div>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      placeholder="0"
-                      className="bg-white"
-                      {...field} 
-                      onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  <p className="text-sm text-gray-500 mt-2">Let us know if you need special children's options</p>
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Venue Information Card */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-indigo-500/80 to-indigo-600 text-white p-6">
-          <h3 className="text-2xl font-semibold">Venue Information</h3>
-          <p className="text-white/80 mt-1">Tell us where your event will take place</p>
-        </div>
-        
-        <div className="p-8">
-          <h3 className="text-xl font-semibold mb-4 hidden">Venue Information</h3>
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* Venue Information */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Venue Information</h3>
           
           <FormField
             control={control}
             name="venueSecured"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-5 mb-6 bg-gray-50">
-                <div className="space-y-1">
-                  <FormLabel className="text-base font-medium flex items-center">
-                    <Building className="h-5 w-5 mr-2 text-primary" />
-                    Have you secured a venue?
-                  </FormLabel>
-                  <p className="text-sm text-gray-500">
-                    Let us know if you've already booked a location
-                  </p>
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mb-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Have you secured a venue?</FormLabel>
                 </div>
                 <FormControl>
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="data-[state=checked]:bg-primary"
                   />
                 </FormControl>
               </FormItem>
@@ -1876,18 +1739,15 @@ const EventDetailsStep = ({
           />
           
           {venueSecured && (
-            <div className="bg-primary/5 rounded-lg p-6 border border-primary/10 space-y-5">
+            <div className="ml-4 border-l-2 border-primary/30 pl-4 py-2 space-y-4">
               <FormField
                 control={control}
                 name="venueName"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center mb-2">
-                      <MapPin className="h-4 w-4 mr-2 text-primary" />
-                      <FormLabel className="font-medium">Venue Name</FormLabel>
-                    </div>
+                    <FormLabel>Venue Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter venue name" {...field} className="bg-white" />
+                      <Input placeholder="Enter venue name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1895,11 +1755,8 @@ const EventDetailsStep = ({
               />
               
               {/* Venue Location */}
-              <div className="space-y-5">
-                <h4 className="text-base font-medium flex items-center">
-                  <MapPin className="h-4 w-4 mr-2 text-primary" />
-                  Venue Location
-                </h4>
+              <div className="space-y-4">
+                <h4 className="text-md font-medium">Venue Location</h4>
                 
                 <FormField
                   control={control}
@@ -1977,105 +1834,11 @@ const EventDetailsStep = ({
           )}
         </div>
         
-        {/* Service Options Card */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-violet-500/80 to-violet-600 text-white p-6">
-            <h3 className="text-2xl font-semibold">Service Options</h3>
-            <p className="text-white/80 mt-1">Choose how you'd like your food to be served</p>
-          </div>
+        {/* Event Schedule */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Event Schedule</h3>
           
-          <div className="p-8">
-            <div className="space-y-8">
-              <div>
-                <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
-                  <UtensilsIcon className="h-5 w-5 mr-2 text-primary" />
-                  Service Type
-                </h4>
-                <FormField
-                  control={control}
-                  name="serviceStyle"
-                  render={({ field }) => (
-                    <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-                      <FormLabel>Select Service Style*</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="bg-white">
-                            <SelectValue placeholder="Select service style" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {serviceTypeOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                      <p className="text-sm text-gray-500 mt-3">
-                        This determines how your food will be presented and served to your guests
-                      </p>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div>
-                <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
-                  <MenuSquare className="h-5 w-5 mr-2 text-primary" />
-                  Menu Theme
-                </h4>
-                <FormField
-                  control={control}
-                  name="menuTheme"
-                  render={({ field }) => (
-                    <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-                      <FormLabel>Menu Theme*</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="bg-white">
-                            <SelectValue placeholder="Select menu theme" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {themeOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                      <p className="text-sm text-gray-500 mt-3">
-                        Choose a cuisine style that matches your event theme
-                      </p>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Event Schedule Section */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-rose-500/80 to-rose-600 text-white p-6">
-            <h3 className="text-2xl font-semibold">Event Schedule</h3>
-            <p className="text-white/80 mt-1">Let us know the timing for your event</p>
-          </div>
-          
-          <div className="p-8">
-            <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-primary" />
-              Event Timing
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 bg-gray-50 p-6 rounded-lg border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <FormField
               control={control}
               name="eventStartTime"
