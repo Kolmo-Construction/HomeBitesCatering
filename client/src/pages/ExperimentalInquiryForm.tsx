@@ -3471,7 +3471,8 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
     "appetizers",    // Only show if user wants appetizers
     "foodTruckMenu", // Food Truck menu step (will be conditionally shown)
     "sandwichFactoryMenu", // Sandwich Factory menu step (will be conditionally shown)
-    "desserts", 
+    "dessertQuestion", // Ask if user wants desserts
+    "desserts",      // Only show if user wants desserts
     "beverages",
     "equipment",
     "dietaryRestrictions", // Added new step for dietary restrictions

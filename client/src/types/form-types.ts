@@ -20,6 +20,7 @@ export type FormStep =
   | "appetizers" 
   | "foodTruckMenu"  // Added Food Truck menu step
   | "sandwichFactoryMenu" // Added Sandwich Factory menu step
+  | "dessertQuestion" // Added Dessert question step
   | "desserts" 
   | "beverages"
   | "equipment"
@@ -139,6 +140,9 @@ export type EventInquiryFormData = {
   // Step 6: Appetizers
   appetizerService?: "stationary" | "passed";
   appetizers: Record<string, { name: string, quantity: number, price: number }[]>;
+  
+  // Dessert Question
+  wantsDesserts: boolean;
   
   // Hors d'oeuvres selections with matrix selection
   horsDoeurvesSelections: {
