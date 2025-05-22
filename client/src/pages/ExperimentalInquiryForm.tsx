@@ -2221,7 +2221,14 @@ const MenuSelectionStep = ({
     }
   }, [selectedPackages, setValue]);
   
-  // Display available menu themes for selection
+  // Set hors d'oeuvres as the theme if no other theme is selected
+  useEffect(() => {
+    if (!selectedTheme || selectedTheme === "") {
+      setValue("requestedTheme", "hors_doeuvres");
+    }
+  }, [selectedTheme, setValue]);
+  
+  // Display available menu themes for selection - define outside useEffect
   const handleThemeSelection = (theme: string) => {
     setValue("requestedTheme", theme);
   };
