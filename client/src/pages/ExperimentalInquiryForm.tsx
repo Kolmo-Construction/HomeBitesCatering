@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { 
   ChevronRight, ChevronLeft, Check, Building, Phone,
   MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X,
-  Info as InfoIcon
+  Info as InfoIcon, Truck as TruckIcon, Package as PackageIcon,
+  Utensils as UtensilsIcon, Table as TableIcon,
+  UtensilsCrossed as UtensilsCrossedIcon, GlassWater as GlassWaterIcon
 } from "lucide-react";
 import FoodTruckMenu from "@/components/FoodTruckMenu";
 import { Helmet } from "react-helmet";
@@ -765,8 +767,8 @@ const EventDetailsStep = ({
   const hasMainCourse = watch("hasMainCourse");
   const serviceStyle = watch("serviceStyle");
   
-  // Service style options
-  const serviceStyleOptions = [
+  // Service type options
+  const serviceTypeOptions = [
     { value: "drop_off", label: "Drop-off" },
     { value: "buffet_standard", label: "Buffet Standard" },
     { value: "buffet_full", label: "Buffet Full Service" },
@@ -1140,25 +1142,35 @@ const EventDetailsStep = ({
             control={control}
             name="serviceStyle"
             render={({ field }) => (
-              <FormItem className="mb-4">
-                <FormLabel>Service Style</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select service style" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {serviceStyleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <FormItem className="mb-6">
+                <FormLabel className="text-lg font-medium mb-3">Service Type</FormLabel>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {serviceTypeOptions.map((option) => (
+                    <Card 
+                      key={option.value}
+                      className={`
+                        transition-all duration-200 hover:shadow-md cursor-pointer
+                        ${field.value === option.value ? 'border-2 border-primary shadow-md' : 'border border-gray-200'}
+                      `}
+                      onClick={() => field.onChange(option.value)}
+                    >
+                      <CardContent className="p-4 text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          {option.value === 'food_truck' && <TruckIcon className="h-6 w-6 text-primary" />}
+                          {option.value === 'drop_off' && <PackageIcon className="h-6 w-6 text-primary" />}
+                          {option.value === 'buffet_standard' && <UtensilsIcon className="h-6 w-6 text-primary" />}
+                          {option.value === 'buffet_full' && <Users2 className="h-6 w-6 text-primary" />}
+                          {option.value === 'family_style' && <TableIcon className="h-6 w-6 text-primary" />}
+                          {option.value === 'plated_dinner' && <UtensilsIcon className="h-6 w-6 text-primary" />}
+                          {option.value === 'cocktail_party' && <GlassWaterIcon className="h-6 w-6 text-primary" />}
+                        </div>
+                        <div className={`font-medium ${field.value === option.value ? 'text-primary' : 'text-gray-700'}`}>
+                          {option.label}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
                 <FormMessage />
               </FormItem>
             )}
