@@ -2976,8 +2976,18 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
       
       // Handle special navigation based on current step and theme selection
       if (currentStep === "eventDetails") {
-        // Always go to menuSelection after eventDetails
-        nextStep = "menuSelection";
+        // If Food Truck is selected as service style, go directly to Food Truck menu
+        if (serviceStyle === "food_truck") {
+          const foodTruckIndex = steps.indexOf("foodTruckMenu");
+          if (foodTruckIndex > -1) {
+            nextStep = "foodTruckMenu";
+          } else {
+            nextStep = "menuSelection";
+          }
+        } else {
+          // For other service styles, go to menuSelection
+          nextStep = "menuSelection";
+        }
       } else if (currentStep === "menuSelection") {
         // If hors_doeuvres is selected, skip appetizerQuestion and go directly to appetizers
         if (currentFormTheme === "hors_doeuvres") {
