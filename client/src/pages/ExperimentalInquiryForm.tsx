@@ -1142,136 +1142,182 @@ const BasicInformationStep = ({
   const { control, watch, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3 text-gray-900">Basic Information</h2>
-        <p className="text-lg text-gray-600">
-          Let's get to know you and your {eventType.toLowerCase()} event
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Let's Plan Your {eventType}</h2>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          We're excited to help create an unforgettable experience for you and your guests. Let's start with some basic information.
         </p>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="mb-6 flex items-center justify-center bg-gray-100 py-3 rounded-md">
-          <div className={`inline-flex items-center px-4 py-2 rounded-md bg-primary/10 border border-primary/20`}>
-            <span className="text-primary font-medium">{eventType}</span>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-primary/80 to-primary text-white p-6">
+          <h3 className="text-2xl font-semibold">Contact Information</h3>
+          <p className="text-white/80 mt-1">Tell us who you are and how we can reach you</p>
+        </div>
+        
+        <div className="p-8">
+          {/* Event Type Badge */}
+          <div className="mb-8 flex justify-center">
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+              <span className="text-primary font-medium mr-2">{eventType}</span>
+              <CalendarHeart className="h-4 w-4 text-primary" />
+            </div>
+          </div>
+                    
+          {/* Company Name - Only show for Corporate events */}
+          {eventType === "Corporate" && (
+            <div className="mb-8 bg-gray-50 p-5 rounded-lg border border-gray-100">
+              <FormField
+                control={control}
+                name="companyName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Company Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter company name" 
+                        {...field} 
+                        className="bg-white" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+          
+          {/* Contact Information Section */}
+          <div className="space-y-8">
+            {/* Contact Name */}
+            <div>
+              <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
+                <UserRound className="h-4 w-4 mr-2 text-primary" />
+                Your Name
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={control}
+                  name="contactName.firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter first name" {...field} className="bg-white" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="contactName.lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter last name" {...field} className="bg-white" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            
+            {/* Contact Details */}
+            <div>
+              <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
+                <Contact className="h-4 w-4 mr-2 text-primary" />
+                Contact Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address*</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="email@example.com" 
+                          {...field} 
+                          className="bg-white"
+                          type="email"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="(123) 456-7890" 
+                          {...field} 
+                          className="bg-white"
+                          type="tel"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
           </div>
         </div>
-        
-        {/* Company Name - Only show for Corporate events */}
-        {eventType === "Corporate" && (
-          <div className="mb-6">
-            <FormField
-              control={control}
-              name="companyName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter company name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
-        
-        {/* Contact Name */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <FormField
-            control={control}
-            name="contactName.firstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>First Name*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter first name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={control}
-            name="contactName.lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Last Name*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter last name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      </div>
+      
+      {/* Billing Address Card */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-amber-500/80 to-amber-600 text-white p-6">
+          <h3 className="text-2xl font-semibold">Billing Address</h3>
+          <p className="text-white/80 mt-1">Where should we send your invoice?</p>
         </div>
         
-        {/* Email and Phone */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <FormField
-            control={control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email Address*</FormLabel>
-                <FormControl>
-                  <Input placeholder="email@example.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="(123) 456-7890" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        {/* Billing Address */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-3">Billing Address</h3>
-          
-          <div className="space-y-4">
-            <FormField
-              control={control}
-              name="billingAddress.street"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="p-8">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-5">
+              <FormField
+                control={control}
+                name="billingAddress.street"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St" {...field} className="bg-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={control}
+                name="billingAddress.street2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Apartment, Suite, Unit, etc. (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Apt #123" {...field} className="bg-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
-            <FormField
-              control={control}
-              name="billingAddress.street2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address Line 2</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Apt, Suite, Unit, etc. (optional)" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <FormField
                 control={control}
                 name="billingAddress.city"
@@ -1279,7 +1325,7 @@ const BasicInformationStep = ({
                   <FormItem>
                     <FormLabel>City*</FormLabel>
                     <FormControl>
-                      <Input placeholder="City" {...field} />
+                      <Input placeholder="City" {...field} className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1293,7 +1339,7 @@ const BasicInformationStep = ({
                   <FormItem>
                     <FormLabel>State/Province*</FormLabel>
                     <FormControl>
-                      <Input placeholder="State" {...field} />
+                      <Input placeholder="State" {...field} className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1307,7 +1353,7 @@ const BasicInformationStep = ({
                   <FormItem>
                     <FormLabel>Postal/Zip Code*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Zip Code" {...field} />
+                      <Input placeholder="Zip Code" {...field} className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1316,22 +1362,37 @@ const BasicInformationStep = ({
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Event Date Card */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-blue-500/80 to-blue-600 text-white p-6">
+          <h3 className="text-2xl font-semibold">Event Date</h3>
+          <p className="text-white/80 mt-1">When is your special day?</p>
+        </div>
         
-        {/* Event Date */}
-        <div className="mb-6">
-          <FormField
-            control={control}
-            name="eventDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Event Date*</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="p-8">
+          <div className="flex justify-center">
+            <div className="w-full max-w-md">
+              <FormField
+                control={control}
+                name="eventDate"
+                render={({ field }) => (
+                  <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+                    <FormLabel className="text-lg font-medium mb-3 block">Select Your Event Date*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        className="text-center text-lg p-6 h-auto bg-white" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
         </div>
       </div>
       
@@ -1341,17 +1402,19 @@ const BasicInformationStep = ({
           type="button" 
           variant="outline" 
           onClick={onPrevious}
-          className="flex items-center"
+          className="flex items-center px-6 py-5 text-base"
+          size="lg"
         >
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          <ChevronLeft className="mr-2 h-5 w-5" /> Back
         </Button>
         
         <Button 
           type="button" 
           onClick={onNext}
-          className="flex items-center"
+          className="flex items-center px-8 py-5 text-base bg-primary hover:bg-primary/90"
+          size="lg"
         >
-          Next <ChevronRight className="ml-2 h-4 w-4" />
+          Continue <ChevronRight className="ml-2 h-5 w-5" />
         </Button>
       </div>
     </div>
