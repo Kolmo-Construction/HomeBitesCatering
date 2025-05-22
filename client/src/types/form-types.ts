@@ -119,6 +119,20 @@ export type EventInquiryFormData = {
     includeDesserts: boolean;
   };
   
+  // Sandwich Factory Selections
+  sandwichFactorySelections?: {
+    package: string;
+    meats: string[];
+    cheeses: string[];
+    vegetables: string[];
+    breads: string[];
+    spreads: string[];
+    salads: string[];
+    wantsGlutenFreeBread: boolean;
+    glutenFreeBreadCount?: number;
+    notes?: string;
+  };
+  
   // Step 5: Appetizer Question
   wantsAppetizers: boolean;
   

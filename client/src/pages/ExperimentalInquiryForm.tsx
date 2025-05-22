@@ -3472,7 +3472,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           }
         } 
         // If Sandwich Factory is selected as service style, go to Sandwich Factory menu
-        else if (serviceStyle === "sandwich_factory") {
+        else if (serviceStyle === "Sandwich Factory Buffet") {
           setValue("requestedTheme", "sandwich_factory");
           const sandwichFactoryIndex = steps.indexOf("sandwichFactoryMenu");
           if (sandwichFactoryIndex > -1) {
@@ -3527,6 +3527,12 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           if (foodTruckIndex > -1) {
             nextStep = "foodTruckMenu";
           }
+        }
+      } else if (currentStep === "sandwichFactoryMenu" || currentStep === "foodTruckMenu") {
+        // After Sandwich Factory or Food Truck menu, go to desserts
+        const dessertsIndex = steps.indexOf("desserts");
+        if (dessertsIndex > -1) {
+          nextStep = "desserts";
         }
       }
       
