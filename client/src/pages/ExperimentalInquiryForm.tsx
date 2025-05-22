@@ -2208,6 +2208,7 @@ const MenuSelectionStep = ({
   // Add missing import
   const { useState, useEffect } = React;
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null);
   
   // Watch the selected packages (theme-specific)
   const selectedPackages = watch("selectedPackages") || {};
@@ -2366,12 +2367,7 @@ const MenuSelectionStep = ({
     setValue(`menuSelections.${categoryKey}`, currentSelections);
   };
   
-  // Set hors d'oeuvres as the theme if no other theme is selected
-  React.useEffect(() => {
-    if (!selectedTheme || selectedTheme === "") {
-      setValue("requestedTheme", "hors_doeuvres");
-    }
-  }, [selectedTheme, setValue]);
+  // Removed duplicate useEffect
   
   // Check if an item is selected
   const isItemSelected = (categoryKey: string, itemId: string) => {
@@ -2387,8 +2383,7 @@ const MenuSelectionStep = ({
   
   // Handle Custom Menu selection differently
   if (selectedTheme === "custom_menu") {
-    // Update: Using selectedActualCategory instead of the previous multi-level selection approach
-    const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null);
+    // We've moved the selectedActualCategory useState to the top of the component
     
     const handleActualCategorySelect = (categoryKey: string) => {
       setSelectedActualCategory(categoryKey);
