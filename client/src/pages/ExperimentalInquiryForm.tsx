@@ -2221,9 +2221,15 @@ const MenuSelectionStep = ({
     }
   }, [selectedPackages, setValue]);
   
-  // Get the theme menu data or show default message if theme not found
-  const themeData = themeMenuData[selectedTheme as keyof typeof themeMenuData];
+  // Display available menu themes for selection
+  const handleThemeSelection = (theme: string) => {
+    setValue("requestedTheme", theme);
+  };
   
+  // Get the theme menu data if theme is selected
+  const themeData = selectedTheme ? themeMenuData[selectedTheme as keyof typeof themeMenuData] : null;
+  
+  // Show available menu themes instead of error message
   if (!themeData) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -2232,9 +2238,32 @@ const MenuSelectionStep = ({
           <p className="text-2xl font-semibold text-primary mb-4">
             What would you like a quote for?
           </p>
-          <p className="text-lg text-gray-600">
-            Please complete the previous steps to select a menu theme.
-          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {Object.keys(themeMenuData).map((themeKey) => (
+            <Card 
+              key={themeKey}
+              className={`
+                overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+                ${selectedTheme === themeKey ? 'ring-4 ring-primary ring-offset-2' : ''}
+              `}
+              onClick={() => handleThemeSelection(themeKey)}
+            >
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-2">{themeMenuData[themeKey as keyof typeof themeMenuData].title}</h3>
+                <p className="text-gray-600 mb-4">{themeMenuData[themeKey as keyof typeof themeMenuData].description}</p>
+                <div className="flex justify-end">
+                  <Button 
+                    variant={selectedTheme === themeKey ? "default" : "outline"}
+                    size="sm"
+                  >
+                    {selectedTheme === themeKey ? "Selected" : "Select This Menu"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
         
         <div className="flex justify-between mt-8">
