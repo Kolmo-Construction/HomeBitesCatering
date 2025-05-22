@@ -3004,7 +3004,19 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
   const handlePrevious = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1]);
+      const previousStep = steps[currentIndex - 1];
+      
+      // If currently on menuSelection and going back to eventDetails
+      if (currentStep === "menuSelection" && previousStep === "eventDetails") {
+        setValue("requestedTheme", ""); // Clear the selected theme
+        setValue("selectedPackages", {}); // Clear any selected packages
+        // Optionally, clear general menuSelections if they shouldn't persist across theme changes
+        setValue("menuSelections", {
+          proteins: [], sides: [], salads: [], salsas: [], desserts: [], addons: []
+        });
+      }
+      
+      setCurrentStep(previousStep);
     }
   };
   
