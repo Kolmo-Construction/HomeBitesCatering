@@ -765,7 +765,7 @@ const EventDetailsStep = ({
   const venueSecured = watch("venueSecured");
   const hasCocktailHour = watch("hasCocktailHour");
   const hasMainCourse = watch("hasMainCourse");
-  const serviceStyle = watch("serviceStyle");
+  const serviceStyle = watch("serviceStyle"); // We're keeping the field name as serviceStyle for compatibility
   
   // Service type options
   const serviceTypeOptions = [
