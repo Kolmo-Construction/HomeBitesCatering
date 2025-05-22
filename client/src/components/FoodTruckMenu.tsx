@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { ChevronLeft, ChevronRight, InfoIcon } from "lucide-react";
@@ -21,74 +19,91 @@ type FoodTruckMenuProps = {
 };
 
 const FoodTruckMenu = ({ onPrevious, onNext, onSkipDessert }: FoodTruckMenuProps) => {
-  const { control, watch, setValue } = useFormContext<EventInquiryFormData>();
+  const { watch, setValue } = useFormContext<EventInquiryFormData>();
   
-  // Initialize the food truck selections if not already set
-  const foodTruckSelections = watch("foodTruckSelections") || {
-    smallBites: [],
-    bigBites: [],
-    vegetarianVegan: [],
-    kidsBites: [],
+  // Initialize the food truck selections with default values
+  const defaultSelections = {
+    smallBites: [] as string[],
+    bigBites: [] as string[],
+    vegetarianVegan: [] as string[],
+    kidsBites: [] as string[],
     glutenFreeBuns: 0,
     includeMenuPoster: false,
     includeDesserts: false
   };
   
+  // Get current form data or use defaults
+  const formData = watch() || {};
+  const foodTruckSelections = formData.foodTruckSelections || defaultSelections;
+  
+  // Initialize form data on component mount if needed
+  useEffect(() => {
+    if (!formData.foodTruckSelections) {
+      setValue("foodTruckSelections", defaultSelections);
+    }
+  }, []);
+  
   // Local state to track selection counts
   const [selectedCounts, setSelectedCounts] = useState({
-    smallBites: foodTruckSelections.smallBites.length,
-    bigBites: foodTruckSelections.bigBites.length + (foodTruckSelections?.vegetarianVegan?.length || 0),
-    kidsBites: foodTruckSelections.kidsBites.length
+    smallBites: foodTruckSelections.smallBites?.length || 0,
+    bigBites: (foodTruckSelections.bigBites?.length || 0) + (foodTruckSelections.vegetarianVegan?.length || 0),
+    kidsBites: foodTruckSelections.kidsBites?.length || 0
   });
   
   // Handle checkbox item selection
   const handleItemSelect = (category: "smallBites" | "bigBites" | "vegetarianVegan" | "kidsBites", itemId: string, isChecked: boolean) => {
-    // Get current selections
-    const currentSelections = [...(foodTruckSelections[category] || [])];
+    // Create a copy of the current form data
+    const currentSelections = {...foodTruckSelections};
+    
+    // Make sure the category array exists
+    if (!currentSelections[category]) {
+      currentSelections[category] = [];
+    }
     
     // Update selections based on checked state
     if (isChecked) {
       // Add item if not already selected
-      if (!currentSelections.includes(itemId)) {
-        currentSelections.push(itemId);
+      if (!currentSelections[category].includes(itemId)) {
+        currentSelections[category] = [...currentSelections[category], itemId];
       }
     } else {
       // Remove item if selected
-      const index = currentSelections.indexOf(itemId);
-      if (index !== -1) {
-        currentSelections.splice(index, 1);
-      }
+      currentSelections[category] = currentSelections[category].filter(id => id !== itemId);
     }
     
-    // Update form data
-    setValue(`foodTruckSelections.${category}`, currentSelections);
+    // Update the form with the full updated object
+    setValue("foodTruckSelections", currentSelections);
     
     // Update selection counts
-    if (category === "smallBites") {
-      setSelectedCounts(prev => ({ ...prev, smallBites: currentSelections.length }));
-    } else if (category === "bigBites" || category === "vegetarianVegan") {
-      const totalBigBites = category === "bigBites" 
-        ? currentSelections.length + (foodTruckSelections.vegetarianVegan?.length || 0)
-        : (foodTruckSelections.bigBites?.length || 0) + currentSelections.length;
-      setSelectedCounts(prev => ({ ...prev, bigBites: totalBigBites }));
-    } else if (category === "kidsBites") {
-      setSelectedCounts(prev => ({ ...prev, kidsBites: currentSelections.length }));
-    }
+    setSelectedCounts({
+      smallBites: currentSelections.smallBites?.length || 0,
+      bigBites: (currentSelections.bigBites?.length || 0) + (currentSelections.vegetarianVegan?.length || 0),
+      kidsBites: currentSelections.kidsBites?.length || 0
+    });
   };
   
   // Handle number input change for gluten-free buns
   const handleGlutenFreeBunsChange = (value: number) => {
-    setValue("foodTruckSelections.glutenFreeBuns", value);
+    setValue("foodTruckSelections", {
+      ...foodTruckSelections,
+      glutenFreeBuns: value
+    });
   };
   
   // Handle dessert selection toggle
   const handleDessertsToggle = (value: boolean) => {
-    setValue("foodTruckSelections.includeDesserts", value);
+    setValue("foodTruckSelections", {
+      ...foodTruckSelections,
+      includeDesserts: value
+    });
   };
   
   // Handle menu poster toggle
   const handleMenuPosterToggle = (value: boolean) => {
-    setValue("foodTruckSelections.includeMenuPoster", value);
+    setValue("foodTruckSelections", {
+      ...foodTruckSelections,
+      includeMenuPoster: value
+    });
   };
   
   // Handle next button click
@@ -140,26 +155,21 @@ const FoodTruckMenu = ({ onPrevious, onNext, onSkipDessert }: FoodTruckMenuProps
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {foodTruckMenuData.categories.smallBites.items.map((item) => (
-            <FormField
-              key={item.id}
-              control={control}
-              name={`foodTruckSelections.smallBites.${item.id}`}
-              render={({ field }) => (
-                <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={foodTruckSelections.smallBites.includes(item.id)}
-                      onCheckedChange={(checked) => 
-                        handleItemSelect("smallBites", item.id, checked as boolean)
-                      }
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-medium cursor-pointer">
-                    {item.name}
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+            <div key={item.id} className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
+              <Checkbox
+                id={`smallBites-${item.id}`}
+                checked={foodTruckSelections.smallBites?.includes(item.id) || false}
+                onCheckedChange={(checked) => 
+                  handleItemSelect("smallBites", item.id, checked as boolean)
+                }
+              />
+              <Label 
+                htmlFor={`smallBites-${item.id}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {item.name}
+              </Label>
+            </div>
           ))}
         </div>
         
