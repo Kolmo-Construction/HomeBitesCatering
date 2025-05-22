@@ -36,6 +36,12 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -185,6 +191,301 @@ const sandwichFactoryData = {
       salads: 3
     }
   }
+};
+
+// SandwichFactoryMenuStep component
+const SandwichFactoryMenuStep = ({
+  guestCount,
+  onPrevious,
+  onNext
+}: {
+  guestCount: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  const [selectedPackage, setSelectedPackage] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("packages");
+  
+  // Initialize selected options state
+  const [selectedOptions, setSelectedOptions] = useState({
+    meats: [] as string[],
+    cheeses: [] as string[],
+    vegetables: [] as string[],
+    breads: [] as string[],
+    spreads: [] as string[],
+    salads: [] as string[]
+  });
+  
+  // Get current package limits
+  const packageLimits = selectedPackage ? sandwichFactoryData.limits[selectedPackage as keyof typeof sandwichFactoryData.limits] : null;
+  
+  // Handle package selection
+  const handlePackageSelect = (packageId: string) => {
+    setSelectedPackage(packageId);
+    setValue("selectedPackages", { sandwich_factory: packageId });
+    
+    // Reset selections when changing packages
+    setSelectedOptions({
+      meats: [],
+      cheeses: [],
+      vegetables: [],
+      breads: [],
+      spreads: [],
+      salads: []
+    });
+    
+    // Move to options tab after selecting a package
+    setActiveTab("options");
+  };
+  
+  // Handle option selection for each category
+  const handleOptionSelection = (category: string, option: string) => {
+    setSelectedOptions(prev => {
+      const currentSelections = [...prev[category as keyof typeof prev]];
+      const index = currentSelections.indexOf(option);
+      
+      // Check if we're at the limit for this category
+      const limit = packageLimits ? 
+        (category === 'spreads' ? packageLimits.spreads : 
+         category === 'salads' ? packageLimits.salads : 0) : 0;
+      
+      if (index >= 0) {
+        // Remove item if already selected
+        currentSelections.splice(index, 1);
+      } else {
+        // Add item if under limit
+        if (limit === 0 || currentSelections.length < limit) {
+          currentSelections.push(option);
+        }
+      }
+      
+      // Update form data
+      const menuSelectionsData = { ...watch("menuSelections") };
+      menuSelectionsData[category] = currentSelections;
+      setValue("menuSelections", menuSelectionsData);
+      
+      return {
+        ...prev,
+        [category]: currentSelections
+      };
+    });
+  };
+  
+  // Calculate remaining selections for each category
+  const getRemainingSelections = (category: string) => {
+    if (!packageLimits) return 0;
+    const limit = category === 'spreads' ? packageLimits.spreads :
+                 category === 'salads' ? packageLimits.salads : 0;
+    
+    if (limit === 0) return null; // Unlimited
+    
+    const currentCount = selectedOptions[category as keyof typeof selectedOptions]?.length || 0;
+    return limit - currentCount;
+  };
+  
+  // Render the package cards
+  const renderPackageCards = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {sandwichFactoryData.packages.map(pkg => (
+          <Card 
+            key={pkg.id}
+            className={`
+              overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+              ${selectedPackage === pkg.id ? 'ring-4 ring-primary ring-offset-2' : ''}
+            `}
+            onClick={() => handlePackageSelect(pkg.id)}
+          >
+            <CardHeader className="bg-primary/5 pb-2">
+              <CardTitle className="flex justify-between items-center">
+                <span>{pkg.name}</span>
+                <span className="text-primary font-bold">${pkg.price.toFixed(2)}/person</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 text-sm">
+              <p className="mb-2">{pkg.description}</p>
+              <p className="text-xs text-muted-foreground">Minimum {pkg.minGuestCount} guests</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+  
+  // Render option checkboxes for each category
+  const renderOptionSelection = (category: string, options: string[]) => {
+    const remaining = getRemainingSelections(category);
+    const selections = selectedOptions[category as keyof typeof selectedOptions];
+    
+    return (
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-lg font-medium capitalize">{category}</h3>
+          {remaining !== null && (
+            <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
+              {remaining} remaining
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {options.map(option => (
+            <div key={option} className="flex items-center space-x-2">
+              <Checkbox
+                id={`${category}-${option}`}
+                checked={selections.includes(option)}
+                onCheckedChange={() => handleOptionSelection(category, option)}
+                disabled={remaining === 0 && !selections.includes(option)}
+              />
+              <label
+                htmlFor={`${category}-${option}`}
+                className={`text-sm ${remaining === 0 && !selections.includes(option) ? 'text-gray-400' : ''}`}
+              >
+                {option}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
+  // Check if all required selections are made
+  const isSelectionComplete = () => {
+    if (!selectedPackage) return false;
+    
+    // Check if required selections meet the package limits
+    if (packageLimits) {
+      if (packageLimits.spreads > 0 && selectedOptions.spreads.length < packageLimits.spreads) {
+        return false;
+      }
+      if (packageLimits.salads > 0 && selectedOptions.salads.length < packageLimits.salads) {
+        return false;
+      }
+    }
+    
+    // Require at least one item from meats, cheeses, vegetables, breads
+    return selectedOptions.meats.length > 0 &&
+           selectedOptions.cheeses.length > 0 &&
+           selectedOptions.vegetables.length > 0 &&
+           selectedOptions.breads.length > 0;
+  };
+  
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-3 text-gray-900">Sandwich Factory Menu</h2>
+        <p className="text-lg text-gray-600">
+          Select your sandwich package and customize your options
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="packages">Packages</TabsTrigger>
+            <TabsTrigger value="options" disabled={!selectedPackage}>Menu Options</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="packages">
+            <div className="mb-6">
+              <h3 className="text-lg font-medium mb-4">Select a Catering Package</h3>
+              {renderPackageCards()}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="options">
+            {selectedPackage && (
+              <div>
+                <div className="mb-4 p-3 bg-primary/5 rounded-md">
+                  <h3 className="font-medium mb-1">
+                    Selected Package: {sandwichFactoryData.packages.find(p => p.id === selectedPackage)?.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {sandwichFactoryData.packages.find(p => p.id === selectedPackage)?.description}
+                  </p>
+                </div>
+                
+                <div className="space-y-6">
+                  {renderOptionSelection('meats', sandwichFactoryData.options.meats)}
+                  {renderOptionSelection('cheeses', sandwichFactoryData.options.cheeses)}
+                  {renderOptionSelection('vegetables', sandwichFactoryData.options.vegetables)}
+                  {renderOptionSelection('breads', sandwichFactoryData.options.breads)}
+                  {renderOptionSelection('spreads', sandwichFactoryData.options.spreads)}
+                  {packageLimits && packageLimits.salads > 0 && (
+                    renderOptionSelection('salads', sandwichFactoryData.options.salads)
+                  )}
+                </div>
+                
+                <div className="mt-6 pt-4 border-t">
+                  <FormField
+                    control={control}
+                    name="wantsGlutenFreeBread"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="gluten-free-option"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel htmlFor="gluten-free-option">
+                            Add gluten-free bread option (+$0.50 per person)
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="mt-6">
+                  <FormField
+                    control={control}
+                    name="sandwichFactoryNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Special Requests or Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Any special requests or dietary notes for your order"
+                            className="min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+      
+      <div className="flex justify-between mt-8">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onPrevious}
+          className="flex items-center"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onNext}
+          className="flex items-center"
+          disabled={!isSelectionComplete()}
+        >
+          Next <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 };
 
 // Experimental Form Header component
