@@ -194,6 +194,391 @@ const sandwichFactoryData = {
   }
 };
 
+// BreakfastMenuStep component
+const BreakfastMenuStep = ({ 
+  onPrevious, 
+  onNext,
+  guestCount
+}: { 
+  onPrevious: () => void;
+  onNext: () => void;
+  guestCount: number;
+}) => {
+  const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
+  const [selectedMenuType, setSelectedMenuType] = useState<string>("");
+  const breakfastSelections = watch("breakfastMenuSelections") || {};
+  
+  // Initialize the breakfastMenuSelections if they're not already set
+  useEffect(() => {
+    if (!breakfastSelections.menuType) {
+      setValue("breakfastMenuSelections", { 
+        menuType: "", 
+        grab_and_go_bites: [], 
+        grab_and_go_snacks: [], 
+        grab_and_go_beverages: [],
+        continental_staples: [],
+        continental_beverages: []
+      });
+    } else {
+      setSelectedMenuType(breakfastSelections.menuType);
+    }
+  }, [breakfastSelections.menuType, setValue]);
+
+  // Handle menu type selection
+  const handleMenuTypeSelect = (type: string) => {
+    setSelectedMenuType(type);
+    setValue("breakfastMenuSelections.menuType", type);
+  };
+
+  // Handle item selection for grab and go menu (with quantity)
+  const handleGrabAndGoItemSelect = (sectionId: string, itemId: string, quantity: number) => {
+    const sectionKey = `grab_and_go_${sectionId}` as keyof typeof breakfastSelections;
+    const currentSelections = breakfastSelections[sectionKey] as Array<{id: string, quantity: number}> || [];
+    const existingIndex = currentSelections.findIndex(item => item.id === itemId);
+    
+    if (quantity > 0) {
+      if (existingIndex >= 0) {
+        // Update quantity of existing item
+        const newSelections = [...currentSelections];
+        newSelections[existingIndex] = { id: itemId, quantity };
+        setValue(`breakfastMenuSelections.${sectionKey}`, newSelections);
+      } else {
+        // Add new item
+        setValue(`breakfastMenuSelections.${sectionKey}`, [...currentSelections, { id: itemId, quantity }]);
+      }
+    } else {
+      // Remove item if quantity is 0
+      if (existingIndex >= 0) {
+        const newSelections = [...currentSelections];
+        newSelections.splice(existingIndex, 1);
+        setValue(`breakfastMenuSelections.${sectionKey}`, newSelections);
+      }
+    }
+  };
+
+  // Handle item selection for other menu types (single/multi-select)
+  const handleItemSelect = (sectionId: string, itemId: string, isMultiple: boolean, isSelected: boolean) => {
+    const sectionKey = sectionId as keyof typeof breakfastSelections;
+    const currentSelections = Array.isArray(breakfastSelections[sectionKey]) 
+      ? [...breakfastSelections[sectionKey] as string[]] 
+      : [];
+    
+    if (isMultiple) {
+      // Multi-select logic
+      if (isSelected) {
+        if (!currentSelections.includes(itemId)) {
+          setValue(`breakfastMenuSelections.${sectionKey}`, [...currentSelections, itemId]);
+        }
+      } else {
+        setValue(`breakfastMenuSelections.${sectionKey}`, 
+          currentSelections.filter(id => id !== itemId)
+        );
+      }
+    } else {
+      // Single-select logic (radio button)
+      setValue(`breakfastMenuSelections.${sectionKey}`, itemId);
+    }
+  };
+
+  // Get quantity for a grab and go item
+  const getItemQuantity = (sectionId: string, itemId: string): number => {
+    const sectionKey = `grab_and_go_${sectionId}` as keyof typeof breakfastSelections;
+    const selections = breakfastSelections[sectionKey] as Array<{id: string, quantity: number}> || [];
+    const item = selections.find(item => item.id === itemId);
+    return item ? item.quantity : 0;
+  };
+
+  // Check if an item is selected (for non-grab-and-go sections)
+  const isItemSelected = (sectionId: string, itemId: string): boolean => {
+    const sectionKey = sectionId as keyof typeof breakfastSelections;
+    const selections = breakfastSelections[sectionKey];
+    
+    if (!selections) return false;
+    
+    if (Array.isArray(selections)) {
+      return selections.includes(itemId);
+    } else {
+      return selections === itemId;
+    }
+  };
+
+  // Calculate if form is valid based on menu type requirements
+  const isFormValid = () => {
+    if (!selectedMenuType) return false;
+    
+    switch (selectedMenuType) {
+      case "grab_and_go":
+        // At least one item must be selected
+        const bites = breakfastSelections.grab_and_go_bites || [];
+        const snacks = breakfastSelections.grab_and_go_snacks || [];
+        const beverages = breakfastSelections.grab_and_go_beverages || [];
+        return bites.length > 0 || snacks.length > 0 || beverages.length > 0;
+        
+      case "continental":
+        // Must have 3 staples and 2 beverages
+        const staples = breakfastSelections.continental_staples || [];
+        const continentalBevs = breakfastSelections.continental_beverages || [];
+        return staples.length >= 3 && continentalBevs.length >= 2;
+        
+      case "american":
+        // Check if all required fields are selected
+        return !!breakfastSelections.eggs && 
+               (breakfastSelections.meats || []).length >= 2 &&
+               !!breakfastSelections.potatoes &&
+               !!breakfastSelections.breads &&
+               !!breakfastSelections.sides &&
+               (breakfastSelections.beverages || []).length >= 2;
+        
+      case "full_monty":
+        // Check if all required sections have at least one selection
+        return !!breakfastSelections.serviceStyle &&
+               (breakfastSelections.breakfast_meats || []).length > 0 &&
+               (breakfastSelections.breads || []).length > 0 &&
+               (breakfastSelections.sweet_selections || []).length > 0 &&
+               (breakfastSelections.savory_selections || []).length > 0 &&
+               (breakfastSelections.sides_selections || []).length > 0 &&
+               (breakfastSelections.beverages || []).length > 0;
+               
+      default:
+        return false;
+    }
+  };
+
+  // Render menu type selection cards
+  const renderMenuTypeSelection = () => {
+    return (
+      <>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">Breakfast/Brunch</h2>
+          <p className="text-lg text-gray-600">
+            {breakfastMenuData.description}
+          </p>
+          <p className="mt-4 text-lg font-medium text-gray-800">
+            What Type of Breakfast do you want a quote for?
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {breakfastMenuData.menuTypes.map((menuType) => (
+            <Card 
+              key={menuType.id}
+              className={`
+                overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg
+                ${selectedMenuType === menuType.id ? 'ring-4 ring-primary ring-offset-2' : ''}
+              `}
+              onClick={() => handleMenuTypeSelect(menuType.id)}
+            >
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-semibold">{menuType.name}</h3>
+                  {selectedMenuType === menuType.id && (
+                    <Check className="h-6 w-6 text-primary" />
+                  )}
+                </div>
+                <p className="text-gray-600 mb-4">{menuType.description}</p>
+                {menuType.minGuestCount > 0 && (
+                  <p className="text-sm text-gray-500">
+                    Minimum order: {menuType.minGuestCount} guests
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  // Render the specific menu based on selected type
+  const renderSelectedMenu = () => {
+    const selectedMenu = breakfastMenuData.menuTypes.find(menu => menu.id === selectedMenuType);
+    if (!selectedMenu) return null;
+
+    return (
+      <>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">{selectedMenu.name}</h2>
+          <p className="text-lg text-gray-600">
+            {selectedMenu.description}
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedMenuType("")}
+            className="mt-4"
+          >
+            Choose a Different Breakfast Type
+          </Button>
+        </div>
+        
+        {selectedMenu.sections.map((section) => (
+          <div key={section.id} className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 className="text-xl font-semibold mb-2">{section.name}</h3>
+            <p className="text-gray-600 mb-4">{section.description}</p>
+            
+            {/* Grab and Go sections with quantity inputs */}
+            {selectedMenu.id === "grab_and_go" && section.id.startsWith("grab_and_go_") && (
+              <div className="space-y-4">
+                {section.items.map((item) => {
+                  const quantity = getItemQuantity(section.id.replace("grab_and_go_", ""), item.id);
+                  return (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-gray-500">${item.price.toFixed(2)}</p>
+                      </div>
+                      <div className="flex items-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleGrabAndGoItemSelect(
+                            section.id.replace("grab_and_go_", ""), 
+                            item.id, 
+                            Math.max(0, quantity - 1)
+                          )}
+                        >
+                          <span>-</span>
+                        </Button>
+                        <span className="mx-3 w-8 text-center">{quantity}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleGrabAndGoItemSelect(
+                            section.id.replace("grab_and_go_", ""), 
+                            item.id, 
+                            quantity + 1
+                          )}
+                        >
+                          <span>+</span>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Single-select sections (radio buttons) */}
+            {section.selectType === "single" && (
+              <RadioGroup
+                value={breakfastSelections[section.id as keyof typeof breakfastSelections] || ""}
+                onValueChange={(value) => handleItemSelect(section.id, value, false, true)}
+                className="space-y-3"
+              >
+                {section.items.map((item) => (
+                  <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <RadioGroupItem value={item.id} id={`${section.id}-${item.id}`} />
+                    <Label htmlFor={`${section.id}-${item.id}`} className="flex-1 cursor-pointer">
+                      <span className="font-medium">{item.name}</span>
+                      {item.price > 0 && (
+                        <span className="ml-2 text-sm text-gray-500">${item.price.toFixed(2)}</span>
+                      )}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+            
+            {/* Multi-select sections (checkboxes) with selection limits */}
+            {section.selectType !== "single" && !section.id.startsWith("grab_and_go_") && (
+              <div className="space-y-3">
+                {section.selectLimit && (
+                  <p className="text-sm italic text-gray-600 mb-2">
+                    {section.required ? "Required: " : ""}
+                    {section.selectLimit === 1 
+                      ? "Choose 1 option" 
+                      : `Choose up to ${section.selectLimit} options`
+                    }
+                  </p>
+                )}
+                
+                {section.items.map((item) => {
+                  const isSelected = isItemSelected(section.id, item.id);
+                  const selections = breakfastSelections[section.id as keyof typeof breakfastSelections] || [];
+                  const selectionCount = Array.isArray(selections) ? selections.length : 0;
+                  const isLimitReached = section.selectLimit ? selectionCount >= section.selectLimit : false;
+                  const disabled = isLimitReached && !isSelected;
+                  
+                  return (
+                    <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <Checkbox 
+                        id={`${section.id}-${item.id}`}
+                        checked={isSelected}
+                        disabled={disabled}
+                        onCheckedChange={(checked) => 
+                          handleItemSelect(section.id, item.id, true, !!checked)
+                        }
+                      />
+                      <Label htmlFor={`${section.id}-${item.id}`} className="flex-1 cursor-pointer">
+                        <span className="font-medium">{item.name}</span>
+                        {item.price > 0 && (
+                          <span className="ml-2 text-sm text-gray-500">${item.price.toFixed(2)}</span>
+                        )}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+        
+        {/* Special requests / notes */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-xl font-semibold mb-4">Special Requests</h3>
+          <FormField
+            control={control}
+            name="breakfastMenuSelections.notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Additional notes or dietary restrictions</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Please enter any special requests, dietary restrictions, or additional information here."
+                    className="h-24"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {!selectedMenuType ? renderMenuTypeSelection() : renderSelectedMenu()}
+      
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onPrevious}
+          className="flex items-center"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onNext}
+          className="flex items-center bg-primary"
+          disabled={selectedMenuType !== "" && !isFormValid()}
+        >
+          Continue <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // DessertQuestionStep component
 const DessertQuestionStep = ({ 
   onPrevious, 
@@ -3626,6 +4011,16 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
             nextStep = "menuSelection"; // Fallback if sandwich factory step isn't found
           }
         }
+        // If Breakfast/Brunch is selected as service style, go to Breakfast Menu
+        else if (serviceStyle === "breakfast_brunch") {
+          setValue("requestedTheme", "breakfast_brunch");
+          const breakfastMenuIndex = steps.indexOf("breakfastMenu");
+          if (breakfastMenuIndex > -1) {
+            nextStep = "breakfastMenu";
+          } else {
+            nextStep = "menuSelection"; // Fallback if breakfast menu step isn't found
+          }
+        }
         else {
           // For other service styles, go to menuSelection
           nextStep = "menuSelection";
@@ -3786,6 +4181,14 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
               
               {currentStep === "sandwichFactoryMenu" && eventType && (
                 <SandwichFactoryMenuStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  guestCount={watch("guestCount") || 0}
+                />
+              )}
+              
+              {currentStep === "breakfastMenu" && eventType && (
+                <BreakfastMenuStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                   guestCount={watch("guestCount") || 0}
