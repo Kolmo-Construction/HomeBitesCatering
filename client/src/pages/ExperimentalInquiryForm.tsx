@@ -1181,47 +1181,7 @@ const EventDetailsStep = ({
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <FormField
-              control={control}
-              name="serviceDuration"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Service Duration (hours)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="1"
-                      placeholder="Duration" 
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value) || undefined)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={control}
-              name="laborHours"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Labor Hours</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number"
-                      min="1" 
-                      placeholder="Labor hours" 
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value) || undefined)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          {/* Service duration and labor hours fields removed as requested */}
         </div>
         
         {/* Service Style Section - Extra Guidance */}
