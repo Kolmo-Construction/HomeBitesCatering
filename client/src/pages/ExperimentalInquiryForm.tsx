@@ -3529,7 +3529,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           }
         } 
         // If Sandwich Factory is selected as service style, go to Sandwich Factory menu
-        else if (serviceStyle === "Sandwich Factory Buffet") {
+        else if (serviceStyle === "sandwich_factory") {
           setValue("requestedTheme", "sandwich_factory");
           const sandwichFactoryIndex = steps.indexOf("sandwichFactoryMenu");
           if (sandwichFactoryIndex > -1) {
