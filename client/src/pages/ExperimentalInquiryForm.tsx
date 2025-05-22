@@ -223,7 +223,23 @@ const SandwichFactoryMenuStep = ({
   // Handle package selection
   const handlePackageSelect = (packageId: string) => {
     setSelectedPackage(packageId);
-    setValue("selectedPackages", { sandwich_factory: packageId });
+    
+    // Initialize sandwichFactorySelections if it doesn't exist
+    if (!watch("sandwichFactorySelections")) {
+      setValue("sandwichFactorySelections", {
+        package: packageId,
+        meats: [],
+        cheeses: [],
+        vegetables: [],
+        breads: [],
+        spreads: [],
+        salads: [],
+        wantsGlutenFreeBread: false
+      });
+    } else {
+      // Update just the package selection
+      setValue("sandwichFactorySelections.package", packageId);
+    }
     
     // Reset selections when changing packages
     setSelectedOptions({
@@ -260,10 +276,22 @@ const SandwichFactoryMenuStep = ({
         }
       }
       
-      // Update form data
-      const menuSelectionsData = { ...watch("menuSelections") };
-      menuSelectionsData[category] = currentSelections;
-      setValue("menuSelections", menuSelectionsData);
+      // Make sure we have the sandwich factory selections object initialized
+      if (!watch("sandwichFactorySelections")) {
+        setValue("sandwichFactorySelections", {
+          package: selectedPackage,
+          meats: [],
+          cheeses: [],
+          vegetables: [],
+          breads: [],
+          spreads: [],
+          salads: [],
+          wantsGlutenFreeBread: false
+        });
+      }
+      
+      // Update form data with new selections
+      setValue(`sandwichFactorySelections.${category}`, currentSelections);
       
       return {
         ...prev,
@@ -420,13 +448,18 @@ const SandwichFactoryMenuStep = ({
                 <div className="mt-6 pt-4 border-t">
                   <FormField
                     control={control}
-                    name="wantsGlutenFreeBread"
+                    name="sandwichFactorySelections.wantsGlutenFreeBread"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            onCheckedChange={field.onChange}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (checked) {
+                                setValue("sandwichFactorySelections.glutenFreeBreadCount", 1);
+                              }
+                            }}
                             id="gluten-free-option"
                           />
                         </FormControl>
@@ -438,12 +471,35 @@ const SandwichFactoryMenuStep = ({
                       </FormItem>
                     )}
                   />
+                  
+                  {watch("sandwichFactorySelections.wantsGlutenFreeBread") && (
+                    <FormField
+                      control={control}
+                      name="sandwichFactorySelections.glutenFreeBreadCount"
+                      render={({ field }) => (
+                        <FormItem className="mb-4 ml-8">
+                          <FormLabel>How many gluten-free breads?</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Enter the number of gluten-free breads needed
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
                 
                 <div className="mt-6">
                   <FormField
                     control={control}
-                    name="sandwichFactoryNotes"
+                    name="sandwichFactorySelections.notes"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Special Requests or Notes</FormLabel>
@@ -452,6 +508,7 @@ const SandwichFactoryMenuStep = ({
                             placeholder="Any special requests or dietary notes for your order"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
