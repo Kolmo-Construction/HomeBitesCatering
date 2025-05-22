@@ -769,8 +769,7 @@ const EventDetailsStep = ({
   
   // Service type options
   const serviceTypeOptions = [
-    { value: "buffet_standard", label: "Buffet Standard" },
-    { value: "buffet_full", label: "Buffet Full Service" },
+    { value: "catering_buffet", label: "Catering Buffet" },
     { value: "breakfast_brunch", label: "Breakfast/Brunch Buffet" },
     { value: "sandwich_factory", label: "Sandwich Factory Buffet" },
     { value: "family_style", label: "Family Style" },
@@ -1158,8 +1157,7 @@ const EventDetailsStep = ({
                       <CardContent className="p-4 text-center">
                         <div className="flex items-center justify-center mb-2">
                           {option.value === 'food_truck' && <TruckIcon className="h-6 w-6 text-primary" />}
-                          {option.value === 'buffet_standard' && <UtensilsIcon className="h-6 w-6 text-primary" />}
-                          {option.value === 'buffet_full' && <Users2 className="h-6 w-6 text-primary" />}
+                          {option.value === 'catering_buffet' && <UtensilsIcon className="h-6 w-6 text-primary" />}
                           {option.value === 'breakfast_brunch' && <Clock className="h-6 w-6 text-primary" />}
                           {option.value === 'sandwich_factory' && <UtensilsIcon className="h-6 w-6 text-primary" />}
                           {option.value === 'family_style' && <TableIcon className="h-6 w-6 text-primary" />}
