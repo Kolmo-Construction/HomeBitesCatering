@@ -253,7 +253,7 @@ export const themeMenuData = {
           { id: "pickled_cabbage", name: "Pickled cabbage", upcharge: 0 }
         ]
       },
-      
+
       // American BBQ - Custom
       bbq_mains: {
         title: "American BBQ - Mains",
@@ -324,7 +324,7 @@ export const themeMenuData = {
           { id: "fruit_salad", name: "Fruit Salad", upcharge: 0 }
         ]
       },
-      
+
       // Greek Menu Items
       greek_mains: {
         title: "Greek - Mains",
@@ -365,7 +365,7 @@ export const themeMenuData = {
           { id: "baked_vegetables", name: "Baked Vegetables- Briam", upcharge: 0 }
         ]
       },
-      
+
       // Kebab Party Menu Items
       kebab_proteins: {
         title: "Kebab Party - Proteins",
@@ -421,7 +421,7 @@ export const themeMenuData = {
           { id: "garden_salad", name: "Garden Salad", upcharge: 0 }
         ]
       },
-      
+
       // Italian Menu Items
       italian_mains: {
         title: "Italian - Mains",
@@ -493,7 +493,7 @@ export const themeMenuData = {
           { id: "tuscan_orzo", name: "Tuscan Orzo Pesto Salad", upcharge: 0 }
         ]
       },
-      
+
       // Vegan Menu Items
       vegan_mains: {
         title: "Vegan - Mains",
@@ -552,7 +552,7 @@ export const themeMenuData = {
       }
     }
   },
-  
+
   taco_fiesta: {
     title: "Taco Fiesta",
     description: "A festive Mexican-inspired menu perfect for casual gatherings and celebrations",
@@ -618,7 +618,7 @@ export const themeMenuData = {
           "bronze": 2,
           "silver": 3,
           "gold": 4,
-          "diamond": 5
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "barbacoa", name: "Barbacoa", upcharge: 0 },
@@ -640,7 +640,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "refried_beans", name: "Refried Beans", upcharge: 0 },
@@ -663,7 +664,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "pico_de_gallo", name: "Classic Pico de Gallo", upcharge: 0 },
@@ -681,7 +683,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 3,
           "silver": 5,
-          "gold": 8
+          "gold": 8,
+          "diamond": 10 // ADDED
         },
         items: [
           { id: "shredded_cheese", name: "Shredded cheese", upcharge: 0 },
@@ -700,7 +703,7 @@ export const themeMenuData = {
       }
     }
   },
-  
+
   american_bbq: {
     title: "American BBQ",
     description: "Classic American BBQ menu with smoky flavors and comfort food favorites",
@@ -769,7 +772,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "smoked_brisket", name: "Smoked Brisket", upcharge: 3.00 },
@@ -790,7 +794,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "ham_hock_baked_beans", name: "Ham hock baked Beans", upcharge: 0 },
@@ -811,7 +816,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 1,
           "silver": 2,
-          "gold": 3
+          "gold": 3,
+          "diamond": 4 // ADDED
         },
         items: [
           { id: "caesar", name: "Caesar", upcharge: 0 },
@@ -828,7 +834,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "kansas_city_bbq", name: "Kansas City BBQ Sauce", upcharge: 0 },
@@ -845,7 +852,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 3,
           "silver": 5,
-          "gold": 8
+          "gold": 8,
+          "diamond": 10 // ADDED
         },
         items: [
           { id: "ketchup", name: "Ketchup", upcharge: 0 },
@@ -860,7 +868,7 @@ export const themeMenuData = {
       }
     }
   },
-  
+
   taste_of_greece: {
     title: "A Taste of Greece",
     description: "Mediterranean flavors from Greece with authentic dishes and fresh ingredients",
@@ -921,7 +929,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "papoutsakia", name: "Papoutsakia", upcharge: 0 },
@@ -940,7 +949,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 3,
           "silver": 4,
-          "gold": 5
+          "gold": 5,
+          "diamond": 6 // ADDED
         },
         items: [
           { id: "lemon_potatoes", name: "Lemon Potatoes", upcharge: 0 },
@@ -958,7 +968,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 1,
           "silver": 2,
-          "gold": 3
+          "gold": 3,
+          "diamond": 4 // ADDED
         },
         items: [
           { id: "salata_horiatiki", name: "Salata Horiatiki", upcharge: 0 },
@@ -970,7 +981,7 @@ export const themeMenuData = {
       }
     }
   },
-  
+
   kebab_party: {
     title: "Kebab Party",
     description: "Skewered delights featuring global flavors and grilled perfection",
@@ -1031,7 +1042,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "pork_tenderloin", name: "Pork Tenderloin", upcharge: 0 },
@@ -1049,7 +1061,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "falafel", name: "Falafel", upcharge: 0 },
@@ -1066,7 +1079,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5 // ADDED
         },
         items: [
           { id: "tzatziki", name: "Tzatziki", upcharge: 0 },
