@@ -2914,7 +2914,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         desserts: [],
         addons: []
       },
-      wantsAppetizers: false,
+      wantsAppetizers: true,
       // Initialize with empty arrays for each category
       appetizers: {
         tea_sandwiches: [],

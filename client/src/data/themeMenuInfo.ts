@@ -617,7 +617,8 @@ export const themeMenuData = {
         limits: {
           "bronze": 2,
           "silver": 3,
-          "gold": 4
+          "gold": 4,
+          "diamond": 5
         },
         items: [
           { id: "barbacoa", name: "Barbacoa", upcharge: 0 },
