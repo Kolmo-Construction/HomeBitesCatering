@@ -3040,7 +3040,19 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           } else {
             nextStep = "menuSelection";
           }
-        } else {
+        } 
+        // If Sandwich Factory is selected as service style, set the theme and skip to desserts
+        else if (serviceStyle === "sandwich_factory") {
+          setValue("requestedTheme", "sandwich_factory");
+          // Skip directly to desserts, which comes before beverages
+          const dessertsIndex = steps.indexOf("desserts");
+          if (dessertsIndex > -1) {
+            nextStep = "desserts";
+          } else {
+            nextStep = "menuSelection"; // Fallback if desserts step isn't found
+          }
+        }
+        else {
           // For other service styles, go to menuSelection
           nextStep = "menuSelection";
         }
