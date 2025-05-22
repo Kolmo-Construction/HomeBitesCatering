@@ -2276,6 +2276,9 @@ const MenuSelectionStep = ({
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-3 text-gray-900">Menu Selection</h2>
+          <p className="text-2xl font-semibold text-primary mb-4">
+            What would you like a quote for?
+          </p>
           <p className="text-lg text-gray-600">
             Please complete the previous steps to select a menu theme.
           </p>
@@ -2450,6 +2453,9 @@ const MenuSelectionStep = ({
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-3 text-gray-900">{customMenuData.title}</h2>
+          <p className="text-2xl font-semibold text-primary mb-4">
+            What would you like a quote for?
+          </p>
           <p className="text-lg text-gray-600">{customMenuData.description}</p>
         </div>
         
@@ -2626,6 +2632,9 @@ const MenuSelectionStep = ({
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-3 text-gray-900">{themeData.title}</h2>
+        <p className="text-2xl font-semibold text-primary mb-4">
+          What would you like a quote for?
+        </p>
         <p className="text-lg text-gray-600">
           Select your preferred package and menu items
         </p>
