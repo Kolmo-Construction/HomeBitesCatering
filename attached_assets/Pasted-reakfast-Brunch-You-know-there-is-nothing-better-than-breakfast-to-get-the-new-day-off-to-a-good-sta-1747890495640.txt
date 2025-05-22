@@ -1,0 +1,245 @@
+reakfast/Brunch
+You know there is nothing better than breakfast to get the new day off to a good start! Do you want something quick, or will a leisurely continental breakfast do the trick? Home Bites has what it takes to get you and your guests back in shape! We serve up a fantastic brunch customized to your liking!
+
+What Type of Breakfast do you want a quote for?
+
+Grab and Go
+Continental
+American
+"The Full Monty" - (Build your own Menu)
+1. Grab n' Go Breakfast
+If you're looking for a quick and easy morning meal, a grab and go breakfast might be just what you need. This package gets you started on the following items below. This package includes 1 item per person.
+
+You can make multiple choices, keeping in mind, there is a minimum purchase of 10 of any single item.
+Add the number of items here in the column for each category.
+If there are any dietary concerns or questions about the selections, you can enter that information once you have made your menu choices.
+
+Grab and Go Bites* (Amount)
+
+Breakfast Burrito - The Mexi
+Breakfast Burrito - The Carnivore
+Breakfast Burrito - The Cali
+Breakfast Burrito - The Green (Vegetarian)
+Croissandwich - Egg Ham
+Croissandwich - Turkey Club
+Croissandwich - Brisket (Carved Brisket)
+Quiche - Lorraine
+Quiche - Spinach
+Quiche - Denver
+Grab and Go Snack* (Amount)
+
+Muffin Blueberry
+Muffin Chocolate
+Muffin Banana
+Croissandwich - Egg Ham (Note: Duplicate from Bites? Might be an error in original text)
+Croissandwich - Brisket (Carved Brisket) (Note: Duplicate from Bites?)
+Croissandwich - Caprese (Vegetarian)
+Granola Bar - KIND - Caramel Almond & Sea Salt
+Granola Bar - KIND - Dark Chocolate Almond & Sea Salt
+Granola Bar - KIND - Peanut Butter Dark Chocolate
+Granola Bar - KIND - Almond & Coconut Chewy Granola
+Greek Yogurt - OUI Vanilla Yogurt plain
+Greek Yogurt - OUI Strawberry Yogurt plain
+Greek Yogurt - OUI Mixed Berry Yogurt plain
+Fruit - Assortment on cups
+Grab and Go Beverage* (Amount)
+
+Home Bites 96 oz Box of Coffee - Regular
+Home Bites 96 oz Box of Coffee - Decaf
+Starbucks Coffee Traveler - Pike Regular
+Starbucks Coffee Traveler - Pike Decaf
+Dunkin Box O' Joe - Regular
+Dunkin Box O' Joe - Decaf
+Starbucks Ready to Drink Coffee, Espresso & Cream, 6.5oz Cans
+Dunkin Hot Chocolate - (Box O'Joe Hot)
+Home Bites 96 oz Box of Tea - Assorted Flavors
+Lucky Jack Cold Brew Coffee Vanilla - Draft Pour Nitro Latte w/Oat milk - Cold
+Juice - Orange
+Juice - Apple
+Juice - Grapefruit
+Juice - Cranberry
+Juice - Tomato
+Juice - V8 Classic
+V8 +ENERGY Peach Mango
+V8 +ENERGY Black Cherry
+V8 +ENERGY Pomegranate Blueberry
+(Note: The item "Breakfast Burrito - The Cali" and "Croissandwich - Caprese (Vegetarian)" were listed under the general "Grab and Go Beverage" list in the input, but are likely "Bites". I've kept the beverage list focused on drinks based on its separate heading in the provided text).
+
+2. Continental Breakfast
+Please make your selections in the following sections.
+
+The package includes a specific number of choices for each category.
+You will have the option of adding additional items after the primary choices are complete.
+If there are any dietary concerns or questions about the selections, you can enter that information once you have made your menu choices.
+Service Style: (Please see question for description of Service)
+
+Drop off
+Buffet Standard
+Buffet set up (unattended)
+Buffet Full Service
+Family Style Service (This field is required.) (Click on this link for a description of what each service style includes.)
+Continental Breakfast Staple Choices - Pick 3*
+
+Assorted Pastries - muffins, danish, whole grain bagels with butter and jam.
+Cereal Variety - individual packs with 2% milk and almond milk (if requested)
+Oatmeal - individual variety with cream (half/half), butter and jam.
+Quiche (3 fluffy eggs)
+Seasonal fruit such as apples, bananas, and oranges.
+Yogurt Parfait with granola (This field is required.)
+Continental Breakfast - Beverage choices - Pick 2*
+
+Home Bites 96 oz Box of Coffee - Regular
+Home Bites 96 oz Box of Coffee - Decaf
+Home Bites 96 oz Box of Tea - Assorted Flavors
+Juice - Orange
+Juice - Apple
+Juice - Grapefruit
+Juice - Cranberry
+Juice - Tomato
+Juice - V8 Classic (This field is required.)
+Do you want to add additional items?
+
+Yes
+No
+3. American Breakfast
+Please make your selections in the following sections.
+
+The package includes a specific number of choices for each category.
+You will have the option of adding additional items after the primary choices are complete.
+If there are any dietary concerns or questions about the selections, you can enter that information once you have made your menu choices.
+American Breakfast - Egg Choices - Choose 1
+
+Scrambled
+Fried
+Over easy
+Egg whites
+Omelette
+American Breakfast - Meats - Choose 2
+
+Bacon
+Sausage links
+Sausage patties
+Ham
+Turkey bacon
+Corned beef hash
+Tofu
+American Breakfast - Potatoes - Choose 1
+
+Hash browns
+Country style with onions
+O'Brien
+Red Bliss
+American Breakfast - Breads - Choose 1
+
+Toast with butter
+English muffin with butter
+Biscuits with gravy
+Pancakes
+Waffles
+French toast
+American Breakfast - Sides - Choose 1
+
+Fruit salad
+Yogurt
+Cottage cheese
+Grits
+Oatmeal
+American Breakfast - Beverages - Choose 2
+
+Coffee - Regular/Decaf
+Tea - Hot/Iced
+Milk - Whole/2%
+Juice - Orange
+Juice - Apple
+Juice - Grapefruit
+Juice - Cranberry
+Juice - Tomato
+Juice - V8 Classic
+Please list any comments/special requests. There is a dietary restriction trigger to follow.
+
+Do you want to add additional items?
+
+Yes
+No
+4. "The Full Monty"
+A delicious assortment of anything you could imagine for a complete sit-down or buffet style service that is sure to please. All items would be included in this quote.
+
+Full Monty - Service Style
+
+Drop off
+Buffet set up (unattended)
+Buffet Full Service
+Family Style
+Eggs (Check all that apply / This field is required)
+
+Scrambled Eggs
+Fried Eggs
+Poached Eggs
+Scrambled Egg Whites
+Omelets
+Breakfast Meats (Check all that apply / This field is required)
+
+Applewood Bacon
+Sausage Links
+Turkey Bacon
+Ham
+Corned Beef Hash
+Tofu
+Assorted Vegetables
+Breads (Check all that apply / This field is required)
+
+Toast/English muffins
+Bagels with cream cheese
+Croissants
+Biscuits and Gravy
+Whole wheat
+Sourdough
+Multigrain
+Gluten-free
+Sweet Selections (Check all that apply / This field is required)
+
+Pancakes
+Waffles
+French toast with syrup
+Assorted Pastries
+Sweet crepes
+Cinnamon rolls
+Danish
+Other Savory Selections (Check all that apply / This field is required)
+
+Breakfast Burrito - The Mexi
+Breakfast Burrito - The Carnivore
+Breakfast Burrito - The Cali
+Breakfast Burrito - The Green (Vegetarian)
+Quiche - Green (Vegetarian)
+Mexican Quiche
+Breakfast Casserole
+Denver HAMM Breakfast
+Sides Selections (Check all that apply / This field is required)
+
+Fruits and Berries
+Potatoes
+Bacon
+Sausage
+Beverages (Check all that apply / This field is required)
+
+Home Bites 96 oz Box of Coffee - Regular
+Home Bites 96 oz Box of Coffee - Decaf
+Breakfast Burrito - The Cali (Note: Likely a savory item, not a beverage)
+Starbucks Coffee Traveler - Pike Regular
+Croissandwich - Caprese (Vegetarian) (Note: Likely a savory item, not a beverage)
+Dunkin Box O' Joe - Regular
+Dunkin Box O' Joe - Decaf
+Starbucks Ready to Drink Coffee, Espresso & Cream, 6.5oz Cans
+Dunkin Hot Chocolate - (Box O'Joe Hot)
+Home Bites 96 oz Box of Tea - Assorted Flavors
+Lucky Jack Cold Brew Coffee Vanilla - Draft Pour Nitro Latte
+Juice - Orange
+Juice - Apple
+Juice - Grapefruit
+Juice - Cranberry
+Juice - Tomato
+Juice - V8 Classic
+V8 +ENERGY Peach Mango
+V8 +ENERGY Black Cherry
+V8 +ENERGY Pomegranate Blueberry

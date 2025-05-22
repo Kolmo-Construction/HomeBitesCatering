@@ -62,6 +62,7 @@ import { eventTypes, mapUrlToEventType, validateEventType } from "@/data/event-t
 import { appetizerData } from "@/data/appetizerData";
 import { horsDoeurvesData } from "@/data/horsDoeurvesInfo";
 import { themeMenuData } from "@/data/themeMenuInfo";
+import { breakfastMenuData } from "@/data/breakfastMenuData";
 
 // Using EventInquiryFormData imported from form-types.ts
 
@@ -3556,6 +3557,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
     "appetizers",    // Only show if user wants appetizers
     "foodTruckMenu", // Food Truck menu step (will be conditionally shown)
     "sandwichFactoryMenu", // Sandwich Factory menu step (will be conditionally shown)
+    "breakfastMenu", // Breakfast/Brunch menu step (will be conditionally shown)
     "dessertQuestion", // Ask if user wants desserts
     "desserts",      // Only show if user wants desserts
     "beverages",

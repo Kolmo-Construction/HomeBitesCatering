@@ -20,6 +20,7 @@ export type FormStep =
   | "appetizers" 
   | "foodTruckMenu"  // Added Food Truck menu step
   | "sandwichFactoryMenu" // Added Sandwich Factory menu step
+  | "breakfastMenu" // Added Breakfast/Brunch menu step
   | "dessertQuestion" // Added Dessert question step
   | "desserts" 
   | "beverages"
@@ -131,6 +132,28 @@ export type EventInquiryFormData = {
     salads: string[];
     wantsGlutenFreeBread: boolean;
     glutenFreeBreadCount?: number;
+    notes?: string;
+  };
+  
+  // Breakfast Menu Selections
+  breakfastMenuSelections?: {
+    menuType: string; // grab_and_go, continental, american, full_monty
+    serviceStyle?: string;
+    grab_and_go_bites?: Array<{id: string, quantity: number}>;
+    grab_and_go_snacks?: Array<{id: string, quantity: number}>;
+    grab_and_go_beverages?: Array<{id: string, quantity: number}>;
+    continental_staples?: string[];
+    continental_beverages?: string[];
+    eggs?: string;
+    meats?: string[];
+    potatoes?: string;
+    breads?: string;
+    sides?: string;
+    beverages?: string[];
+    breakfast_meats?: string[];
+    sweet_selections?: string[];
+    savory_selections?: string[];
+    sides_selections?: string[];
     notes?: string;
   };
   
