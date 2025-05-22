@@ -1977,11 +1977,105 @@ const EventDetailsStep = ({
           )}
         </div>
         
-        {/* Event Schedule */}
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Event Schedule</h3>
+        {/* Service Options Card */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-violet-500/80 to-violet-600 text-white p-6">
+            <h3 className="text-2xl font-semibold">Service Options</h3>
+            <p className="text-white/80 mt-1">Choose how you'd like your food to be served</p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="p-8">
+            <div className="space-y-8">
+              <div>
+                <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
+                  <UtensilsIcon className="h-5 w-5 mr-2 text-primary" />
+                  Service Type
+                </h4>
+                <FormField
+                  control={control}
+                  name="serviceStyle"
+                  render={({ field }) => (
+                    <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+                      <FormLabel>Select Service Style*</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select service style" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {serviceTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <p className="text-sm text-gray-500 mt-3">
+                        This determines how your food will be presented and served to your guests
+                      </p>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div>
+                <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
+                  <MenuSquare className="h-5 w-5 mr-2 text-primary" />
+                  Menu Theme
+                </h4>
+                <FormField
+                  control={control}
+                  name="menuTheme"
+                  render={({ field }) => (
+                    <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+                      <FormLabel>Menu Theme*</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select menu theme" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {themeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <p className="text-sm text-gray-500 mt-3">
+                        Choose a cuisine style that matches your event theme
+                      </p>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Event Schedule Section */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-rose-500/80 to-rose-600 text-white p-6">
+            <h3 className="text-2xl font-semibold">Event Schedule</h3>
+            <p className="text-white/80 mt-1">Let us know the timing for your event</p>
+          </div>
+          
+          <div className="p-8">
+            <h4 className="text-base font-medium text-gray-900 mb-4 flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-primary" />
+              Event Timing
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 bg-gray-50 p-6 rounded-lg border border-gray-100">
             <FormField
               control={control}
               name="eventStartTime"
