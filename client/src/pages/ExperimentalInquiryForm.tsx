@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { 
   ChevronRight, ChevronLeft, Check, Building, Phone,
-  MapPin, Clock, Send, Users2, LayoutGrid, Radio, CircleOff, X,
+  MapPin, Clock, Send, Users, Users2, LayoutGrid, Radio, CircleOff, X,
   Info as InfoIcon, Truck as TruckIcon, Package as PackageIcon,
-  Utensils as UtensilsIcon, Table as TableIcon,
-  UtensilsCrossed as UtensilsCrossedIcon, GlassWater as GlassWaterIcon
+  Utensils as UtensilsIcon, Table as TableIcon, Wine, CalendarHeart,
+  UtensilsCrossed as UtensilsCrossedIcon, GlassWater as GlassWaterIcon,
+  Contact, UserRound, HeartHandshake, MenuSquare
 } from "lucide-react";
 import FoodTruckMenu from "@/components/FoodTruckMenu";
 import { Helmet } from "react-helmet";
@@ -1770,31 +1771,104 @@ const EventDetailsStep = ({
   ];
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-3 text-gray-900">Event Details & Venue</h2>
-        <p className="text-lg text-gray-600">
-          Tell us more about your venue and event timing
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          Help us understand your {eventType.toLowerCase()} needs so we can create a perfect experience
         </p>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        {/* Venue Information */}
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Venue Information</h3>
+      {/* Guest Count Card */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-teal-500/80 to-teal-600 text-white p-6">
+          <h3 className="text-2xl font-semibold">Guest Information</h3>
+          <p className="text-white/80 mt-1">Tell us about your party size</p>
+        </div>
+        
+        <div className="p-8">
+          <div className="space-y-6">
+            <FormField
+              control={control}
+              name="guestCount"
+              render={({ field }) => (
+                <FormItem className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+                  <div className="flex items-center mb-3">
+                    <Users2 className="h-5 w-5 mr-2 text-primary" />
+                    <FormLabel className="text-lg font-medium">Guest Count*</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="1" 
+                      placeholder="Enter number of guests" 
+                      className="bg-white text-lg p-4"
+                      {...field} 
+                      onChange={(e) => field.onChange(Number(e.target.value) || '')}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-sm text-gray-500 mt-2">This helps us plan portion sizes and staffing</p>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="childrenCount"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center mb-2">
+                    <FormLabel>Children Count (if applicable)</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      placeholder="0"
+                      className="bg-white"
+                      {...field} 
+                      onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-sm text-gray-500 mt-2">Let us know if you need special children's options</p>
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Venue Information Card */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-indigo-500/80 to-indigo-600 text-white p-6">
+          <h3 className="text-2xl font-semibold">Venue Information</h3>
+          <p className="text-white/80 mt-1">Tell us where your event will take place</p>
+        </div>
+        
+        <div className="p-8">
+          <h3 className="text-xl font-semibold mb-4 hidden">Venue Information</h3>
           
           <FormField
             control={control}
             name="venueSecured"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mb-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Have you secured a venue?</FormLabel>
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-5 mb-6 bg-gray-50">
+                <div className="space-y-1">
+                  <FormLabel className="text-base font-medium flex items-center">
+                    <Building className="h-5 w-5 mr-2 text-primary" />
+                    Have you secured a venue?
+                  </FormLabel>
+                  <p className="text-sm text-gray-500">
+                    Let us know if you've already booked a location
+                  </p>
                 </div>
                 <FormControl>
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    className="data-[state=checked]:bg-primary"
                   />
                 </FormControl>
               </FormItem>
@@ -1802,15 +1876,18 @@ const EventDetailsStep = ({
           />
           
           {venueSecured && (
-            <div className="ml-4 border-l-2 border-primary/30 pl-4 py-2 space-y-4">
+            <div className="bg-primary/5 rounded-lg p-6 border border-primary/10 space-y-5">
               <FormField
                 control={control}
                 name="venueName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Venue Name</FormLabel>
+                    <div className="flex items-center mb-2">
+                      <MapPin className="h-4 w-4 mr-2 text-primary" />
+                      <FormLabel className="font-medium">Venue Name</FormLabel>
+                    </div>
                     <FormControl>
-                      <Input placeholder="Enter venue name" {...field} />
+                      <Input placeholder="Enter venue name" {...field} className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1818,8 +1895,11 @@ const EventDetailsStep = ({
               />
               
               {/* Venue Location */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium">Venue Location</h4>
+              <div className="space-y-5">
+                <h4 className="text-base font-medium flex items-center">
+                  <MapPin className="h-4 w-4 mr-2 text-primary" />
+                  Venue Location
+                </h4>
                 
                 <FormField
                   control={control}
