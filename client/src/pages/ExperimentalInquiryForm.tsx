@@ -2984,6 +2984,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
     "appetizerQuestion", // New step to ask if user wants appetizers
     "appetizers",    // Only show if user wants appetizers
     "foodTruckMenu", // Food Truck menu step (will be conditionally shown)
+    "sandwichFactoryMenu", // Sandwich Factory menu step (will be conditionally shown)
     "desserts", 
     "beverages",
     "equipment",
@@ -3041,15 +3042,14 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
             nextStep = "menuSelection";
           }
         } 
-        // If Sandwich Factory is selected as service style, set the theme and skip to desserts
+        // If Sandwich Factory is selected as service style, go to Sandwich Factory menu
         else if (serviceStyle === "sandwich_factory") {
           setValue("requestedTheme", "sandwich_factory");
-          // Skip directly to desserts, which comes before beverages
-          const dessertsIndex = steps.indexOf("desserts");
-          if (dessertsIndex > -1) {
-            nextStep = "desserts";
+          const sandwichFactoryIndex = steps.indexOf("sandwichFactoryMenu");
+          if (sandwichFactoryIndex > -1) {
+            nextStep = "sandwichFactoryMenu";
           } else {
-            nextStep = "menuSelection"; // Fallback if desserts step isn't found
+            nextStep = "menuSelection"; // Fallback if sandwich factory step isn't found
           }
         }
         else {

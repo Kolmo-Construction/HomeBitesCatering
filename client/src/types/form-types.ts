@@ -19,6 +19,7 @@ export type FormStep =
   | "appetizerQuestion" 
   | "appetizers" 
   | "foodTruckMenu"  // Added Food Truck menu step
+  | "sandwichFactoryMenu" // Added Sandwich Factory menu step
   | "desserts" 
   | "beverages"
   | "equipment"
