@@ -197,26 +197,21 @@ const FoodTruckMenu = ({ onPrevious, onNext, onSkipDessert }: FoodTruckMenuProps
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {foodTruckMenuData.categories.bigBitesStandard.items.map((item) => (
-            <FormField
-              key={item.id}
-              control={control}
-              name={`foodTruckSelections.bigBites.${item.id}`}
-              render={({ field }) => (
-                <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={foodTruckSelections.bigBites.includes(item.id)}
-                      onCheckedChange={(checked) => 
-                        handleItemSelect("bigBites", item.id, checked as boolean)
-                      }
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-medium cursor-pointer">
-                    {item.name}
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+            <div key={item.id} className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
+              <Checkbox
+                id={`bigBites-${item.id}`}
+                checked={foodTruckSelections.bigBites?.includes(item.id) || false}
+                onCheckedChange={(checked) => 
+                  handleItemSelect("bigBites", item.id, checked as boolean)
+                }
+              />
+              <Label 
+                htmlFor={`bigBites-${item.id}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {item.name}
+              </Label>
+            </div>
           ))}
         </div>
       </Card>
@@ -228,26 +223,21 @@ const FoodTruckMenu = ({ onPrevious, onNext, onSkipDessert }: FoodTruckMenuProps
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {foodTruckMenuData.categories.bigBitesPremium.items.map((item) => (
-            <FormField
-              key={item.id}
-              control={control}
-              name={`foodTruckSelections.bigBites.${item.id}`}
-              render={({ field }) => (
-                <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={foodTruckSelections.bigBites.includes(item.id)}
-                      onCheckedChange={(checked) => 
-                        handleItemSelect("bigBites", item.id, checked as boolean)
-                      }
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-medium cursor-pointer">
-                    {item.name}
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+            <div key={item.id} className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
+              <Checkbox
+                id={`bigBites-premium-${item.id}`}
+                checked={foodTruckSelections.bigBites?.includes(item.id) || false}
+                onCheckedChange={(checked) => 
+                  handleItemSelect("bigBites", item.id, checked as boolean)
+                }
+              />
+              <Label 
+                htmlFor={`bigBites-premium-${item.id}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {item.name}
+              </Label>
+            </div>
           ))}
         </div>
       </Card>
@@ -259,26 +249,21 @@ const FoodTruckMenu = ({ onPrevious, onNext, onSkipDessert }: FoodTruckMenuProps
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {foodTruckMenuData.categories.vegetarianVegan.items.map((item) => (
-            <FormField
-              key={item.id}
-              control={control}
-              name={`foodTruckSelections.vegetarianVegan.${item.id}`}
-              render={({ field }) => (
-                <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={foodTruckSelections.vegetarianVegan.includes(item.id)}
-                      onCheckedChange={(checked) => 
-                        handleItemSelect("vegetarianVegan", item.id, checked as boolean)
-                      }
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-medium cursor-pointer">
-                    {item.name}
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+            <div key={item.id} className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
+              <Checkbox
+                id={`vegetarianVegan-${item.id}`}
+                checked={foodTruckSelections.vegetarianVegan?.includes(item.id) || false}
+                onCheckedChange={(checked) => 
+                  handleItemSelect("vegetarianVegan", item.id, checked as boolean)
+                }
+              />
+              <Label 
+                htmlFor={`vegetarianVegan-${item.id}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {item.name}
+              </Label>
+            </div>
           ))}
         </div>
         
@@ -304,26 +289,21 @@ const FoodTruckMenu = ({ onPrevious, onNext, onSkipDessert }: FoodTruckMenuProps
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {foodTruckMenuData.categories.kidsBites.items.map((item) => (
-            <FormField
-              key={item.id}
-              control={control}
-              name={`foodTruckSelections.kidsBites.${item.id}`}
-              render={({ field }) => (
-                <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={foodTruckSelections.kidsBites.includes(item.id)}
-                      onCheckedChange={(checked) => 
-                        handleItemSelect("kidsBites", item.id, checked as boolean)
-                      }
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-medium cursor-pointer">
-                    {item.name}
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+            <div key={item.id} className="flex items-start space-x-3 space-y-0 rounded-md border p-3">
+              <Checkbox
+                id={`kidsBites-${item.id}`}
+                checked={foodTruckSelections.kidsBites?.includes(item.id) || false}
+                onCheckedChange={(checked) => 
+                  handleItemSelect("kidsBites", item.id, checked as boolean)
+                }
+              />
+              <Label 
+                htmlFor={`kidsBites-${item.id}`}
+                className="text-sm font-medium cursor-pointer"
+              >
+                {item.name}
+              </Label>
+            </div>
           ))}
         </div>
         
