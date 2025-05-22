@@ -3026,7 +3026,10 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
       
       // Handle special navigation based on current step and theme selection
       if (currentStep === "eventDetails") {
-        // If hors_doeuvres is selected, skip menuSelection and go directly to appetizers
+        // Always go to menuSelection after eventDetails
+        nextStep = "menuSelection";
+      } else if (currentStep === "menuSelection") {
+        // If hors_doeuvres is selected, skip appetizerQuestion and go directly to appetizers
         if (currentFormTheme === "hors_doeuvres") {
           // Find the index of appetizers step
           const appetizersIndex = steps.indexOf("appetizers");
@@ -3034,7 +3037,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
             nextStep = "appetizers";
           }
         }
-        // For all other themes, proceed normally to menuSelection
+        // For all other themes, proceed normally to appetizerQuestion
       } else if (currentStep === "appetizerQuestion" && !wantsAppetizers) {
         // Skip the appetizers step if user doesn't want appetizers
         
