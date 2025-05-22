@@ -3672,10 +3672,27 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           }
         }
       } else if (currentStep === "sandwichFactoryMenu" || currentStep === "foodTruckMenu") {
-        // After Sandwich Factory or Food Truck menu, go to desserts
-        const dessertsIndex = steps.indexOf("desserts");
-        if (dessertsIndex > -1) {
-          nextStep = "desserts";
+        // After Sandwich Factory or Food Truck menu, go to dessert question
+        const dessertQuestionIndex = steps.indexOf("dessertQuestion");
+        if (dessertQuestionIndex > -1) {
+          nextStep = "dessertQuestion";
+        }
+      } else if (currentStep === "dessertQuestion") {
+        // Check if user wants desserts
+        const wantsDesserts = watch("wantsDesserts");
+        
+        if (wantsDesserts) {
+          // If user wants desserts, go to desserts step
+          const dessertsIndex = steps.indexOf("desserts");
+          if (dessertsIndex > -1) {
+            nextStep = "desserts";
+          }
+        } else {
+          // If user doesn't want desserts, skip to beverages step
+          const beveragesIndex = steps.indexOf("beverages");
+          if (beveragesIndex > -1) {
+            nextStep = "beverages";
+          }
         }
       }
       
@@ -3770,6 +3787,13 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                   guestCount={watch("guestCount") || 0}
+                />
+              )}
+              
+              {currentStep === "dessertQuestion" && eventType && (
+                <DessertQuestionStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
                 />
               )}
               
