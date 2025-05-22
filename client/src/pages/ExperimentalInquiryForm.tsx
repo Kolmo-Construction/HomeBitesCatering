@@ -1140,7 +1140,6 @@ const BasicInformationStep = ({
   onNext: () => void;
 }) => {
   const { control, watch, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
-  const hasPromoCode = watch("hasPromoCode");
   
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -1334,46 +1333,6 @@ const BasicInformationStep = ({
             )}
           />
         </div>
-        
-        {/* Promo Code */}
-        <div className="mb-6">
-          <FormField
-            control={control}
-            name="hasPromoCode"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Discount Promo Code</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        {/* Conditional Promo Code Field */}
-        {hasPromoCode && (
-          <div className="mb-6 ml-4 border-l-2 border-primary/30 pl-4 py-2">
-            <FormField
-              control={control}
-              name="promoCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enter Promo Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your promo code" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
       </div>
       
       {/* Navigation Buttons */}
