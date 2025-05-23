@@ -1,19 +1,25 @@
 // client/src/components/form-steps/BasicInformationStep.tsx
 import React, { useState, useEffect } from "react";
 import { useFormContext, Controller } from "react-hook-form";
-import { Form, FormControl, FormItem, FormLabel, FormMessage, FormField } from "@/components/ui/form";
+import { Form, FormControl, FormItem, FormLabel, FormMessage, FormField, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock as ClockIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock as ClockIcon, AlertCircle } from "lucide-react";
 import { EventType, EventInquiryFormData } from "@/types/form-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import * as z from "zod";
 
 // Make sure EventInquiryFormData is imported if BasicInformationStep relies on it for useFormContext
 // If FormProvider or Controller are used directly in this component's JSX, keep them.
 // If they were only part of the outer form setup, they might not be needed here.
 // Based on the original file, useFormContext and FormField/FormItem etc. are key.
+
+// Define validation schemas for form fields
+const phoneRegex = /^(\+\d{1,3})?\s?(\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}$/;
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const zipCodeRegex = /^\d{5}(-\d{4})?$/;
 
 const BasicInformationStep = ({
   eventType,
@@ -24,11 +30,14 @@ const BasicInformationStep = ({
   onPrevious: () => void;
   onNext: () => void;
 }) => {
-  const { control, watch, setValue, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
+  const { control, watch, setValue, trigger, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
   
   // State for date and time selection
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [timeOptions, setTimeOptions] = useState<string[]>([]);
+  
+  // Track validation errors
+  const [validationError, setValidationError] = useState("");
   
   // Generate time options based on event type
   useEffect(() => {
@@ -135,11 +144,23 @@ const BasicInformationStep = ({
           <FormField
             control={control}
             name="email"
+            rules={{
+              required: "Email address is required",
+              pattern: {
+                value: emailRegex,
+                message: "Please enter a valid email address"
+              }
+            }}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email Address*</FormLabel>
                 <FormControl>
-                  <Input placeholder="email@example.com" {...field} />
+                  <Input 
+                    placeholder="email@example.com" 
+                    type="email"
+                    autoComplete="email"
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -149,12 +170,39 @@ const BasicInformationStep = ({
           <FormField
             control={control}
             name="phone"
+            rules={{
+              pattern: {
+                value: phoneRegex,
+                message: "Please enter a valid phone number: (123) 456-7890"
+              }
+            }}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="(123) 456-7890" {...field} />
+                  <Input 
+                    placeholder="(123) 456-7890" 
+                    {...field} 
+                    onChange={(e) => {
+                      // Format phone number as user types
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length > 0) {
+                        // Auto-format to (XXX) XXX-XXXX
+                        if (value.length <= 3) {
+                          value = `(${value}`;
+                        } else if (value.length <= 6) {
+                          value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+                        } else {
+                          value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+                        }
+                      }
+                      field.onChange(value);
+                    }}
+                  />
                 </FormControl>
+                <FormDescription className="text-xs text-gray-500">
+                  Format: (123) 456-7890
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -233,12 +281,31 @@ const BasicInformationStep = ({
               <FormField
                 control={control}
                 name="billingAddress.zipCode"
+                rules={{
+                  required: "ZIP code is required",
+                  pattern: {
+                    value: zipCodeRegex,
+                    message: "Enter a valid ZIP code (5 digits or ZIP+4 format)"
+                  }
+                }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Postal/Zip Code*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Zip Code" {...field} />
+                      <Input 
+                        placeholder="12345" 
+                        {...field} 
+                        onChange={(e) => {
+                          // Only allow digits and hyphen for ZIP+4
+                          const value = e.target.value.replace(/[^\d-]/g, '');
+                          field.onChange(value);
+                        }}
+                        maxLength={10} // Maximum for ZIP+4 (12345-6789)
+                      />
                     </FormControl>
+                    <FormDescription className="text-xs text-gray-500">
+                      Format: 12345 or 12345-6789
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -338,6 +405,14 @@ const BasicInformationStep = ({
         </div>
       </div>
 
+      {/* Display validation error message if present */}
+      {validationError && (
+        <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <div>{validationError}</div>
+        </div>
+      )}
+      
       {/* Navigation Buttons */}
       <div className="flex justify-between mt-8">
         <Button
@@ -351,9 +426,20 @@ const BasicInformationStep = ({
 
         <Button
           type="button"
-          onClick={onNext}
+          onClick={async () => {
+            // Trigger validation on all fields
+            const isFormValid = await trigger(["email", "phone", "billingAddress.zipCode", "eventDate", "eventStartTime"]);
+            
+            if (!isFormValid) {
+              setValidationError("Please correct the highlighted fields before continuing.");
+              // Scroll to the top of the form to show the error message
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              setValidationError("");
+              onNext();
+            }
+          }}
           className="flex items-center"
-          // disabled={!isValid} // You can re-enable this if you want step-specific validation to control the button
         >
           Next <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
