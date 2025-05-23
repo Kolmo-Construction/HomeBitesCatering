@@ -325,55 +325,6 @@ const DietaryRestrictionsStep = ({
         </div>
         
         <div className="mb-6">
-          <h3 className="text-xl font-semibold mb-4">Beverage Selection</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Do you need beverages for your event? Please select one option.
-          </p>
-          
-          <FormField
-            control={control}
-            name="beverageType"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex flex-col space-y-3"
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <RadioGroupItem value="alcoholic" />
-                      </FormControl>
-                      <FormLabel className="font-medium cursor-pointer">
-                        Alcoholic Beverages
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <RadioGroupItem value="non-alcoholic" />
-                      </FormControl>
-                      <FormLabel className="font-medium cursor-pointer">
-                        Non-Alcoholic Beverages
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <RadioGroupItem value="no-beverages" />
-                      </FormControl>
-                      <FormLabel className="font-medium cursor-pointer">
-                        No Beverages
-                      </FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <div className="mb-6">
           <h3 className="text-xl font-semibold mb-4">Food Allergies</h3>
           <p className="text-sm text-gray-600 mb-4">
             Please specify any food allergies or intolerances that we should be aware of.
