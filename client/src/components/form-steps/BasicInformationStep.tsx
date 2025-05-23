@@ -1,7 +1,7 @@
-// src/components/form-steps/BasicInformationStep.tsx
+// client/src/components/form-steps/BasicInformationStep.tsx
 import React from "react";
-import { useFormContext, FormProvider, Controller, FormField } from "react-hook-form"; // Added FormField here if it wasn't explicitly in your snippet but is used.
-import { Form, FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useFormContext, FormProvider, Controller,} from "react-hook-form"; // Added FormField here if it wasn't explicitly in your snippet but is used.
+import { Form, FormControl, FormItem, FormLabel, FormMessage, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
