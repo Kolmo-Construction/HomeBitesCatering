@@ -1,0 +1,692 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)
+hook.js:608 Warning: Using UNSAFE_componentWillMount in strict mode is not recommended and may indicate bugs in your code. See https://reactjs.org/link/unsafe-component-lifecycles for details.
+
+* Move code with side effects to componentDidMount, and set initial state in the constructor.
+
+Please update the following components: SideEffect(NullComponent2)
+overrideMethod @ hook.js:608
+/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)
+ExperimentalInquiryForm.tsx:741 Service style selected: 
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18874
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-2M7HY3UG.js?v=1d7ba30a:50 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at HTMLUnknownElement.callCallback2 (chunk-XQLYTHWV.js?v=1d7ba30a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-XQLYTHWV.js?v=1d7ba30a:3699:24)
+    at invokeGuardedCallback (chunk-XQLYTHWV.js?v=1d7ba30a:3733:39)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19765:15)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+callCallback2 @ chunk-XQLYTHWV.js?v=1d7ba30a:3674
+invokeGuardedCallbackDev @ chunk-XQLYTHWV.js?v=1d7ba30a:3699
+invokeGuardedCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:3733
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19765
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+hook.js:608 The above error occurred in the <RadioGroupItem> component:
+
+    at https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-radio-group.js?v=1d7ba30a:239:13
+    at _c3 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/radio-group.tsx:43:50)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at AlcoholicBeveragesStep (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/components/form-steps/BeverageSelectionSteps.tsx:492:3)
+    at form
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at FormProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-M7SVRKP2.js?v=1d7ba30a:103:11)
+    at div
+    at ExperimentalInquiryForm (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/pages/ExperimentalInquiryForm.tsx:881:51)
+    at div
+    at AppContent (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/App.tsx?v=K68Qao3vxwyOiLwvoePlE:44:29)
+    at AuthProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/src/contexts/AuthContext.tsx:21:32)
+    at QueryClientProvider (https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1d7ba30a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-XQLYTHWV.js?v=1d7ba30a:14032
+update.callback @ chunk-XQLYTHWV.js?v=1d7ba30a:14052
+callCallback @ chunk-XQLYTHWV.js?v=1d7ba30a:11248
+commitUpdateQueue @ chunk-XQLYTHWV.js?v=1d7ba30a:11265
+commitLayoutEffectOnFiber @ chunk-XQLYTHWV.js?v=1d7ba30a:17093
+commitLayoutMountEffects_complete @ chunk-XQLYTHWV.js?v=1d7ba30a:17980
+commitLayoutEffects_begin @ chunk-XQLYTHWV.js?v=1d7ba30a:17969
+commitLayoutEffects @ chunk-XQLYTHWV.js?v=1d7ba30a:17920
+commitRootImpl @ chunk-XQLYTHWV.js?v=1d7ba30a:19353
+commitRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627
+chunk-XQLYTHWV.js?v=1d7ba30a:9129 Uncaught Error: `RadioGroupItem` must be used within `RadioGroup`
+    at useContext2 (chunk-2M7HY3UG.js?v=1d7ba30a:50:13)
+    at @radix-ui_react-radio-group.js?v=1d7ba30a:240:21
+    at renderWithHooks (chunk-XQLYTHWV.js?v=1d7ba30a:11548:26)
+    at updateForwardRef (chunk-XQLYTHWV.js?v=1d7ba30a:14325:28)
+    at beginWork (chunk-XQLYTHWV.js?v=1d7ba30a:15946:22)
+    at beginWork$1 (chunk-XQLYTHWV.js?v=1d7ba30a:19753:22)
+    at performUnitOfWork (chunk-XQLYTHWV.js?v=1d7ba30a:19198:20)
+    at workLoopSync (chunk-XQLYTHWV.js?v=1d7ba30a:19137:13)
+    at renderRootSync (chunk-XQLYTHWV.js?v=1d7ba30a:19116:15)
+    at recoverFromConcurrentError (chunk-XQLYTHWV.js?v=1d7ba30a:18736:28)
+useContext2 @ chunk-2M7HY3UG.js?v=1d7ba30a:50
+(anonymous) @ @radix-ui_react-radio-group.js?v=1d7ba30a:240
+renderWithHooks @ chunk-XQLYTHWV.js?v=1d7ba30a:11548
+updateForwardRef @ chunk-XQLYTHWV.js?v=1d7ba30a:14325
+beginWork @ chunk-XQLYTHWV.js?v=1d7ba30a:15946
+beginWork$1 @ chunk-XQLYTHWV.js?v=1d7ba30a:19753
+performUnitOfWork @ chunk-XQLYTHWV.js?v=1d7ba30a:19198
+workLoopSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19137
+renderRootSync @ chunk-XQLYTHWV.js?v=1d7ba30a:19116
+recoverFromConcurrentError @ chunk-XQLYTHWV.js?v=1d7ba30a:18736
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=1d7ba30a:18879
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=1d7ba30a:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=1d7ba30a:18627

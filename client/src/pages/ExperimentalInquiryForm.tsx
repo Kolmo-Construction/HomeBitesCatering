@@ -618,7 +618,6 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         alcoholTypes: {},
         otherBarEquipment: {}
       },
-      barEquipment: {},
       tableWaterService: false,
       equipment: {
         furniture: {},

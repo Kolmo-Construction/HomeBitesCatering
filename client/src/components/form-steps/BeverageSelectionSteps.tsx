@@ -436,21 +436,23 @@ export function AlcoholicBeveragesStep({
           {/* Service Duration */}
           <div>
             <h3 className="text-xl font-semibold mb-4">How long would you like the service for - Minimum 2.5 hours</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <RadioGroup 
+              value={selections.bartendingServiceDuration} 
+              onValueChange={(value) => setServiceDuration(value)}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
+            >
               {serviceDurationOptions.map((option) => (
                 <div key={option.value} className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
                   <RadioGroupItem 
                     id={option.value} 
                     value={option.value}
-                    checked={selections.bartendingServiceDuration === option.value}
-                    onClick={() => setServiceDuration(option.value)}
                   />
                   <FormLabel htmlFor={option.value} className="font-normal cursor-pointer">
                     {option.label}
                   </FormLabel>
                 </div>
               ))}
-            </div>
+            </RadioGroup>
           </div>
           
           {/* Alcohol Types */}
