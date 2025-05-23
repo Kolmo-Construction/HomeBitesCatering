@@ -53,12 +53,6 @@ const BasicInformationStep = ({
         options.push(`${hour}:00`);
         options.push(`${hour}:30`);
       }
-    } else if (eventType.includes("Breakfast") || eventType.includes("Brunch")) {
-      // Breakfast/Brunch events in the morning
-      for (let hour = 7; hour <= 13; hour++) {
-        options.push(`${hour}:00`);
-        options.push(`${hour}:30`);
-      }
     } else {
       // Default time range for other event types
       for (let hour = 8; hour <= 22; hour++) {
@@ -169,38 +163,45 @@ const BasicInformationStep = ({
 
         {/* Billing Address */}
         <div className="mb-6">
-          <h3 className="text-lg font-medium mb-3">Billing Address</h3>
+          <h3 className="text-lg font-medium mb-3 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            Billing Address
+          </h3>
 
           <div className="space-y-4">
-            <FormField
-              control={control}
-              name="billingAddress.street"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={control}
+                name="billingAddress.street"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={control}
-              name="billingAddress.street2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address Line 2</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Apt, Suite, Unit, etc. (optional)" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={control}
+                name="billingAddress.street2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address Line 2</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Apt, Suite, Unit, etc. (optional)" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <FormField
                 control={control}
                 name="billingAddress.city"
@@ -248,68 +249,91 @@ const BasicInformationStep = ({
 
         {/* Event Date and Time - Enhanced with DatePicker and Time selection */}
         <div className="mb-6">
-          <h3 className="text-lg font-medium mb-3">Event Details</h3>
+          <h3 className="text-lg font-medium mb-3 flex items-center">
+            <CalendarIcon className="h-5 w-5 mr-2 text-primary" />
+            Event Details
+          </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Controller
-              control={control}
-              name="eventDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="flex items-center">
-                    <CalendarIcon className="mr-2 h-4 w-4" /> Event Date*
-                  </FormLabel>
-                  <div className="relative">
-                    <DatePicker
-                      selected={field.value ? new Date(field.value) : null}
-                      onChange={(date) => {
-                        field.onChange(date ? date.toISOString().split('T')[0] : '');
-                        setSelectedDate(date);
-                      }}
-                      dateFormat="MMMM d, yyyy"
-                      minDate={new Date()}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none"
-                      placeholderText="Select event date"
-                      wrapperClassName="w-full"
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Controller
+                control={control}
+                name="eventDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center">
+                      <CalendarIcon className="mr-2 h-4 w-4" /> Event Date*
+                    </FormLabel>
+                    <div className="relative">
+                      <DatePicker
+                        selected={field.value ? new Date(field.value) : null}
+                        onChange={(date) => {
+                          field.onChange(date ? date.toISOString().split('T')[0] : '');
+                          setSelectedDate(date);
+                        }}
+                        dateFormat="MMMM d, yyyy"
+                        minDate={new Date()}
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none"
+                        placeholderText="Select event date"
+                        wrapperClassName="w-full"
+                      />
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={control}
+                name="eventStartTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center">
+                      <ClockIcon className="mr-2 h-4 w-4" /> Start Time*
+                    </FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
-            <FormField
-              control={control}
-              name="eventStartTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center">
-                    <ClockIcon className="mr-2 h-4 w-4" /> Start Time*
-                  </FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value || ""}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a time" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {timeOptions.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {eventType === "Wedding" && (
+              <div className="mt-3 bg-blue-50 text-blue-700 text-sm p-2 rounded-md flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Note: For weddings, you'll be able to add ceremony and reception times in the next step.
+              </div>
+            )}
+            
+            {eventType === "Corporate" && (
+              <div className="mt-3 bg-blue-50 text-blue-700 text-sm p-2 rounded-md flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Tip: Business hours (8am-6pm) are shown by default for corporate events.
+              </div>
+            )}
           </div>
         </div>
       </div>
