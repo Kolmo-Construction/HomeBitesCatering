@@ -418,12 +418,7 @@ const WeddingBasicInfoStep = ({
                 />
               </div>
               
-              <div className="mt-4 bg-white/70 text-rose-700 text-sm p-3 rounded-md border border-rose-100 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>You'll be able to add more detailed ceremony and reception timing in the next step.</span>
-              </div>
+
             </div>
           </motion.div>
         </WeddingCard>
@@ -431,8 +426,8 @@ const WeddingBasicInfoStep = ({
 
       {/* Display validation error message if present */}
       {validationError && (
-        <div className="mb-6 bg-red-50 text-red-700 p-4 rounded-md flex items-center border border-red-200">
-          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 text-red-500" />
+        <div className="mb-6 bg-gray-50 text-gray-900 p-4 rounded-md flex items-center border border-gray-200">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 text-gray-700" />
           <div>{validationError}</div>
         </div>
       )}
