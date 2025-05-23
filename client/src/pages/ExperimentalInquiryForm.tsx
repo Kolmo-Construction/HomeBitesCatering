@@ -7,6 +7,8 @@ import BreakfastMenuStep from "@/components/form-steps/BreakfastMenuStep";
 import DessertsStep from "@/components/form-steps/DessertsStep";
 import AppetizersStep from "@/components/form-steps/AppetizersStep";
 import { BeverageQuestionStep, NonAlcoholicBeveragesStep, AlcoholicBeveragesStep } from "@/components/form-steps/BeverageSelectionSteps";
+import EquipmentQuestionStep from "@/components/form-steps/EquipmentQuestionStep";
+import EquipmentStep from "@/components/form-steps/EquipmentStep";
 
 import SandwichFactoryMenuStep from "@/components/form-steps/SandwichFactoryMenuStep";
 
@@ -618,7 +620,7 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         alcoholTypes: {},
         otherBarEquipment: {}
       },
-      tableWaterService: false,
+      wantsEquipmentRental: undefined,
       equipment: {
         furniture: {},
         linens: {},
@@ -821,8 +823,18 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           nextStep = "equipment";
         }
       } else if (currentStep === "nonAlcoholicBeverages" || currentStep === "alcoholicBeverages") {
-        // After completing beverage selection, go to equipment
-        nextStep = "equipment";
+        // After completing beverage selection, go to equipment question
+        nextStep = "equipmentQuestion";
+      } else if (currentStep === "equipmentQuestion") {
+        // Handle equipment question choice
+        const wantsEquipmentRental = watch("wantsEquipmentRental");
+        if (wantsEquipmentRental) {
+          // If user wants equipment, go to detailed equipment selection
+          nextStep = "equipment";
+        } else {
+          // If user doesn't want equipment, skip to dietary restrictions
+          nextStep = "dietaryRestrictions";
+        }
       }
       setCurrentStep(nextStep);
     }

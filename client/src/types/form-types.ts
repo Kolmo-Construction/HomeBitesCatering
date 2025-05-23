@@ -26,7 +26,8 @@ export type FormStep =
   | "beverageQuestion"  // New step for initial beverage choice
   | "nonAlcoholicBeverages"  // Step for non-alcoholic beverage selection
   | "alcoholicBeverages"  // Step for alcoholic beverage selection
-  | "equipment"
+  | "equipmentQuestion"  // New step to ask if user wants equipment rental
+  | "equipment"  // Detailed equipment selection
   | "dietaryRestrictions"
   | "review";
 
@@ -228,6 +229,9 @@ export type EventInquiryFormData = {
       ice?: boolean;
     };
   };
+  
+  // Equipment Question
+  wantsEquipmentRental?: boolean;
   
   // Step 8: Equipment
   equipment: {

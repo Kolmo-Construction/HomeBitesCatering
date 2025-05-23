@@ -1,0 +1,37 @@
+Update Your Form's Blueprint
+
+File: output/client/src/types/form-types.ts
+Action: We'll edit this file to:
+Add a new step name called equipmentQuestion. This will be the step where the form asks, "Do you want to rent equipment?".
+Add a new field to your main form data storage (EventInquiryFormData) called wantsEquipmentRental. This will simply remember if the user chose "Yes" or "No" for equipment.
+Adjust the Main Form's Flow and Logic
+
+File: output/client/src/pages/ExperimentalInquiryForm.tsx (which you've referred to as ExperimentalInquiryForm.txt)
+Action: We'll modify this core file to:
+Insert the New Question Step: We'll add equipmentQuestion into the list that defines the order of your form steps. It will come right after all the beverage questions and before the existing equipment step (which will become the detailed selection page).
+Handle Navigation:
+After the user finishes the beverage section, the "Next" button will now lead to our new equipmentQuestion page.
+On the equipmentQuestion page:
+If they click "Yes," the "Next" button will take them to the detailed equipment selection page.
+If they click "No," the "Next" button will skip the detailed equipment selection and go directly to the next section in your form (e.g., "Dietary Restrictions").
+The "Back" button logic will also be updated to navigate correctly to and from these new steps.
+Display the New Pages: We'll add the code needed to actually show the content of our new EquipmentQuestionStep and the detailed EquipmentStep when they are the active step.
+Create a List of Your Rental Gear
+
+File: output/client/src/data/equipmentData.ts (This will be a new file)
+Action: We'll create this file to store all your equipment rental options. It will organize items like "Linens," "Serving Ware," and "Furniture," and for each item, it will list its name and price, based on your screenshot (Screenshot 2025-05-22 at 8.09.30 PM.png).
+Build the "Want Equipment?" Page
+
+File: output/client/src/components/form-steps/EquipmentQuestionStep.tsx (This will be a new file)
+Action: This new component will be the actual page for the equipmentQuestion step. It will:
+Clearly ask the user, "Would you like to include equipment rental?".
+Offer "Yes" and "No" choices.
+Save their answer to the wantsEquipmentRental field we added earlier.
+Build the Detailed Equipment Selection Page
+
+File: output/client/src/components/form-steps/EquipmentStep.tsx (This will be a new file, or an update if you have a placeholder)
+Action: This component will be the page where users select specific equipment if they answered "Yes" on the previous step. It will:
+Display the categories (Linens, Serving Ware, Furniture) and all the items within them, using the information from equipmentData.ts.
+Provide an input box next to each item for the user to enter the quantity they need.
+Save these selections (item and quantity) into the equipment section of your form's data.
+This approach ensures the detailed equipment list only appears when relevant, keeping the form flow clean and directly addressing your request.
