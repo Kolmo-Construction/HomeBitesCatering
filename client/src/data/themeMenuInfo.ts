@@ -838,11 +838,11 @@ export const themeMenuData = {
         description: "Basic BBQ setup",
         minGuestCount: 0,
         limits: {
-          mains: 2,
+          mains: 3,
           sides: 2,
-          salads: 1,
-          sauces: 2,
-          condiments: 3
+          salads: 2,
+          sauces: 3,
+          condiments: 2
         }
       },
       {
@@ -852,11 +852,11 @@ export const themeMenuData = {
         description: "Enhanced BBQ with more variety",
         minGuestCount: 0,
         limits: {
-          mains: 3,
+          mains: 4,
           sides: 3,
           salads: 2,
           sauces: 3,
-          condiments: 5
+          condiments: 2
         }
       },
       {
@@ -870,7 +870,7 @@ export const themeMenuData = {
           sides: 4,
           salads: 3,
           sauces: 4,
-          condiments: 8
+          condiments: 3
         }
       },
       {
@@ -882,9 +882,9 @@ export const themeMenuData = {
         limits: {
           mains: 5,
           sides: 5,
-          salads: 4,
-          sauces: 5,
-          condiments: 10
+          salads: 3,
+          sauces: 4,
+          condiments: 4
         }
       }
     ],

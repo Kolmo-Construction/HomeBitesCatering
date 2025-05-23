@@ -1,11 +1,14 @@
 // client/src/components/form-steps/BasicInformationStep.tsx
-import React from "react";
-import { useFormContext, FormProvider, Controller,} from "react-hook-form"; // Added FormField here if it wasn't explicitly in your snippet but is used.
+import React, { useState, useEffect } from "react";
+import { useFormContext, Controller } from "react-hook-form";
 import { Form, FormControl, FormItem, FormLabel, FormMessage, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { EventType, EventInquiryFormData } from "@/types/form-types"; // Adjust path if your types are elsewhere e.g. ../../types/form-types
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock as ClockIcon } from "lucide-react";
+import { EventType, EventInquiryFormData } from "@/types/form-types";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // Make sure EventInquiryFormData is imported if BasicInformationStep relies on it for useFormContext
 // If FormProvider or Controller are used directly in this component's JSX, keep them.
@@ -21,7 +24,51 @@ const BasicInformationStep = ({
   onPrevious: () => void;
   onNext: () => void;
 }) => {
-  const { control, watch, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
+  const { control, watch, setValue, formState: { errors, isValid } } = useFormContext<EventInquiryFormData>();
+  
+  // State for date and time selection
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [timeOptions, setTimeOptions] = useState<string[]>([]);
+  
+  // Generate time options based on event type
+  useEffect(() => {
+    let options: string[] = [];
+    
+    // Different default times based on event type
+    if (eventType === "Wedding") {
+      // Weddings typically afternoon to evening
+      for (let hour = 13; hour <= 20; hour++) {
+        options.push(`${hour}:00`);
+        options.push(`${hour}:30`);
+      }
+    } else if (eventType === "Corporate") {
+      // Corporate events typically during business hours
+      for (let hour = 8; hour <= 18; hour++) {
+        options.push(`${hour}:00`);
+        options.push(`${hour}:30`);
+      }
+    } else if (eventType === "Birthday") {
+      // Birthday events typically afternoon to evening
+      for (let hour = 12; hour <= 21; hour++) {
+        options.push(`${hour}:00`);
+        options.push(`${hour}:30`);
+      }
+    } else if (eventType.includes("Breakfast") || eventType.includes("Brunch")) {
+      // Breakfast/Brunch events in the morning
+      for (let hour = 7; hour <= 13; hour++) {
+        options.push(`${hour}:00`);
+        options.push(`${hour}:30`);
+      }
+    } else {
+      // Default time range for other event types
+      for (let hour = 8; hour <= 22; hour++) {
+        options.push(`${hour}:00`);
+        options.push(`${hour}:30`);
+      }
+    }
+    
+    setTimeOptions(options);
+  }, [eventType]);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -199,21 +246,71 @@ const BasicInformationStep = ({
           </div>
         </div>
 
-        {/* Event Date */}
+        {/* Event Date and Time - Enhanced with DatePicker and Time selection */}
         <div className="mb-6">
-          <FormField
-            control={control}
-            name="eventDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Event Date*</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <h3 className="text-lg font-medium mb-3">Event Details</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Controller
+              control={control}
+              name="eventDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="flex items-center">
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Event Date*
+                  </FormLabel>
+                  <div className="relative">
+                    <DatePicker
+                      selected={field.value ? new Date(field.value) : null}
+                      onChange={(date) => {
+                        field.onChange(date ? date.toISOString().split('T')[0] : '');
+                        setSelectedDate(date);
+                      }}
+                      dateFormat="MMMM d, yyyy"
+                      minDate={new Date()}
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none"
+                      placeholderText="Select event date"
+                      wrapperClassName="w-full"
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="eventStartTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <ClockIcon className="mr-2 h-4 w-4" /> Start Time*
+                  </FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a time" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {timeOptions.map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
       </div>
 
