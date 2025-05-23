@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import BasicInformationStep from "@/components/form-steps/BasicInformationStep";
+import WeddingBasicInfoStep from "@/components/form-steps/WeddingBasicInfoStep";
 import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionStep";
 import EventDetailsStep from "@/components/form-steps/EventDetailsStep";
 import MenuSelectionStep from "@/components/form-steps/MenuSelectionStep";
@@ -872,11 +873,18 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
               )}
               
               {currentStep === "basicInfo" && eventType && (
-                <BasicInformationStep
-                  eventType={eventType}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                eventType === "Wedding" ? (
+                  <WeddingBasicInfoStep
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                ) : (
+                  <BasicInformationStep
+                    eventType={eventType}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                )
               )}
               
               {currentStep === "eventDetails" && eventType && (
