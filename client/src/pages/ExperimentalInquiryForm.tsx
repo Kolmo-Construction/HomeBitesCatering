@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import BasicInformationStep from "@/components/form-steps/BasicInformationStep";
+import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionStep";
 import EventDetailsStep from "@/components/form-steps/EventDetailsStep";
 import MenuSelectionStep from "@/components/form-steps/MenuSelectionStep";
@@ -664,6 +665,25 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
   
   const currentStepNumber = steps.indexOf(currentStep) + 1;
   const totalSteps = steps.length;
+  
+  // Define friendly step names for the progress indicator
+  const stepLabels = useMemo(() => ({
+    "eventType": "Event Type",
+    "basicInfo": "Basic Info",
+    "eventDetails": "Event Details",
+    "menuSelection": "Menu",
+    "appetizerQuestion": "Appetizers",
+    "appetizers": "Select Appetizers",
+    "dessertQuestion": "Desserts",
+    "desserts": "Select Desserts",
+    "beverageQuestion": "Beverages",
+    "nonAlcoholicBeverages": "Drinks",
+    "alcoholicBeverages": "Bar Service",
+    "equipmentQuestion": "Equipment",
+    "equipment": "Rental Items",
+    "dietaryRestrictions": "Dietary Needs",
+    "review": "Review"
+  }), []);
   
   // Handler for event type selection
   const handleEventTypeSelect = (type: EventType) => {
