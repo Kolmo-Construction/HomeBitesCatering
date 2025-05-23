@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import BasicInformationStep from "@/components/form-steps/BasicInformationStep";
-import WeddingBasicInfoStep from "@/components/form-steps/WeddingBasicInfoStep";
+import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionStep";
 import EventDetailsStep from "@/components/form-steps/EventDetailsStep";
 import MenuSelectionStep from "@/components/form-steps/MenuSelectionStep";
@@ -666,6 +666,25 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
   const currentStepNumber = steps.indexOf(currentStep) + 1;
   const totalSteps = steps.length;
   
+  // Define friendly step names for the progress indicator
+  const stepLabels = useMemo(() => ({
+    "eventType": "Event Type",
+    "basicInfo": "Basic Info",
+    "eventDetails": "Event Details",
+    "menuSelection": "Menu",
+    "appetizerQuestion": "Appetizers",
+    "appetizers": "Select Appetizers",
+    "dessertQuestion": "Desserts",
+    "desserts": "Select Desserts",
+    "beverageQuestion": "Beverages",
+    "nonAlcoholicBeverages": "Drinks",
+    "alcoholicBeverages": "Bar Service",
+    "equipmentQuestion": "Equipment",
+    "equipment": "Rental Items",
+    "dietaryRestrictions": "Dietary Needs",
+    "review": "Review"
+  }), []);
+  
   // Handler for event type selection
   const handleEventTypeSelect = (type: EventType) => {
     setValue("eventType", type);
@@ -854,12 +873,15 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         <FormProvider {...methods}>
           <Form {...methods}>
             <form noValidate className="space-y-8">
-              {/* Progress bar - only show after event type selection */}
+              {/* Animated Progress Indicator - only show after event type selection */}
               {currentStep !== "eventType" && (
-                <div className="container mx-auto px-4 max-w-3xl">
-                  <FormProgressBar 
-                    currentStep={currentStepNumber} 
-                    totalSteps={totalSteps} 
+                <div className="container mx-auto px-4 max-w-4xl">
+                  <ProgressIndicator 
+                    currentStep={currentStep}
+                    steps={steps.filter(step => 
+                      !["foodTruckMenu", "sandwichFactoryMenu", "breakfastMenu"].includes(step)
+                    )} 
+                    stepLabels={stepLabels}
                   />
                 </div>
               )}
@@ -873,18 +895,11 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
               )}
               
               {currentStep === "basicInfo" && eventType && (
-                eventType === "Wedding" ? (
-                  <WeddingBasicInfoStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                ) : (
-                  <BasicInformationStep
-                    eventType={eventType}
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                )
+                <BasicInformationStep
+                  eventType={eventType}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
               )}
               
               {currentStep === "eventDetails" && eventType && (
