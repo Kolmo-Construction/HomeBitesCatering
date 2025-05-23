@@ -819,8 +819,8 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
           // Go to alcoholic beverages page
           nextStep = "alcoholicBeverages";
         } else if (beverageChoice === "none") {
-          // Skip beverage pages and go to equipment
-          nextStep = "equipment";
+          // Skip beverage pages and go to equipment question
+          nextStep = "equipmentQuestion";
         }
       } else if (currentStep === "nonAlcoholicBeverages" || currentStep === "alcoholicBeverages") {
         // After completing beverage selection, go to equipment question
@@ -968,6 +968,20 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
               
               {currentStep === "alcoholicBeverages" && eventType && (
                 <AlcoholicBeveragesStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "equipmentQuestion" && eventType && (
+                <EquipmentQuestionStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "equipment" && eventType && (
+                <EquipmentStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                 />
