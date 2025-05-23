@@ -612,10 +612,13 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
       },
       dietaryNotes: "",
       dessertSelections: {},
-      servingAlcohol: [],
-      additionalCocktails: false,
+      beverageServiceChoice: undefined,
+      nonAlcoholicBeverageSelections: {},
+      alcoholicBeverageSelections: {
+        alcoholTypes: {},
+        otherBarEquipment: {}
+      },
       barEquipment: {},
-      nonAlcoholicBeverages: {},
       tableWaterService: false,
       equipment: {
         furniture: {},
