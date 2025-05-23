@@ -6,6 +6,7 @@ import MenuSelectionStep from "@/components/form-steps/MenuSelectionStep";
 import BreakfastMenuStep from "@/components/form-steps/BreakfastMenuStep";
 import DessertsStep from "@/components/form-steps/DessertsStep";
 import AppetizersStep from "@/components/form-steps/AppetizersStep";
+import { BeverageQuestionStep, NonAlcoholicBeveragesStep, AlcoholicBeveragesStep } from "@/components/form-steps/BeverageSelectionSteps";
 
 import SandwichFactoryMenuStep from "@/components/form-steps/SandwichFactoryMenuStep";
 
@@ -649,7 +650,9 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
     "breakfastMenu", // Breakfast/Brunch menu step (will be conditionally shown)
     "dessertQuestion", // Ask if user wants desserts
     "desserts",      // Only show if user wants desserts
-    "beverages",
+    "beverageQuestion", // Initial question about beverage services
+    "nonAlcoholicBeverages", // Step for non-alcoholic beverage selection
+    "alcoholicBeverages", // Step for alcoholic beverage selection
     "equipment",
     "dietaryRestrictions", // Added new step for dietary restrictions
     "review"
@@ -792,16 +795,32 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         }
       } else if (currentStep === "sandwichFactoryMenu" || currentStep === "foodTruckMenu" || currentStep === "breakfastMenu") {
         const dessertQuestionIndex = steps.indexOf("dessertQuestion");
-        nextStep = (dessertQuestionIndex > -1) ? "dessertQuestion" : "beverages";
+        nextStep = (dessertQuestionIndex > -1) ? "dessertQuestion" : "beverageQuestion";
       } else if (currentStep === "dessertQuestion") {
         const wantsDesserts = watch("wantsDesserts");
         if (wantsDesserts) {
           const dessertsIndex = steps.indexOf("desserts");
-          nextStep = (dessertsIndex > -1) ? "desserts" : "beverages";
+          nextStep = (dessertsIndex > -1) ? "desserts" : "beverageQuestion";
         } else {
-          const beveragesIndex = steps.indexOf("beverages");
-          nextStep = (beveragesIndex > -1) ? "beverages" : "equipment";
+          const beverageQuestionIndex = steps.indexOf("beverageQuestion");
+          nextStep = (beverageQuestionIndex > -1) ? "beverageQuestion" : "equipment";
         }
+      } else if (currentStep === "beverageQuestion") {
+        // Handle the beverage question selection to determine next step
+        const beverageChoice = watch("beverageServiceChoice");
+        if (beverageChoice === "non-alcoholic") {
+          // Go to non-alcoholic beverages page
+          nextStep = "nonAlcoholicBeverages";
+        } else if (beverageChoice === "alcoholic") {
+          // Go to alcoholic beverages page
+          nextStep = "alcoholicBeverages";
+        } else if (beverageChoice === "none") {
+          // Skip beverage pages and go to equipment
+          nextStep = "equipment";
+        }
+      } else if (currentStep === "nonAlcoholicBeverages" || currentStep === "alcoholicBeverages") {
+        // After completing beverage selection, go to equipment
+        nextStep = "equipment";
       }
       setCurrentStep(nextStep);
     }
@@ -882,8 +901,8 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                   onSkipDessert={() => {
-                    // If user doesn't want desserts, skip to beverages step
-                    const nextStepIndex = steps.indexOf("beverages");
+                    // If user doesn't want desserts, skip to beverage question step
+                    const nextStepIndex = steps.indexOf("beverageQuestion");
                     setCurrentStep(steps[nextStepIndex]);
                   }}
                 />
@@ -914,6 +933,27 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
               
               {currentStep === "desserts" && eventType && (
                 <DessertsStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "beverageQuestion" && eventType && (
+                <BeverageQuestionStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "nonAlcoholicBeverages" && eventType && (
+                <NonAlcoholicBeveragesStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
+              {currentStep === "alcoholicBeverages" && eventType && (
+                <AlcoholicBeveragesStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                 />
