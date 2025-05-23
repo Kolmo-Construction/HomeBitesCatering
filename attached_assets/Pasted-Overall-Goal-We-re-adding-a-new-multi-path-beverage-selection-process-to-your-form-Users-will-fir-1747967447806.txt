@@ -1,0 +1,112 @@
+Overall Goal: We're adding a new, multi-path beverage selection process to your form. Users will first decide if they want beverages and what kind (non-alcoholic or alcoholic). Based on this, they'll see a specific page for selections, or skip beverages entirely.
+
+Here's how the files will be involved:
+
+File: output/client/src/types/form-types.ts
+
+Full Path: output/client/src/types/form-types.ts
+Purpose: This file is like the blueprint for your form. It defines all possible steps the form can have and the complete structure of all the data your form collects.
+What needs to change (in words):
+Define New Steps: We need to tell TypeScript about our new screens.
+Inside the FormStep type (which looks like export type FormStep = "eventType" | "basicInfo" | ...;), you'll add three new identifiers:
+"beverageQuestion": This will represent the initial screen shown in your first screenshot (Screenshot 2025-05-22 at 7.19.15 PM.png) where the user chooses "YES NON-Alcoholic", "YES - Alcoholic", or "NO Beverage Service".
+"nonAlcoholicBeverages": This will represent the screen for selecting non-alcoholic drinks, as seen in Screenshot 2025-05-22 at 7.27.13 PM.png.
+"alcoholicBeverages": This will represent the screen for alcoholic beverage and bartending service details, as shown in Screenshot 2025-05-22 at 7.27.24 PM.png and Screenshot 2025-05-22 at 7.27.31 PM.png.
+You'll likely remove the existing generic "beverages" identifier from FormStep since this new flow is more specific.
+Add New Data Fields: Your main data structure, EventInquiryFormData, needs new properties to store the answers from these new screens.
+beverageServiceChoice?: This field will store the user's answer from the beverageQuestion screen (e.g., "non-alcoholic", "alcoholic", or "none"). The ? makes it optional.
+nonAlcoholicBeverageSelections?: This will be an object to hold which non-alcoholic beverages were checked. For example, if "Bottled Water (1 pp)" and "Assorted Soft Drinks (unlimited)" are checked, it might look like: { bottled_water_1pp: true, assorted_soft_drinks_unlimited: true }.
+alcoholicBeverageSelections?: This will be a more complex object to hold all the details from the alcoholic beverages screen. It will contain sub-fields like:
+bartendingServiceType: To store "DRY HIRE" or "WET HIRE".
+drinkingAgedGuests: To store the number.
+bartendingStartTime: To store the time.
+bartendingServiceDuration: To store the selected duration (e.g., "2.5 Hours").
+alcoholTypes: An object to store which alcohol options (Beer, Wine - HOUSE, Mocktails, OPEN BAR, etc.) are checked.
+otherBarEquipment: An object for the "Other Bar Equipment/Services" checklist.
+Integrate/Replace Old Fields: Look at the existing beverage fields in EventInquiryFormData (like beverageServiceType, bartendingServiceType, servingAlcohol, nonAlcoholicBeverages from the original file). Decide if these new fields replace them or if the old ones can be incorporated. For example, the new alcoholicBeverageSelections.bartendingServiceType directly replaces the old bartendingServiceType. The old nonAlcoholicBeverages: Record<string, string> is less structured than the new nonAlcoholicBeverageSelections.
+New File: output/client/src/components/form-steps/BeverageQuestionStep.tsx
+
+Full Path: output/client/src/components/form-steps/BeverageQuestionStep.tsx
+Purpose: This file will contain the React component for the screen shown in your first screenshot (Screenshot 2025-05-22 at 7.19.15 PM.png).
+What it should contain (in words):
+A main title: "Beverage/Bartending Service".
+A sub-question: "Will you require Beverage Services?".
+Three distinct clickable radio button options, each clearly labeled:
+"YES NON-Alcoholic"
+"YES - Alcoholic"
+"NO Beverage Service"
+Standard "Back" and "Next" buttons for navigation.
+Functionality: When the user clicks one of the radio buttons, the component will update the beverageServiceChoice field in your main form's data. The "Next" button should only become active once a choice is made.
+New File: output/client/src/components/form-steps/NonAlcoholicBeveragesStep.tsx
+
+Full Path: output/client/src/components/form-steps/NonAlcoholicBeveragesStep.tsx
+Purpose: This file will contain the React component for the screen shown in Screenshot 2025-05-22 at 7.27.13 PM.png. This screen appears if the user chose "YES NON-Alcoholic" on the previous step.
+What it should contain (in words):
+A clear title like "Choose Non-Alcoholic Beverages".
+A list of non-alcoholic beverage options, each with a checkbox:
+"Bottled Water (1 pp)"
+"Bottled Water (unlimited)"
+"Assorted Soft Drinks (1 pp)"
+"Assorted Soft Drinks (unlimited)"
+"Pellegrino Flavored Sodas (1 pp)"
+"Pellegrino Flavored Sodas (unlimited)"
+"Assorted Snapple (1 pp)"
+"Assorted Snapple (unlimited )"
+"Assorted Gatorade (1 pp)"
+"Assorted Gatorade (unlimited)"
+"Free pour Lemonade"
+"Free pour Iced Tea"
+"Non-alcoholic Mocktails (Free- Pour) $ 2.75pp"
+An option like "Skip This I changed my mind" (this button might take them back to the BeverageQuestionStep or directly to the step after beverages if "NO Beverage Service" was chosen).
+Standard "Back" and "Next" buttons.
+Functionality: As users check/uncheck items, the component will update the nonAlcoholicBeverageSelections object in your form's data.
+New File: output/client/src/components/form-steps/AlcoholicBeveragesStep.tsx
+
+Full Path: output/client/src/components/form-steps/AlcoholicBeveragesStep.tsx
+Purpose: This file will contain the React component for the screens shown in Screenshot 2025-05-22 at 7.27.24 PM.png and Screenshot 2025-05-22 at 7.27.31 PM.png. This screen appears if the user chose "YES - Alcoholic".
+What it should contain (in words):
+A main title: "Bartending Service".
+Service Type: Radio buttons for "What type of service do you require?":
+"DRY HIRE - YOU provide alcohol..."
+"WET HIRE - WE provide everything..."
+Guest Count: An input field for "How many 'drinking aged' guests will you have?".
+Start Time: An input (likely a time picker) for "What is the start time of Your Bartending Service".
+Service Duration: Checkboxes for "How long would you like the service for - Minimum 2.5 hours":
+"2.5 Hours", "3 Hours", "3.5 Hours", "4 Hours", "5 Hours", "6 Hours", "Other".
+Alcohol Provision: Checkboxes for "What would you like to provide? Check all that apply":
+"Beer", "Wine - HOUSE", "Wine PREMIUM", "Wine, Beer and 2 Cocktails", "Wine, Beer, soda and cocktails", "Mocktails", "OPEN BAR", "CASH BAR".
+Other Equipment/Services: Checkboxes for "Other Bar Equipment/Services":
+"Mobile Bar unit -$200.00 Check with your venue to identify if they offer a bar setup."
+"Table water service"
+"Coffee Service"
+"Beer Taps"
+"Ice"
+Standard "Back" and "Next" buttons.
+Functionality: This component will update the various sub-fields within the alcoholicBeverageSelections object in your form's data as the user makes their selections.
+File: output/client/src/pages/ExperimentalInquiryForm.tsx
+
+Full Path: output/client/src/pages/ExperimentalInquiryForm.tsx
+Purpose: This is the main conductor of your multi-step form. It keeps track of the current step and manages navigation between steps.
+What needs to change (in words):
+Import New Step Components: At the top of the file, you'll need to import the three new components you just created (e.g., import BeverageQuestionStep from '@/components/form-steps/BeverageQuestionStep';).
+Update the steps Array: This array (currently defined around line in ExperimentalInquiryForm.txt) lists all possible steps in order. You need to:
+Remove the old, generic "beverages" entry.
+Insert "beverageQuestion", then "nonAlcoholicBeverages", then "alcoholicBeverages" into the array at the correct point in the flow (likely after the "desserts" or "dessertQuestion" step and before the "equipment" step).
+Update defaultValues: In the useForm hook (around lines in ExperimentalInquiryForm.txt), add the new data fields to defaultValues to initialize them (e.g., beverageServiceChoice: undefined, nonAlcoholicBeverageSelections: {}, alcoholicBeverageSelections: {}).
+Modify handleNext() Function: This function (around line in ExperimentalInquiryForm.txt) decides which step to show when the user clicks "Next". You'll add logic:
+If the current step is the one right before your new beverage flow (e.g., desserts), make beverageQuestion the next step.
+If the current step IS beverageQuestion:
+Check what the user selected (the value of beverageServiceChoice).
+If "non-alcoholic", the next step is nonAlcoholicBeverages.
+If "alcoholic", the next step is alcoholicBeverages.
+If "none", the next step is equipment (or whatever comes after beverages).
+If the current step is nonAlcoholicBeverages or alcoholicBeverages, the next step is equipment.
+Modify handlePrevious() Function: This function (around line in ExperimentalInquiryForm.txt) handles the "Back" button. You'll add logic:
+If on equipment and the user did go through a beverage flow, go back to the specific beverage page they were on (nonAlcoholicBeverages or alcoholicBeverages), or to beverageQuestion if they chose "none".
+If on nonAlcoholicBeverages or alcoholicBeverages, the previous step is beverageQuestion.
+If on beverageQuestion, the previous step is desserts (or dessertQuestion).
+Render the New Steps in JSX: In the main return (...) part of the component, add sections to display your new step components when they are the currentStep. This will look similar to how existing steps like DessertsStep are rendered (e.g., lines in ExperimentalInquiryForm.txt for other steps). You'll have:
+{currentStep === "beverageQuestion" && <BeverageQuestionStep ... />}
+{currentStep === "nonAlcoholicBeverages" && <NonAlcoholicBeveragesStep ... />}
+{currentStep === "alcoholicBeverages" && <AlcoholicBeveragesStep ... />}
+By making these changes, you'll integrate the new beverage selection workflow based on the UI details you've provided in the screenshots. Remember that the actual form field names within nonAlcoholicBeverageSelections and alcoholicBeverageSelections should be chosen to make sense for your data handling later (e.g., when you submit or process the form).
