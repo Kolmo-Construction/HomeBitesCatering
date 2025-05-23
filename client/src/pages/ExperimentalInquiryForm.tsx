@@ -873,12 +873,15 @@ export default function ExperimentalInquiryForm({ initialEventType = "" }: { ini
         <FormProvider {...methods}>
           <Form {...methods}>
             <form noValidate className="space-y-8">
-              {/* Progress bar - only show after event type selection */}
+              {/* Animated Progress Indicator - only show after event type selection */}
               {currentStep !== "eventType" && (
-                <div className="container mx-auto px-4 max-w-3xl">
-                  <FormProgressBar 
-                    currentStep={currentStepNumber} 
-                    totalSteps={totalSteps} 
+                <div className="container mx-auto px-4 max-w-4xl">
+                  <ProgressIndicator 
+                    currentStep={currentStep}
+                    steps={steps.filter(step => 
+                      !["foodTruckMenu", "sandwichFactoryMenu", "breakfastMenu"].includes(step)
+                    )} 
+                    stepLabels={stepLabels}
                   />
                 </div>
               )}
