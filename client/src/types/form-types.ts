@@ -23,7 +23,9 @@ export type FormStep =
   | "breakfastMenu" // Added Breakfast/Brunch menu step
   | "dessertQuestion" // Added Dessert question step
   | "desserts" 
-  | "beverages"
+  | "beverageQuestion"  // New step for initial beverage choice
+  | "nonAlcoholicBeverages"  // Step for non-alcoholic beverage selection
+  | "alcoholicBeverages"  // Step for alcoholic beverage selection
   | "equipment"
   | "dietaryRestrictions"
   | "review";
@@ -183,16 +185,49 @@ export type EventInquiryFormData = {
   dessertSelections: Record<string, number>;
   
   // Step 7: Beverages
-  beverageServiceType?: "alcoholic" | "non_alcoholic" | "both";
-  bartendingServiceType?: "dry_hire" | "wet_hire";
-  servingAlcohol: string[];
-  additionalCocktails: boolean;
-  additionalCocktailsCount?: number;
-  liquorQuality?: "well" | "mid_shelf" | "top_shelf";
-  spiritBrands?: string;
-  barEquipment: Record<string, number>;
-  nonAlcoholicBeverages: Record<string, string>;
-  tableWaterService: boolean;
+  beverageServiceChoice?: "non-alcoholic" | "alcoholic" | "none";
+  
+  // Non-alcoholic beverage selections
+  nonAlcoholicBeverageSelections?: {
+    bottled_water_1pp?: boolean;
+    bottled_water_unlimited?: boolean;
+    assorted_soft_drinks_1pp?: boolean;
+    assorted_soft_drinks_unlimited?: boolean;
+    pellegrino_sodas_1pp?: boolean;
+    pellegrino_sodas_unlimited?: boolean;
+    assorted_snapple_1pp?: boolean;
+    assorted_snapple_unlimited?: boolean;
+    assorted_gatorade_1pp?: boolean;
+    assorted_gatorade_unlimited?: boolean;
+    free_pour_lemonade?: boolean;
+    free_pour_iced_tea?: boolean;
+    non_alcoholic_mocktails?: boolean;
+  };
+  
+  // Alcoholic beverage selections
+  alcoholicBeverageSelections?: {
+    bartendingServiceType?: "dry_hire" | "wet_hire";
+    drinkingAgedGuests?: number;
+    bartendingStartTime?: string;
+    bartendingServiceDuration?: string;
+    alcoholTypes?: {
+      beer?: boolean;
+      wine_house?: boolean;
+      wine_premium?: boolean;
+      wine_beer_2cocktails?: boolean;
+      wine_beer_soda_cocktails?: boolean;
+      mocktails?: boolean;
+      open_bar?: boolean;
+      cash_bar?: boolean;
+    };
+    otherBarEquipment?: {
+      mobile_bar_unit?: boolean;
+      table_water_service?: boolean;
+      coffee_service?: boolean;
+      beer_taps?: boolean;
+      ice?: boolean;
+    };
+  };
   
   // Step 8: Equipment
   equipment: {
