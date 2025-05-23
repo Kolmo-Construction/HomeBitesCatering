@@ -46,14 +46,14 @@ const WeddingInput: React.FC<WeddingInputProps> = ({
       className="relative"
     >
       <FormItem className="group">
-        <FormLabel className="font-serif text-rose-700">
-          {label}{required && <span className="text-rose-500 ml-1">*</span>}
+        <FormLabel>
+          {label}{required && <span className="text-primary ml-1">*</span>}
         </FormLabel>
         <div className="relative">
           <FormControl>
             <Input
               {...field}
-              className="border-rose-200 hover:border-rose-300 focus:border-rose-400 focus:ring-rose-100 
+              className="border-input hover:border-primary/30 focus:border-primary focus:ring-primary/10
                          transition-all duration-300 bg-white/80 hover:bg-white px-4"
               placeholder={placeholder}
               required={required}
@@ -68,7 +68,7 @@ const WeddingInput: React.FC<WeddingInputProps> = ({
           
           {/* Elegant animated highlight line */}
           <motion.div 
-            className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-rose-200 via-rose-400 to-rose-200"
+            className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary/30 via-primary to-primary/30"
             initial="initial"
             animate={isFocused ? "focus" : "blur"}
             variants={highlightAnimation}

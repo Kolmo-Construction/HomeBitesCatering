@@ -443,7 +443,7 @@ const WeddingBasicInfoStep = ({
           type="button"
           variant="outline"
           onClick={onPrevious}
-          className="flex items-center border-rose-200 text-rose-700 hover:bg-rose-50"
+          className="flex items-center"
         >
           <ChevronLeft className="mr-2 h-4 w-4" /> Back
         </Button>
@@ -463,7 +463,7 @@ const WeddingBasicInfoStep = ({
               onNext();
             }
           }}
-          className="flex items-center bg-rose-500 hover:bg-rose-600 text-white"
+          className="flex items-center"
         >
           Next <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
