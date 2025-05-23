@@ -513,8 +513,14 @@ const MenuSelectionStep = ({
                 <div key={categoryKey} className="border-t pt-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">{category.title}</h3>
-                    <div className="text-sm font-medium px-3 py-1 bg-gray-100 rounded-full">
-                      {selectedCount} of {selectionLimit} selected
+                    <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                      selectedCount < selectionLimit 
+                        ? 'bg-red-100 text-red-600' 
+                        : 'bg-green-100 text-green-600'
+                    }`}>
+                      {selectedCount < selectionLimit 
+                        ? `Please select ${selectionLimit - selectedCount} more ${selectionLimit - selectedCount === 1 ? 'item' : 'items'}` 
+                        : `${selectedCount} of ${selectionLimit} selected ✓`}
                     </div>
                   </div>
 

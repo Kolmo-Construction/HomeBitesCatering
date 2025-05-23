@@ -1,0 +1,38 @@
+add a dedicated "Vegan Menu" as a new theme, complete with its own tiers and item selection rules. The goal is to guide users to pick the correct number of dishes based on their chosen tier, warning them if they pick too few and preventing them from picking too many.
+Here’s how we can build this, focusing on the files and the changes in words:
+Define Your New "Vegan Menu" Data
+
+
+File to Modify:/client/src/data/themeMenuInfo.ts
+What to Do:
+Introduce the Vegan Theme: Inside the main themeMenuData object in this file, we'll add a new entry for your vegan menu. Let's call it vegan_feast (or any unique ID you prefer). This entry will be structured just like your other themes (e.g., "Taco Fiesta").
+Define Tiers (Packages): For this vegan_feast theme, you'll define four packages: "Bronze," "Silver," "Gold," and "Diamond."
+For each package, you'll specify:
+id: A simple identifier (e.g., "bronze_vegan").
+name: A display name (e.g., "Bronze Vegan Delight").
+price: The price per person for that tier.
+description: A short explanation of the tier (e.g., "Includes 2 mains, 2 sides, 1 salad").
+limits: This is crucial. It will specify exactly how many items the customer must choose from each food category for that specific tier. For example, for the "Diamond" tier shown in your screenshot, the limit for "Mains" would be 5. You'll also define limits for other categories like "Sides" and "Salads" for each tier.
+List Vegan Dishes (Categories & Items):
+Under vegan_feast, you'll define categories like mains, sides, and salads.
+mains: This category will list all the vegan main dishes you offer. The items in your screenshot (Cabbage rolls, Eggplant Imam Baildi, etc.) are perfect for this. These exact items already exist in your themeMenuInfo.ts file under the custom_menu's vegan_mains section, so you can copy that list.
+sides: You'll list your vegan side dishes here. You can likely copy the items from the custom_menu's vegan_sides section.
+salads: Similarly, list your vegan salads, possibly copying from custom_menu's vegan_salads section.
+Each item (dish) will have an id and a name.
+Enhance the Menu Selection Page for Warnings and Limits
+
+
+File to Modify:/client/src/components/form-steps/MenuSelectionStep.tsx (This is the file you provided as MenuSelectionStep.txt)
+What to Do: This page is where users see the themes and pick their dishes.
+Automatic Theme Display: Once you add "Vegan Menu" to the themeMenuInfo.ts file, it will automatically show up as an option for users to select on this page. The existing code already loops through available themes.
+Enforcing Maximum Choices: The good news is that this page already has logic to stop users from selecting more items than their chosen package allows. When the limit for a category is reached, checkboxes for other items in that category get disabled. This covers your requirement that "customers can not choose more than they are allowed to."
+Adding a "Chosen Less" Warning:
+Currently, the page shows a count like "2 of 3 selected" for each category. We need to make this more of a warning if the count is less than required.
+We will modify the display of this counter. If the number of selected items is less than the number required by the package tier, we will change the text style (e.g., make it red, or add a warning icon and explicit text like "Please select X more items for this category"). This provides an immediate visual cue.
+This warning will appear next to each category as the user makes their selections.
+Ensure Form Data Can Store Selections
+
+
+File to Review:/client/src/types/form-types.ts
+Action: The way your form currently stores menu choices (using selectedPackages to note the tier and menuSelections to list the chosen dishes) should work perfectly for the new Vegan Menu without any changes. The system is flexible enough to handle new themes and their specific categories (like vegan_mains, vegan_sides).
+By making these changes, primarily by defining the new "Vegan Menu" with its tiers and item limits in your data file, and then by enhancing the display logic in the MenuSelectionStep.tsx component, you'll have a fully functional vegan menu theme that guides users correctly.

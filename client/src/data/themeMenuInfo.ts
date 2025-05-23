@@ -43,6 +43,129 @@ export type ThemeMenu = {
 
 // Main theme menu data structure
 export const themeMenuData = {
+  vegan_feast: {
+    title: "Vegan Menu",
+    description: "Plant-based culinary selections for conscious catering",
+    packages: [
+      {
+        id: "bronze_vegan",
+        name: "Bronze Vegan Delight",
+        price: 30.00,
+        description: "Pick 2 Mains, Pick 2 Sides, Pick 1 Salad",
+        limits: {
+          mains: 2,
+          sides: 2,
+          salads: 1
+        }
+      },
+      {
+        id: "silver_vegan",
+        name: "Silver Vegan Collection",
+        price: 38.00,
+        description: "Pick 3 Mains, Pick 3 Sides, Pick 2 Salads",
+        limits: {
+          mains: 3,
+          sides: 3,
+          salads: 2
+        }
+      },
+      {
+        id: "gold_vegan",
+        name: "Gold Vegan Experience",
+        price: 45.00,
+        description: "Pick 4 Mains, Pick 4 Sides, Pick 2 Salads",
+        limits: {
+          mains: 4,
+          sides: 4,
+          salads: 2
+        }
+      },
+      {
+        id: "diamond_vegan",
+        name: "Diamond Vegan Extravaganza",
+        price: 55.00,
+        description: "Pick 5 Mains, Pick 5 Sides, Pick 3 Salads",
+        limits: {
+          mains: 5,
+          sides: 5,
+          salads: 3
+        }
+      }
+    ],
+    categories: {
+      mains: {
+        title: "Plant-Based Mains",
+        description: "Select your vegan main dishes",
+        limits: {
+          "bronze_vegan": 2,
+          "silver_vegan": 3,
+          "gold_vegan": 4,
+          "diamond_vegan": 5
+        },
+        items: [
+          { id: "cabbage_rolls", name: "Cabbage rolls with rice, dried figs, pine nuts and herbs", upcharge: 0 },
+          { id: "eggplant_imam", name: "Eggplant Imam Baildi- Topped with stewed tomato and peppers", upcharge: 0 },
+          { id: "indian_stuffed_peppers", name: "Indian style stuffed Peppers with curried chickpeas", upcharge: 0 },
+          { id: "eggplant_napolean", name: "Eggplant Napolean with roasted red peppers", upcharge: 0 },
+          { id: "artichoke_polita", name: "Artichoke Ala Polita with lemon tahini sauce", upcharge: 0 },
+          { id: "stuffed_portabella", name: "Stuffed Portabella Mushroom with stewed lentils", upcharge: 0 },
+          { id: "wild_rice_squash", name: "Wild Rice Stuffed Acorn Squash", upcharge: 0 },
+          { id: "tofu_vindaloo", name: "Tofu Vindaloo", upcharge: 0 },
+          { id: "greek_stuffed_peppers", name: "Greek style stuffed Peppers with jasmine rice", upcharge: 0 },
+          { id: "vegan_moussaka", name: "Vegan Moussaka with stewed lentils and cauliflower", upcharge: 0 },
+          { id: "stuffed_poblano", name: "Stuffed Poblano peppers with rice and beans", upcharge: 0 }
+        ]
+      },
+      sides: {
+        title: "Plant-Based Sides",
+        description: "Select your vegan side dishes",
+        limits: {
+          "bronze_vegan": 2,
+          "silver_vegan": 3,
+          "gold_vegan": 4,
+          "diamond_vegan": 5
+        },
+        items: [
+          { id: "lemon_potatoes", name: "Lemon Potatoes", upcharge: 0 },
+          { id: "green_beans_almondine", name: "Green Beans Almondine", upcharge: 0 },
+          { id: "fasolakia", name: "Fasolakia", upcharge: 0 },
+          { id: "gigante_beans", name: "Gigante Beans", upcharge: 0 },
+          { id: "vegan_dolmades", name: "Dolmades with bulgur and dried figs", upcharge: 0 },
+          { id: "cannellini_caponata", name: "Cannellini Beans with caponata", upcharge: 0 },
+          { id: "roasted_brussel_sprouts", name: "Roasted Brussel Sprouts with balsamic", upcharge: 0 },
+          { id: "moroccan_cauliflower", name: "Moroccan-style roasted Cauliflower", upcharge: 0 },
+          { id: "tuscan_carrots", name: "Tuscan carrots", upcharge: 0 },
+          { id: "moroccan_wild_rice", name: "Moroccan wild rice", upcharge: 0 },
+          { id: "cilantro_lime_rice", name: "Cilantro-Lime rice", upcharge: 0 },
+          { id: "greek_rice_pilaf", name: "Greek rice pilaf", upcharge: 0 },
+          { id: "southwest_spring_rolls", name: "Southwest style Spring Rolls", upcharge: 0 },
+          { id: "crispy_falafel", name: "Crispy Falafel", upcharge: 0 }
+        ]
+      },
+      salads: {
+        title: "Plant-Based Salads",
+        description: "Select your vegan salads",
+        limits: {
+          "bronze_vegan": 1,
+          "silver_vegan": 2,
+          "gold_vegan": 2,
+          "diamond_vegan": 3
+        },
+        items: [
+          { id: "panzanella", name: "Panzanella Bread Salad", upcharge: 0 },
+          { id: "sicilian_fennel", name: "Sicilian Fennel Salad", upcharge: 0 },
+          { id: "bowtie_pasta", name: "Bowtie Pasta Salad", upcharge: 0 },
+          { id: "tuscan_orzo", name: "Tuscan Orzo Pesto Salad", upcharge: 0 },
+          { id: "garden_salad", name: "Garden Salad", upcharge: 0 },
+          { id: "greek_village", name: "Greek Village Salad", upcharge: 0 },
+          { id: "asian_slaw", name: "Asian Slaw with Mandarin Oranges", upcharge: 0 },
+          { id: "cucumber_mint", name: "Cucumber Mint Salad", upcharge: 0 },
+          { id: "kale_quinoa", name: "Kale and Quinoa Salad", upcharge: 0 },
+          { id: "southwest_bean", name: "Southwest Bean Salad", upcharge: 0 }
+        ]
+      }
+    }
+  },
   taste_of_italy: {
     title: "A Taste of Italy",
     description: "Traditional Italian cuisine with rich flavors",
