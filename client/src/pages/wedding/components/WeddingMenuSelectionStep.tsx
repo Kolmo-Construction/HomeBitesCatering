@@ -359,8 +359,8 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
                                       ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-pink-300'}`}
                           onClick={() => !isDisabled && handleItemSelection(categoryKey, item.id, !isChecked)}
                         >
-                          <Checkbox id={`${categoryKey}-${item.id}-${pkg.id}`} checked={isChecked} disabled={isDisabled} className="mr-3"/>
-                          <Label htmlFor={`${categoryKey}-${item.id}-${pkg.id}`} className={`flex-grow ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
+                          <Checkbox id={`${categoryKey}-${item.id}-${currentThemePackageId}`} checked={isChecked} disabled={isDisabled} className="mr-3"/>
+                            <Label htmlFor={`${categoryKey}-${item.id}-${currentThemePackageId}`} className={`flex-grow ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
                             {item.name}
                             {item.upcharge && item.upcharge > 0 && (
                               <span className="text-xs text-amber-600 ml-1">(+${item.upcharge.toFixed(2)}/person)</span>

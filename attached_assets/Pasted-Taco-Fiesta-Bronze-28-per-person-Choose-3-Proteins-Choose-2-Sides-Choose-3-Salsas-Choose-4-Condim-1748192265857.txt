@@ -1,0 +1,316 @@
+Taco Fiesta
+Bronze - $28 per person
+Choose 3 Proteins
+Choose 2 Sides
+Choose 3 Salsas
+Choose 4 Condiments
+Bronze package not available for a guest count lower than 50
+Silver - $34 per person
+Choose 4 Proteins
+Choose 3 Sides
+Choose 4 Salsas
+Choose 6 Condiments
+Gold - $40 per person
+Choose 4 Proteins
+Choose 4 Sides
+Choose 4 Salsas
+Choose 6 Condiments 
+Diamond - $46 per person
+Choose 5 Proteins
+Choose 5 Sides
+Choose 5 Salsas
+Choose 8 Condiments 
+Protein Options include (specific availability may vary by tier):
+Barbacoa
+Flank steak Fajitas (upcharge of $2.00 pp)
+Ground Beef
+Pork Carnitas
+Pork Belly
+Chorizo
+Beef Birria
+Mexican Chicken
+Cod
+Shrimp
+Tofu
+Roasted Vegetables
+Escabeche - House-made picked vegetable medley
+Side Options include (specific availability may vary by tier):
+Refried Beans
+Mexican Street corn (Elotes)
+Queso Dip
+Chorizo Queso Dip
+Stuffed Poblano peppers
+Mexican Rice
+Cilantro Lime Rice
+Rice and Beans
+Jalapeno cornbread
+Grilled Vegetables
+Mexican Slaw with Mango
+Vegetarian Empanadas
+Salsa Options include (specific availability may vary by tier):
+Classic Pico de Gallo
+Fresh Mango Salsa
+Pineapple Habanero Salsa
+Cucumber & Apple Salsa
+Jicama and Papaya Salsa
+Salsa Roja (red sauce)
+Salsa Verde (green sauce)
+Creamy Salsa Verde (green sauce)
+Salsa Macha -(contains peanuts and sesame seeds)
+Condiment Options include (specific availability may vary by tier):
+Shredded cheese
+Shredded vegan cheese
+Diced Onions
+Lime wedges
+Jalapeños
+Sour Cream
+Diced bell peppers
+Guacamole
+Fire roasted bell peppers
+Sliced radish
+Cilantro
+Pickled cabbage
+Escabeche - House-made picked vegetable medley
+
+
+
+
+
+
+Okay, here are the details for the American BBQ package from the provided file:
+American BBQ
+Bronze - $32 per person
+Pick 3 Proteins
+Pick 2 Sides
+Pick 2 Salads
+Pick 3 Condiments
+Pick 2 Sauces
+Bronze package not available for a guest count lower than 50
+Silver - $38 per person
+Pick 4 Proteins
+Pick 3 Sides 
+Pick 2 Salads
+Pick 3 Condiments
+Pick 2 Sauces
+Gold - $46 per person
+Pick 4 Proteins
+Pick 4 Sides
+Pick 3 Salads
+Pick 4 Condiments
+Pick 3 Sauces
+Diamond - $54 per person
+Pick 5 Proteins
+Pick 5 Sides
+Pick 3 Salads
+Pick 5 Condiments 
+Pick 4 Sauces
+Protein Options include (specific availability may vary by tier):
+Prime Rib - Boneless -Carving station (upcharge of $4.00 pp)
+Smoked Brisket (upcharge $2.00 pp or $3.00 pp depending on the tier)
+Beef Ribs (upcharge $3.00 pp or $4.00 pp depending on the tier)
+Guinness Braised Boneless Short Ribs (upcharge $2.00 pp)
+Bacon Wrapped Fillet Mignon - (upcharge of $4.00 pp)
+Flank Steak with Chimichurri
+Sausage Medley
+Hamburger Bar (upcharge of $1.50 pp or $2.50 pp depending on the tier) - (includes full condiment bar for some tiers)
+Lamb Chops (upcharge of $3.00 pp or $4.00 pp depending on the tier)
+Smoked Leg of Lamb (Family Style only)
+Pulled Pork
+Smoked pork Belly
+Baby Back Ribs
+Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze
+BBQ Guinness Chicken (upcharge of $1.00 pp for some tiers)
+Carolina BBQ Chicken
+Rotisserie Chicken
+BBQ Prawns (upcharge of $1.00 pp) / BBQ Black Tiger Prawns (upcharge of $2.00 pp for some tiers)
+Salmon steak
+Tofu
+Vegetable kebabs
+Grilled Cauliflower Steaks
+Side Options include (specific availability may vary by tier):
+Ham hock baked Beans
+Avocado deviled Eggs
+Mac n' Cheese
+Stuffed Poblano peppers
+Baked Potato Bar (upcharge $1.50 pp)
+Garlic Mashed Potatoes
+Mini Smashed Potatoes
+Twice Baked Potatoes (upcharge $0.50 pp or $0.75 pp depending on the tier)
+Corn on the Cob
+Creamed Corn
+Jalapeño Poppers
+Roasted Brussels Sprouts
+Corn Bread
+Jalapeno cornbread
+Grilled Vegetables
+Grilled Asparagus
+Salad Options include (specific availability may vary by tier):
+Caesar
+Coleslaw
+Garden Salad
+Pasta Salad
+Bacon Jalapeño Corn Salad
+Wedge Salad
+German cucumber salad
+Crunchy Asian Slaw
+Tossed Cobb Salad
+Classic Potato Salad
+German Potato Salad
+Macaroni Salad
+Hawaiian Macaroni Salad
+Fruit Salad
+Sauce Options include (specific availability may vary by tier):
+Kansas City BBQ Sauce
+South Carolina Gold BBQ Sauce
+North Carolina Vinegar based BBQ Sauce
+Alabama White BBQ Sauce
+Texas BBQ Sauce
+Very Berry BBQ Sauce
+Smoky bourbon BBQ Sauce
+Condiment Options include (specific availability may vary by tier):
+Ketchup
+Stone Ground Mustard
+Dijon Mustard
+Yellow Mustard
+Mayonnaise
+Sweet pickle Chips
+Dill pickle Chips
+Sliced radish
+Sweet Relish
+Cranberry Relish
+Kimchi
+Mixed Pickled Vegetables - Giardiniera
+—----
+
+
+A taste of Greece
+Bronze - from $32 per person
+Pick 3 Mains
+Pick 3 Sides
+Pick 2 Salads
+Includes pita bread
+Bronze package not available for a guest count lower than 50
+Silver - from $38 per person
+Pick 4 Mains
+Pick 3 Sides
+Pick 2 Salads
+Includes pita bread
+Gold - from $46 per person
+Pick 4 Mains
+Pick 4 Sides
+Pick 2 Salads
+Includes spreads selection and pita bread
+Diamond - from $59 per person
+Pick 5 Mains
+Pick 4 Sides
+Pick 3 Salads
+Includes spreads selection, meze platter, and pita bread
+Main Options include (specific availability may vary by tier):
+Papoutsakia -Classic moussaka in individual hollowed eggplant shells with seasoned ground beef and topped with creamy bechamel
+Soutzoukakia -Plump oblong-shaped meatballs are packed with﻿ loads of aromatics and fresh herbs, smothered in a cinnamon wine-enhanced tomato sauce.
+Kokinisto - Boneless short rib slowly cooked in cinnamon-scente﻿d tomato sauce.
+Kleftiko - (Family style only - upcharge of $5.00 pp)- Boldly seasoned lamb roast that cooks with new potatoes, celery, and carrots, low and slow for 6 hours, in a parchment paper pouch.
+Pastitsio Classic baked pasta dish with cinnamon-scented ground meat and creamy béchamel sauce.
+Kotopoulo lemonato Aromatic and lemony baked chicken with fresh herbs.
+Paidakia ( upcharge of $ 4.00 per person ) These Greek lamb chops are marinated in a mix of olive oil, lemon juice, garlic and oregano and grilled to perfection
+Kotsi Arni - Slowly roasted lamb shank with tomato, herbs and robust spices such as cinnamon and clove.
+Bifteki Gemisto - Aromatic oven-baked minced beef “burgers”, stuffed with cheese and topped with tomato relish.
+Psari Plaki Oven-baked fish fillet topped with fresh tomato slices, o﻿nion, and fresh herbs
+Brizola Solomou Grilled salmon steaks with fresh herbs, lemon, and evoo.
+Bakaliaros Plaki - Oven-baked Cod fish fillet topped with fresh tomato slices, onion, and fresh herbs
+Aginares -Ala Polita - Vegan option - Artichoke hearts braised with potatoes and carrots and finished with a creamy egg-lemon sauce and fresh dill.
+Gemista - Vegan Oven-baked stuffed tomatoes and peppers with rice, and fresh﻿ herbs
+Side Options include (specific availability may vary by tier):
+Lemon Potatoes - Roasted russet potatoes cooked with oregano garlic, evoo and fresh lemon juice
+Spanakopita - House made phyllo dough pouches stuffed with spinach, greens, herbs, and feta cheese
+Kritharaki- Orzo pasta baked in the oven. A pasta side dish choice with﻿ any main
+Fasolakia - Green beans simmered with tomato and fresh herbs
+Gigandes Plaki - Oven baked lima beans ﻿in a herbaceous tomato sauce
+Tyrokroketes -A blend of three Greek cheeses rolled into delightful tangy balls and coated with sesame seeds
+Octapodi -Spanish octopus slowly braised and served simply with lemon juice, EVOO, and fresh oregano. ($7.00pp upcharge for Gold tier)
+Dolmades Grape leaves stuffed with rice and fresh herbs
+Saganaki Cheese - Cheese is deep fried to make a crispy outside, with a﻿ melty gooey inside. Flambeed tableside! (Family style only- upcharge $2.00 pp)
+Greek Rice Pilaf- Long grain rice, with mixed diced vegetables, scented with lemon zest and fresh herbs.
+Baked Vegetables- Briam - Thinly sliced vegetable medley, seasoned and baked till lightly charred.
+Salad Options include (specific availability may vary by tier):
+Salata Horiatiki - A mix of tomatoes, cucumber, onion, green pepper, feta, and olives, dressed with oil and vinegar
+Lahanosalata (Greek Coleslaw) -Green﻿ and red shredded cabbage, grated carrots, olive oil and lemon juice
+Maroulosalata (Greek Romaine Salad) Shredded romaine lettuce, scallions, a mixed herbs, olive oil, lemon, juice
+Patatosalata -Warm p﻿otato salad with sliced red onions, Kalamata olives, parsley and extra virgin olive oil
+Dakos Bread Salad- Fresh tomatoes, barley rusks, feta, capers, onion, oregano, and basil.
+Garden Salad - Mixed greens, c﻿herry tomatoes, cucumber, red onion and mushrooms with choice of dressing
+Tabouli - Chopped pa﻿rsley, cous-cous, tomato, cucumber, mint , red onion and lemon-tahini dressing
+Spreads Options (included in Gold and Diamond tiers):
+Tzatziki - Yogurt, garlic, cucumber, herbs
+Hummus - Chickpea, tahini, lemon
+Melitzanosalata - Eggplant, garlic, tahini, cilantro
+Spicy Feta - Feta cheese puree with spicy peppers
+Taramasalata - Cod roe, potato, extra virgin olive oil
+Beet Hummus - Roasted beets, chickpea, garlic, tahini, evoo
+—-----
+
+Kebab Party
+Bronze - $35 per person
+Pick 3 Proteins
+Pick 3 Sides
+Pick 2 Salads
+Bronze package not available for a guest count lower than 50
+Silver - $39 per person
+Pick 4 Proteins ("mains" in the package description)
+Pick 3 Sides (The HTML says 4 sides, but the "Kebab Party - Silver - Side choice - Pick 3" section implies 3. I'm going by the section title)
+Pick 2 Salads
+Gold - $49 per person
+Pick 4 Proteins ("mains" in the package description)
+Pick 4 Sides
+Pick 3 Salads (The HTML says 2 salads, but the "Kebab Party - Gold - Salad choice - Pick 2" section implies 2. The package description indicates 3. I'm going by the package description)
+Includes spreads
+Diamond - $63 per person
+Pick 5 Proteins
+Pick 5 Sides (The HTML says 4 sides, but the "Kebab Party - Diamond - Side choice - Pick 5" section implies 5. I'm going by the section title)
+Pick 3 Salads
+Includes spreads
+Includes meze grazing board
+Protein Options include (specific availability may vary by tier):
+Pork Tenderloin
+Chicken
+Beef Tenderloin
+Beef Flank
+Lamb ($1.50 pp upcharge for some tiers)
+Swordfish
+Shrimp
+Bacon wrapped Asparagus
+Tofu
+Mushrooms
+Tomato & Gnocchi- with pesto
+Mixed Vegetables
+Side Options include (specific availability may vary by tier):
+Falafel
+Spanakopita
+Dolmades
+Yellow Rice Pilaf
+Wild Rice and Mushroom Pilaf
+Patatas Bravas
+Potato Croquettes
+Roasted beets
+Roasted Brussel Sprouts
+Moroccan-style roasted Cauliflower
+Roasted carrots
+Grilled Vegetables
+Salad Options include (specific availability may vary by tier):
+Tabouli
+Fattoush
+Cous-cous
+Lebanese Potato Salad
+Greek Village Salad
+Tomato - Cucumber salad
+Caprese pasta salad
+Caesar
+Garden Salad
+Spreads Options (served with pita bread, crudité and breadsticks - included in Gold and Diamond tiers - Pick 3):
+Tzatziki
+Hummus
+Baba Ghanoush
+Spicy Feta
+Taramasalata
+Muhammara
+Lebanese garlic dip

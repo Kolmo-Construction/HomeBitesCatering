@@ -50,7 +50,7 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
       {
         id: "italy_wedding_bronze", // Renamed and repriced
         name: "Bronze Celebration Package",
-        price: 65.00, // Adjusted price for the new tiering
+        price: 32.00, // Adjusted price for the new tiering
         description: "An elegant introduction: Select 2 Mains, 3 Sides, 1 Pasta, and 1 Salad. Includes artisanal bread service.",
         minGuestCount: 50,
         limits: { mains: 2, sides: 3, pasta: 1, salads: 1 },
@@ -58,7 +58,7 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
       {
         id: "italy_wedding_silver", // This is now based on the original "Silver" limits
         name: "Silver Celebration Package",
-        price: 80.00, // Intermediate price
+        price: 38.00, // Intermediate price
         description: "A delightful selection: Select 3 Mains, 3 Sides, 2 Pastas, and 2 Salads. Includes artisanal bread service and a choice of infused olive oils.",
         minGuestCount: 50,
         limits: { mains: 3, sides: 3, pasta: 2, salads: 2 },
@@ -66,7 +66,7 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
       {
         id: "italy_wedding_gold",
         name: "Gold Celebration Package",
-        price: 95.00, // Kept original price, now clearly the third tier
+        price: 46.00, // Kept original price, now clearly the third tier
         description: "A luxurious experience: Select 3 Mains, 4 Sides, 2 Pastas, and 2 Salads. Includes premium bread service and a complimentary signature appetizer selection.",
         minGuestCount: 50,
         limits: { mains: 3, sides: 4, pasta: 2, salads: 2 },
@@ -74,7 +74,7 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
       {
         id: "italy_wedding_diamond", // New top tier
         name: "Diamond Celebration Package",
-        price: 115.00,
+        price: 58.00,
         description: "The ultimate Italian feast: Select 4 Mains, 5 Sides, 2 Premium Pastas, and 3 Salads. Includes deluxe bread service, complimentary signature appetizers, and dedicated table-side olive oil tasting.",
         minGuestCount: 50,
         limits: { mains: 4, sides: 5, pasta: 2, salads: 3 }, // Pasta limit kept at 2 for balance
@@ -217,32 +217,33 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
     description: "A vibrant and festive Mexican-inspired menu, perfect for a lively wedding celebration.",
     packages: [
       {
-        id: "tfw_fiesta",
-        name: "Fiesta Package",
+        id: "tfw_bronze",
+        name: "Bronze Package",
+        price: 28.00,
+        description: "A delightful taco bar experience: 3 Proteins, 2 Sides, 3 Salsas, 4 Condiments.",
+        minGuestCount: 50,
+        limits: { proteins: 3, sides: 2, salsas: 3, condiments: 4 }
+      },
+      {
+        id: "tfw_silver",
+        name: "Silver Package",
         price: 34.00,
-        description: "A delightful taco bar experience: 2 Proteins, 2 Sides, 2 Salsas, 3 Condiments.",
-        limits: { proteins: 2, sides: 2, salsas: 2, condiments: 3 }
+        description: "An enhanced celebration: 4 Proteins, 3 Sides, 4 Salsas, 6 Condiments.",
+        limits: { proteins: 4, sides: 3, salsas: 4, condiments: 6 }
       },
       {
-        id: "tfw_celebracion",
-        name: "Celebración Package",
-        price: 39.00,
-        description: "An enhanced celebration: 3 Proteins, 3 Sides, 3 Salsas, 5 Condiments.",
-        limits: { proteins: 3, sides: 3, salsas: 3, condiments: 5 }
+        id: "tfw_gold",
+        name: "Gold Package",
+        price: 40.00,
+        description: "The grand taco experience: 4 Proteins, 4 Sides, 4 Salsas, 6 Condiments.",
+        limits: { proteins: 4, sides: 4, salsas: 4, condiments: 6 }
       },
       {
-        id: "tfw_gran_fiesta",
-        name: "Gran Fiesta Package",
-        price: 47.00,
-        description: "The grand taco experience: 4 Proteins, 4 Sides, 4 Salsas, 8 Condiments.",
-        limits: { proteins: 4, sides: 4, salsas: 4, condiments: 8 }
-      },
-      {
-        id: "tfw_ultimate_fiesta",
-        name: "Ultimate Fiesta Package",
-        price: 58.00,
-        description: "The ultimate taco indulgence: 5 Proteins, 5 Sides, 5 Salsas, 10 Condiments, plus a signature agua fresca station.",
-        limits: { proteins: 5, sides: 5, salsas: 5, condiments: 10 }
+        id: "tfw_diamond",
+        name: "Diamond Package",
+        price: 46.00,
+        description: "The ultimate taco indulgence: 5 Proteins, 5 Sides, 5 Salsas, 8 Condiments.",
+        limits: { proteins: 5, sides: 5, salsas: 5, condiments: 8 }
       }
     ],
     categories: {
@@ -250,66 +251,71 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
         title: "Gourmet Proteins",
         description: "Choose your succulent protein options.",
         items: [
-          { id: "tfw_barbacoa", name: "Slow-Cooked Barbacoa Beef", upcharge: 0 },
-          { id: "tfw_flank_steak_fajitas", name: "Sizzling Flank Steak Fajitas", upcharge: 2.00 },
-          { id: "tfw_ground_beef", name: "Seasoned Ground Beef Picadillo", upcharge: 0 },
-          { id: "tfw_pork_carnitas", name: "Crispy Pork Carnitas", upcharge: 0 },
-          { id: "tfw_chorizo", name: "Spicy Chorizo Crumbles", upcharge: 0 },
-          { id: "tfw_beef_birria", name: "Rich Beef Birria with Consommé", upcharge: 1.00 },
-          { id: "tfw_chicken_tinga", name: "Chipotle Chicken Tinga", upcharge: 0 },
-          { id: "tfw_grilled_fish", name: "Grilled Mahi-Mahi with lime", upcharge: 1.50 },
-          { id: "tfw_sauteed_shrimp", name: "Garlic-Lime Sautéed Shrimp", upcharge: 2.00 },
-          { id: "tfw_spiced_tofu", name: "Adobo Spiced Tofu Crumbles (Vegan)", upcharge: 0 },
-          { id: "tfw_roasted_fajita_veg", name: "Colorful Roasted Fajita Vegetables (Vegan)", upcharge: 0 }
+          { id: "tfw_barbacoa", name: "Barbacoa", upcharge: 0 },
+          { id: "tfw_flank_steak_fajitas", name: "Flank steak Fajitas", upcharge: 2.00 },
+          { id: "tfw_ground_beef", name: "Ground Beef", upcharge: 0 },
+          { id: "tfw_pork_carnitas", name: "Pork Carnitas", upcharge: 0 },
+          { id: "tfw_pork_belly", name: "Pork Belly", upcharge: 0 },
+          { id: "tfw_chorizo", name: "Chorizo", upcharge: 0 },
+          { id: "tfw_beef_birria", name: "Beef Birria", upcharge: 0 },
+          { id: "tfw_mexican_chicken", name: "Mexican Chicken", upcharge: 0 },
+          { id: "tfw_cod", name: "Cod", upcharge: 0 },
+          { id: "tfw_shrimp", name: "Shrimp", upcharge: 0 },
+          { id: "tfw_tofu", name: "Tofu", upcharge: 0 },
+          { id: "tfw_roasted_vegetables", name: "Roasted Vegetables", upcharge: 0 },
+          { id: "tfw_escabeche", name: "Escabeche - House-made picked vegetable medley", upcharge: 0 }
         ]
       },
       sides: {
         title: "Flavorful Sides",
         description: "Select your delectable side dishes.",
         items: [
-          { id: "tfw_refried_beans", name: "Creamy Refried Pinto Beans with cotija", upcharge: 0 },
-          { id: "tfw_elotes", name: "Mexican Street Corn (Elotes) off the cob", upcharge: 0 },
-          { id: "tfw_queso_dip", name: "Warm Queso Dip with roasted peppers", upcharge: 0 },
-          { id: "tfw_chorizo_queso_dip", name: "Chorizo y Queso Fundido", upcharge: 1.00 },
-          { id: "tfw_stuffed_poblano", name: "Cheese-Stuffed Poblano Peppers with salsa roja", upcharge: 0 },
-          { id: "tfw_mexican_rice", name: "Traditional Mexican Red Rice", upcharge: 0 },
-          { id: "tfw_cilantro_lime_rice", name: "Cilantro Lime Rice with toasted pepitas", upcharge: 0 },
-          { id: "tfw_black_beans_rice", name: "Cuban-Style Black Beans and Rice", upcharge: 0 },
-          { id: "tfw_jalapeno_cornbread", name: "Sweet & Spicy Jalapeño Cornbread Muffins", upcharge: 0 },
-          { id: "tfw_grilled_veg_medley", name: "Grilled Vegetable Medley with balsamic glaze", upcharge: 0 },
-          { id: "tfw_mango_jicama_slaw", name: "Mango, Jicama & Cabbage Slaw with lime dressing", upcharge: 0 },
-          { id: "tfw_veg_empanadas", name: "Mini Vegetarian Empanadas with chimichurri", upcharge: 0 }
+          { id: "tfw_refried_beans", name: "Refried Beans", upcharge: 0 },
+          { id: "tfw_elotes", name: "Mexican Street corn (Elotes)", upcharge: 0 },
+          { id: "tfw_queso_dip", name: "Queso Dip", upcharge: 0 },
+          { id: "tfw_chorizo_queso_dip", name: "Chorizo Queso Dip", upcharge: 0 },
+          { id: "tfw_stuffed_poblano", name: "Stuffed Poblano peppers", upcharge: 0 },
+          { id: "tfw_mexican_rice", name: "Mexican Rice", upcharge: 0 },
+          { id: "tfw_cilantro_lime_rice", name: "Cilantro Lime Rice", upcharge: 0 },
+          { id: "tfw_rice_and_beans", name: "Rice and Beans", upcharge: 0 },
+          { id: "tfw_jalapeno_cornbread", name: "Jalapeno cornbread", upcharge: 0 },
+          { id: "tfw_grilled_vegetables", name: "Grilled Vegetables", upcharge: 0 },
+          { id: "tfw_mexican_slaw", name: "Mexican Slaw with Mango", upcharge: 0 },
+          { id: "tfw_veg_empanadas", name: "Vegetarian Empanadas", upcharge: 0 }
         ]
       },
       salsas: {
         title: "Artisanal Salsas",
         description: "Choose from our freshly made salsas.",
         items: [
-          { id: "tfw_pico_de_gallo", name: "Classic Pico de Gallo (Fresh & Chunky)", upcharge: 0 },
-          { id: "tfw_mango_hab_salsa", name: "Sweet & Spicy Mango-Habanero Salsa", upcharge: 0 },
-          { id: "tfw_roasted_corn_salsa", name: "Roasted Corn & Black Bean Salsa", upcharge: 0 },
-          { id: "tfw_salsa_roja", name: "Smoky Salsa Roja (Roasted Tomato & Chile)", upcharge: 0 },
-          { id: "tfw_salsa_verde", name: "Tangy Salsa Verde (Tomatillo & Cilantro)", upcharge: 0 },
-          { id: "tfw_avocado_crema", name: "Cool Avocado Crema", upcharge: 0 },
-          { id: "tfw_chipotle_salsa", name: "Creamy Chipotle Salsa", upcharge: 0 }
+          { id: "tfw_pico_de_gallo", name: "Classic Pico de Gallo", upcharge: 0 },
+          { id: "tfw_fresh_mango_salsa", name: "Fresh Mango Salsa", upcharge: 0 },
+          { id: "tfw_pineapple_habanero", name: "Pineapple Habanero Salsa", upcharge: 0 },
+          { id: "tfw_cucumber_apple", name: "Cucumber & Apple Salsa", upcharge: 0 },
+          { id: "tfw_jicama_papaya", name: "Jicama and Papaya Salsa", upcharge: 0 },
+          { id: "tfw_salsa_roja", name: "Salsa Roja (red sauce)", upcharge: 0 },
+          { id: "tfw_salsa_verde", name: "Salsa Verde (green sauce)", upcharge: 0 },
+          { id: "tfw_creamy_salsa_verde", name: "Creamy Salsa Verde (green sauce)", upcharge: 0 },
+          { id: "tfw_salsa_macha", name: "Salsa Macha (contains peanuts and sesame seeds)", upcharge: 0 }
         ]
       },
       condiments: {
         title: "Fresh Condiments & Toppings",
         description: "Complete your tacos with these essential toppings.",
         items: [
-          { id: "tfw_shredded_cheese_blend", name: "Mexican Shredded Cheese Blend", upcharge: 0 },
-          { id: "tfw_vegan_cheese", name: "Shredded Vegan Cheddar Alternative", upcharge: 0 },
-          { id: "tfw_diced_onions_cilantro", name: "Diced White Onions & Fresh Cilantro Mix", upcharge: 0 },
-          { id: "tfw_lime_wedges", name: "Fresh Lime Wedges", upcharge: 0 },
-          { id: "tfw_pickled_jalapenos", name: "Pickled Jalapeño Slices", upcharge: 0 },
-          { id: "tfw_sour_cream", name: "Cool Sour Cream (or Vegan Alternative)", upcharge: 0 },
-          { id: "tfw_fresh_guacamole", name: "Signature Fresh Guacamole", upcharge: 1.00 },
-          { id: "tfw_roasted_peppers_onions", name: "Fire-Roasted Bell Peppers & Onions", upcharge: 0 },
-          { id: "tfw_sliced_radish", name: "Crisp Sliced Radishes", upcharge: 0 },
-          { id: "tfw_cotija_cheese", name: "Crumbled Cotija Cheese", upcharge: 0 },
-          { id: "tfw_pickled_red_onions", name: "Tangy Pickled Red Onions", upcharge: 0 },
-          { id: "tfw_lettuce_shredded", name: "Shredded Crisp Lettuce", upcharge: 0 }
+          { id: "tfw_shredded_cheese", name: "Shredded cheese", upcharge: 0 },
+          { id: "tfw_vegan_cheese", name: "Shredded vegan cheese", upcharge: 0 },
+          { id: "tfw_diced_onions", name: "Diced Onions", upcharge: 0 },
+          { id: "tfw_lime_wedges", name: "Lime wedges", upcharge: 0 },
+          { id: "tfw_jalapenos", name: "Jalapeños", upcharge: 0 },
+          { id: "tfw_sour_cream", name: "Sour Cream", upcharge: 0 },
+          { id: "tfw_diced_bell_peppers", name: "Diced bell peppers", upcharge: 0 },
+          { id: "tfw_guacamole", name: "Guacamole", upcharge: 0 },
+          { id: "tfw_fire_roasted_peppers", name: "Fire roasted bell peppers", upcharge: 0 },
+          { id: "tfw_sliced_radish", name: "Sliced radish", upcharge: 0 },
+          { id: "tfw_cilantro", name: "Cilantro", upcharge: 0 },
+          { id: "tfw_pickled_cabbage", name: "Pickled cabbage", upcharge: 0 },
+          { id: "tfw_escabeche_condiment", name: "Escabeche - House-made picked vegetable medley", upcharge: 0 }
         ]
       }
     }
