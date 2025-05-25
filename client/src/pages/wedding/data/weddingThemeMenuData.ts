@@ -322,109 +322,122 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
   },
 
   american_bbq_wedding: {
-    title: "All-American BBQ Reception",
+    title: "American BBQ",
     description: "A classic American BBQ feast, perfect for a relaxed and joyful wedding reception.",
     packages: [
       {
-        id: "abw_backyard",
-        name: "Backyard Bliss Package",
+        id: "abw_bronze",
+        name: "Bronze Package",
         price: 32.00,
-        description: "A hearty start: 3 Mains, 2 Sides, 2 Salads, 3 Sauces, 2 Condiments.",
-        limits: { mains: 3, sides: 2, salads: 2, sauces: 3, condiments: 2 }
+        description: "Pick 3 Proteins, Pick 2 Sides, Pick 2 Salads, Pick 3 Condiments, Pick 2 Sauces.",
+        minGuestCount: 50,
+        limits: { proteins: 3, sides: 2, salads: 2, condiments: 3, sauces: 2 }
       },
       {
-        id: "abw_pitmaster",
-        name: "Pitmaster's Choice Package",
-        price: 39.00,
-        description: "More smoky goodness: 4 Mains, 3 Sides, 2 Salads, 3 Sauces, 2 Condiments.",
-        limits: { mains: 4, sides: 3, salads: 2, sauces: 3, condiments: 2 }
+        id: "abw_silver",
+        name: "Silver Package",
+        price: 38.00,
+        description: "Pick 4 Proteins, Pick 3 Sides, Pick 2 Salads, Pick 3 Condiments, Pick 2 Sauces.",
+        limits: { proteins: 4, sides: 3, salads: 2, condiments: 3, sauces: 2 }
       },
       {
-        id: "abw_smokehouse",
-        name: "Smokehouse Supreme Package",
-        price: 48.00,
-        description: "The ultimate BBQ spread: 4 Mains, 4 Sides, 3 Salads, 4 Sauces, 3 Condiments.",
-        limits: { mains: 4, sides: 4, salads: 3, sauces: 4, condiments: 3 }
+        id: "abw_gold",
+        name: "Gold Package",
+        price: 46.00,
+        description: "Pick 4 Proteins, Pick 4 Sides, Pick 3 Salads, Pick 4 Condiments, Pick 3 Sauces.",
+        limits: { proteins: 4, sides: 4, salads: 3, condiments: 4, sauces: 3 }
       },
       {
-        id: "abw_grand_bbq",
-        name: "Grand BBQ Union Package",
-        price: 55.00,
-        description: "A lavish feast for your union: 5 Mains, 5 Sides, 3 Salads, 4 Sauces, 4 Condiments, plus a lemonade & iced tea station.",
-        limits: { mains: 5, sides: 5, salads: 3, sauces: 4, condiments: 4 }
+        id: "abw_diamond",
+        name: "Diamond Package",
+        price: 54.00,
+        description: "Pick 5 Proteins, Pick 5 Sides, Pick 3 Salads, Pick 5 Condiments, Pick 4 Sauces.",
+        limits: { proteins: 5, sides: 5, salads: 3, condiments: 5, sauces: 4 }
       }
     ],
     categories: {
-      mains: {
-        title: "Smoky & Savory Mains",
-        description: "Choose your heartiest BBQ main courses.",
+      proteins: {
+        title: "Protein Options",
+        description: "Choose your hearty BBQ proteins.",
         items: [
-          { id: "abw_smoked_brisket", name: "12-Hour Smoked Texas Brisket", upcharge: 3.00 },
-          { id: "abw_beef_ribs", name: "Slow-Smoked Beef Ribs", upcharge: 4.00 },
-          { id: "abw_flank_steak_chimichurri", name: "Grilled Flank Steak with Zesty Chimichurri", upcharge: 0 },
-          { id: "abw_sausage_medley", name: "Artisanal Sausage Medley (e.g., Andouille, Bratwurst)", upcharge: 0 },
-          { id: "abw_gourmet_burger_bar", name: "Gourmet Slider Bar (Beef, Chicken, Veggie)", upcharge: 2.50 },
-          { id: "abw_herb_lamb_chops", name: "Grilled Herb Lamb Chops", upcharge: 4.00 },
-          { id: "abw_pulled_pork", name: "Carolina-Style Pulled Pork", upcharge: 0 },
-          { id: "abw_smoked_pork_belly_bites", name: "Smoked Pork Belly Burnt Ends", upcharge: 1.00 },
-          { id: "abw_st_louis_ribs", name: "St. Louis Style Baby Back Ribs", upcharge: 0 },
-          { id: "abw_bbq_glazed_chicken", name: "Signature BBQ Glazed Chicken Quarters", upcharge: 0 },
-          { id: "abw_rotisserie_herb_chicken", name: "Herb Rotisserie Chicken", upcharge: 0 },
-          { id: "abw_grilled_prawn_skewers", name: "Jumbo BBQ Prawn Skewers", upcharge: 2.00 },
-          { id: "abw_cedar_plank_salmon", name: "Cedar Plank Roasted Salmon with dill", upcharge: 1.50 },
-          { id: "abw_bbq_tofu_skewers", name: "Smoky BBQ Tofu Skewers (Vegan)", upcharge: 0 },
-          { id: "abw_vegetable_kebabs", name: "Colorful Grilled Vegetable Kebabs (Vegan)", upcharge: 0 },
-          { id: "abw_cauliflower_steaks", name: "Grilled Cauliflower Steaks with BBQ rub (Vegan)", upcharge: 0 }
+          { id: "abw_prime_rib", name: "Prime Rib - Boneless -Carving station", upcharge: 4.00 },
+          { id: "abw_smoked_brisket", name: "Smoked Brisket", upcharge: 2.00 },
+          { id: "abw_beef_ribs", name: "Beef Ribs", upcharge: 3.00 },
+          { id: "abw_guinness_short_ribs", name: "Guinness Braised Boneless Short Ribs", upcharge: 2.00 },
+          { id: "abw_bacon_filet_mignon", name: "Bacon Wrapped Fillet Mignon", upcharge: 4.00 },
+          { id: "abw_flank_steak_chimichurri", name: "Flank Steak with Chimichurri", upcharge: 0 },
+          { id: "abw_sausage_medley", name: "Sausage Medley", upcharge: 0 },
+          { id: "abw_hamburger_bar", name: "Hamburger Bar", upcharge: 1.50 },
+          { id: "abw_lamb_chops", name: "Lamb Chops", upcharge: 3.00 },
+          { id: "abw_smoked_leg_lamb", name: "Smoked Leg of Lamb (Family Style only)", upcharge: 0 },
+          { id: "abw_pulled_pork", name: "Pulled Pork", upcharge: 0 },
+          { id: "abw_smoked_pork_belly", name: "Smoked pork Belly", upcharge: 0 },
+          { id: "abw_baby_back_ribs", name: "Baby Back Ribs", upcharge: 0 },
+          { id: "abw_pork_chop", name: "Bone-in, thick-cut, Grilled Pork Chop with Korean BBQ glaze", upcharge: 0 },
+          { id: "abw_bbq_guinness_chicken", name: "BBQ Guinness Chicken", upcharge: 1.00 },
+          { id: "abw_carolina_bbq_chicken", name: "Carolina BBQ Chicken", upcharge: 0 },
+          { id: "abw_rotisserie_chicken", name: "Rotisserie Chicken", upcharge: 0 },
+          { id: "abw_bbq_prawns", name: "BBQ Prawns", upcharge: 1.00 },
+          { id: "abw_black_tiger_prawns", name: "BBQ Black Tiger Prawns", upcharge: 2.00 },
+          { id: "abw_salmon_steak", name: "Salmon steak", upcharge: 0 },
+          { id: "abw_tofu", name: "Tofu", upcharge: 0 },
+          { id: "abw_vegetable_kebabs", name: "Vegetable kebabs", upcharge: 0 },
+          { id: "abw_cauliflower_steaks", name: "Grilled Cauliflower Steaks", upcharge: 0 }
         ]
       },
       sides: {
-        title: "Comforting Sides",
-        description: "Select your favorite down-home side dishes.",
+        title: "Side Options",
+        description: "Select your favorite side dishes.",
         items: [
-          { id: "abw_pit_baked_beans", name: "Smoky Pit Baked Beans with bacon bits", upcharge: 0 },
-          { id: "abw_creamy_mac_cheese", name: "Creamy Three-Cheese Mac n' Cheese Bake", upcharge: 0 },
-          { id: "abw_loaded_baked_potato_bar", name: "Loaded Baked Potato Bar with all the fixings", upcharge: 1.50 },
-          { id: "abw_garlic_herb_mashed", name: "Garlic Herb Mashed Potatoes", upcharge: 0 },
-          { id: "abw_crispy_smashed_potatoes", name: "Crispy Mini Smashed Potatoes with rosemary", upcharge: 0 },
-          { id: "abw_cheddar_chive_potatoes", name: "Twice Baked Potatoes with Cheddar & Chives", upcharge: 0.75 },
-          { id: "abw_grilled_corn_on_cob", name: "Sweet Grilled Corn on the Cob with flavored butters", upcharge: 0 },
-          { id: "abw_southern_creamed_corn", name: "Southern Style Creamed Corn", upcharge: 0 },
-          { id: "abw_bacon_jalapeno_poppers", name: "Bacon-Wrapped Jalapeño Poppers", upcharge: 0.50 },
-          { id: "abw_maple_balsamic_brussels", name: "Roasted Brussels Sprouts with Maple-Balsamic Glaze", upcharge: 0 },
-          { id: "abw_buttermilk_cornbread", name: "Classic Buttermilk Cornbread Muffins", upcharge: 0 },
-          { id: "abw_cheddar_jalapeno_cornbread", name: "Cheddar Jalapeño Cornbread", upcharge: 0 },
-          { id: "abw_grilled_seasonal_veg", name: "Medley of Grilled Seasonal Vegetables", upcharge: 0 },
-          { id: "abw_grilled_asparagus_lemon", name: "Grilled Asparagus with Lemon Zest", upcharge: 0 }
+          { id: "abw_ham_hock_beans", name: "Ham hock baked Beans", upcharge: 0 },
+          { id: "abw_avocado_deviled_eggs", name: "Avocado deviled Eggs", upcharge: 0 },
+          { id: "abw_mac_cheese", name: "Mac n' Cheese", upcharge: 0 },
+          { id: "abw_stuffed_poblano", name: "Stuffed Poblano peppers", upcharge: 0 },
+          { id: "abw_baked_potato_bar", name: "Baked Potato Bar", upcharge: 1.50 },
+          { id: "abw_garlic_mashed", name: "Garlic Mashed Potatoes", upcharge: 0 },
+          { id: "abw_mini_smashed", name: "Mini Smashed Potatoes", upcharge: 0 },
+          { id: "abw_twice_baked_potatoes", name: "Twice Baked Potatoes", upcharge: 0.50 },
+          { id: "abw_corn_on_cob", name: "Corn on the Cob", upcharge: 0 },
+          { id: "abw_creamed_corn", name: "Creamed Corn", upcharge: 0 },
+          { id: "abw_jalapeno_poppers", name: "Jalapeño Poppers", upcharge: 0 },
+          { id: "abw_roasted_brussels", name: "Roasted Brussels Sprouts", upcharge: 0 },
+          { id: "abw_corn_bread", name: "Corn Bread", upcharge: 0 },
+          { id: "abw_jalapeno_cornbread", name: "Jalapeno cornbread", upcharge: 0 },
+          { id: "abw_grilled_vegetables", name: "Grilled Vegetables", upcharge: 0 },
+          { id: "abw_grilled_asparagus", name: "Grilled Asparagus", upcharge: 0 }
         ]
       },
       salads: {
-        title: "Fresh & Crisp Salads",
+        title: "Salad Options",
         description: "Choose from our selection of refreshing salads.",
         items: [
-          { id: "abw_classic_caesar", name: "Classic Caesar Salad with garlic croutons", upcharge: 0 },
-          { id: "abw_creamy_coleslaw", name: "Creamy Country Coleslaw", upcharge: 0 },
-          { id: "abw_garden_ranch", name: "Homestyle Garden Salad with buttermilk ranch", upcharge: 0 },
-          { id: "abw_summer_pasta_salad", name: "Summer Pasta Salad with fresh vegetables", upcharge: 0 },
-          { id: "abw_loaded_corn_salad", name: "Bacon & Jalapeño Loaded Corn Salad", upcharge: 0 },
-          { id: "abw_iceberg_wedge_bluecheese", name: "Classic Iceberg Wedge Salad with blue cheese & bacon", upcharge: 0 },
-          { id: "abw_cucumber_dill_salad", name: "Refreshing Cucumber Dill Salad", upcharge: 0 },
-          { id: "abw_asian_crunch_slaw", name: "Crunchy Asian Slaw with sesame vinaigrette", upcharge: 0 },
-          { id: "abw_cobb_salad", name: "Hearty Cobb Salad with traditional toppings", upcharge: 0 },
-          { id: "abw_red_potato_salad", name: "Creamy Red Bliss Potato Salad", upcharge: 0 },
-          { id: "abw_loaded_macaroni_salad", name: "Loaded Macaroni Salad with cheddar and bacon", upcharge: 0 },
-          { id: "abw_seasonal_fruit_platter", name: "Seasonal Fresh Fruit Platter with honey-lime drizzle", upcharge: 0 }
+          { id: "abw_caesar", name: "Caesar", upcharge: 0 },
+          { id: "abw_coleslaw", name: "Coleslaw", upcharge: 0 },
+          { id: "abw_garden_salad", name: "Garden Salad", upcharge: 0 },
+          { id: "abw_pasta_salad", name: "Pasta Salad", upcharge: 0 },
+          { id: "abw_bacon_jalapeno_corn", name: "Bacon Jalapeño Corn Salad", upcharge: 0 },
+          { id: "abw_wedge_salad", name: "Wedge Salad", upcharge: 0 },
+          { id: "abw_german_cucumber", name: "German cucumber salad", upcharge: 0 },
+          { id: "abw_crunchy_asian_slaw", name: "Crunchy Asian Slaw", upcharge: 0 },
+          { id: "abw_tossed_cobb", name: "Tossed Cobb Salad", upcharge: 0 },
+          { id: "abw_classic_potato", name: "Classic Potato Salad", upcharge: 0 },
+          { id: "abw_german_potato", name: "German Potato Salad", upcharge: 0 },
+          { id: "abw_macaroni_salad", name: "Macaroni Salad", upcharge: 0 },
+          { id: "abw_hawaiian_macaroni", name: "Hawaiian Macaroni Salad", upcharge: 0 },
+          { id: "abw_fruit_salad", name: "Fruit Salad", upcharge: 0 }
         ]
       },
       sauces: {
-        title: "Signature BBQ Sauces",
+        title: "Sauce Options",
         description: "Select from our house-made BBQ sauces.",
         items: [
-          { id: "abw_kansas_city_sweet_smoky", name: "Kansas City Sweet & Smoky BBQ Sauce", upcharge: 0 },
-          { id: "abw_carolina_mustard_tang", name: "Carolina Gold Mustard Tang BBQ Sauce", upcharge: 0 },
-          { id: "abw_eastern_nc_vinegar", name: "Eastern North Carolina Vinegar Pepper BBQ Sauce", upcharge: 0 },
-          { id: "abw_alabama_creamy_white", name: "Alabama Creamy White BBQ Sauce", upcharge: 0 },
-          { id: "abw_texas_bold_peppery", name: "Texas Bold & Peppery BBQ Sauce", upcharge: 0 },
-          { id: "abw_raspberry_chipotle_bbq", name: "Raspberry Chipotle BBQ Sauce", upcharge: 0 }
+          { id: "abw_kansas_city_bbq", name: "Kansas City BBQ Sauce", upcharge: 0 },
+          { id: "abw_south_carolina_gold", name: "South Carolina Gold BBQ Sauce", upcharge: 0 },
+          { id: "abw_north_carolina_vinegar", name: "North Carolina Vinegar based BBQ Sauce", upcharge: 0 },
+          { id: "abw_alabama_white", name: "Alabama White BBQ Sauce", upcharge: 0 },
+          { id: "abw_texas_bbq", name: "Texas BBQ Sauce", upcharge: 0 },
+          { id: "abw_very_berry_bbq", name: "Very Berry BBQ Sauce", upcharge: 0 },
+          { id: "abw_smoky_bourbon_bbq", name: "Smoky bourbon BBQ Sauce", upcharge: 0 }
         ]
       },
       condiments: {
