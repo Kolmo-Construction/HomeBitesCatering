@@ -562,79 +562,102 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
   },
 
   kebab_party_wedding: {
-    title: "Worldly Kebab Soirée",
+    title: "Kebab Party",
     description: "A delightful array of skewered delights, featuring global flavors grilled to perfection for your wedding.",
     packages: [
       {
-        id: "kpw_silk_road",
-        name: "Silk Road Selection",
-        price: 31.00,
-        description: "An enticing start: 2 Protein Kebabs, 2 Sides, 2 Sauces.",
-        limits: { proteins: 2, sides: 2, sauces: 2 }
+        id: "kpw_bronze",
+        name: "Bronze Package",
+        price: 35.00,
+        description: "Pick 3 Proteins, Pick 3 Sides, Pick 2 Salads",
+        minGuestCount: 50,
+        limits: { proteins: 3, sides: 3, salads: 2 }
       },
       {
-        id: "kpw_spice_route",
-        name: "Spice Route Collection",
-        price: 38.00,
-        description: "A journey of flavors: 3 Protein Kebabs, 3 Sides, 3 Sauces.",
-        limits: { proteins: 3, sides: 3, sauces: 3 }
+        id: "kpw_silver",
+        name: "Silver Package",
+        price: 39.00,
+        description: "Pick 4 Proteins, Pick 3 Sides, Pick 2 Salads",
+        limits: { proteins: 4, sides: 3, salads: 2 }
       },
       {
-        id: "kpw_bazaar_grand",
-        name: "Grand Bazaar Feast",
-        price: 45.00,
-        description: "A lavish spread: 4 Protein Kebabs, 4 Sides, 4 Sauces.",
-        limits: { proteins: 4, sides: 4, sauces: 4 }
+        id: "kpw_gold",
+        name: "Gold Package",
+        price: 49.00,
+        description: "Pick 4 Proteins, Pick 4 Sides, Pick 3 Salads, Includes spreads",
+        limits: { proteins: 4, sides: 4, salads: 3 }
       },
       {
-        id: "kpw_sultans_banquet",
-        name: "Sultan's Banquet",
-        price: 55.00,
-        description: "The ultimate kebab indulgence: 5 Protein Kebabs, 5 Sides, 5 Sauces, plus a selection of artisanal flatbreads.",
-        limits: { proteins: 5, sides: 5, sauces: 5 }
+        id: "kpw_diamond",
+        name: "Diamond Package",
+        price: 63.00,
+        description: "Pick 5 Proteins, Pick 5 Sides, Pick 3 Salads, Includes spreads, Includes meze grazing board",
+        limits: { proteins: 5, sides: 5, salads: 3 }
       }
     ],
     categories: {
       proteins: {
-        title: "Gourmet Kebab Proteins",
-        description: "Select your succulent skewered protein options.",
+        title: "Protein Options",
+        description: "Select your kebab proteins.",
         items: [
-          { id: "kpw_pork_tenderloin_apricot", name: "Pork Tenderloin & Apricot Kebabs with rosemary glaze", upcharge: 0 },
-          { id: "kpw_chicken_lemon_herb", name: "Lemon-Herb Marinated Chicken Kebabs", upcharge: 0 },
-          { id: "kpw_beef_tenderloin_pepper", name: "Beef Tenderloin & Bell Pepper Kebabs", upcharge: 1.00 },
-          { id: "kpw_lamb_kofta", name: "Spiced Lamb Kofta Kebabs", upcharge: 0.50 },
-          { id: "kpw_swordfish_mediterranean", name: "Mediterranean Swordfish Kebabs with olives & capers", upcharge: 1.50 },
-          { id: "kpw_garlic_shrimp_skewers", name: "Garlic & Herb Shrimp Skewers", upcharge: 0 },
-          { id: "kpw_halloumi_vegetable", name: "Grilled Halloumi & Vegetable Kebabs (Vegetarian)", upcharge: 0},
-          { id: "kpw_tofu_satay_skewers", name: "Tofu Satay Skewers with peanut sauce (Vegan)", upcharge: 0}
+          { id: "kpw_pork_tenderloin", name: "Pork Tenderloin", upcharge: 0 },
+          { id: "kpw_chicken", name: "Chicken", upcharge: 0 },
+          { id: "kpw_beef_tenderloin", name: "Beef Tenderloin", upcharge: 0 },
+          { id: "kpw_beef_flank", name: "Beef Flank", upcharge: 0 },
+          { id: "kpw_lamb", name: "Lamb", upcharge: 1.50 },
+          { id: "kpw_swordfish", name: "Swordfish", upcharge: 0 },
+          { id: "kpw_shrimp", name: "Shrimp", upcharge: 0 },
+          { id: "kpw_bacon_wrapped_asparagus", name: "Bacon wrapped Asparagus", upcharge: 0 },
+          { id: "kpw_tofu", name: "Tofu", upcharge: 0 },
+          { id: "kpw_mushrooms", name: "Mushrooms", upcharge: 0 },
+          { id: "kpw_tomato_gnocchi", name: "Tomato & Gnocchi- with pesto", upcharge: 0 },
+          { id: "kpw_mixed_vegetables", name: "Mixed Vegetables", upcharge: 0 }
         ]
       },
       sides: {
-        title: "Flavorful Kebab Accompaniments",
+        title: "Side Options",
         description: "Choose your delicious side dishes.",
         items: [
-          { id: "kpw_crispy_falafel", name: "Crispy Falafel Bites", upcharge: 0 },
-          { id: "kpw_mini_spanakopita", name: "Mini Spanakopita (Spinach & Feta Puffs)", upcharge: 0 },
-          { id: "kpw_stuffed_grape_leaves", name: "Stuffed Grape Leaves (Dolmades)", upcharge: 0 },
-          { id: "kpw_saffron_rice_pilaf", name: "Saffron & Almond Rice Pilaf", upcharge: 0 },
-          { id: "kpw_wild_rice_cranberry", name: "Wild Rice Pilaf with Cranberries & Pecans", upcharge: 0 },
-          { id: "kpw_patatas_bravas_aioli", name: "Patatas Bravas with Smoked Paprika Aioli", upcharge: 0 },
-          { id: "kpw_couscous_apricot_almond", name: "Couscous Salad with Apricots, Almonds & Mint", upcharge: 0.50},
-          { id: "kpw_roasted_root_vegetables", name: "Medley of Roasted Root Vegetables with herbs", upcharge: 0}
+          { id: "kpw_falafel", name: "Falafel", upcharge: 0 },
+          { id: "kpw_spanakopita", name: "Spanakopita", upcharge: 0 },
+          { id: "kpw_dolmades", name: "Dolmades", upcharge: 0 },
+          { id: "kpw_yellow_rice_pilaf", name: "Yellow Rice Pilaf", upcharge: 0 },
+          { id: "kpw_wild_rice_mushroom", name: "Wild Rice and Mushroom Pilaf", upcharge: 0 },
+          { id: "kpw_patatas_bravas", name: "Patatas Bravas", upcharge: 0 },
+          { id: "kpw_potato_croquettes", name: "Potato Croquettes", upcharge: 0 },
+          { id: "kpw_roasted_beets", name: "Roasted beets", upcharge: 0 },
+          { id: "kpw_roasted_brussel_sprouts", name: "Roasted Brussel Sprouts", upcharge: 0 },
+          { id: "kpw_moroccan_cauliflower", name: "Moroccan-style roasted Cauliflower", upcharge: 0 },
+          { id: "kpw_roasted_carrots", name: "Roasted carrots", upcharge: 0 },
+          { id: "kpw_grilled_vegetables", name: "Grilled Vegetables", upcharge: 0 }
         ]
       },
-      sauces: {
-        title: "Artisanal Dipping Sauces",
-        description: "Select from our house-made sauces to complement your kebabs.",
+      salads: {
+        title: "Salad Options",
+        description: "Choose from our vibrant and refreshing salads.",
         items: [
-          { id: "kpw_classic_tzatziki", name: "Classic Greek Tzatziki (Cucumber Yogurt Dip)", upcharge: 0 },
-          { id: "kpw_smoky_baba_ganoush", name: "Smoky Baba Ganoush (Roasted Eggplant Dip)", upcharge: 0 },
-          { id: "kpw_creamy_hummus_tahini", name: "Creamy Hummus with Tahini & Lemon", upcharge: 0 },
-          { id: "kpw_muhammara_walnut_pepper", name: "Muhammara (Roasted Red Pepper & Walnut Dip)", upcharge: 0 },
-          { id: "kpw_chimichurri_fresh_herb", name: "Argentinian Chimichurri (Fresh Herb & Garlic Sauce)", upcharge: 0 },
-          { id: "kpw_romesco_almond_pepper", name: "Spanish Romesco Sauce (Almond & Roasted Pepper)", upcharge: 0 },
-          { id: "kpw_cilantro_lime_yogurt", name: "Cilantro-Lime Yogurt Sauce", upcharge: 0},
-          { id: "kpw_harissa_aioli_spicy", name: "Spicy Harissa Aioli", upcharge: 0}
+          { id: "kpw_tabouli", name: "Tabouli", upcharge: 0 },
+          { id: "kpw_fattoush", name: "Fattoush", upcharge: 0 },
+          { id: "kpw_cous_cous", name: "Cous-cous", upcharge: 0 },
+          { id: "kpw_lebanese_potato", name: "Lebanese Potato Salad", upcharge: 0 },
+          { id: "kpw_greek_village", name: "Greek Village Salad", upcharge: 0 },
+          { id: "kpw_tomato_cucumber", name: "Tomato - Cucumber salad", upcharge: 0 },
+          { id: "kpw_caprese_pasta", name: "Caprese pasta salad", upcharge: 0 },
+          { id: "kpw_caesar", name: "Caesar", upcharge: 0 },
+          { id: "kpw_garden_salad", name: "Garden Salad", upcharge: 0 }
+        ]
+      },
+      spreads: {
+        title: "Spreads Options",
+        description: "Served with pita bread, crudité and breadsticks - included in Gold and Diamond tiers - Pick 3",
+        items: [
+          { id: "kpw_tzatziki", name: "Tzatziki", upcharge: 0 },
+          { id: "kpw_hummus", name: "Hummus", upcharge: 0 },
+          { id: "kpw_baba_ghanoush", name: "Baba Ghanoush", upcharge: 0 },
+          { id: "kpw_spicy_feta", name: "Spicy Feta", upcharge: 0 },
+          { id: "kpw_taramasalata", name: "Taramasalata", upcharge: 0 },
+          { id: "kpw_muhammara", name: "Muhammara", upcharge: 0 },
+          { id: "kpw_lebanese_garlic", name: "Lebanese garlic dip", upcharge: 0 }
         ]
       }
     }
