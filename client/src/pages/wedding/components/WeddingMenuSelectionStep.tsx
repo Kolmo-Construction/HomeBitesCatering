@@ -52,6 +52,9 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
     ? weddingThemeMenuData[selectedTheme as keyof typeof weddingThemeMenuData]
     : null;
 
+  // Create a constant for the wedding theme data to avoid circular references
+  const themeData = weddingThemeMenuData || {};
+
   if (!currentWeddingThemeDetails) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -65,8 +68,8 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {Object.keys(weddingThemeMenuData).map((themeKey) => {
-            const theme = weddingThemeMenuData[themeKey as keyof typeof weddingThemeMenuData];
+          {Object.keys(themeData).map((themeKey) => {
+            const theme = themeData[themeKey as keyof typeof themeData];
             return (
               <Card
                 key={themeKey}
