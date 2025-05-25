@@ -441,95 +441,121 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
         ]
       },
       condiments: {
-        title: "Essential Condiments",
+        title: "Condiment Options",
         description: "All the fixings for your BBQ feast.",
         items: [
-          { id: "abw_ketchup", name: "Classic Tomato Ketchup", upcharge: 0 },
-          { id: "abw_stone_ground_mustard", name: "Artisanal Stone Ground Mustard", upcharge: 0 },
-          { id: "abw_dijon_mustard", name: "Smooth Dijon Mustard", upcharge: 0 },
-          { id: "abw_yellow_mustard", name: "Classic Yellow Mustard", upcharge: 0 },
-          { id: "abw_mayonnaise", name: "Creamy Mayonnaise", upcharge: 0 },
-          { id: "abw_sweet_pickle_relish", name: "Sweet Pickle Relish", upcharge: 0 },
-          { id: "abw_dill_pickle_chips", name: "Crisp Dill Pickle Chips", upcharge: 0 },
-          { id: "abw_sliced_red_onions", name: "Thinly Sliced Red Onions", upcharge: 0 }
+          { id: "abw_ketchup", name: "Ketchup", upcharge: 0 },
+          { id: "abw_stone_ground_mustard", name: "Stone Ground Mustard", upcharge: 0 },
+          { id: "abw_dijon_mustard", name: "Dijon Mustard", upcharge: 0 },
+          { id: "abw_yellow_mustard", name: "Yellow Mustard", upcharge: 0 },
+          { id: "abw_mayonnaise", name: "Mayonnaise", upcharge: 0 },
+          { id: "abw_sweet_pickle_chips", name: "Sweet pickle Chips", upcharge: 0 },
+          { id: "abw_dill_pickle_chips", name: "Dill pickle Chips", upcharge: 0 },
+          { id: "abw_sliced_radish", name: "Sliced radish", upcharge: 0 },
+          { id: "abw_sweet_relish", name: "Sweet Relish", upcharge: 0 },
+          { id: "abw_cranberry_relish", name: "Cranberry Relish", upcharge: 0 },
+          { id: "abw_kimchi", name: "Kimchi", upcharge: 0 },
+          { id: "abw_mixed_pickled_veg", name: "Mixed Pickled Vegetables - Giardiniera", upcharge: 0 }
         ]
       }
     }
   },
 
   taste_of_greece_wedding: {
-    title: "Grecian Wedding Feast",
+    title: "A taste of Greece",
     description: "Authentic Mediterranean flavors from Greece, perfect for a memorable wedding celebration.",
     packages: [
       {
-        id: "tgw_aphrodite",
-        name: "Aphrodite's Table Package",
-        price: 35.00,
-        description: "A classic taste: 2 Mains, 3 Sides, 1 Salad.",
-        limits: { mains: 2, sides: 3, salads: 1 }
+        id: "tgw_bronze",
+        name: "Bronze Package",
+        price: 32.00,
+        description: "Pick 3 Mains, Pick 3 Sides, Pick 2 Salads, Includes pita bread",
+        minGuestCount: 50,
+        limits: { mains: 3, sides: 3, salads: 2 }
       },
       {
-        id: "tgw_olympian",
-        name: "Olympian Spread Package",
-        price: 42.00,
-        description: "A generous offering: 3 Mains, 4 Sides, 2 Salads.",
-        limits: { mains: 3, sides: 4, salads: 2 }
+        id: "tgw_silver",
+        name: "Silver Package",
+        price: 38.00,
+        description: "Pick 4 Mains, Pick 3 Sides, Pick 2 Salads, Includes pita bread",
+        limits: { mains: 4, sides: 3, salads: 2 }
       },
       {
-        id: "tgw_elysian",
-        name: "Elysian Banquet Package",
-        price: 49.00,
-        description: "A divine feast: 4 Mains, 5 Sides, 3 Salads.",
-        limits: { mains: 4, sides: 5, salads: 3 }
+        id: "tgw_gold",
+        name: "Gold Package",
+        price: 46.00,
+        description: "Pick 4 Mains, Pick 4 Sides, Pick 2 Salads, Includes spreads selection and pita bread",
+        limits: { mains: 4, sides: 4, salads: 2 }
       },
       {
-        id: "tgw_aegean_dream",
-        name: "Aegean Dream Package",
+        id: "tgw_diamond",
+        name: "Diamond Package",
         price: 59.00,
-        description: "The ultimate Greek culinary journey: 5 Mains, 6 Sides, 4 Salads, plus traditional Greek dessert bites.",
-        limits: { mains: 5, sides: 6, salads: 4 }
+        description: "Pick 5 Mains, Pick 4 Sides, Pick 3 Salads, Includes spreads selection, meze platter, and pita bread",
+        limits: { mains: 5, sides: 4, salads: 3 }
       }
     ],
     categories: {
       mains: {
-        title: "Authentic Greek Mains",
-        description: "Choose your centerpiece Hellenic dishes.",
+        title: "Main Options",
+        description: "Choose your centerpiece Greek dishes.",
         items: [
-          { id: "tgw_papoutsakia", name: "Papoutsakia (Stuffed Eggplant with savory filling)", upcharge: 0 },
-          { id: "tgw_soutzoukakia", name: "Soutzoukakia (Greek meatballs in rich tomato sauce)", upcharge: 0 },
-          { id: "tgw_kokinisto", name: "Kokinisto (Slow-cooked beef or lamb in tomato wine sauce)", upcharge: 0 },
-          { id: "tgw_kleftiko", name: "Lamb Kleftiko (Slow-roasted lamb with herbs, family style presentation)", upcharge: 5.00 },
-          { id: "tgw_pastitsio", name: "Pastitsio (Baked pasta dish with ground meat and béchamel)", upcharge: 0 },
-          { id: "tgw_kotopoulo_lemonato", name: "Kotopoulo Lemonato (Roasted lemon herb chicken)", upcharge: 0 },
-          { id: "tgw_paidakia", name: "Paidakia (Grilled lamb chops with oregano & lemon)", upcharge: 4.00 },
-          { id: "tgw_kotsi_arni", name: "Kotsi Arni (Braised lamb shanks)", upcharge: 2.00 },
-          { id: "tgw_moussaka", name: "Classic Moussaka with layers of eggplant, meat, and béchamel", upcharge: 1.00}
+          { id: "tgw_papoutsakia", name: "Papoutsakia - Classic moussaka in individual hollowed eggplant shells with seasoned ground beef and topped with creamy bechamel", upcharge: 0 },
+          { id: "tgw_soutzoukakia", name: "Soutzoukakia - Plump oblong-shaped meatballs are packed with loads of aromatics and fresh herbs, smothered in a cinnamon wine-enhanced tomato sauce", upcharge: 0 },
+          { id: "tgw_kokinisto", name: "Kokinisto - Boneless short rib slowly cooked in cinnamon-scented tomato sauce", upcharge: 0 },
+          { id: "tgw_kleftiko", name: "Kleftiko - (Family style only) Boldly seasoned lamb roast that cooks with new potatoes, celery, and carrots, low and slow for 6 hours, in a parchment paper pouch", upcharge: 5.00 },
+          { id: "tgw_pastitsio", name: "Pastitsio - Classic baked pasta dish with cinnamon-scented ground meat and creamy béchamel sauce", upcharge: 0 },
+          { id: "tgw_kotopoulo_lemonato", name: "Kotopoulo lemonato - Aromatic and lemony baked chicken with fresh herbs", upcharge: 0 },
+          { id: "tgw_paidakia", name: "Paidakia - These Greek lamb chops are marinated in a mix of olive oil, lemon juice, garlic and oregano and grilled to perfection", upcharge: 4.00 },
+          { id: "tgw_kotsi_arni", name: "Kotsi Arni - Slowly roasted lamb shank with tomato, herbs and robust spices such as cinnamon and clove", upcharge: 0 },
+          { id: "tgw_bifteki_gemisto", name: "Bifteki Gemisto - Aromatic oven-baked minced beef 'burgers', stuffed with cheese and topped with tomato relish", upcharge: 0 },
+          { id: "tgw_psari_plaki", name: "Psari Plaki - Oven-baked fish fillet topped with fresh tomato slices, onion, and fresh herbs", upcharge: 0 },
+          { id: "tgw_solomou", name: "Brizola Solomou - Grilled salmon steaks with fresh herbs, lemon, and evoo", upcharge: 0 },
+          { id: "tgw_bakaliaros", name: "Bakaliaros Plaki - Oven-baked Cod fish fillet topped with fresh tomato slices, onion, and fresh herbs", upcharge: 0 },
+          { id: "tgw_aginares", name: "Aginares Ala Polita - Vegan option - Artichoke hearts braised with potatoes and carrots and finished with a creamy egg-lemon sauce and fresh dill", upcharge: 0 },
+          { id: "tgw_gemista", name: "Gemista - Vegan Oven-baked stuffed tomatoes and peppers with rice, and fresh herbs", upcharge: 0 }
         ]
       },
       sides: {
-        title: "Traditional Greek Sides",
-        description: "Select your flavorful Hellenic accompaniments.",
+        title: "Side Options",
+        description: "Select your flavorful Greek side dishes.",
         items: [
-          { id: "tgw_lemon_potatoes", name: "Greek Lemon Potatoes roasted to perfection", upcharge: 0 },
-          { id: "tgw_spanakopita_triangles", name: "Spanakopita Triangles (Spinach & feta pastries)", upcharge: 0 },
-          { id: "tgw_kritharaki_yiouvetsi", name: "Kritharaki Yiouvetsi (Orzo with tomato sauce)", upcharge: 0 },
-          { id: "tgw_fasolakia_ladera", name: "Fasolakia Ladera (Green beans stewed in olive oil & tomato)", upcharge: 0 },
-          { id: "tgw_gigandes_plaki", name: "Gigandes Plaki (Baked giant beans in tomato-dill sauce)", upcharge: 0 },
-          { id: "tgw_tyrokroketes", name: "Tyrokroketes (Crispy cheese croquettes)", upcharge: 0 },
-          { id: "tgw_grilled_halloumi_octopus", name: "Grilled Halloumi & Marinated Octopus Skewers", upcharge: 7.00 },
-          { id: "tgw_dolmades_yalantzi", name: "Dolmades Yalantzi (Stuffed grape leaves with rice & herbs)", upcharge: 0.50}
+          { id: "tgw_lemon_potatoes", name: "Lemon Potatoes - Roasted russet potatoes cooked with oregano garlic, evoo and fresh lemon juice", upcharge: 0 },
+          { id: "tgw_spanakopita", name: "Spanakopita - House made phyllo dough pouches stuffed with spinach, greens, herbs, and feta cheese", upcharge: 0 },
+          { id: "tgw_kritharaki", name: "Kritharaki - Orzo pasta baked in the oven. A pasta side dish choice with any main", upcharge: 0 },
+          { id: "tgw_fasolakia", name: "Fasolakia - Green beans simmered with tomato and fresh herbs", upcharge: 0 },
+          { id: "tgw_gigandes_plaki", name: "Gigandes Plaki - Oven baked lima beans in a herbaceous tomato sauce", upcharge: 0 },
+          { id: "tgw_tyrokroketes", name: "Tyrokroketes - A blend of three Greek cheeses rolled into delightful tangy balls and coated with sesame seeds", upcharge: 0 },
+          { id: "tgw_octapodi", name: "Octapodi - Spanish octopus slowly braised and served simply with lemon juice, EVOO, and fresh oregano", upcharge: 7.00 },
+          { id: "tgw_dolmades", name: "Dolmades - Grape leaves stuffed with rice and fresh herbs", upcharge: 0 },
+          { id: "tgw_saganaki", name: "Saganaki Cheese - Cheese is deep fried to make a crispy outside, with a melty gooey inside. Flambeed tableside! (Family style only)", upcharge: 2.00 },
+          { id: "tgw_greek_rice_pilaf", name: "Greek Rice Pilaf - Long grain rice, with mixed diced vegetables, scented with lemon zest and fresh herbs", upcharge: 0 },
+          { id: "tgw_baked_vegetables", name: "Baked Vegetables - Briam - Thinly sliced vegetable medley, seasoned and baked till lightly charred", upcharge: 0 }
         ]
       },
       salads: {
-        title: "Fresh Greek Salads",
-        description: "Choose from our vibrant and refreshing salad creations.",
+        title: "Salad Options",
+        description: "Choose from our vibrant and refreshing Greek salads.",
         items: [
-          { id: "tgw_horiatiki", name: "Horiatiki Salata (Classic Greek Village Salad)", upcharge: 0 },
-          { id: "tgw_lahanosalata", name: "Lahanosalata (Finely shredded cabbage salad with lemon-oil dressing)", upcharge: 0 },
-          { id: "tgw_maroulosalata", name: "Maroulosalata (Crisp romaine lettuce salad with dill & spring onions)", upcharge: 0 },
-          { id: "tgw_patatosalata", name: "Patatosalata (Greek potato salad with herbs & olive oil)", upcharge: 0 },
-          { id: "tgw_dakos", name: "Dakos Salad (Cretan barley rusks with tomato, feta, olives & capers)", upcharge: 0 },
-          { id: "tgw_beetroot_salad", name: "Beetroot & Yogurt Salad with Walnuts (Patzarosalata)", upcharge: 0}
+          { id: "tgw_horiatiki", name: "Salata Horiatiki - A mix of tomatoes, cucumber, onion, green pepper, feta, and olives, dressed with oil and vinegar", upcharge: 0 },
+          { id: "tgw_lahanosalata", name: "Lahanosalata (Greek Coleslaw) - Green and red shredded cabbage, grated carrots, olive oil and lemon juice", upcharge: 0 },
+          { id: "tgw_maroulosalata", name: "Maroulosalata (Greek Romaine Salad) - Shredded romaine lettuce, scallions, mixed herbs, olive oil, lemon juice", upcharge: 0 },
+          { id: "tgw_patatosalata", name: "Patatosalata - Warm potato salad with sliced red onions, Kalamata olives, parsley and extra virgin olive oil", upcharge: 0 },
+          { id: "tgw_dakos", name: "Dakos Bread Salad - Fresh tomatoes, barley rusks, feta, capers, onion, oregano, and basil", upcharge: 0 },
+          { id: "tgw_garden_salad", name: "Garden Salad - Mixed greens, cherry tomatoes, cucumber, red onion and mushrooms with choice of dressing", upcharge: 0 },
+          { id: "tgw_tabouli", name: "Tabouli - Chopped parsley, cous-cous, tomato, cucumber, mint, red onion and lemon-tahini dressing", upcharge: 0 }
+        ]
+      },
+      spreads: {
+        title: "Greek Spreads Options",
+        description: "Included in Gold and Diamond tiers",
+        items: [
+          { id: "tgw_tzatziki", name: "Tzatziki - Yogurt, garlic, cucumber, herbs", upcharge: 0 },
+          { id: "tgw_hummus", name: "Hummus - Chickpea, tahini, lemon", upcharge: 0 },
+          { id: "tgw_melitzanosalata", name: "Melitzanosalata - Eggplant, garlic, tahini, cilantro", upcharge: 0 },
+          { id: "tgw_spicy_feta", name: "Spicy Feta - Feta cheese puree with spicy peppers", upcharge: 0 },
+          { id: "tgw_taramasalata", name: "Taramasalata - Cod roe, potato, extra virgin olive oil", upcharge: 0 },
+          { id: "tgw_beet_hummus", name: "Beet Hummus - Roasted beets, chickpea, garlic, tahini, evoo", upcharge: 0 }
         ]
       }
     }
