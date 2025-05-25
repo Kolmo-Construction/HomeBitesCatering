@@ -40,15 +40,71 @@ import {
 // --- Helper Components (Progress Bar, Header) ---
 const WeddingFormHeader = () => {
   return (
-    <div className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-6 mb-8">
-      <div className="container mx-auto">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-3 text-center">
-          Plan Your Dream Wedding
-        </h1>
-        <p className="text-lg md:text-xl text-center max-w-2xl mx-auto">
-          Tell us about your special day, and we'll help create an unforgettable culinary experience.
-        </p>
+    <div className="relative w-full min-h-[400px] overflow-hidden mb-8">
+      {/* Background with gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50"></div>
+      
+      {/* Decorative floating elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-pink-200 rounded-full opacity-20 animate-pulse"></div>
+        <div className="absolute top-32 right-20 w-16 h-16 bg-rose-300 rounded-full opacity-30 animate-bounce" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-20 left-32 w-12 h-12 bg-purple-200 rounded-full opacity-25 animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-40 right-10 w-24 h-24 bg-pink-100 rounded-full opacity-20 animate-bounce" style={{ animationDelay: '0.5s' }}></div>
       </div>
+      
+      {/* Subtle pattern overlay */}
+      <div className="absolute inset-0 opacity-5" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23db2777' fill-opacity='0.1'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zm10 0c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+      }}></div>
+      
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-6 py-16 text-center">
+        <div className="max-w-4xl mx-auto">
+          {/* Main headline with romantic typography */}
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gray-800 leading-tight">
+            <span className="font-serif italic text-rose-600">Your</span>{' '}
+            <span className="bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">Dream Wedding</span>
+            <br />
+            <span className="text-4xl md:text-5xl font-light text-gray-700">Awaits</span>
+          </h1>
+          
+          {/* Elegant tagline */}
+          <div className="mb-8">
+            <p className="text-2xl md:text-3xl font-serif italic text-rose-500 mb-2">
+              "Creating magical moments, one bite at a time"
+            </p>
+            <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-rose-300 to-transparent mx-auto"></div>
+          </div>
+          
+          {/* Description */}
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
+            From intimate gatherings to grand celebrations, our expert culinary team crafts 
+            unforgettable dining experiences that perfectly complement your love story.
+          </p>
+          
+          {/* Trust indicators */}
+          <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <div className="flex text-yellow-400">
+                {'★'.repeat(5)}
+              </div>
+              <span>500+ Happy Couples</span>
+            </div>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <span>Licensed & Insured</span>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <span>15+ Years Experience</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom decorative wave */}
+      <div className="absolute bottom-0 left-0 w-full">
+        <svg className="w-full h-12 text-white" preserveAspectRatio="none" viewBox="0 0 1200 120" fill="currentColor">
+          <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25"></path>
+          <path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5"></path>
+          <path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z"></path>
+        </svg>
     </div>
   );
 };
