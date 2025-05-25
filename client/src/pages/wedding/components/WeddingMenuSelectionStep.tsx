@@ -357,15 +357,28 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
                           className={`flex items-center p-3 border rounded-md transition-all
                                       ${isChecked ? 'bg-pink-50 border-pink-400' : 'border-gray-200'}
                                       ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-pink-300'}`}
-                          onClick={() => !isDisabled && handleItemSelection(categoryKey, item.id, !isChecked)}
                         >
-                          <Checkbox id={`${categoryKey}-${item.id}-${currentThemePackageId}`} checked={isChecked} disabled={isDisabled} className="mr-3"/>
-                            <Label htmlFor={`${categoryKey}-${item.id}-${currentThemePackageId}`} className={`flex-grow ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
-                            {item.name}
-                            {item.upcharge && item.upcharge > 0 && (
-                              <span className="text-xs text-amber-600 ml-1">(+${item.upcharge.toFixed(2)}/person)</span>
-                            )}
-                          </Label>
+                          <Checkbox 
+                            id={`${categoryKey}-${item.id}-${currentThemePackageId}`} 
+                            checked={isChecked} 
+                            disabled={isDisabled} 
+                            className="mr-3"
+                            onCheckedChange={(checked) => !isDisabled && handleItemSelection(categoryKey, item.id, !!checked)}/>
+                            <Label 
+                              htmlFor={`${categoryKey}-${item.id}-${currentThemePackageId}`} 
+                              className={`flex-grow ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}
+                              onClick={(e) => {
+                                if (!isDisabled) {
+                                  e.preventDefault();
+                                  handleItemSelection(categoryKey, item.id, !isChecked);
+                                }
+                              }}
+                            >
+                              {item.name}
+                              {item.upcharge && item.upcharge > 0 && (
+                                <span className="text-xs text-amber-600 ml-1">(+${item.upcharge.toFixed(2)}/person)</span>
+                              )}
+                            </Label>
                         </div>
                       );
                     })}
