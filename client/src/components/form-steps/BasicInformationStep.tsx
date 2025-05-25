@@ -5,7 +5,7 @@ import { Form, FormControl, FormItem, FormLabel, FormMessage, FormField, FormDes
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock as ClockIcon, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock as ClockIcon, AlertCircle, Info as InfoIcon } from "lucide-react";
 import { EventType, EventInquiryFormData } from "@/types/form-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
