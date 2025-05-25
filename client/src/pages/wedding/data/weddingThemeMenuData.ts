@@ -42,85 +42,118 @@ export type WeddingThemeMenu = {
   };
 };
 
-export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
-  taste_of_italy_wedding: {
-    title: "A Taste of Italy - Wedding Celebration",
-    description: "Elegant Italian cuisine, exquisitely prepared for your wedding reception.",
-    packages: [
-      {
-        id: "italy_wedding_bronze", // Renamed and repriced
-        name: "Bronze Celebration Package",
-        price: 32.00, // Adjusted price for the new tiering
-        description: "An elegant introduction: Select 2 Mains, 3 Sides, 1 Pasta, and 1 Salad. Includes artisanal bread service.",
-        minGuestCount: 50,
-        limits: { mains: 2, sides: 3, pasta: 1, salads: 1 },
-      },
-      {
-        id: "italy_wedding_silver", // This is now based on the original "Silver" limits
-        name: "Silver Celebration Package",
-        price: 38.00, // Intermediate price
-        description: "A delightful selection: Select 3 Mains, 3 Sides, 2 Pastas, and 2 Salads. Includes artisanal bread service and a choice of infused olive oils.",
-        minGuestCount: 50,
-        limits: { mains: 3, sides: 3, pasta: 2, salads: 2 },
-      },
-      {
-        id: "italy_wedding_gold",
-        name: "Gold Celebration Package",
-        price: 46.00, // Kept original price, now clearly the third tier
-        description: "A luxurious experience: Select 3 Mains, 4 Sides, 2 Pastas, and 2 Salads. Includes premium bread service and a complimentary signature appetizer selection.",
-        minGuestCount: 50,
-        limits: { mains: 3, sides: 4, pasta: 2, salads: 2 },
-      },
-      {
-        id: "italy_wedding_diamond", // New top tier
-        name: "Diamond Celebration Package",
-        price: 58.00,
-        description: "The ultimate Italian feast: Select 4 Mains, 5 Sides, 2 Premium Pastas, and 3 Salads. Includes deluxe bread service, complimentary signature appetizers, and dedicated table-side olive oil tasting.",
-        minGuestCount: 50,
-        limits: { mains: 4, sides: 5, pasta: 2, salads: 3 }, // Pasta limit kept at 2 for balance
-      },
-    ],
-    categories: { // Categories remain the same, packages draw from these
-      mains: {
-        title: "Exquisite Italian Mains",
-        description: "Choose your centerpiece main courses.",
-        items: [
-          { id: "chicken_saltimbocca_w", name: "Chicken Saltimbocca with Prosciutto & Sage", upcharge: 0 },
-          { id: "beef_braciole_w", name: "Slow-Cooked Beef Braciole in Rich Tomato Sauce", upcharge: 5.00 },
-          { id: "vegetarian_lasagna_w", name: "Layered Vegetarian Lasagna with Fresh Béchamel", upcharge: 0 },
-          { id: "salmon_lemon_dill_w", name: "Pan-Seared Salmon with a Delicate Lemon-Dill Sauce", upcharge: 7.00 },
-        ],
-      },
-      sides: {
-        title: "Refined Italian Sides",
-        description: "Select your accompanying side dishes.",
-        items: [
-          { id: "rosemary_potatoes_w", name: "Roasted Rosemary & Garlic Potatoes", upcharge: 0 },
-          { id: "grilled_asparagus_parmesan_w", name: "Grilled Asparagus spears with Shaved Parmesan", upcharge: 0 },
-          { id: "risotto_milanese_w", name: "Creamy Saffron Risotto Milanese", upcharge: 3.00 },
-          { id: "garlic_broccolini_w", name: "Sautéed Garlic Broccolini with a hint of chili", upcharge: 0 },
-        ],
-      },
-      pasta: {
-        title: "Artisanal Italian Pasta",
-        description: "Indulge in our freshly prepared pasta selections.",
-        items: [
-          { id: "penne_alla_vodka_w", name: "Penne alla Vodka with a Creamy Tomato Sauce", upcharge: 0 },
-          { id: "fettuccine_alfredo_truffle_w", name: "Fettuccine Alfredo enhanced with Black Truffle Oil", upcharge: 4.00 },
-          { id: "lobster_ravioli_w", name: "Lobster Ravioli in a Delicate Saffron Cream Sauce", upcharge: 8.00 },
-        ],
-      },
-      salads: {
-        title: "Fresh Italian Salads",
-        description: "Choose from our vibrant and fresh salad creations.",
-        items: [
-          { id: "caesar_w", name: "Classic Caesar Salad with Homemade Croutons & Parmesan Crisps", upcharge: 0 },
-          { id: "caprese_w", name: "Vine-Ripened Tomato & Fresh Mozzarella Caprese with Balsamic Glaze", upcharge: 0 },
-          { id: "arugula_pear_gorgonzola_w", name: "Arugula Salad with Sliced Pear, Gorgonzola, and Candied Walnuts", upcharge: 2.00 },
-        ],
-      },
+export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } =
+  {
+    "taste_of_italy_wedding": {
+      "title": "A Taste of Italy - Wedding Celebration",
+      "description": "Elegant Italian cuisine, exquisitely prepared for your wedding reception.",
+      "packages": [
+        {
+          "id": "italy_wedding_bronze",
+          "name": "Bronze Celebration Package",
+          "price": 32.00,
+          "description": "An elegant introduction: Select 2 Mains, 3 Sides, 1 Pasta, and 1 Salad. Includes artisanal bread service.",
+          "minGuestCount": 50,
+          "limits": { "mains": 2, "sides": 3, "pasta": 1, "salads": 1 }
+        },
+        {
+          "id": "italy_wedding_silver",
+          "name": "Silver Celebration Package",
+          "price": 38.00,
+          "description": "A delightful selection: Select 3 Mains, 3 Sides, 2 Pastas, and 2 Salads. Includes artisanal bread service and a choice of infused olive oils.",
+          "minGuestCount": 50,
+          "limits": { "mains": 3, "sides": 3, "pasta": 2, "salads": 2 }
+        },
+        {
+          "id": "italy_wedding_gold",
+          "name": "Gold Celebration Package",
+          "price": 46.00,
+          "description": "A luxurious experience: Select 3 Mains, 4 Sides, 2 Pastas, and 2 Salads. Includes premium bread service and a complimentary signature appetizer selection.",
+          "minGuestCount": 50,
+          "limits": { "mains": 3, "sides": 4, "pasta": 2, "salads": 2 }
+        },
+        {
+          "id": "italy_wedding_diamond",
+          "name": "Diamond Celebration Package",
+          "price": 58.00,
+          "description": "The ultimate Italian feast: Select 4 Mains, 5 Sides, 2 Premium Pastas, and 3 Salads. Includes deluxe bread service, complimentary signature appetizers, and dedicated table-side olive oil tasting.",
+          "minGuestCount": 50,
+          "limits": { "mains": 4, "sides": 5, "pasta": 2, "salads": 3 }
+        }
+      ],
+      "categories": {
+        "mains": {
+          "title": "Exquisite Italian Mains",
+          "description": "Choose your centerpiece main courses.",
+          "items": [
+            { "id": "chicken_saltimbocca_w", "name": "Chicken Saltimbocca with Prosciutto & Sage", "upcharge": 0 },
+            { "id": "chicken_florentine_w", "name": "Chicken Florentine with Spinach & White Wine Cream Sauce", "upcharge": 0 },
+            { "id": "chicken_piccata_w", "name": "Chicken Piccata with Lemon, Capers & Parsley", "upcharge": 0 },
+            { "id": "chicken_cacciatore_w", "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions", "upcharge": 0 },
+            { "id": "chicken_parmesan_white_w", "name": "Chicken Parmesan White with Sun-dried Tomato & White Wine Cream Sauce", "upcharge": 0 },
+            { "id": "chicken_parmesan_red_w", "name": "Chicken Parmesan Red with Mozzarella & Tomato Sauce", "upcharge": 0 },
+            { "id": "chicken_marsala_w", "name": "Chicken Marsala with Mushrooms & Creamy Marsala Wine Sauce", "upcharge": 0 },
+            { "id": "chicken_puttanesca_w", "name": "Chicken Puttanesca with Olives, Capers & Anchovies (Moderately Spicy)", "upcharge": 0 },
+            { "id": "beef_pizzaiola_w", "name": "Beef Pizzaiola with Cremini Mushrooms, Peppers & Oregano", "upcharge": 0 },
+            { "id": "beef_braciole_w", "name": "Beef Braciole with Parmesan, Salami & Herb Stuffing", "upcharge": 0 },
+            { "id": "lasagna_w", "name": "Lasagna with Beef, Pork & Ricotta", "upcharge": 0 },
+            { "id": "osso_bucco_w", "name": "Osso Bucco with Root Vegetables & Red Wine", "upcharge": 8.00 },
+            { "id": "brasato_al_barolo_w", "name": "Brasato Al Barolo with Barolo Wine & Tomato", "upcharge": 0 },
+            { "id": "veal_saltimbocca_w", "name": "Veal Saltimbocca with Prosciutto & Sage", "upcharge": 3.00 },
+            { "id": "pesce_all_acqua_pazza_w", "name": "Pesce All'Acqua Pazza (Poached Halibut) with Tomatoes, Capers & Lemon", "upcharge": 0 },
+            { "id": "spinach_and_ricotta_cannelloni", "name": "Spinach and Ricotta Cannelloni", "upcharge": 0 },
+            { "id": "italian_meatballs", "name": "Italian Meatballs", "upcharge": 0 },
+            { "id": "vegetarian_lasagna_w", "name": "Vegetarian Lasagna with Artichoke Hearts & Bechamel Sauce", "upcharge": 0 }
+          ]
+        },
+        "sides": {
+          "title": "Refined Italian Sides",
+          "description": "Select your accompanying side dishes.",
+          "items": [
+            { "id": "rosemary_roasted_potatoes", "name": "Rosemary Roasted Potatoes", "upcharge": 0 },
+            { "id": "green_beans_almondine", "name": "Green Beans Almondine", "upcharge": 0 },
+            { "id": "baked_cauliflower_w", "name": "Baked Cauliflower with Bechamel & Shaved Parmesan", "upcharge": 0 },
+            { "id": "asiago_zucchini_bites", "name": "Asiago Zucchini Bites", "upcharge": 0 },
+            { "id": "eggplant_parmesan", "name": "Eggplant Parmesan", "upcharge": 0 },
+            { "id": "cannellini_beans_w", "name": "Cannellini Beans with Caponata", "upcharge": 0 },
+            { "id": "peas_w", "name": "Peas with Pancetta", "upcharge": 0 },
+            { "id": "roasted_brussels_sprouts_w", "name": "Roasted Brussels Sprouts with Balsamic Crema", "upcharge": 0 },
+            { "id": "tuscan_roasted_carrots", "name": "Tuscan Roasted Carrots", "upcharge": 0 }
+          ]
+        },
+        "pasta": {
+          "title": "Artisanal Italian Pasta",
+          "description": "Indulge in our freshly prepared pasta selections.",
+          "items": [
+            { "id": "penne_pasta_with_butter", "name": "Penne Pasta with Butter", "upcharge": 0 },
+            { "id": "penne_pasta_with_pesto", "name": "Penne Pasta with Pesto", "upcharge": 0 },
+            { "id": "penne_pasta_with_marinara", "name": "Penne Pasta with Marinara", "upcharge": 0 },
+            { "id": "rigatoni_with_butter", "name": "Rigatoni with Butter", "upcharge": 0 },
+            { "id": "rigatoni_with_pesto", "name": "Rigatoni with Pesto", "upcharge": 0 },
+            { "id": "rigatoni_with_marinara", "name": "Rigatoni with Marinara", "upcharge": 0 },
+            { "id": "conchiglie_with_butter", "name": "Conchiglie with Butter", "upcharge": 0 },
+            { "id": "conchiglie_with_pesto", "name": "Conchiglie with Pesto", "upcharge": 0 },
+            { "id": "conchiglie_with_marinara", "name": "Conchiglie with Marinara", "upcharge": 0 }
+          ]
+        },
+        "salads": {
+          "title": "Fresh Italian Salads",
+          "description": "Choose from our vibrant and fresh salad creations.",
+          "items": [
+            { "id": "caprese_stuffed_avocado", "name": "Caprese Stuffed Avocado", "upcharge": 0 },
+            { "id": "panzanella_bread_salad", "name": "Panzanella Bread Salad", "upcharge": 0 },
+            { "id": "tossed_italian_cobb_salad", "name": "Tossed Italian Cobb Salad", "upcharge": 0 },
+            { "id": "sicilian_fennel_salad", "name": "Sicilian Fennel Salad", "upcharge": 0 },
+            { "id": "roasted_beets_with_burrata", "name": "Roasted Beets with Burrata", "upcharge": 0 },
+            { "id": "caprese", "name": "Caprese", "upcharge": 0 },
+            { "id": "pasta_salad", "name": "Pasta Salad", "upcharge": 0 },
+            { "id": "tuscan_orzo_pesto_salad", "name": "Tuscan Orzo Pesto Salad", "upcharge": 0 },
+            { "id": "caesar_salad", "name": "Caesar Salad", "upcharge": 0 },
+            { "id": "garden_salad", "name": "Garden Salad", "upcharge": 0 }
+          ]
+        }
+      }
     },
-  },
 
   vegan_wedding_feast: {
     title: "Elegant Vegan Wedding Feast",
@@ -681,7 +714,7 @@ export const weddingThemeMenuData: { [key: string]: WeddingThemeMenu } = {
       // --- Items from: A Taste of Italy - Wedding Celebration ---
       custom_italy_mains: {
         title: "Italian Mains (Bespoke Selection)",
-        description: "Choose from our exquisite Italian main courses.",
+        description: "Choose from our Italian main courses.",
         items: [
           { id: "chicken_saltimbocca_w", name: "Chicken Saltimbocca with Prosciutto & Sage", upcharge: 0 },
           { id: "beef_braciole_w", name: "Slow-Cooked Beef Braciole in Rich Tomato Sauce", upcharge: 5.00 },
