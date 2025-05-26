@@ -43,7 +43,30 @@ export default function DietaryDashboard({ isCollapsed = false }: DietaryDashboa
   const { watch } = useFormContext<WeddingInquiryFormData>();
   
   const dietaryGuidance = watch("dietaryGuidance");
-  const selectedMenuItems = watch("selectedMenuItems") || [];
+  const allFormData = watch();
+  
+  // Get selected items from various form fields
+  const selectedMenuItems = React.useMemo(() => {
+    const items: string[] = [];
+    
+    // Check wedding package selection
+    if (allFormData.menuSelections?.selectedPackage) {
+      items.push(allFormData.menuSelections.selectedPackage);
+    }
+    
+    // Check appetizer selections
+    if (allFormData.horsDoeurvesSelections?.categories) {
+      Object.values(allFormData.horsDoeurvesSelections.categories).forEach(category => {
+        if (category?.items) {
+          Object.keys(category.items).forEach(itemKey => {
+            items.push(itemKey);
+          });
+        }
+      });
+    }
+    
+    return items;
+  }, [allFormData]);
   
   const primaryDietGoal = dietaryGuidance?.primaryDietGoal as DietPreferenceCategory;
   const dietaryRestrictions = dietaryGuidance?.dietaryRestrictions || [];
@@ -138,14 +161,23 @@ export default function DietaryDashboard({ isCollapsed = false }: DietaryDashboa
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-4 space-y-4 max-h-screen overflow-y-auto">
-      <div className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-        <Target className="h-5 w-5 text-pink-500" />
-        Dietary Dashboard
+    <div className="w-full bg-white rounded-lg p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Target className="h-5 w-5 text-pink-500" />
+          Dietary Tracking
+        </div>
+        {selectedMenuItems.length > 0 && (
+          <div className="text-sm text-green-600 font-medium">
+            {selectedMenuItems.length} item{selectedMenuItems.length > 1 ? 's' : ''} selected
+          </div>
+        )}
       </div>
-
-      {/* Diet Goal Summary */}
-      {primaryDietGoal && (
+      
+      {/* Horizontal layout for compact display */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Diet Goal Summary */}
+        {primaryDietGoal && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">

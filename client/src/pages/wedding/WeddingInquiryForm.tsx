@@ -27,7 +27,7 @@ import WeddingEquipmentQuestionStep from "./components/WeddingEquipmentQuestionS
 import WeddingEquipmentStep from "./components/WeddingEquipmentStep";
 import WeddingDietaryRestrictionsStep from "./components/WeddingDietaryRestrictionsStep";
 // import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
-import DietaryDashboard from "./components/DietaryDashboard";
+import SimpleDietaryDashboard from "./components/SimpleDietaryDashboard";
 // WeddingReviewStep would be the component for the "review" step
 // import WeddingReviewStep from "./components/WeddingReviewStep";
 
@@ -456,18 +456,19 @@ export default function WeddingInquiryForm() {
                 />
               )}
               {currentStepKey === "menuSelection" && (
-                <div className="flex gap-6">
-                  <div className="flex-1">
-                    <WeddingMenuSelectionStep
-                      selectedTheme={selectedTheme}
-                      guestCount={guestCount}
-                      onPrevious={handlePrevious}
-                      onNext={handleNext}
-                    />
+                <div className="space-y-6">
+                  {/* Dietary Dashboard at the top for better visibility */}
+                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
+                    <SimpleDietaryDashboard />
                   </div>
-                  <div className="w-80">
-                    <DietaryDashboard />
-                  </div>
+                  
+                  {/* Menu Selection Below */}
+                  <WeddingMenuSelectionStep
+                    selectedTheme={selectedTheme}
+                    guestCount={guestCount}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
                 </div>
               )}
               {currentStepKey === "appetizerQuestion" && (
@@ -479,7 +480,7 @@ export default function WeddingInquiryForm() {
                     />
                   </div>
                   <div className="w-80">
-                    <DietaryDashboard />
+                    <SimpleDietaryDashboard />
                   </div>
                 </div>
               )}
