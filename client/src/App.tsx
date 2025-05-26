@@ -30,6 +30,9 @@ import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionSt
 import { eventTypes } from "@/data/event-types"; // For the EventTypeSelectionStep props
 import { EventType } from "@/pages/wedding/types/weddingFormTypes"; // Get EventType for onSelectEventType
 
+// Import the Dietary Demo page
+import DietaryDemo from "@/pages/DietaryDemo";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -163,6 +166,7 @@ function AppContent() {
           <Route path="/admin/form-builder/forms" component={FormManager} />
           <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
           <Route path="/calculator-test" component={CalculatorTest} />
+          <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
           <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
