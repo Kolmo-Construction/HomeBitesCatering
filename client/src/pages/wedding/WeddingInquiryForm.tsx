@@ -26,7 +26,7 @@ import WeddingAlcoholicBeveragesStep from "./components/WeddingAlcoholicBeverage
 import WeddingEquipmentQuestionStep from "./components/WeddingEquipmentQuestionStep";
 import WeddingEquipmentStep from "./components/WeddingEquipmentStep";
 import WeddingDietaryRestrictionsStep from "./components/WeddingDietaryRestrictionsStep";
-import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
+// import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
 import DietaryDashboard from "./components/DietaryDashboard";
 // WeddingReviewStep would be the component for the "review" step
 // import WeddingReviewStep from "./components/WeddingReviewStep";
@@ -400,10 +400,54 @@ export default function WeddingInquiryForm() {
                 />
               )}
               {currentStepKey === "dietaryGuidance" && (
-                <DietaryGuidanceStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                      Dietary Preferences & Guidance
+                    </h2>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                      Help us curate the perfect menu for your wedding guests by sharing your dietary goals and any restrictions we should consider.
+                    </p>
+                  </div>
+
+                  <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {["BALANCED", "HIGH_PROTEIN", "LOW_CARB", "VEGAN", "VEGETARIAN", "HEART_HEALTHY"].map((diet) => (
+                        <div
+                          key={diet}
+                          className="p-4 border rounded-lg cursor-pointer hover:border-pink-500 hover:bg-pink-50 transition-all"
+                          onClick={() => setValue("dietaryGuidance.primaryDietGoal", diet)}
+                        >
+                          <div className="text-sm font-medium text-center">
+                            {diet.replace(/_/g, " ")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-center text-sm text-gray-600 mt-4">
+                      Selected: {watch("dietaryGuidance.primaryDietGoal") || "None"}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-6">
+                    <button 
+                      type="button" 
+                      onClick={handlePrevious}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    
+                    <button 
+                      type="button" 
+                      onClick={handleNext}
+                      className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600"
+                    >
+                      Continue to Menu Selection
+                    </button>
+                  </div>
+                </div>
               )}
               {currentStepKey === "serviceStyleSelection" && ( // <-- RENDER NEW STEP
                 <WeddingServiceStyleStep
