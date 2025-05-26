@@ -382,11 +382,11 @@ export default function WeddingInquiryForm() {
                     currentStepKey={currentStepKey}
                 />
             )}
-            <div className="container mx-auto px-4"> {/* Added container for consistent padding */}
+            <div className="container mx-auto px-4">
               {currentStepKey === "basicInfo" && (
                 <WeddingBasicInformationStep
-                  // eventType={fixedWeddingEventType} // Not needed if fixed in component
-                  onPrevious={handlePrevious} // Should be disabled by logic if currentStepIndex <= 0
+                  eventType={fixedWeddingEventType}
+                  onPrevious={handlePrevious}
                   onNext={handleNext}
                 />
               )}
