@@ -54,7 +54,7 @@ const dietGoalIcons = {
   ATHLETIC_PERFORMANCE: Zap
 };
 
-export default function DietaryGuidanceStep({ onPrevious, onNext }: DietaryGuidanceStepProps) {
+function DietaryGuidanceStep({ onPrevious, onNext }: DietaryGuidanceStepProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<WeddingInquiryFormData>();
   
   const [localPreferences, setLocalPreferences] = useState<DietaryPreferences>({
@@ -333,3 +333,5 @@ export default function DietaryGuidanceStep({ onPrevious, onNext }: DietaryGuida
     </div>
   );
 }
+
+export default DietaryGuidanceStep;
