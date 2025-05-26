@@ -1,0 +1,308 @@
+{
+  "menu_items_by_category": {
+    "taco_fiesta": {
+      "proteins": {
+        "barbacoa": "Barbacoa",
+        "flank_steak_fajitas": "Flank steak Fajitas",
+        "ground_beef": "Ground Beef",
+        "pork_carnitas": "Pork Carnitas",
+        "pork_belly": "Pork Belly",
+        "chorizo": "Chorizo",
+        "beef_birria": "Beef Birria",
+        "mexican_chicken": "Mexican Chicken",
+        "cod": "Cod",
+        "shrimp": "Shrimp",
+        "tofu": "Tofu",
+        "roasted_vegetables": "Roasted Vegetables",
+        "escabeche": "Escabeche - House-made picked vegetable medley"
+      },
+      "sides": {
+        "refried_beans": "Refried Beans",
+        "mexican_street_corn": "Mexican Street corn (Elotes)",
+        "queso_dip": "Queso Dip",
+        "chorizo_queso_dip": "Chorizo Queso Dip",
+        "stuffed_poblano": "Stuffed Poblano peppers",
+        "mexican_rice": "Mexican Rice",
+        "cilantro_lime_rice": "Cilantro Lime Rice",
+        "rice_and_beans": "Rice and Beans",
+        "jalapeno_cornbread": "Jalapeno cornbread",
+        "grilled_vegetables": "Grilled Vegetables",
+        "mexican_slaw_mango": "Mexican Slaw with Mango",
+        "vegetarian_empanadas": "Vegetarian Empanadas"
+      },
+      "salads": {
+        "mexican_caesar": "Mexican Caesar Salad",
+        "southwest_salad": "Southwest Salad",
+        "pico_de_gallo": "Pico de Gallo"
+      },
+      "salsas": {
+        "salsa_verde": "Salsa Verde",
+        "salsa_roja": "Salsa Roja",
+        "chipotle_salsa": "Chipotle Salsa",
+        "mango_salsa": "Mango Salsa"
+      }
+    },
+    "taste_of_italy": {
+      "mains": {
+        "chicken_parmigiana": "Chicken Parmigiana",
+        "eggplant_parmigiana": "Eggplant Parmigiana",
+        "veal_marsala": "Veal Marsala",
+        "chicken_piccata": "Chicken Piccata",
+        "italian_sausage_peppers": "Italian Sausage with Peppers",
+        "osso_buco": "Osso Buco",
+        "salmon_mediterranean": "Mediterranean Salmon"
+      },
+      "pasta": {
+        "penne_arrabbiata": "Penne Arrabbiata",
+        "fettuccine_alfredo": "Fettuccine Alfredo",
+        "spaghetti_carbonara": "Spaghetti Carbonara",
+        "lasagna_classic": "Classic Lasagna",
+        "ravioli_spinach_ricotta": "Spinach & Ricotta Ravioli"
+      },
+      "sides": {
+        "garlic_bread": "Garlic Bread",
+        "roasted_vegetables_italian": "Italian Roasted Vegetables",
+        "caprese_salad": "Caprese Salad",
+        "antipasto_platter": "Antipasto Platter"
+      },
+      "salads": {
+        "caesar_salad": "Caesar Salad",
+        "arugula_salad": "Arugula Salad with Lemon Vinaigrette",
+        "italian_garden_salad": "Italian Garden Salad"
+      }
+    },
+    "american_bbq": {
+      "proteins": {
+        "pulled_pork": "Pulled Pork",
+        "brisket": "BBQ Brisket",
+        "ribs_baby_back": "Baby Back Ribs",
+        "bbq_chicken": "BBQ Chicken",
+        "smoked_turkey": "Smoked Turkey",
+        "grilled_salmon": "Grilled Salmon"
+      },
+      "sides": {
+        "mac_and_cheese": "Mac and Cheese",
+        "coleslaw": "Coleslaw",
+        "baked_beans": "Baked Beans",
+        "cornbread": "Cornbread",
+        "potato_salad": "Potato Salad",
+        "grilled_corn": "Grilled Corn on the Cob"
+      },
+      "salads": {
+        "garden_salad": "Garden Salad",
+        "three_bean_salad": "Three Bean Salad"
+      },
+      "sauces": {
+        "bbq_sauce_sweet": "Sweet BBQ Sauce",
+        "bbq_sauce_spicy": "Spicy BBQ Sauce",
+        "alabama_white_sauce": "Alabama White Sauce"
+      }
+    },
+    "taste_of_greece": {
+      "mains": {
+        "moussaka": "Moussaka",
+        "souvlaki_chicken": "Chicken Souvlaki",
+        "souvlaki_pork": "Pork Souvlaki",
+        "lamb_gyros": "Lamb Gyros",
+        "grilled_fish": "Grilled Mediterranean Fish",
+        "stuffed_peppers": "Greek Stuffed Peppers"
+      },
+      "sides": {
+        "greek_rice": "Greek Rice Pilaf",
+        "roasted_potatoes": "Greek Roasted Potatoes",
+        "spanakopita": "Spanakopita",
+        "dolmades": "Dolmades (Stuffed Grape Leaves)",
+        "greek_beans": "Greek Green Beans"
+      },
+      "salads": {
+        "greek_salad": "Traditional Greek Salad",
+        "village_salad": "Greek Village Salad"
+      },
+      "sauces": {
+        "tzatziki": "Tzatziki Sauce",
+        "hummus": "Hummus",
+        "olive_tapenade": "Olive Tapenade"
+      }
+    },
+    "kebab_party": {
+      "proteins": {
+        "chicken_kebab": "Chicken Kebab",
+        "beef_kebab": "Beef Kebab",
+        "lamb_kebab": "Lamb Kebab",
+        "kofta_kebab": "Kofta Kebab",
+        "vegetable_kebab": "Vegetable Kebab",
+        "shrimp_kebab": "Shrimp Kebab"
+      },
+      "sides": {
+        "rice_pilaf": "Rice Pilaf",
+        "grilled_vegetables_kebab": "Grilled Vegetables",
+        "flatbread": "Flatbread",
+        "roasted_eggplant": "Roasted Eggplant"
+      },
+      "salads": {
+        "tabbouleh": "Tabbouleh",
+        "fattoush": "Fattoush Salad"
+      },
+      "sauces": {
+        "garlic_sauce": "Garlic Sauce",
+        "tahini_sauce": "Tahini Sauce",
+        "hot_sauce_middle_eastern": "Middle Eastern Hot Sauce"
+      }
+    },
+    "sandwich_factory": {
+      "packages": {
+        "bronze_sandwich": "Bronze Sandwich Package",
+        "silver_sandwich": "Silver Sandwich Package",
+        "gold_sandwich": "Gold Sandwich Package",
+        "diamond_sandwich": "Diamond Sandwich Package"
+      },
+      "spreads": {
+        "mayo": "Mayo",
+        "mustard": "Mustard",
+        "ranch": "Ranch",
+        "chipotle_mayo": "Chipotle Mayo",
+        "avocado_spread": "Avocado Spread",
+        "hummus_spread": "Hummus"
+      },
+      "salads": {
+        "potato_salad_sandwich": "Potato Salad",
+        "pasta_salad": "Pasta Salad",
+        "coleslaw_sandwich": "Coleslaw"
+      }
+    },
+    "breakfast_brunch": {
+      "grab_and_go": {
+        "breakfast_burrito_mexi": "Breakfast Burrito - The Mexi",
+        "breakfast_burrito_carnivore": "Breakfast Burrito - The Carnivore",
+        "breakfast_burrito_cali": "Breakfast Burrito - The Cali",
+        "breakfast_burrito_green": "Breakfast Burrito - The Green (Vegetarian)",
+        "croissandwich_egg_ham": "Croissandwich - Egg Ham",
+        "croissandwich_egg_bacon": "Croissandwich - Egg Bacon",
+        "croissandwich_egg_sausage": "Croissandwich - Egg Sausage",
+        "breakfast_sandwich_english": "Breakfast Sandwich on English Muffin",
+        "bagel_cream_cheese": "Bagel with Cream Cheese",
+        "danish_pastry": "Danish Pastry",
+        "muffin_blueberry": "Blueberry Muffin",
+        "granola_parfait": "Granola Parfait"
+      },
+      "continental": {
+        "fresh_fruit_platter": "Fresh Fruit Platter",
+        "pastry_selection": "Pastry Selection",
+        "coffee_service": "Coffee Service",
+        "juice_selection": "Juice Selection"
+      }
+    },
+    "vegan_feast": {
+      "mains": {
+        "quinoa_stuffed_peppers": "Quinoa Stuffed Peppers",
+        "lentil_walnut_loaf": "Lentil Walnut Loaf",
+        "vegetable_curry": "Vegetable Curry",
+        "black_bean_burgers": "Black Bean Burgers",
+        "stuffed_portobello": "Stuffed Portobello Mushrooms",
+        "cauliflower_steaks": "Cauliflower Steaks"
+      },
+      "sides": {
+        "quinoa_salad": "Quinoa Salad",
+        "roasted_root_vegetables": "Roasted Root Vegetables",
+        "coconut_rice": "Coconut Rice",
+        "steamed_broccoli": "Steamed Broccoli",
+        "sweet_potato_fries": "Sweet Potato Fries"
+      },
+      "salads": {
+        "kale_caesar": "Kale Caesar Salad",
+        "beet_arugula_salad": "Beet and Arugula Salad",
+        "mediterranean_chickpea": "Mediterranean Chickpea Salad"
+      }
+    }
+  },
+  "package_ids": {
+    "taco_fiesta_bronze": "Bronze Fiesta Package",
+    "taco_fiesta_silver": "Silver Fiesta Package", 
+    "taco_fiesta_gold": "Gold Fiesta Package",
+    "taco_fiesta_diamond": "Diamond Fiesta Package",
+    "italy_wedding_bronze": "Bronze Celebration Package",
+    "italy_wedding_silver": "Silver Celebration Package",
+    "italy_wedding_gold": "Gold Celebration Package",
+    "italy_wedding_diamond": "Diamond Celebration Package",
+    "bbq_bronze": "Bronze BBQ Package",
+    "bbq_silver": "Silver BBQ Package",
+    "bbq_gold": "Gold BBQ Package",
+    "bbq_diamond": "Diamond BBQ Package",
+    "greece_bronze": "Bronze Greek Package",
+    "greece_silver": "Silver Greek Package",
+    "greece_gold": "Gold Greek Package",
+    "greece_diamond": "Diamond Greek Package",
+    "kebab_bronze": "Bronze Kebab Package",
+    "kebab_silver": "Silver Kebab Package",
+    "kebab_gold": "Gold Kebab Package",
+    "kebab_diamond": "Diamond Kebab Package",
+    "bronze_sandwich": "Bronze Sandwich Package",
+    "silver_sandwich": "Silver Sandwich Package",
+    "gold_sandwich": "Gold Sandwich Package",
+    "diamond_sandwich": "Diamond Sandwich Package",
+    "bronze_vegan": "Bronze Vegan Delight",
+    "silver_vegan": "Silver Vegan Collection",
+    "gold_vegan": "Gold Vegan Experience",
+    "diamond_vegan": "Diamond Vegan Extravaganza",
+    "grab_and_go": "Grab and Go Breakfast",
+    "continental_breakfast": "Continental Breakfast"
+  },
+  "appetizers_hors_doeuvres": {
+    "tea_sandwiches": {
+      "cucumber_cream_cheese": "Cucumber & Cream Cheese",
+      "smoked_salmon": "Smoked Salmon",
+      "egg_salad": "Egg Salad",
+      "chicken_salad": "Chicken Salad"
+    },
+    "shooters": {
+      "gazpacho": "Gazpacho Shooter",
+      "tomato_basil": "Tomato Basil Shooter",
+      "butternut_squash": "Butternut Squash Shooter"
+    },
+    "canapes": {
+      "bruschetta": "Bruschetta",
+      "deviled_eggs": "Deviled Eggs",
+      "stuffed_mushrooms": "Stuffed Mushrooms",
+      "shrimp_cocktail": "Shrimp Cocktail"
+    },
+    "spreads": {
+      "hummus_platter": "Hummus Platter",
+      "cheese_board": "Cheese Board",
+      "charcuterie": "Charcuterie Board"
+    }
+  },
+  "beverages": {
+    "non_alcoholic": {
+      "coffee": "Coffee",
+      "tea_selection": "Tea Selection",
+      "soft_drinks": "Soft Drinks",
+      "juice_bar": "Juice Bar",
+      "infused_water": "Infused Water"
+    },
+    "alcoholic": {
+      "beer_selection": "Beer Selection",
+      "wine_selection": "Wine Selection",
+      "signature_cocktails": "Signature Cocktails",
+      "full_bar": "Full Bar Service"
+    }
+  },
+  "desserts": {
+    "cakes": {
+      "chocolate_cake": "Chocolate Cake",
+      "vanilla_cake": "Vanilla Cake",
+      "red_velvet": "Red Velvet Cake",
+      "carrot_cake": "Carrot Cake"
+    },
+    "pastries": {
+      "tiramisu": "Tiramisu",
+      "cannoli": "Cannoli",
+      "fruit_tart": "Fruit Tart",
+      "cheesecake": "Cheesecake"
+    },
+    "cookies": {
+      "chocolate_chip": "Chocolate Chip Cookies",
+      "sugar_cookies": "Sugar Cookies",
+      "oatmeal_raisin": "Oatmeal Raisin Cookies"
+    }
+  }
+}
