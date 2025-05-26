@@ -3,6 +3,38 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define the structure for additional_dietary_metadata JSONB field
+export interface AdditionalDietaryMetadata {
+  dietary_flags_list?: string[];       // e.g., ["HIGH_PROTEIN", "LOW_CARB", "VEGAN"] (from DietaryFlag type)
+  allergen_alert_list?: string[];      // e.g., ["CONTAINS_SOY", "MAY_CONTAIN_NUTS"] (from AllergenAlert type)
+  nutritional_highlights?: {
+    calories?: string;                 // e.g., "Approx. 350-450 kcal"
+    protein?: string;                  // e.g., "High Protein (30g+)"
+    fat?: string;                      // e.g., "Low Fat (<10g)"
+    carbs?: string;                    // e.g., "Low Carb (<15g)"
+    fiber?: string;                    // e.g., "Good Source of Fiber (5g+)"
+  };
+  key_preparation_notes?: string;      // e.g., "Pan-seared, contains white wine"
+  suitable_for_diet_preferences?: string[]; // e.g., ["KETO", "MEDITERRANEAN"] (from DietPreferenceCategory type)
+  guidance_for_customer_short?: string; // A concise tip, e.g., "Great choice for a light, healthy meal."
+}
+
+// Zod schema for validating additional_dietary_metadata
+export const additionalDietaryMetadataSchema = z.object({
+  dietary_flags_list: z.array(z.string()).optional(),
+  allergen_alert_list: z.array(z.string()).optional(),
+  nutritional_highlights: z.object({
+    calories: z.string().optional(),
+    protein: z.string().optional(),
+    fat: z.string().optional(),
+    carbs: z.string().optional(),
+    fiber: z.string().optional(),
+  }).optional(),
+  key_preparation_notes: z.string().optional(),
+  suitable_for_diet_preferences: z.array(z.string()).optional(),
+  guidance_for_customer_short: z.string().optional(),
+}).optional();
+
 // User and authentication tables
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -79,7 +111,9 @@ export const menuItems = pgTable("menu_items", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertMenuItemSchema = createInsertSchema(menuItems).omit({
+export const insertMenuItemSchema = createInsertSchema(menuItems, {
+  additional_dietary_metadata: additionalDietaryMetadataSchema,
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true
@@ -498,12 +532,7 @@ export const insertProcessedEmailSchema = createInsertSchema(processedEmails).om
 });
 
 export type ProcessedEmail = typeof processedEmails.$inferSelect;
-export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;// In your shared/schema.ts or a new file (e.g., shared/form-schema.ts)
-
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, primaryKey } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-
-// Don't import from schema.ts to avoid circular references
+export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
 
 // --- ENUMS ---
 
