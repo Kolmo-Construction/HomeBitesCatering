@@ -3,32 +3,50 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Nutritional range interface for structured nutrition data
+export interface NutritionalRange {
+  min: number;
+  max: number;
+  unit: string;
+}
+
 // Define the structure for additional_dietary_metadata JSONB field
 export interface AdditionalDietaryMetadata {
   dietary_flags_list?: string[];       // e.g., ["HIGH_PROTEIN", "LOW_CARB", "VEGAN"] (from DietaryFlag type)
   allergen_alert_list?: string[];      // e.g., ["CONTAINS_SOY", "MAY_CONTAIN_NUTS"] (from AllergenAlert type)
   nutritional_highlights?: {
-    calories?: string;                 // e.g., "Approx. 350-450 kcal"
-    protein?: string;                  // e.g., "High Protein (30g+)"
-    fat?: string;                      // e.g., "Low Fat (<10g)"
-    carbs?: string;                    // e.g., "Low Carb (<15g)"
-    fiber?: string;                    // e.g., "Good Source of Fiber (5g+)"
+    calories?: NutritionalRange;       // e.g., { min: 380, max: 420, unit: "kcal" }
+    protein?: NutritionalRange;        // e.g., { min: 32, max: 38, unit: "g" }
+    fat?: NutritionalRange;            // e.g., { min: 18, max: 22, unit: "g" }
+    carbs?: NutritionalRange;          // e.g., { min: 8, max: 12, unit: "g" }
+    fiber?: NutritionalRange;          // e.g., { min: 2, max: 3, unit: "g" }
+    sodium?: NutritionalRange;         // e.g., { min: 800, max: 1200, unit: "mg" }
+    sugar?: NutritionalRange;          // e.g., { min: 5, max: 8, unit: "g" }
   };
   key_preparation_notes?: string;      // e.g., "Pan-seared, contains white wine"
   suitable_for_diet_preferences?: string[]; // e.g., ["KETO", "MEDITERRANEAN"] (from DietPreferenceCategory type)
   guidance_for_customer_short?: string; // A concise tip, e.g., "Great choice for a light, healthy meal."
 }
 
+// Nutritional range schema for structured nutrition data
+const nutritionalRangeSchema = z.object({
+  min: z.number(),
+  max: z.number(),
+  unit: z.string(),
+});
+
 // Zod schema for validating additional_dietary_metadata
 export const additionalDietaryMetadataSchema = z.object({
   dietary_flags_list: z.array(z.string()).optional(),
   allergen_alert_list: z.array(z.string()).optional(),
   nutritional_highlights: z.object({
-    calories: z.string().optional(),
-    protein: z.string().optional(),
-    fat: z.string().optional(),
-    carbs: z.string().optional(),
-    fiber: z.string().optional(),
+    calories: nutritionalRangeSchema.optional(),
+    protein: nutritionalRangeSchema.optional(),
+    fat: nutritionalRangeSchema.optional(),
+    carbs: nutritionalRangeSchema.optional(),
+    fiber: nutritionalRangeSchema.optional(),
+    sodium: nutritionalRangeSchema.optional(),
+    sugar: nutritionalRangeSchema.optional(),
   }).optional(),
   key_preparation_notes: z.string().optional(),
   suitable_for_diet_preferences: z.array(z.string()).optional(),
