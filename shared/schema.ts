@@ -35,6 +35,48 @@ export const additionalDietaryMetadataSchema = z.object({
   guidance_for_customer_short: z.string().optional(),
 }).optional();
 
+// Define the structure for menus.items JSONB field
+export interface MenuPackageStructure {
+  theme_key: string;                    // e.g., "taste_of_italy_wedding"
+  package_id: string;                   // e.g., "italy_wedding_bronze"
+  package_name: string;                 // e.g., "Bronze Celebration Package"
+  package_price_per_person: number;     // e.g., 32.00
+  package_description: string;          // Full package description
+  min_guest_count?: number;             // e.g., 50
+  customizable?: boolean;               // For bespoke/custom packages
+  categories: MenuPackageCategory[];    // Array of category definitions
+}
+
+export interface MenuPackageCategory {
+  category_key: string;                 // e.g., "mains", "sides", "pasta"
+  display_title: string;               // e.g., "Exquisite Italian Mains"
+  description?: string;                 // Category description
+  available_item_ids: number[];         // Integer IDs from menu_items table
+  selection_limit: number;              // How many items can be selected from this category
+  upcharge_info?: {                     // For items with additional costs
+    [item_id: string]: number;          // item_id -> upcharge amount
+  };
+}
+
+// Zod schema for validating menus.items JSONB structure
+export const menuPackageStructureSchema = z.object({
+  theme_key: z.string(),
+  package_id: z.string(),
+  package_name: z.string(),
+  package_price_per_person: z.number(),
+  package_description: z.string(),
+  min_guest_count: z.number().optional(),
+  customizable: z.boolean().optional(),
+  categories: z.array(z.object({
+    category_key: z.string(),
+    display_title: z.string(),
+    description: z.string().optional(),
+    available_item_ids: z.array(z.number()),
+    selection_limit: z.number(),
+    upcharge_info: z.record(z.string(), z.number()).optional(),
+  })),
+});
+
 // User and authentication tables
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -130,7 +172,9 @@ export const menus = pgTable("menus", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertMenuSchema = createInsertSchema(menus).omit({
+export const insertMenuSchema = createInsertSchema(menus, {
+  items: menuPackageStructureSchema,
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true
