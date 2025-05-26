@@ -301,12 +301,28 @@ async function runComprehensiveMigration() {
         normalizedPrice = itemDetails.price.toFixed(2);
       }
 
+      // Determine upcharge vs base price
+      let upchargeAmount = null;
+      let basePrice = null;
+      
+      if (itemDetails.price > 0) {
+        // If from Italian wedding data (has upcharge field), treat as upcharge
+        if (itemDetails.source_file === 'taste_of_italy_wedding') {
+          upchargeAmount = normalizedPrice;
+          basePrice = null;
+        } else {
+          // For other items (desserts, appetizers, etc.), treat as base price
+          basePrice = normalizedPrice;
+          upchargeAmount = null;
+        }
+      }
+
       const insertQuery = `
         INSERT INTO menu_items (
-          name, description, category, price, 
+          name, description, category, price, upcharge,
           is_vegetarian, is_vegan, is_gluten_free, is_dairy_free, is_nut_free,
           additional_dietary_metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id
       `;
 
       try {
@@ -314,7 +330,8 @@ async function runComprehensiveMigration() {
           itemDetails.name,
           itemDetails.description,
           itemDetails.category_suggestion,
-          normalizedPrice,
+          basePrice,
+          upchargeAmount,
           false, // Basic boolean flags set to false for Phase 1
           false,
           false,
