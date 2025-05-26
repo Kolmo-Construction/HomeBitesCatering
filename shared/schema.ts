@@ -64,13 +64,17 @@ export const menuItems = pgTable("menu_items", {
   description: text("description"),
   category: text("category").notNull(), // appetizer, entree, side, dessert, beverage
   price: numeric("price", { precision: 10, scale: 2 }), // stored as decimal, nullable for items without price
-  ingredients: text("ingredients"),
+  ingredients: text("ingredients"), // General list of ingredients
   isVegetarian: boolean("is_vegetarian").default(false),
   isVegan: boolean("is_vegan").default(false),
   isGlutenFree: boolean("is_gluten_free").default(false),
   isDairyFree: boolean("is_dairy_free").default(false),
   isNutFree: boolean("is_nut_free").default(false),
-  image: text("image"), // url to image
+  image: text("image"),
+
+  // NEW COLUMN for richer, yet selective, dietary metadata
+  additional_dietary_metadata: jsonb("additional_dietary_metadata"), // Changed from additionalDietaryMetadata for snake_case convention
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
