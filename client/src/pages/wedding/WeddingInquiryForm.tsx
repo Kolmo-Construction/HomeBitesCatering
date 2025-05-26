@@ -112,7 +112,7 @@ const WeddingFormHeader = () => {
 const FormProgressBar = ({
   currentStepNumber,
   totalSteps,
-  currentStepKey,
+  currentStepKey
 }: {
   currentStepNumber: number;
   totalSteps: number;
