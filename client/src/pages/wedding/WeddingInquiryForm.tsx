@@ -9,7 +9,7 @@
                         import { ChevronRight, ChevronLeft } from "lucide-react";
 
                         // Import ALL step components
-                        import WeddingBasicInformationStep from "./components/WeddingBasicInformationStep";
+                        import WeddingBasicInformationStep from "./components/WeddingBasicInformationStepClean";
                         import WeddingEventDetailsStep from "./components/WeddingEventDetailsStep";
                         import WeddingServiceStyleStep from "./components/WeddingServiceStyleStep";
                         import WeddingMenuSelectionStep from "./components/WeddingMenuSelectionStep";

@@ -356,10 +356,6 @@ const WeddingBasicInformationStep: React.FC<WeddingBasicInformationStepProps> = 
 };
 
 export default WeddingBasicInformationStep;
-                message: "Valid phone number: (123) 456-7890",
-              },
-            }}
-            render={({ field }) => (
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
