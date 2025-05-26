@@ -222,17 +222,38 @@ const WeddingProgressSidebar: React.FC<WeddingProgressSidebarProps> = ({
               <span className="font-medium">{guestCount}</span>
             </div>
             
-            {selectedPackage && (
+            {requestedTheme && (
               <div className="flex justify-between">
-                <span className="text-sm">Menu Package:</span>
+                <span className="text-sm">Theme:</span>
+                <span className="font-medium text-xs">{weddingThemeMenuData[requestedTheme]?.title?.slice(0, 20) || 'Selected'}</span>
+              </div>
+            )}
+            
+            {selectedPackage && totalCost > 0 && (
+              <div className="flex justify-between">
+                <span className="text-sm">Menu Cost:</span>
                 <span className="font-medium">${totalCost.toLocaleString()}</span>
+              </div>
+            )}
+            
+            {wantsAppetizers && (
+              <div className="flex justify-between">
+                <span className="text-sm">Appetizers:</span>
+                <span className="font-medium">Selected</span>
+              </div>
+            )}
+            
+            {wantsDesserts && (
+              <div className="flex justify-between">
+                <span className="text-sm">Desserts:</span>
+                <span className="font-medium">Selected</span>
               </div>
             )}
             
             <hr className="my-2" />
             <div className="flex justify-between font-bold text-lg">
-              <span>Current Total:</span>
-              <span className="text-green-600">${totalCost.toLocaleString()}</span>
+              <span>Estimated Total:</span>
+              <span className="text-green-600">${totalCost > 0 ? totalCost.toLocaleString() : '---'}</span>
             </div>
             <p className="text-xs text-gray-500">
               *Estimate only. Final pricing may vary.

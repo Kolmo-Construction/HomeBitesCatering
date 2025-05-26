@@ -414,12 +414,12 @@ export default function WeddingInquiryForm() {
                     onNext={handleNext}
                   />
                 )}
-              {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
-                <WeddingAppetizersStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
+                {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
+                  <WeddingAppetizersStep
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                )}
               {currentStepKey === "foodTruckMenu" && (
                 <WeddingFoodTruckMenuStep
                   onPrevious={handlePrevious}
