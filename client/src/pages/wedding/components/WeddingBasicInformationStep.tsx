@@ -27,6 +27,11 @@ import {
   AlertCircle,
   Users, // Icon for couple's names
   Gift,  // Icon for wedding related fields
+  Heart, // For romantic touches
+  Mail, // For email
+  Phone, // For phone
+  MapPin, // For address
+  Home, // For venue
 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -155,12 +160,22 @@ const WeddingBasicInformationStep: React.FC<WeddingBasicInformationStepProps> = 
                 name="contactName.firstName"
                 rules={{ required: "First name is required." }}
                 render={({ field }) => (
-                <FormItem>
-                    <FormLabel>First Name*</FormLabel>
+                <FormItem className="group">
+                    <FormLabel className="flex items-center gap-2 text-gray-700 font-medium transition-colors group-focus-within:text-rose-600">
+                        <Heart className="h-4 w-4 text-rose-400" />
+                        First Name*
+                    </FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter first name" {...field} />
+                        <div className="relative">
+                            <Input 
+                                placeholder="Your first name" 
+                                {...field} 
+                                className="pl-4 pr-4 py-3 border-gray-200 rounded-xl transition-all duration-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 hover:border-rose-300 bg-white/70 backdrop-blur-sm shadow-sm"
+                            />
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-50/0 via-rose-50/20 to-pink-50/0 opacity-0 transition-opacity duration-300 group-focus-within:opacity-100 pointer-events-none"></div>
+                        </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-rose-500" />
                 </FormItem>
                 )}
             />
@@ -169,12 +184,22 @@ const WeddingBasicInformationStep: React.FC<WeddingBasicInformationStepProps> = 
                 name="contactName.lastName"
                 rules={{ required: "Last name is required." }}
                 render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Last Name*</FormLabel>
+                <FormItem className="group">
+                    <FormLabel className="flex items-center gap-2 text-gray-700 font-medium transition-colors group-focus-within:text-rose-600">
+                        <Heart className="h-4 w-4 text-rose-400" />
+                        Last Name*
+                    </FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter last name" {...field} />
+                        <div className="relative">
+                            <Input 
+                                placeholder="Your last name" 
+                                {...field} 
+                                className="pl-4 pr-4 py-3 border-gray-200 rounded-xl transition-all duration-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 hover:border-rose-300 bg-white/70 backdrop-blur-sm shadow-sm"
+                            />
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-50/0 via-rose-50/20 to-pink-50/0 opacity-0 transition-opacity duration-300 group-focus-within:opacity-100 pointer-events-none"></div>
+                        </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-rose-500" />
                 </FormItem>
                 )}
             />
@@ -182,22 +207,114 @@ const WeddingBasicInformationStep: React.FC<WeddingBasicInformationStepProps> = 
         </div>
 
 
-        {/* Email and Phone */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <FormField
-            control={control}
-            name="email"
-            rules={{
-              required: "Email address is required",
-              pattern: {
-                value: emailRegex,
-                message: "Please enter a valid email address",
-              },
-            }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email Address*</FormLabel>
-                <FormControl>
+        {/* Contact Information Section */}
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-serif italic text-gray-800 mb-2">
+              How can we reach you?
+            </h3>
+            <div className="flex items-center justify-center gap-2 text-rose-500">
+              <Mail className="h-5 w-5" />
+              <span className="text-sm font-medium">Contact Details</span>
+            </div>
+            <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-rose-300 to-transparent mx-auto mt-3"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={control}
+              name="email"
+              rules={{
+                required: "Email address is required",
+                pattern: {
+                  value: emailRegex,
+                  message: "Please enter a valid email address",
+                },
+              }}
+              render={({ field }) => (
+                <FormItem className="group">
+                  <FormLabel className="flex items-center gap-2 text-gray-700 font-medium transition-colors group-focus-within:text-rose-600">
+                    <Mail className="h-4 w-4 text-rose-400" />
+                    Email Address*
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input 
+                        type="email"
+                        placeholder="your.email@example.com" 
+                        {...field} 
+                        className="pl-4 pr-4 py-3 border-gray-200 rounded-xl transition-all duration-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 hover:border-rose-300 bg-white/70 backdrop-blur-sm shadow-sm"
+                      />
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-50/0 via-rose-50/20 to-pink-50/0 opacity-0 transition-opacity duration-300 group-focus-within:opacity-100 pointer-events-none"></div>
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-rose-500" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="phone"
+              rules={{
+                required: "Phone number is required",
+                pattern: {
+                  value: phoneRegex,
+                  message: "Please enter a valid phone number",
+                },
+              }}
+              render={({ field }) => (
+                <FormItem className="group">
+                  <FormLabel className="flex items-center gap-2 text-gray-700 font-medium transition-colors group-focus-within:text-rose-600">
+                    <Phone className="h-4 w-4 text-rose-400" />
+                    Phone Number*
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input 
+                        type="tel"
+                        placeholder="(555) 123-4567" 
+                        {...field} 
+                        className="pl-4 pr-4 py-3 border-gray-200 rounded-xl transition-all duration-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 hover:border-rose-300 bg-white/70 backdrop-blur-sm shadow-sm"
+                      />
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-50/0 via-rose-50/20 to-pink-50/0 opacity-0 transition-opacity duration-300 group-focus-within:opacity-100 pointer-events-none"></div>
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-rose-500" />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Address Section */}
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-serif italic text-gray-800 mb-2">
+              Where should we send details?
+            </h3>
+            <div className="flex items-center justify-center gap-2 text-rose-500">
+              <MapPin className="h-5 w-5" />
+              <span className="text-sm font-medium">Mailing Address</span>
+            </div>
+            <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-rose-300 to-transparent mx-auto mt-3"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={control}
+              name="email"
+              rules={{
+                required: "Email address is required",
+                pattern: {
+                  value: emailRegex,
+                  message: "Please enter a valid email address",
+                },
+              }}
+              render={({ field }) => (
+                <FormItem className="group">
+                  <FormLabel className="flex items-center gap-2 text-gray-700 font-medium transition-colors group-focus-within:text-rose-600">
+                    <Mail className="h-4 w-4 text-rose-400" />
+                    Email Address*
+                  </FormLabel>
+                  <FormControl>
                   <Input
                     placeholder="email@example.com"
                     type="email"
