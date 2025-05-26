@@ -20,25 +20,52 @@ export default function SimpleDietaryDashboard() {
   const dietaryGuidance = watch("dietaryGuidance");
   const allFormData = watch();
   
-  // Count selected items
-  const selectedItemsCount = React.useMemo(() => {
+  // Count selected items and get detailed tracking
+  const selectionAnalysis = React.useMemo(() => {
     let count = 0;
+    const selectedItems: string[] = [];
     
     // Check if a wedding package is selected
     if (allFormData.menuSelections?.selectedPackage) {
       count += 1;
+      selectedItems.push(`Package: ${allFormData.menuSelections.selectedPackage}`);
     }
     
-    // Check appetizers
+    // Check appetizers/hors d'oeuvres
     if (allFormData.horsDoeurvesSelections?.categories) {
-      Object.values(allFormData.horsDoeurvesSelections.categories).forEach(category => {
+      Object.entries(allFormData.horsDoeurvesSelections.categories).forEach(([categoryName, category]) => {
         if (category?.items) {
-          count += Object.keys(category.items).length;
+          Object.entries(category.items).forEach(([itemName, itemData]) => {
+            if (itemData && typeof itemData === 'object' && 'quantity' in itemData) {
+              count += 1;
+              selectedItems.push(`${categoryName}: ${itemName}`);
+            }
+          });
         }
       });
     }
     
-    return count;
+    // Check desserts
+    if (allFormData.dessertSelections) {
+      Object.entries(allFormData.dessertSelections).forEach(([key, value]) => {
+        if (value === true) {
+          count += 1;
+          selectedItems.push(`Dessert: ${key}`);
+        }
+      });
+    }
+    
+    // Check beverages
+    if (allFormData.beverageSelections) {
+      Object.entries(allFormData.beverageSelections).forEach(([key, value]) => {
+        if (value === true) {
+          count += 1;
+          selectedItems.push(`Beverage: ${key}`);
+        }
+      });
+    }
+    
+    return { count, selectedItems };
   }, [allFormData]);
 
   const primaryDietGoal = dietaryGuidance?.primaryDietGoal;
@@ -56,7 +83,7 @@ export default function SimpleDietaryDashboard() {
   }
 
   // Mock compatibility score based on selections (you can enhance this)
-  const compatibilityScore = selectedItemsCount > 0 ? 75 : 0;
+  const compatibilityScore = selectionAnalysis.count > 0 ? 75 : 0;
 
   return (
     <Card className="bg-white border-pink-200">
@@ -66,9 +93,9 @@ export default function SimpleDietaryDashboard() {
             <Target className="h-5 w-5 text-pink-500" />
             <span className="font-semibold text-gray-900">Dietary Tracking</span>
           </div>
-          {selectedItemsCount > 0 && (
+          {selectionAnalysis.count > 0 && (
             <Badge variant="secondary" className="bg-green-100 text-green-700">
-              {selectedItemsCount} item{selectedItemsCount > 1 ? 's' : ''} selected
+              {selectionAnalysis.count} item{selectionAnalysis.count > 1 ? 's' : ''} selected
             </Badge>
           )}
         </div>
@@ -83,7 +110,7 @@ export default function SimpleDietaryDashboard() {
           </div>
           
           {/* Compatibility Score */}
-          {selectedItemsCount > 0 && (
+          {selectionAnalysis.count > 0 && (
             <div className="text-center">
               <div className="text-sm text-gray-600 mb-1">Compatibility</div>
               <div className="flex items-center gap-2">
@@ -96,7 +123,7 @@ export default function SimpleDietaryDashboard() {
           {/* Status */}
           <div className="text-center">
             <div className="text-sm text-gray-600 mb-1">Status</div>
-            {selectedItemsCount === 0 ? (
+            {selectionAnalysis.count === 0 ? (
               <div className="text-xs text-gray-500">Start selecting items</div>
             ) : (
               <div className="flex items-center justify-center gap-1 text-green-600">
@@ -108,10 +135,22 @@ export default function SimpleDietaryDashboard() {
         </div>
 
         {/* Real-time feedback */}
-        {selectedItemsCount > 0 && (
+        {selectionAnalysis.count > 0 && (
           <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
             <div className="text-sm text-green-800">
               <strong>Great progress!</strong> Your selections are being tracked for {primaryDietGoal.replace(/_/g, " ").toLowerCase()} compatibility.
+            </div>
+            {/* Debug: Show what's being tracked */}
+            <div className="mt-2 text-xs text-gray-600">
+              <strong>Currently tracking:</strong>
+              <ul className="list-disc list-inside mt-1">
+                {selectionAnalysis.selectedItems.slice(0, 3).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+                {selectionAnalysis.selectedItems.length > 3 && (
+                  <li>...and {selectionAnalysis.selectedItems.length - 3} more items</li>
+                )}
+              </ul>
             </div>
           </div>
         )}
