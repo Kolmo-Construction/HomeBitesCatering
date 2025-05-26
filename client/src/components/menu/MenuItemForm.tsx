@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertMenuItemSchema } from "@shared/schema";
+import { insertMenuItemSchema, type AdditionalDietaryMetadata, type NutritionalRange } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSignIcon, X } from "lucide-react";
+import { DollarSignIcon, X, Plus, Minus } from "lucide-react";
 
 // Extend the menu item schema with validation
 const formSchema = insertMenuItemSchema.extend({
@@ -61,6 +61,15 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // State for combined name/description format
   const [useCombinedFormat, setUseCombinedFormat] = useState(false);
   const [combinedNameDesc, setCombinedNameDesc] = useState("");
+  
+  // State for advanced dietary metadata
+  const [showAdvancedDietary, setShowAdvancedDietary] = useState(false);
+  const [dietaryFlags, setDietaryFlags] = useState<string[]>([]);
+  const [allergenAlerts, setAllergenAlerts] = useState<string[]>([]);
+  const [nutritionalHighlights, setNutritionalHighlights] = useState<Record<string, NutritionalRange>>({});
+  const [suitableForDiets, setSuitableForDiets] = useState<string[]>([]);
+  const [preparationNotes, setPreparationNotes] = useState("");
+  const [customerGuidance, setCustomerGuidance] = useState("");
   
   // Set up the form with default values
   const form = useForm<FormValues>({
@@ -98,12 +107,25 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // Create or update menu item mutation
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      // No need to convert price anymore as it's stored as decimal in the database
+      // Build the additional dietary metadata
+      const additionalDietaryMetadata: AdditionalDietaryMetadata = {
+        dietary_flags_list: dietaryFlags.length > 0 ? dietaryFlags : undefined,
+        allergen_alert_list: allergenAlerts.length > 0 ? allergenAlerts : undefined,
+        nutritional_highlights: Object.keys(nutritionalHighlights || {}).length > 0 ? nutritionalHighlights : undefined,
+        key_preparation_notes: preparationNotes || undefined,
+        suitable_for_diet_preferences: suitableForDiets.length > 0 ? suitableForDiets : undefined,
+        guidance_for_customer_short: customerGuidance || undefined,
+      };
+
       const formattedValues = {
         ...values,
         // Keep null values as null, don't default to 0 for optional price
         price: values.price !== undefined && values.price !== null ? 
-          values.price : null
+          values.price : null,
+        upcharge: values.upcharge !== undefined && values.upcharge !== null ? 
+          values.upcharge : null,
+        additional_dietary_metadata: Object.values(additionalDietaryMetadata).some(v => v !== undefined) ? 
+          additionalDietaryMetadata : null
       };
       
       if (isEditing && menuItem?.id) {
@@ -477,6 +499,176 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                   )}
                 />
               </div>
+            </div>
+
+            {/* Advanced Dietary Metadata Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Advanced Dietary Information</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedDietary(!showAdvancedDietary)}
+                >
+                  {showAdvancedDietary ? "Hide" : "Show"} Advanced Options
+                </Button>
+              </div>
+              
+              {showAdvancedDietary && (
+                <div className="space-y-6 border rounded-lg p-4 bg-gray-50">
+                  {/* Dietary Flags */}
+                  <div>
+                    <FormLabel>Dietary Flags</FormLabel>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {["HIGH_PROTEIN", "LOW_CARB", "LOW_FAT", "HIGH_FIBER", "KETO_FRIENDLY", "PALEO_FRIENDLY"].map((flag) => (
+                        <Button
+                          key={flag}
+                          type="button"
+                          variant={dietaryFlags.includes(flag) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setDietaryFlags(prev => 
+                              prev.includes(flag) 
+                                ? prev.filter(f => f !== flag)
+                                : [...prev, flag]
+                            );
+                          }}
+                        >
+                          {flag.replace(/_/g, ' ')}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Allergen Alerts */}
+                  <div>
+                    <FormLabel>Allergen Alerts</FormLabel>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {["CONTAINS_NUTS", "CONTAINS_SOY", "CONTAINS_EGGS", "MAY_CONTAIN_NUTS", "CONTAINS_SHELLFISH", "CONTAINS_FISH"].map((allergen) => (
+                        <Button
+                          key={allergen}
+                          type="button"
+                          variant={allergenAlerts.includes(allergen) ? "destructive" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setAllergenAlerts(prev => 
+                              prev.includes(allergen) 
+                                ? prev.filter(a => a !== allergen)
+                                : [...prev, allergen]
+                            );
+                          }}
+                        >
+                          {allergen.replace(/_/g, ' ')}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Nutritional Highlights */}
+                  <div>
+                    <FormLabel>Nutritional Highlights</FormLabel>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      {["calories", "protein", "fat", "carbs", "fiber", "sodium", "sugar"].map((nutrient) => (
+                        <div key={nutrient} className="space-y-2 border rounded p-3">
+                          <h4 className="font-medium capitalize">{nutrient}</h4>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Min"
+                              value={nutritionalHighlights[nutrient as keyof typeof nutritionalHighlights]?.min || ""}
+                              onChange={(e) => {
+                                const value = e.target.value ? Number(e.target.value) : undefined;
+                                setNutritionalHighlights(prev => ({
+                                  ...prev,
+                                  [nutrient]: {
+                                    ...prev[nutrient as keyof typeof prev],
+                                    min: value
+                                  }
+                                }));
+                              }}
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Max"
+                              value={nutritionalHighlights[nutrient as keyof typeof nutritionalHighlights]?.max || ""}
+                              onChange={(e) => {
+                                const value = e.target.value ? Number(e.target.value) : undefined;
+                                setNutritionalHighlights(prev => ({
+                                  ...prev,
+                                  [nutrient]: {
+                                    ...prev[nutrient as keyof typeof prev],
+                                    max: value
+                                  }
+                                }));
+                              }}
+                            />
+                            <Input
+                              placeholder="Unit"
+                              value={nutritionalHighlights[nutrient as keyof typeof nutritionalHighlights]?.unit || ""}
+                              onChange={(e) => {
+                                setNutritionalHighlights(prev => ({
+                                  ...prev,
+                                  [nutrient]: {
+                                    ...prev[nutrient as keyof typeof prev],
+                                    unit: e.target.value
+                                  }
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Suitable for Diet Preferences */}
+                  <div>
+                    <FormLabel>Suitable for Diet Preferences</FormLabel>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {["KETO", "PALEO", "MEDITERRANEAN", "LOW_SODIUM", "DIABETIC_FRIENDLY", "HEART_HEALTHY"].map((diet) => (
+                        <Button
+                          key={diet}
+                          type="button"
+                          variant={suitableForDiets.includes(diet) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSuitableForDiets(prev => 
+                              prev.includes(diet) 
+                                ? prev.filter(d => d !== diet)
+                                : [...prev, diet]
+                            );
+                          }}
+                        >
+                          {diet.replace(/_/g, ' ')}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Preparation Notes */}
+                  <div>
+                    <FormLabel>Key Preparation Notes</FormLabel>
+                    <Textarea
+                      placeholder="e.g., Pan-seared, contains white wine, served at room temperature"
+                      value={preparationNotes}
+                      onChange={(e) => setPreparationNotes(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                  
+                  {/* Customer Guidance */}
+                  <div>
+                    <FormLabel>Guidance for Customer</FormLabel>
+                    <Textarea
+                      placeholder="e.g., Great choice for a light, healthy meal. Perfect for outdoor events."
+                      value={customerGuidance}
+                      onChange={(e) => setCustomerGuidance(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <CardFooter className="px-0 pb-0 pt-6 flex justify-end space-x-2">
