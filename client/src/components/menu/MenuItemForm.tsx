@@ -36,6 +36,7 @@ const formSchema = insertMenuItemSchema.extend({
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().nonnegative("Price must be a non-negative number").optional(),
+  upcharge: z.coerce.number().nonnegative("Upcharge must be a non-negative number").optional(),
   ingredients: z.string().optional(),
   isVegetarian: z.boolean().optional(),
   isVegan: z.boolean().optional(),
@@ -47,7 +48,7 @@ const formSchema = insertMenuItemSchema.extend({
 type FormValues = z.infer<typeof formSchema>;
 
 interface MenuItemFormProps {
-  menuItem?: FormValues;
+  menuItem?: FormValues & { id?: string };
   isEditing?: boolean;
   onCancel?: () => void;
 }
@@ -69,6 +70,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
       description: "",
       category: "",
       price: 0,
+      upcharge: 0,
       ingredients: "",
       isVegetarian: false,
       isVegan: false,
@@ -104,7 +106,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
           values.price : null
       };
       
-      if (isEditing && menuItem) {
+      if (isEditing && menuItem?.id) {
         // Update existing menu item
         const res = await apiRequest("PATCH", `/api/menu-items/${menuItem.id}`, formattedValues);
         return res.json();
@@ -292,7 +294,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price Per Person <span className="text-sm text-muted-foreground">(optional)</span></FormLabel>
+                    <FormLabel>Base Price <span className="text-sm text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
                       <div className="relative">
                         <DollarSignIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
@@ -303,13 +305,40 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                           placeholder="0.00" 
                           className="pl-8" 
                           {...field}
-                          value={isEditing && typeof menuItem?.price === 'number' ? 
-                            formatPriceForEditing(menuItem.price) : field.value}
+                          value={field.value ?? ""}
                         />
                       </div>
                     </FormControl>
                     <FormMessage />
-                    <p className="text-xs text-gray-500 mt-1">Leave empty if price is not applicable or to be determined later.</p>
+                    <p className="text-xs text-gray-500 mt-1">For standalone items (appetizers, desserts, equipment rental).</p>
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="upcharge"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Package Upcharge <span className="text-sm text-muted-foreground">(optional)</span></FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <DollarSignIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          className="pl-8" 
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-gray-500 mt-1">Additional cost when added to wedding packages.</p>
                   </FormItem>
                 )}
               />
