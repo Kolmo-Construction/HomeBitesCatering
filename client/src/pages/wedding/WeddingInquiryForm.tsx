@@ -456,18 +456,32 @@ export default function WeddingInquiryForm() {
                 />
               )}
               {currentStepKey === "menuSelection" && (
-                <WeddingMenuSelectionStep
-                  selectedTheme={selectedTheme}
-                  guestCount={guestCount}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="flex gap-6">
+                  <div className="flex-1">
+                    <WeddingMenuSelectionStep
+                      selectedTheme={selectedTheme}
+                      guestCount={guestCount}
+                      onPrevious={handlePrevious}
+                      onNext={handleNext}
+                    />
+                  </div>
+                  <div className="w-80">
+                    <DietaryDashboard />
+                  </div>
+                </div>
               )}
               {currentStepKey === "appetizerQuestion" && (
-                <WeddingAppetizerQuestionStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="flex gap-6">
+                  <div className="flex-1">
+                    <WeddingAppetizerQuestionStep
+                      onPrevious={handlePrevious}
+                      onNext={handleNext}
+                    />
+                  </div>
+                  <div className="w-80">
+                    <DietaryDashboard />
+                  </div>
+                </div>
               )}
               {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
                 <WeddingAppetizersStep
