@@ -614,8 +614,8 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                               }}
                             />
                             <Input
-                              placeholder="Unit"
-                              value={nutritionalHighlights[nutrient]?.unit || ""}
+                              placeholder={`Unit (${defaultUnit})`}
+                              value={nutritionalHighlights[nutrient]?.unit || defaultUnit}
                               onChange={(e) => {
                                 setNutritionalHighlights(prev => ({
                                   ...prev,
