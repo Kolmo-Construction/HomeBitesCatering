@@ -1,45 +1,108 @@
 {
   "menu_items_by_category": {
-    "taco_fiesta": {
+    "taco_fiesta_wedding": {
       "proteins": {
-        "barbacoa": "Barbacoa",
-        "flank_steak_fajitas": "Flank steak Fajitas",
-        "ground_beef": "Ground Beef",
-        "pork_carnitas": "Pork Carnitas",
-        "pork_belly": "Pork Belly",
-        "chorizo": "Chorizo",
-        "beef_birria": "Beef Birria",
-        "mexican_chicken": "Mexican Chicken",
-        "cod": "Cod",
-        "shrimp": "Shrimp",
-        "tofu": "Tofu",
-        "roasted_vegetables": "Roasted Vegetables",
-        "escabeche": "Escabeche - House-made picked vegetable medley"
+        "tfw_barbacoa": "Barbacoa",
+        "tfw_flank_steak_fajitas": "Flank steak Fajitas",
+        "tfw_ground_beef": "Ground Beef",
+        "tfw_pork_carnitas": "Pork Carnitas",
+        "tfw_pork_belly": "Pork Belly",
+        "tfw_chorizo": "Chorizo",
+        "tfw_beef_birria": "Beef Birria",
+        "tfw_mexican_chicken": "Mexican Chicken",
+        "tfw_cod": "Cod",
+        "tfw_shrimp": "Shrimp",
+        "tfw_tofu": "Tofu",
+        "tfw_roasted_vegetables": "Roasted Vegetables",
+        "tfw_escabeche": "Escabeche - House-made picked vegetable medley"
       },
       "sides": {
-        "refried_beans": "Refried Beans",
-        "mexican_street_corn": "Mexican Street corn (Elotes)",
-        "queso_dip": "Queso Dip",
-        "chorizo_queso_dip": "Chorizo Queso Dip",
-        "stuffed_poblano": "Stuffed Poblano peppers",
-        "mexican_rice": "Mexican Rice",
-        "cilantro_lime_rice": "Cilantro Lime Rice",
-        "rice_and_beans": "Rice and Beans",
-        "jalapeno_cornbread": "Jalapeno cornbread",
-        "grilled_vegetables": "Grilled Vegetables",
-        "mexican_slaw_mango": "Mexican Slaw with Mango",
-        "vegetarian_empanadas": "Vegetarian Empanadas"
-      },
-      "salads": {
-        "mexican_caesar": "Mexican Caesar Salad",
-        "southwest_salad": "Southwest Salad",
-        "pico_de_gallo": "Pico de Gallo"
+        "tfw_refried_beans": "Refried Beans",
+        "tfw_elotes": "Mexican Street corn (Elotes)",
+        "tfw_queso_dip": "Queso Dip",
+        "tfw_chorizo_queso_dip": "Chorizo Queso Dip",
+        "tfw_stuffed_poblano": "Stuffed Poblano peppers",
+        "tfw_mexican_rice": "Mexican Rice",
+        "tfw_cilantro_lime_rice": "Cilantro Lime Rice",
+        "tfw_rice_and_beans": "Rice and Beans",
+        "tfw_jalapeno_cornbread": "Jalapeno cornbread",
+        "tfw_grilled_vegetables": "Grilled Vegetables",
+        "tfw_mexican_slaw": "Mexican Slaw with Mango",
+        "tfw_veg_empanadas": "Vegetarian Empanadas"
       },
       "salsas": {
-        "salsa_verde": "Salsa Verde",
-        "salsa_roja": "Salsa Roja",
-        "chipotle_salsa": "Chipotle Salsa",
-        "mango_salsa": "Mango Salsa"
+        "tfw_pico_de_gallo": "Classic Pico de Gallo",
+        "tfw_fresh_mango_salsa": "Fresh Mango Salsa",
+        "tfw_pineapple_habanero": "Pineapple Habanero Salsa",
+        "tfw_cucumber_apple": "Cucumber & Apple Salsa",
+        "tfw_jicama_papaya": "Jicama and Papaya Salsa",
+        "tfw_salsa_roja": "Salsa Roja (red sauce)",
+        "tfw_salsa_verde": "Salsa Verde (green sauce)",
+        "tfw_creamy_salsa_verde": "Creamy Salsa Verde (green sauce)",
+        "tfw_salsa_macha": "Salsa Macha (contains peanuts and sesame seeds)"
+      },
+      "condiments": {
+        "tfw_shredded_cheese": "Shredded cheese",
+        "tfw_vegan_cheese": "Shredded vegan cheese",
+        "tfw_diced_onions": "Diced Onions",
+        "tfw_lime_wedges": "Lime wedges",
+        "tfw_jalapenos": "Jalapeños",
+        "tfw_sour_cream": "Sour Cream",
+        "tfw_diced_bell_peppers": "Diced bell peppers",
+        "tfw_guacamole": "Guacamole",
+        "tfw_fire_roasted_peppers": "Fire roasted bell peppers",
+        "tfw_sliced_radish": "Sliced radish",
+        "tfw_cilantro": "Cilantro",
+        "tfw_pickled_cabbage": "Pickled cabbage",
+        "tfw_escabeche_condiment": "Escabeche - House-made picked vegetable medley"
+      }
+    },
+    "american_bbq_wedding": {
+      "proteins": {
+        "abw_prime_rib": "Prime Rib - Boneless -Carving station",
+        "abw_smoked_brisket": "Smoked Brisket", 
+        "abw_beef_ribs": "Beef Ribs",
+        "abw_guinness_short_ribs": "Guinness Braised Boneless Short Ribs",
+        "abw_bacon_filet_mignon": "Bacon Wrapped Fillet Mignon"
+      }
+    },
+    "vegan_wedding": {
+      "mains": {
+        "vw_artichoke_polita": "Artichoke Ala Polita with a vibrant lemon tahini sauce",
+        "vw_stuffed_portabella": "Stuffed Portabella Mushrooms with hearty stewed lentils",
+        "vw_wild_rice_squash": "Wild Rice Stuffed Acorn Squash, a harvest delight",
+        "vw_tofu_vindaloo": "Spicy Tofu Vindaloo, full of bold flavors",
+        "vw_greek_stuffed_peppers": "Greek Style Stuffed Peppers with aromatic jasmine rice",
+        "vw_vegan_moussaka": "Vegan Moussaka with stewed lentils and creamy cauliflower béchamel",
+        "vw_stuffed_poblano": "Stuffed Poblano Peppers with savory rice and beans"
+      },
+      "sides": {
+        "vw_lemon_potatoes": "Roasted Lemon Potatoes with oregano",
+        "vw_green_beans_almondine": "Haricots Verts Almondine",
+        "vw_fasolakia": "Fasolakia (Greek green beans stewed with tomatoes)",
+        "vw_gigante_beans": "Gigante Beans baked in a rich tomato dill sauce",
+        "vw_vegan_dolmades": "Dolmades with bulgur, currants, and dried figs",
+        "vw_cannellini_caponata": "Cannellini Beans with a sweet & sour caponata",
+        "vw_roasted_brussel_sprouts": "Roasted Brussel Sprouts with balsamic glaze",
+        "vw_moroccan_cauliflower": "Moroccan-Style Roasted Cauliflower with exotic spices",
+        "vw_tuscan_carrots": "Tuscan Glazed Carrots with herbs",
+        "vw_moroccan_wild_rice": "Moroccan Wild Rice Pilaf with dried fruits and nuts",
+        "vw_cilantro_lime_rice": "Cilantro-Lime Rice, fresh and zesty",
+        "vw_greek_rice_pilaf": "Greek Rice Pilaf with fresh herbs",
+        "vw_southwest_spring_rolls": "Southwest Style Spring Rolls with a zesty dip",
+        "vw_crispy_falafel": "Crispy Falafel with tahini drizzle"
+      },
+      "salads": {
+        "vw_panzanella": "Tuscan Panzanella Bread Salad",
+        "vw_sicilian_fennel": "Sicilian Fennel & Orange Salad",
+        "vw_bowtie_pasta": "Mediterranean Bowtie Pasta Salad",
+        "vw_tuscan_orzo": "Tuscan Orzo Pesto Salad with sun-dried tomatoes",
+        "vw_garden_salad": "Fresh Garden Salad with a choice of vegan dressings",
+        "vw_greek_village": "Greek Village Salad (Horiatiki) with vegan feta alternative",
+        "vw_asian_slaw": "Crunchy Asian Slaw with Mandarin Oranges and sesame ginger dressing",
+        "vw_cucumber_mint": "Refreshing Cucumber Mint & Dill Salad",
+        "vw_kale_quinoa": "Kale and Quinoa Salad with lemon-tahini dressing",
+        "vw_southwest_bean": "Southwest Black Bean & Corn Salad with lime vinaigrette"
       }
     },
     "taste_of_italy": {
@@ -247,28 +310,25 @@
     "grab_and_go": "Grab and Go Breakfast",
     "continental_breakfast": "Continental Breakfast"
   },
-  "appetizers_hors_doeuvres": {
-    "tea_sandwiches": {
-      "cucumber_cream_cheese": "Cucumber & Cream Cheese",
-      "smoked_salmon": "Smoked Salmon",
-      "egg_salad": "Egg Salad",
-      "chicken_salad": "Chicken Salad"
+  "wedding_appetizers": {
+    "elegant_bites": {
+      "caprese_skewers": "Mini Caprese Skewers with Balsamic Glaze",
+      "smoked_salmon_crostini": "Smoked Salmon & Dill Cream Cheese Crostini",
+      "prosciutto_melon": "Prosciutto-Wrapped Melon Bites",
+      "fig_brie_bites": "Fig & Brie Bites with Toasted Walnuts",
+      "mini_quiches": "Assorted Mini Quiches (Lorraine, Spinach)"
     },
-    "shooters": {
-      "gazpacho": "Gazpacho Shooter",
-      "tomato_basil": "Tomato Basil Shooter",
-      "butternut_squash": "Butternut Squash Shooter"
+    "wedding_shooters": {
+      "shrimp_cocktail_shooter": "Classic Shrimp Cocktail Shooter",
+      "gazpacho_shooter": "Chilled Gazpacho Shooter with Cucumber Garnish",
+      "ceviche_shooter": "White Fish Ceviche Shooter with Avocado"
     },
-    "canapes": {
-      "bruschetta": "Bruschetta",
-      "deviled_eggs": "Deviled Eggs",
-      "stuffed_mushrooms": "Stuffed Mushrooms",
-      "shrimp_cocktail": "Shrimp Cocktail"
-    },
-    "spreads": {
-      "hummus_platter": "Hummus Platter",
-      "cheese_board": "Cheese Board",
-      "charcuterie": "Charcuterie Board"
+    "wedding_spreads_dips": {
+      "spinach_artichoke_dip": "Creamy Spinach & Artichoke Dip (Warm)",
+      "roasted_red_pepper_hummus": "Roasted Red Pepper Hummus",
+      "gourmet_cheese_ball": "Gourmet Cheese Ball with Nuts & Herbs",
+      "olive_tapenade": "Kalamata Olive Tapenade",
+      "whipped_feta_honey": "Whipped Feta with Honey & Pistachios"
     }
   },
   "beverages": {
@@ -286,23 +346,18 @@
       "full_bar": "Full Bar Service"
     }
   },
-  "desserts": {
-    "cakes": {
-      "chocolate_cake": "Chocolate Cake",
-      "vanilla_cake": "Vanilla Cake",
-      "red_velvet": "Red Velvet Cake",
-      "carrot_cake": "Carrot Cake"
-    },
-    "pastries": {
-      "tiramisu": "Tiramisu",
-      "cannoli": "Cannoli",
-      "fruit_tart": "Fruit Tart",
-      "cheesecake": "Cheesecake"
-    },
-    "cookies": {
-      "chocolate_chip": "Chocolate Chip Cookies",
-      "sugar_cookies": "Sugar Cookies",
-      "oatmeal_raisin": "Oatmeal Raisin Cookies"
-    }
+  "wedding_desserts": {
+    "petit_fours": "Petit Fours",
+    "macaroons": "Macaroons",
+    "flourless_chocolate_cake": "Flourless Chocolate Cake",
+    "cheesecake": "Cheesecake",
+    "baklava": "Baklava",
+    "cannolis": "Cannolis",
+    "mini_cannolis": "Mini Cannolis",
+    "assorted_dessert_cups": "Assorted dessert cups",
+    "pate_a_choux": "Pâte à Choux with Crème Pâtissière",
+    "baklava_rollups": "Baklava roll-ups",
+    "lemon_tartlets": "Lemon Tartlets",
+    "mille_feuille": "Mille feuille with cream and berries"
   }
 }
