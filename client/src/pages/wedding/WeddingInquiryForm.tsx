@@ -26,6 +26,8 @@ import WeddingAlcoholicBeveragesStep from "./components/WeddingAlcoholicBeverage
 import WeddingEquipmentQuestionStep from "./components/WeddingEquipmentQuestionStep";
 import WeddingEquipmentStep from "./components/WeddingEquipmentStep";
 import WeddingDietaryRestrictionsStep from "./components/WeddingDietaryRestrictionsStep";
+import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
+import DietaryDashboard from "./components/DietaryDashboard";
 // WeddingReviewStep would be the component for the "review" step
 // import WeddingReviewStep from "./components/WeddingReviewStep";
 
@@ -97,6 +99,7 @@ export default function WeddingInquiryForm() {
   const weddingSteps: WeddingFormStep[] = [
     "basicInfo",
     "eventDetails",
+    "dietaryGuidance", // <-- ADDED NEW DIETARY STEP
     "serviceStyleSelection", // <-- ADDED NEW STEP IN SEQUENCE
     "menuSelection",
     "appetizerQuestion",
@@ -173,6 +176,16 @@ export default function WeddingInquiryForm() {
       alcoholicBeverageSelections: { alcoholTypes: {}, otherBarEquipment: {} },
       wantsEquipmentRental: undefined,
       equipment: { furniture: {}, linens: {}, servingWare: {}, decor: {} },
+      // Enhanced Dietary Guidance
+      dietaryGuidance: {
+        primaryDietGoal: "",
+        secondaryDietGoals: [],
+        dietaryRestrictions: [],
+        allergenConcerns: [],
+        customNotes: ""
+      },
+      selectedMenuItems: [],
+      
       dietaryRestrictions: {
         vegetarian: false, vegan: false, gluten_free: false, dairy_free: false,
         nut_free: false, shellfish_allergy: false, kosher: false, halal: false,
@@ -379,6 +392,12 @@ export default function WeddingInquiryForm() {
               )}
               {currentStepKey === "eventDetails" && (
                 <WeddingEventDetailsStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "dietaryGuidance" && (
+                <DietaryGuidanceStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
                 />

@@ -15,6 +15,7 @@ export type EventType =
 export type WeddingFormStep =
   | "basicInfo"
   | "eventDetails"
+  | "dietaryGuidance" // Added early in the process
   | "serviceStyleSelection"
   | "menuSelection"
   | "appetizerQuestion"
@@ -244,7 +245,19 @@ export type WeddingInquiryFormData = {
     decor?: Record<string, number>;
   };
 
-  // Dietary Restrictions
+  // Enhanced Dietary Guidance (New System)
+  dietaryGuidance?: {
+    primaryDietGoal?: string; // DietPreferenceCategory
+    secondaryDietGoals?: string[];
+    dietaryRestrictions?: string[]; // DietaryFlag[]
+    allergenConcerns?: string[]; // AllergenAlert[]
+    customNotes?: string;
+  };
+
+  // Track selected menu items for dietary analysis
+  selectedMenuItems?: string[]; // Array of item IDs for tracking
+
+  // Legacy Dietary Restrictions (keeping for compatibility)
   dietaryRestrictions?: {
     vegetarian?: boolean;
     vegan?: boolean;
