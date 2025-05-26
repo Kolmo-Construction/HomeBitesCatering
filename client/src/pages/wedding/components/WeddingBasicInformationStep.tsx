@@ -315,23 +315,47 @@ const WeddingBasicInformationStep: React.FC<WeddingBasicInformationStepProps> = 
                     Email Address*
                   </FormLabel>
                   <FormControl>
-                  <Input
-                    placeholder="email@example.com"
-                    type="email"
-                    autoComplete="email"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="phone"
-            rules={{
-              pattern: {
-                value: phoneRegex,
+                    <div className="relative">
+                      <Input 
+                        type="email"
+                        placeholder="your.email@example.com" 
+                        {...field} 
+                        className="pl-4 pr-4 py-3 border-gray-200 rounded-xl transition-all duration-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 hover:border-rose-300 bg-white/70 backdrop-blur-sm shadow-sm"
+                      />
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-50/0 via-rose-50/20 to-pink-50/0 opacity-0 transition-opacity duration-300 group-focus-within:opacity-100 pointer-events-none"></div>
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-rose-500" />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-10">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPrevious}
+            className="flex items-center px-6 py-3 text-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all duration-300"
+          >
+            <ChevronLeft className="mr-2 h-5 w-5" /> Back
+          </Button>
+          <Button
+            type="button"
+            onClick={handleNextClick}
+            className="flex items-center bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 px-8 py-3 text-lg text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+          >
+            Continue Your Journey <ChevronRight className="ml-2 h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WeddingBasicInformationStep;
                 message: "Valid phone number: (123) 456-7890",
               },
             }}
