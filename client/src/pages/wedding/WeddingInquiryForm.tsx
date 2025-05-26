@@ -389,37 +389,37 @@ export default function WeddingInquiryForm() {
                   />
                 )}
                 {currentStepKey === "eventDetails" && (
-                  <WeddingEventDetailsStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                )}
-                {currentStepKey === "serviceStyleSelection" && ( // <-- RENDER NEW STEP
-                  <WeddingServiceStyleStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                )}
-                {currentStepKey === "menuSelection" && (
-                  <WeddingMenuSelectionStep
-                    selectedTheme={selectedTheme}
-                    guestCount={guestCount}
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                )}
-                {currentStepKey === "appetizerQuestion" && (
-                  <WeddingAppetizerQuestionStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                )}
-                {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
-                  <WeddingAppetizersStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                )}
+                <WeddingEventDetailsStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "serviceStyleSelection" && ( // <-- RENDER NEW STEP
+                <WeddingServiceStyleStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "menuSelection" && (
+                <WeddingMenuSelectionStep
+                  selectedTheme={selectedTheme}
+                  guestCount={guestCount}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "appetizerQuestion" && (
+                <WeddingAppetizerQuestionStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
+                <WeddingAppetizersStep
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
               {currentStepKey === "foodTruckMenu" && (
                 <WeddingFoodTruckMenuStep
                   onPrevious={handlePrevious}

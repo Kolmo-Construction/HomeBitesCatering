@@ -28,17 +28,15 @@ const WeddingProgressSidebar: React.FC<WeddingProgressSidebarProps> = ({
 }) => {
   const { watch } = useFormContext<WeddingInquiryFormData>();
   
-  // Watch form values with proper field names
-  const guestCount = watch("guestCount") || 50;
-  const requestedTheme = watch("requestedTheme");
-  const menuSelections = watch("menuSelections");
-  const selectedPackage = menuSelections?.package;
-  const selectedMenuItems = menuSelections?.selectedItems || {};
-  const serviceStyle = watch("serviceStyle");
-  const eventDate = watch("eventDate");
-  const venueName = watch("venueName");
-  const wantsAppetizers = watch("wantsAppetizers");
-  const wantsDesserts = watch("wantsDesserts");
+  // Watch form values safely
+  const formData = watch();
+  const guestCount = formData.guestCount || 50;
+  const requestedTheme = formData.requestedTheme;
+  const selectedPackage = formData.menuSelections?.package;
+  const selectedMenuItems = formData.menuSelections?.selectedItems || {};
+  const serviceStyle = formData.serviceStyle;
+  const eventDate = formData.eventDate;
+  const venueName = formData.venueName;
 
   // Calculate progress
   const currentStepIndex = allSteps.indexOf(currentStepKey);
@@ -75,7 +73,7 @@ const WeddingProgressSidebar: React.FC<WeddingProgressSidebarProps> = ({
 
   const totalCost = calculateMenuCost();
 
-  // Enhanced dietary information tracking
+  // Get dietary information for selected items
   const getDietaryInfo = () => {
     const dietary = {
       vegetarian: 0,
@@ -84,45 +82,23 @@ const WeddingProgressSidebar: React.FC<WeddingProgressSidebarProps> = ({
       total: 0
     };
 
-    // Count selected menu items with better dietary detection
-    if (selectedMenuItems && typeof selectedMenuItems === 'object') {
-      Object.values(selectedMenuItems).forEach(categoryItems => {
-        if (Array.isArray(categoryItems)) {
-          categoryItems.forEach(itemId => {
-            if (typeof itemId === 'string') {
-              dietary.total++;
-              
-              // Enhanced dietary detection
-              const itemLower = itemId.toLowerCase();
-              
-              // Vegan detection
-              if (itemLower.includes('vegan') || 
-                  requestedTheme === 'vegan_wedding' ||
-                  itemId.startsWith('vw_')) {
-                dietary.vegan++;
-                dietary.vegetarian++; // Vegan items are also vegetarian
-              }
-              
-              // Vegetarian detection
-              if (itemLower.includes('vegetarian') || 
-                  itemLower.includes('veg_') ||
-                  itemLower.includes('tofu') ||
-                  itemLower.includes('vegetables')) {
-                dietary.vegetarian++;
-              }
-              
-              // Gluten-free detection
-              if (itemLower.includes('gluten') || 
-                  itemLower.includes('gf_') ||
-                  itemLower.includes('rice') ||
-                  itemLower.includes('salad')) {
-                dietary.glutenFree++;
-              }
-            }
-          });
+    // Count selected menu items
+    Object.values(selectedMenuItems).flat().forEach(itemId => {
+      if (typeof itemId === 'string') {
+        dietary.total++;
+        // Check for dietary indicators in item IDs
+        if (itemId.includes('vegan') || requestedTheme === 'vegan_wedding') {
+          dietary.vegan++;
+          dietary.vegetarian++;
         }
-      });
-    }
+        if (itemId.includes('vegetarian') || itemId.includes('veg_')) {
+          dietary.vegetarian++;
+        }
+        if (itemId.includes('gluten_free') || itemId.includes('gf_')) {
+          dietary.glutenFree++;
+        }
+      }
+    });
 
     return dietary;
   };
@@ -222,38 +198,17 @@ const WeddingProgressSidebar: React.FC<WeddingProgressSidebarProps> = ({
               <span className="font-medium">{guestCount}</span>
             </div>
             
-            {requestedTheme && (
+            {selectedPackage && (
               <div className="flex justify-between">
-                <span className="text-sm">Theme:</span>
-                <span className="font-medium text-xs">{weddingThemeMenuData[requestedTheme]?.title?.slice(0, 20) || 'Selected'}</span>
-              </div>
-            )}
-            
-            {selectedPackage && totalCost > 0 && (
-              <div className="flex justify-between">
-                <span className="text-sm">Menu Cost:</span>
+                <span className="text-sm">Menu Package:</span>
                 <span className="font-medium">${totalCost.toLocaleString()}</span>
-              </div>
-            )}
-            
-            {wantsAppetizers && (
-              <div className="flex justify-between">
-                <span className="text-sm">Appetizers:</span>
-                <span className="font-medium">Selected</span>
-              </div>
-            )}
-            
-            {wantsDesserts && (
-              <div className="flex justify-between">
-                <span className="text-sm">Desserts:</span>
-                <span className="font-medium">Selected</span>
               </div>
             )}
             
             <hr className="my-2" />
             <div className="flex justify-between font-bold text-lg">
-              <span>Estimated Total:</span>
-              <span className="text-green-600">${totalCost > 0 ? totalCost.toLocaleString() : '---'}</span>
+              <span>Current Total:</span>
+              <span className="text-green-600">${totalCost.toLocaleString()}</span>
             </div>
             <p className="text-xs text-gray-500">
               *Estimate only. Final pricing may vary.
