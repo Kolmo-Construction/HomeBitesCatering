@@ -99,30 +99,57 @@ const WeddingBasicInformationStep: React.FC<WeddingBasicInformationStepProps> = 
 
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3 text-gray-900">
-          Your Contact & Wedding Information
-        </h2>
-        <p className="text-lg text-gray-600">
-          Let's get some basic details for your special day.
+    <div className="relative container mx-auto px-4 py-8 max-w-3xl">
+      {/* Romantic background pattern */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23f472b6' fill-opacity='0.05'%3E%3Cpath d='M20 20c0-8.837-7.163-16-16-16S-12 11.163-12 20s7.163 16 16 16 16-7.163 16-16zm12 0c0-8.837-7.163-16-16-16s-16 7.163-16 16 7.163 16 16 16 16-7.163 16-16z'/%3E%3C/g%3E%3C/svg%3E")`
+      }}></div>
+      
+      {/* Header with romantic styling */}
+      <div className="relative text-center mb-10">
+        <div className="inline-block">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 bg-clip-text text-transparent">
+            Your Love Story
+          </h2>
+          <div className="w-32 h-0.5 bg-gradient-to-r from-transparent via-rose-300 to-transparent mx-auto mb-4"></div>
+        </div>
+        <p className="text-xl text-gray-600 font-light leading-relaxed max-w-2xl mx-auto">
+          Let's capture the beautiful details of your special day
         </p>
+        <div className="mt-6 flex justify-center items-center gap-3 text-sm text-gray-500">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-rose-300 rounded-full animate-pulse"></div>
+            <span>Step 1 of your journey</span>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 md:p-8 mb-6">
-        <div className="mb-6 flex items-center justify-center bg-pink-50 dark:bg-pink-900/10 py-3 rounded-md">
-          <div className="inline-flex items-center px-4 py-2 rounded-md bg-pink-100 dark:bg-pink-800/20 border border-pink-200 dark:border-pink-700/30">
-            <Gift className="h-5 w-5 mr-2 text-pink-600 dark:text-pink-400" />
-            <span className="text-pink-700 dark:text-pink-300 font-medium">{eventType}</span>
+      <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-rose-100 p-8 md:p-10 mb-6">
+        {/* Subtle decorative elements */}
+        <div className="absolute top-4 right-4 w-8 h-8 bg-rose-100 rounded-full opacity-30"></div>
+        <div className="absolute bottom-4 left-4 w-6 h-6 bg-pink-100 rounded-full opacity-40"></div>
+        {/* Elegant event type badge */}
+        <div className="mb-8 flex items-center justify-center">
+          <div className="relative inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/50 shadow-sm">
+            <Gift className="h-5 w-5 mr-3 text-rose-500" />
+            <span className="text-rose-700 font-medium text-lg">{eventType} Celebration</span>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-300 rounded-full animate-pulse"></div>
           </div>
         </div>
 
-        {/* Contact Name - For Weddings, this might be for one or both partners */}
-        <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 flex items-center text-gray-800">
-                <Users className="h-5 w-5 mr-2 text-pink-600" /> Couple's Information (Primary Contact)
+        {/* Contact Name Section with romantic styling */}
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-serif italic text-gray-800 mb-2">
+              Tell us about yourselves
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center justify-center gap-2 text-rose-500">
+              <Users className="h-5 w-5" />
+              <span className="text-sm font-medium">Primary Contact Information</span>
+            </div>
+            <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-rose-300 to-transparent mx-auto mt-3"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
                 control={control}
                 name="contactName.firstName"
