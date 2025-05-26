@@ -485,10 +485,15 @@ export default function WeddingInquiryForm() {
                 </div>
               )}
               {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
-                <WeddingAppetizersStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
+                    <SimpleDietaryDashboard />
+                  </div>
+                  <WeddingAppetizersStep
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                </div>
               )}
               {currentStepKey === "foodTruckMenu" && (
                 <WeddingFoodTruckMenuStep
@@ -522,10 +527,15 @@ export default function WeddingInquiryForm() {
                 />
               )}
               {currentStepKey === "desserts" && watch("wantsDesserts") && (
-                <WeddingDessertsStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
+                    <SimpleDietaryDashboard />
+                  </div>
+                  <WeddingDessertsStep
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                </div>
               )}
               {currentStepKey === "beverageQuestion" && (
                 <WeddingBeverageQuestionStep
@@ -534,16 +544,26 @@ export default function WeddingInquiryForm() {
                 />
               )}
               {currentStepKey === "nonAlcoholicBeverages" && watch("beverageServiceChoice") === "non-alcoholic" && (
-                <WeddingNonAlcoholicBeveragesStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
+                    <SimpleDietaryDashboard />
+                  </div>
+                  <WeddingNonAlcoholicBeveragesStep
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                </div>
               )}
               {currentStepKey === "alcoholicBeverages" && watch("beverageServiceChoice") === "alcoholic" && (
-                <WeddingAlcoholicBeveragesStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
+                    <SimpleDietaryDashboard />
+                  </div>
+                  <WeddingAlcoholicBeveragesStep
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                </div>
               )}
               {currentStepKey === "equipmentQuestion" && (
                  <WeddingEquipmentQuestionStep
@@ -564,29 +584,34 @@ export default function WeddingInquiryForm() {
                 />
               )}
               {currentStepKey === "review" && (
-                // Assuming you have a WeddingReviewStep component
-                // <WeddingReviewStep onPrevious={handlePrevious} onSubmit={handleNext} />
-                // For now, a simple review placeholder:
-                <div className="container mx-auto px-4 py-8 max-w-3xl text-center">
-                    <Card>
-                        <CardContent className="p-6">
-                            <h2 className="text-3xl font-bold mb-4 text-pink-600">Review Your Wedding Inquiry</h2>
-                            <p className="text-gray-700 mb-6">
-                                Please review all the details you've provided. Once you're satisfied, you can submit your inquiry.
-                            </p>
-                            <pre className="text-left bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
-                                {JSON.stringify(getValues(), null, 2)}
-                            </pre>
-                             <div className="flex justify-between mt-8">
-                                <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStepIndex <= 0}>
-                                    <ChevronLeft className="mr-2 h-4 w-4" /> Back
-                                </Button>
-                                <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
-                                    Submit Wedding Inquiry <ChevronRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="space-y-6">
+                  {/* Dietary Summary at the top of review */}
+                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
+                    <SimpleDietaryDashboard />
+                  </div>
+                  
+                  {/* Review Content */}
+                  <div className="container mx-auto px-4 py-8 max-w-3xl text-center">
+                      <Card>
+                          <CardContent className="p-6">
+                              <h2 className="text-3xl font-bold mb-4 text-pink-600">Review Your Wedding Inquiry</h2>
+                              <p className="text-gray-700 mb-6">
+                                  Please review all the details you've provided, including your dietary preferences and menu selections above.
+                              </p>
+                              <pre className="text-left bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+                                  {JSON.stringify(getValues(), null, 2)}
+                              </pre>
+                               <div className="flex justify-between mt-8">
+                                  <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStepIndex <= 0}>
+                                      <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                  </Button>
+                                  <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
+                                      Submit Wedding Inquiry <ChevronRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                              </div>
+                          </CardContent>
+                      </Card>
+                  </div>
                 </div>
               )}
             </div>
