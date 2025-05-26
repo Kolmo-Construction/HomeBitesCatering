@@ -37,6 +37,9 @@ import {
   EventType as LocalEventType, 
 } from "./types/weddingFormTypes";
 
+// Import Progress Sidebar
+import WeddingProgressSidebar from "./components/WeddingProgressSidebar";
+
 // --- Helper Components (Progress Bar, Header) ---
 const WeddingFormHeader = () => {
   return (
