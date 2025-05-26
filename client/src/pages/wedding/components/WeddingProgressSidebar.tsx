@@ -254,46 +254,7 @@ const WeddingProgressSidebar: React.FC<WeddingProgressSidebarProps> = ({
         </Card>
       )}
 
-      {/* Step Roadmap */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Completion Roadmap</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {allSteps.map((step, index) => {
-              const stepDef = stepDefinitions[step];
-              const isCompleted = index < currentStepIndex;
-              const isCurrent = index === currentStepIndex;
-              const IconComponent = stepDef?.icon || Circle;
-              
-              return (
-                <div
-                  key={step}
-                  className={`flex items-center gap-3 p-2 rounded-lg ${
-                    isCurrent ? 'bg-blue-50 border border-blue-200' : ''
-                  }`}
-                >
-                  <IconComponent
-                    className={`h-4 w-4 ${
-                      isCompleted ? 'text-green-600' : 
-                      isCurrent ? 'text-blue-600' : 'text-gray-400'
-                    }`}
-                  />
-                  <span
-                    className={`text-sm ${
-                      isCompleted ? 'text-green-600 line-through' :
-                      isCurrent ? 'text-blue-600 font-medium' : 'text-gray-500'
-                    }`}
-                  >
-                    {stepDef?.label || step}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Current Selections Summary */}
       {(requestedTheme || serviceStyle) && (
