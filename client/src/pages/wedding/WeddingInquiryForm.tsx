@@ -362,25 +362,33 @@ export default function WeddingInquiryForm() {
         <meta name="description" content="Plan your dream wedding with Home Bites Catering. Fill out our inquiry form to get started." />
       </Helmet>
       <div className="min-h-screen bg-gray-100 pb-12">
-        <WeddingFormHeader />
         <FormProvider {...methods}>
-          <form noValidate onSubmit={methods.handleSubmit(handleNext)} className="space-y-8">
-            {currentStepKey !== "basicInfo" && ( // Optionally hide progress bar on first step
-                 <FormProgressBar
-                    currentStepNumber={currentStepNumber}
-                    totalSteps={totalSteps}
-                    currentStepKey={currentStepKey}
-                />
-            )}
-            <div className="container mx-auto px-4"> {/* Added container for consistent padding */}
-              {currentStepKey === "basicInfo" && (
-                <WeddingBasicInformationStep
-                  // eventType={fixedWeddingEventType} // Not needed if fixed in component
-                  onPrevious={handlePrevious} // Should be disabled by logic if currentStepIndex <= 0
-                  onNext={handleNext}
-                />
+          {/* Progress Sidebar */}
+          <WeddingProgressSidebar
+            currentStepKey={currentStepKey}
+            allSteps={weddingSteps}
+          />
+          
+          {/* Main Content Area - adjusted for sidebar */}
+          <div className="ml-80"> {/* Left margin to accommodate fixed sidebar */}
+            <WeddingFormHeader />
+            <form noValidate onSubmit={methods.handleSubmit(handleNext)} className="space-y-8">
+              {currentStepKey !== "basicInfo" && ( // Optionally hide progress bar on first step
+                   <FormProgressBar
+                      currentStepNumber={currentStepNumber}
+                      totalSteps={totalSteps}
+                      currentStepKey={currentStepKey}
+                  />
               )}
-              {currentStepKey === "eventDetails" && (
+              <div className="container mx-auto px-4"> {/* Added container for consistent padding */}
+                {currentStepKey === "basicInfo" && (
+                  <WeddingBasicInformationStep
+                    eventType={fixedWeddingEventType}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                  />
+                )}
+                {currentStepKey === "eventDetails" && (
                 <WeddingEventDetailsStep
                   onPrevious={handlePrevious}
                   onNext={handleNext}
@@ -511,8 +519,9 @@ export default function WeddingInquiryForm() {
                     </Card>
                 </div>
               )}
-            </div>
-          </form>
+              </div>
+            </form>
+          </div>
         </FormProvider>
       </div>
     </>
