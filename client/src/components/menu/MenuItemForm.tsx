@@ -569,7 +569,15 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                   <div>
                     <FormLabel>Nutritional Highlights</FormLabel>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      {["calories", "protein", "fat", "carbs", "fiber", "sodium", "sugar"].map((nutrient) => (
+                      {[
+                        { key: "calories", defaultUnit: "kcal" },
+                        { key: "protein", defaultUnit: "g" },
+                        { key: "fat", defaultUnit: "g" },
+                        { key: "carbs", defaultUnit: "g" },
+                        { key: "fiber", defaultUnit: "g" },
+                        { key: "sodium", defaultUnit: "mg" },
+                        { key: "sugar", defaultUnit: "g" }
+                      ].map(({ key: nutrient, defaultUnit }) => (
                         <div key={nutrient} className="space-y-2 border rounded p-3">
                           <h4 className="font-medium capitalize">{nutrient}</h4>
                           <div className="grid grid-cols-3 gap-2">

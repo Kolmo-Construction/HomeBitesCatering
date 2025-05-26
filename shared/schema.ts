@@ -156,6 +156,7 @@ export const menuItems = pgTable("menu_items", {
   description: text("description"),
   category: text("category").notNull(), // appetizer, entree, side, dessert, beverage
   price: numeric("price", { precision: 10, scale: 2 }), // stored as decimal, nullable for items without price
+  upcharge: numeric("upcharge", { precision: 10, scale: 2 }), // additional cost for package add-ons
   ingredients: text("ingredients"), // General list of ingredients
   isVegetarian: boolean("is_vegetarian").default(false),
   isVegan: boolean("is_vegan").default(false),
@@ -173,6 +174,7 @@ export const menuItems = pgTable("menu_items", {
 
 export const insertMenuItemSchema = createInsertSchema(menuItems, {
   additional_dietary_metadata: additionalDietaryMetadataSchema,
+  price: z.coerce.number().nullable().optional(),
 }).omit({
   id: true,
   createdAt: true,
