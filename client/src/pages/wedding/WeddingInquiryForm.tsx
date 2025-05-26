@@ -68,6 +68,7 @@ const FormProgressBar = ({
   const formatStepName = (key: string) => {
     // Simple formatter, can be expanded
     if (key === "serviceStyleSelection") return "Service Style";
+    if (key === "dietaryGuidance") return "Dietary Preferences";
     return key
       .replace(/([A-Z])/g, ' $1') 
       .replace(/^./, (str) => str.toUpperCase()); 
@@ -227,7 +228,9 @@ export default function WeddingInquiryForm() {
     const currentRequestedTheme = watch("requestedTheme");
 
     if (currentStepKey === "eventDetails") {
-      nextStepKey = "serviceStyleSelection"; // Always go to service style selection after event details
+      nextStepKey = "dietaryGuidance"; // Go to dietary guidance after event details
+    } else if (currentStepKey === "dietaryGuidance") {
+      nextStepKey = "serviceStyleSelection"; // Then go to service style selection
     } else if (currentStepKey === "serviceStyleSelection") {
         // Logic based on the selected serviceStyle
         switch (currentServiceStyle) {
