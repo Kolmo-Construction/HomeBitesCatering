@@ -1,0 +1,70 @@
+additional_dietary_metadata (JSONB Column):
+
+To store the "extended dietary metadata" directly with each menu item, we'll add a jsonb column. I recommend calling it additional_dietary_metadata.
+
+Here's how you can add it to your menu_items table definition in schema (6).ts:
+
+TypeScript
+
+// In schema (6).ts, update the menuItems table
+export const menuItems = pgTable("menu_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // appetizer, entree, side, dessert, beverage
+  price: numeric("price", { precision: 10, scale: 2 }),
+  ingredients: text("ingredients"), // General list of ingredients
+  isVegetarian: boolean("is_vegetarian").default(false),
+  isVegan: boolean("is_vegan").default(false),
+  isGlutenFree: boolean("is_gluten_free").default(false),
+  isDairyFree: boolean("is_dairy_free").default(false),
+  isNutFree: boolean("is_nut_free").default(false),
+  image: text("image"),
+
+  // NEW COLUMN for richer, yet selective, dietary metadata
+  additional_dietary_metadata: jsonb("additional_dietary_metadata"), // Changed from additionalDietaryMetadata for snake_case convention
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+Defining the Structure for additional_dietary_metadata:
+
+Now, we need to decide on a consistent structure for the JSON object that will go into this additional_dietary_metadata column. This structure should be informed by your DietaryInformation type but be more concise.
+
+Here's a proposed TypeScript interface for what this JSON could look like (you won't define this interface in schema (6).ts, but it will guide how you populate the JSONB data):
+
+TypeScript
+
+// This interface is for conceptualizing the JSONB structure
+interface AdditionalDietaryMetadata {
+  dietary_flags_list?: string[];       // e.g., ["HIGH_PROTEIN", "LOW_CARB", "VEGAN"] (from DietaryFlag type)
+  allergen_alert_list?: string[];      // e.g., ["CONTAINS_SOY", "MAY_CONTAIN_NUTS"] (from AllergenAlert type)
+  nutritional_highlights?: {
+    calories?: string;                 // e.g., "Approx. 350-450 kcal"
+    protein?: string;                  // e.g., "High Protein (30g+)"
+    fat?: string;                      // e.g., "Low Fat (<10g)"
+    carbs?: string;                    // e.g., "Low Carb (<15g)"
+    fiber?: string;                    // e.g., "Good Source of Fiber (5g+)"
+  };
+  key_preparation_notes?: string;      // e.g., "Pan-seared, contains white wine"
+  suitable_for_diet_preferences?: string[]; // e.g., ["KETO", "MEDITERRANEAN"] (from DietPreferenceCategory type)
+  guidance_for_customer_short?: string; // A concise tip, e.g., "Great choice for a light, healthy meal."
+  // You can add other specific fields you find important for quick reference
+}
+dietary_flags_list: Allows for more detailed flags than the simple booleans. These would correspond to your DietaryFlag enum values.
+allergen_alert_list: A list of applicable AllergenAlert enum values.
+nutritional_highlights: A brief, human-readable summary, not necessarily the full numeric ranges from NutritionalInfo.
+suitable_for_diet_preferences: Corresponds to DietPreferenceCategory.
+When you populate this jsonb field for an item in the database, it would look something like this:
+
+JSON
+
+{
+  "dietary_flags_list": ["VEGAN", "GLUTEN_FREE"],
+  "allergen_alert_list": ["CONTAINS_SOY"],
+  "nutritional_highlights": {
+    "calories": "Approx. 400 kcal",
+    "protein": "15g"
+  },
+  "suitable_for_diet_preferences": ["PLANT_BASED"],
+  "guidance_for_customer_short": "A hearty and flavorful plant-based option."
