@@ -1,0 +1,72 @@
+Source File: Primarily weddingThemeMenuData.ts for themes and packages. Other complex offerings (like "Spreads Package" from weddingHorsDoeurvesData.ts or different Sandwich Factory packages from weddingSandwichFactoryData.ts) could also be modeled as entries in menus.
+Process for Each Package:
+Iterate through themes and their packages in weddingThemeMenuData.ts.
+For each package, prepare a record for the menus table:
+name: Package name (e.g., "Bronze Celebration Package").
+description: Package description.
+type: Theme key (e.g., "taste_of_italy_wedding").
+items (JSONB): Construct the JSON object based on the structure you finalized in Step 1.
+This JSON will include theme_key, package_price_per_person, min_guest_count.
+The categories array within this JSON will list the categories relevant to this package.
+For each category, available_item_ids will be an array of integer IDs obtained from your idMap (created while populating menu_items).
+selection_limit will come from package.limits.
+Insert into menus table.
+Example Snippet (Conceptual for Migration Script - Node.js/Drizzle):
+
+JavaScript
+
+// Conceptual Node.js script (you'll need to set up Drizzle client, etc.)
+// import { db } from './db-client'; // Your Drizzle client
+// import { menuItemsTable, menusTable } from './schema'; // Your schema (schema (7).ts)
+// import { weddingThemeMenuData } from '../frontend/wedding/data/weddingThemeMenuData';
+// import { enhancedWeddingMenuData } from '../frontend/wedding/data/enhancedWeddingMenuData'; // For dietary info
+
+async function migrateData() {
+  const stringIdToDbIdMap = {};
+
+  // --- Step A: Migrate Menu Items ---
+  console.log("Migrating individual menu items...");
+  // 1. Collect all unique items from all your data files
+  // For simplicity, let's assume weddingThemeMenuData.categories has flat item lists for now
+  for (const themeKey in weddingThemeMenuData) {
+    const theme = weddingThemeMenuData[themeKey];
+    for (const categoryKey in theme.categories) {
+      const category = theme.categories[categoryKey];
+      for (const itemFromFile of category.items) {
+        // Avoid duplicates if an item string ID already processed
+        if (stringIdToDbIdMap[itemFromFile.id]) continue;
+
+        // Construct additional_dietary_metadata
+        const enhancedInfo = enhancedWeddingMenuData.italianWeddingMenuDietaryData[itemFromFile.id] || // Adjust lookup as needed
+                             enhancedWeddingMenuData.appetizerDietaryData[itemFromFile.id] || 
+                             {}; // Or other data sources
+
+        const additionalMetadata = {
+          dietary_flags_list: enhancedInfo.dietary_flags || [],
+          allergen_alert_list: enhancedInfo.allergen_alert || [],
+          nutritional_highlights: { /* extract from enhancedInfo.nutritional_info */ },
+          key_preparation_notes: enhancedInfo.key_preparation_notes,
+          suitable_for_diet_preferences: enhancedInfo.diet_preference_fit,
+          guidance_for_customer_short: enhancedInfo.guidance_for_customer?.substring(0,100) // example
+        };
+        
+        // Determine basic boolean flags (e.g., from additionalMetadata.dietary_flags_list)
+        const isVegan = additionalMetadata.dietary_flags_list.includes("VEGAN");
+        // ... etc. for other booleans
+
+        const [insertedItem] = await db.insert(menuItemsTable).values({
+          name: itemFromFile.name,
+          description: itemFromFile.description,
+          category: categoryKey, // Or a more standardized category
+          price: itemFromFile.upcharge, // Or a base price if available; adapt as needed
+          // ... basic boolean flags ...
+          isVegan: isVegan,
+          additional_dietary_metadata: additionalMetadata,
+        }).returning();
+        
+        stringIdToDbIdMap[itemFromFile.id] = insertedItem.id;
+        console.log(`Migrated item: ${itemFromFile.name} -> DB ID: ${insertedItem.id}`);
+      }
+    }
+  }
+  // ... repeat for items from desserts, hors d'oeuvres etc. ensuring unique items ...

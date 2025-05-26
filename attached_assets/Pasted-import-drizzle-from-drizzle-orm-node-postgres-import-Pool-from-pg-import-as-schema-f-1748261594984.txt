@@ -1,0 +1,284 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import * as schema from '../path-to-your/schema'; // Adjust path to your schema (7).ts
+import { eq } from 'drizzle-orm';
+
+// --- IMPORT YOUR DATA FILES ---
+// You'll need to ensure these paths are correct relative to this script file
+import { weddingThemeMenuData, MenuItem as ThemeMenuItem, MenuPackage, MenuCategory as ThemeMenuCategory } from '../path-to-your/frontend/wedding/data/weddingThemeMenuData';
+import { dessertItems as sourceDessertItems, dessertLotSizes } from '../path-to-your/frontend/wedding/data/weddingDessertData';
+import { weddingHorsDoeuvresData, HorsDoeuvresItem, SpreadItem } from '../path-to-your/frontend/wedding/data/weddingHorsDoeurvesData';
+import { weddingAppetizerData, WeddingAppetizerItem, WeddingAppetizerCategory } from '../path-to-your/frontend/wedding/data/weddingAppetizerData';
+import { weddingBreakfastMenuData, BreakfastMenuTypeDetails, GrabAndGoItem as BreakfastGrabAndGoItem, MenuItem as BreakfastMenuItem } from '../path-to-your/frontend/wedding/data/weddingBreakfastMenuData';
+import { sandwichFactoryDataNew, SandwichComponentItem, GlutenFreeOptionDefinition, SandwichPackageDefinition } from '../path-to-your/frontend/wedding/data/weddingSandwichFactoryData';
+import { weddingEquipmentCategories, WeddingEquipmentItem } from '../path-to-your/frontend/wedding/data/weddingEquipmentData';
+
+// This is the challenging part: enhancedWeddingMenuData is keyed by string IDs.
+// We need to look up items here after we've collected them from other files.
+import { italianWeddingMenuDietaryData, appetizerDietaryData, getDietaryInfoForItem } from '../path-to-your/frontend/wedding/data/enhancedWeddingMenuData';
+import { DietaryInformation, DietaryFlag, AllergenAlert, DietPreferenceCategory } from '../path-to-your/frontend/wedding/data/dietaryInformation';
+
+
+// --- DATABASE CONNECTION ---
+// Replace with your actual connection details (consider using environment variables)
+const pool = new Pool({
+  connectionString: 'postgresql://user:password@host:port/database',
+});
+const db = drizzle(pool, { schema });
+
+// --- HELPER TYPES & INTERFACES ---
+interface OriginalItemDetails {
+  original_id: string;
+  name: string;
+  description?: string;
+  category_suggestion: string; // e.g., "Dessert", "Entree - Italian Wedding"
+  price?: number | string; // Price can be tricky, needs normalization
+  ingredients_suggestion?: string;
+  image_url?: string;
+  // Basic dietary flags if easily derivable from source
+  is_vegetarian_suggestion?: boolean;
+  is_vegan_suggestion?: boolean;
+  is_gluten_free_suggestion?: boolean;
+  is_dairy_free_suggestion?: boolean;
+  is_nut_free_suggestion?: boolean;
+}
+
+// For the structure of additional_dietary_metadata JSONB field
+interface AdditionalDietaryMetadata {
+  dietary_flags_list?: DietaryFlag[];
+  allergen_alert_list?: AllergenAlert[];
+  nutritional_highlights?: {
+    calories?: string;
+    protein?: string;
+    fat?: string;
+    carbs?: string;
+    fiber?: string;
+  };
+  key_preparation_notes?: string;
+  suitable_for_diet_preferences?: DietPreferenceCategory[];
+  guidance_for_customer_short?: string;
+  original_item_id?: string; // To trace back if needed
+}
+
+
+// --- MAIN MIGRATION FUNCTION ---
+async function runMigration() {
+  console.log("Starting data migration...");
+
+  // For development, you might want to clear tables. BE CAREFUL WITH THIS.
+  // console.log("Clearing existing menu data (menu_items, menus)...");
+  // await db.delete(schema.menus);
+  // await db.delete(schema.menuItems);
+  // console.log("Tables cleared.");
+
+  const stringIdToDbIdMap: Record<string, number> = {};
+  const allOriginalItems: Map<string, OriginalItemDetails> = new Map();
+
+  // --- STEP 1: Collect all unique items from all data sources ---
+  console.log("Collecting unique items from source files...");
+
+  // 1.1 Process weddingThemeMenuData
+  Object.values(weddingThemeMenuData).forEach(theme => {
+    Object.values(theme.categories).forEach(category => {
+      category.items.forEach(item => {
+        if (!allOriginalItems.has(item.id)) {
+          allOriginalItems.set(item.id, {
+            original_id: item.id,
+            name: item.name,
+            description: item.description,
+            category_suggestion: `${category.title} - ${theme.title}`,
+            price: item.upcharge, // This is an upcharge, main price is on package. Adapt as needed for base price.
+          });
+        }
+      });
+    });
+  });
+
+  // 1.2 Process sourceDessertItems
+  sourceDessertItems.forEach(item => {
+    if (!allOriginalItems.has(item.id)) {
+      allOriginalItems.set(item.id, {
+        original_id: item.id,
+        name: item.name,
+        category_suggestion: 'Dessert',
+        price: item.price,
+      });
+    }
+  });
+  
+  // 1.3 Process weddingHorsDoeuvresData (Individual Items)
+  Object.values(weddingHorsDoeuvresData.categories).forEach(category => {
+    category.items.forEach(item => {
+      if (!allOriginalItems.has(item.id)) {
+        allOriginalItems.set(item.id, {
+          original_id: item.id,
+          name: item.name,
+          description: item.description || item.notes,
+          category_suggestion: `Hors d'Oeuvre - ${category.name}`,
+          price: item.pricePerPiece,
+        });
+      }
+    });
+  });
+  // Spreads from spreadsPackage (if considered individual items to be referenced elsewhere)
+  weddingHorsDoeuvresData.spreadsPackage?.items.forEach(item => {
+     if (!allOriginalItems.has(item.id)) {
+      allOriginalItems.set(item.id, {
+        original_id: item.id,
+        name: item.name,
+        category_suggestion: `Spread - ${weddingHorsDoeuvresData.spreadsPackage?.name}`,
+        // Price for these is typically part of the package
+      });
+    }
+  });
+
+
+  // TODO: Add similar processing for:
+  // - weddingAppetizerData
+  // - weddingBreakfastMenuData (GrabAndGoItem, MenuItem within categories)
+  // - sandwichFactoryDataNew (spreadsMasterList, saladsMasterList, glutenFreeOptions)
+  // - weddingEquipmentCategories
+
+  console.log(`Collected ${allOriginalItems.size} unique items.`);
+
+  // --- STEP 2: Insert unique items into menu_items table ---
+  console.log("Inserting items into menu_items table...");
+  for (const itemDetails of allOriginalItems.values()) {
+    // Attempt to get full DietaryInformation from enhancedWeddingMenuData
+    // This lookup logic needs to be robust if IDs are in different objects
+    let enhancedInfo: DietaryInformation | null = null;
+    if (italianWeddingMenuDietaryData[itemDetails.original_id]) {
+        enhancedInfo = italianWeddingMenuDietaryData[itemDetails.original_id];
+    } else if (appetizerDietaryData[itemDetails.original_id]) {
+        enhancedInfo = appetizerDietaryData[itemDetails.original_id];
+    }
+    // Add more lookups if enhancedWeddingMenuData has more specific objects
+
+    const adMetadata: AdditionalDietaryMetadata = { original_item_id: itemDetails.original_id };
+    let isVeganFlag = itemDetails.is_vegan_suggestion || false;
+    let isVegetarianFlag = itemDetails.is_vegetarian_suggestion || false;
+    let isGlutenFreeFlag = itemDetails.is_gluten_free_suggestion || false;
+    let isDairyFreeFlag = itemDetails.is_dairy_free_suggestion || false;
+    let isNutFreeFlag = itemDetails.is_nut_free_suggestion || false;
+
+    if (enhancedInfo) {
+      adMetadata.dietary_flags_list = enhancedInfo.dietary_flags;
+      adMetadata.allergen_alert_list = enhancedInfo.allergen_alert;
+      adMetadata.nutritional_highlights = { // Simplified, you might want more detail
+        calories: enhancedInfo.nutritional_info.calories_range_kcal,
+        protein: enhancedInfo.nutritional_info.protein_g_range,
+        fat: enhancedInfo.nutritional_info.fat_g_range,
+        carbs: enhancedInfo.nutritional_info.carbs_g_range,
+        fiber: enhancedInfo.nutritional_info.fiber_g_range,
+      };
+      adMetadata.key_preparation_notes = enhancedInfo.key_preparation_notes;
+      adMetadata.suitable_for_diet_preferences = enhancedInfo.diet_preference_fit;
+      adMetadata.guidance_for_customer_short = enhancedInfo.guidance_for_customer?.substring(0, 150); // Truncate for short version
+
+      // Update boolean flags from detailed dietary_flags if present
+      if (enhancedInfo.dietary_flags) {
+        isVeganFlag = enhancedInfo.dietary_flags.includes("VEGAN");
+        isVegetarianFlag = enhancedInfo.dietary_flags.includes("VEGETARIAN") || isVeganFlag;
+        isGlutenFreeFlag = enhancedInfo.dietary_flags.includes("GLUTEN_FREE");
+        isDairyFreeFlag = enhancedInfo.dietary_flags.includes("DAIRY_FREE");
+        isNutFreeFlag = enhancedInfo.dietary_flags.includes("NUT_FREE"); // Assuming NUT_FREE means all nuts
+      }
+    }
+    
+    // Normalize price: Drizzle expects number or string that can be cast to numeric
+    let normalizedPrice: string | undefined = undefined;
+    if (typeof itemDetails.price === 'number') {
+        normalizedPrice = itemDetails.price.toFixed(2);
+    } else if (typeof itemDetails.price === 'string') {
+        const parsedPrice = parseFloat(itemDetails.price);
+        if (!isNaN(parsedPrice)) {
+            normalizedPrice = parsedPrice.toFixed(2);
+        }
+    }
+
+
+    try {
+      const [insertedItem] = await db
+        .insert(schema.menuItems)
+        .values({
+          name: itemDetails.name,
+          description: itemDetails.description,
+          category: itemDetails.category_suggestion,
+          price: normalizedPrice, // Ensure this is correctly formatted string or null
+          ingredients: itemDetails.ingredients_suggestion,
+          isVegetarian: isVegetarianFlag,
+          isVegan: isVeganFlag,
+          isGlutenFree: isGlutenFreeFlag,
+          isDairyFree: isDairyFreeFlag,
+          isNutFree: isNutFreeFlag,
+          image: itemDetails.image_url,
+          additional_dietary_metadata: adMetadata,
+        })
+        .returning({ id: schema.menuItems.id });
+
+      stringIdToDbIdMap[itemDetails.original_id] = insertedItem.id;
+    } catch (error) {
+      console.error(`Failed to insert item ${itemDetails.name} (Original ID: ${itemDetails.original_id}):`, error);
+    }
+  }
+  console.log("Finished inserting items into menu_items. ID Map:", stringIdToDbIdMap);
+
+  // --- STEP 3: Insert Packages into menus table ---
+  console.log("Inserting packages into menus table...");
+  for (const themeKey of Object.keys(weddingThemeMenuData)) {
+    const theme = weddingThemeMenuData[themeKey as keyof typeof weddingThemeMenuData];
+    for (const pkgFromFile of theme.packages) {
+      const packageItemsJsonCategories = [];
+
+      for (const categoryKey of Object.keys(theme.categories)) {
+        const categoryFromFile = theme.categories[categoryKey as keyof typeof theme.categories];
+        // Ensure this category is relevant for the package based on limits
+        if (pkgFromFile.limits && (pkgFromFile.limits as any)[categoryKey] !== undefined) {
+          const dbItemIdsForCategory = categoryFromFile.items
+            .map(item => stringIdToDbIdMap[item.id])
+            .filter(id => id !== undefined); // Filter out items not successfully migrated
+
+          packageItemsJsonCategories.push({
+            category_key: categoryKey,
+            display_title: categoryFromFile.title,
+            description: categoryFromFile.description,
+            available_item_ids: dbItemIdsForCategory,
+            selection_limit: (pkgFromFile.limits as any)[categoryKey],
+          });
+        }
+      }
+      
+      const packageJsonForDb = {
+        theme_key: themeKey,
+        theme_title: theme.title,
+        package_price_per_person: pkgFromFile.price,
+        min_guest_count: pkgFromFile.minGuestCount,
+        categories: packageItemsJsonCategories,
+      };
+
+      try {
+        await db.insert(schema.menus).values({
+          name: pkgFromFile.name,
+          description: pkgFromFile.description,
+          type: themeKey, // Using themeKey as the 'type' for this package/menu
+          items: packageJsonForDb,
+        });
+      } catch (error) {
+          console.error(`Failed to insert package ${pkgFromFile.name}:`, error);
+      }
+    }
+  }
+  // TODO: Add similar logic for other "package-like" structures:
+  // - weddingHorsDoeurvesData.spreadsPackage
+  // - sandwichFactoryDataNew.packages
+
+  console.log("Finished inserting packages into menus table.");
+  console.log("Data migration script finished.");
+  await pool.end();
+}
+
+runMigration().catch(err => {
+  console.error("Migration failed:", err);
+  pool.end();
+  process.exit(1);
+});
