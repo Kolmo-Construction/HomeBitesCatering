@@ -66,7 +66,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   const [showAdvancedDietary, setShowAdvancedDietary] = useState(false);
   const [dietaryFlags, setDietaryFlags] = useState<string[]>([]);
   const [allergenAlerts, setAllergenAlerts] = useState<string[]>([]);
-  const [nutritionalHighlights, setNutritionalHighlights] = useState<Record<string, NutritionalRange>>({});
+  const [nutritionalHighlights, setNutritionalHighlights] = useState<Record<string, Partial<NutritionalRange>>>({});
   const [suitableForDiets, setSuitableForDiets] = useState<string[]>([]);
   const [preparationNotes, setPreparationNotes] = useState("");
   const [customerGuidance, setCustomerGuidance] = useState("");
@@ -576,14 +576,15 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                             <Input
                               type="number"
                               placeholder="Min"
-                              value={nutritionalHighlights[nutrient as keyof typeof nutritionalHighlights]?.min || ""}
+                              value={nutritionalHighlights[nutrient]?.min || ""}
                               onChange={(e) => {
                                 const value = e.target.value ? Number(e.target.value) : undefined;
                                 setNutritionalHighlights(prev => ({
                                   ...prev,
                                   [nutrient]: {
-                                    ...prev[nutrient as keyof typeof prev],
-                                    min: value
+                                    min: value,
+                                    max: prev[nutrient]?.max,
+                                    unit: prev[nutrient]?.unit || ""
                                   }
                                 }));
                               }}
@@ -591,26 +592,28 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                             <Input
                               type="number"
                               placeholder="Max"
-                              value={nutritionalHighlights[nutrient as keyof typeof nutritionalHighlights]?.max || ""}
+                              value={nutritionalHighlights[nutrient]?.max || ""}
                               onChange={(e) => {
                                 const value = e.target.value ? Number(e.target.value) : undefined;
                                 setNutritionalHighlights(prev => ({
                                   ...prev,
                                   [nutrient]: {
-                                    ...prev[nutrient as keyof typeof prev],
-                                    max: value
+                                    min: prev[nutrient]?.min,
+                                    max: value,
+                                    unit: prev[nutrient]?.unit || ""
                                   }
                                 }));
                               }}
                             />
                             <Input
                               placeholder="Unit"
-                              value={nutritionalHighlights[nutrient as keyof typeof nutritionalHighlights]?.unit || ""}
+                              value={nutritionalHighlights[nutrient]?.unit || ""}
                               onChange={(e) => {
                                 setNutritionalHighlights(prev => ({
                                   ...prev,
                                   [nutrient]: {
-                                    ...prev[nutrient as keyof typeof prev],
+                                    min: prev[nutrient]?.min,
+                                    max: prev[nutrient]?.max,
                                     unit: e.target.value
                                   }
                                 }));
