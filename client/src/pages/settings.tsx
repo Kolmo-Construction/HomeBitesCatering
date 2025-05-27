@@ -163,8 +163,16 @@ export default function Settings() {
   // Database export mutation
   const exportMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/export-database");
+      const res = await fetch("/api/admin/export-database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // This ensures cookies are included for authentication
+      });
       if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Export failed:', errorText);
         throw new Error('Failed to export database');
       }
       return res.blob();
