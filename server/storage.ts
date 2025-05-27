@@ -51,10 +51,10 @@ export interface IStorage {
   listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]>;
 
   // Menu Items
-  getMenuItem(id: number): Promise<MenuItem | undefined>;
+  getMenuItem(id: string): Promise<MenuItem | undefined>;
   createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem>;
-  updateMenuItem(id: number, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined>;
-  deleteMenuItem(id: number): Promise<boolean>;
+  updateMenuItem(id: string, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined>;
+  deleteMenuItem(id: string): Promise<boolean>;
   listMenuItems(): Promise<MenuItem[]>;
 
   // Menus
@@ -305,8 +305,13 @@ export class DatabaseStorage implements IStorage {
 
   // Menu Item methods
   async getMenuItem(id: string): Promise<MenuItem | undefined> {
-    const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
-    return menuItem;
+    try {
+      const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
+      return menuItem;
+    } catch (error) {
+      console.error('Error getting menu item:', error);
+      return undefined;
+    }
   }
 
   async createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem> {
