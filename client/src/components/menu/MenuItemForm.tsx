@@ -70,6 +70,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   const [suitableForDiets, setSuitableForDiets] = useState<string[]>([]);
   const [preparationNotes, setPreparationNotes] = useState("");
   const [customerGuidance, setCustomerGuidance] = useState("");
+  const [availableLotSizes, setAvailableLotSizes] = useState<number[]>([]);
   
   // Set up the form with default values
   const form = useForm<FormValues>({
@@ -104,6 +105,22 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
     }
   };
 
+  // Load existing dietary metadata when editing
+  useEffect(() => {
+    if (isEditing && menuItem?.additional_dietary_metadata) {
+      const metadata = menuItem.additional_dietary_metadata;
+      
+      // Load existing values
+      if (metadata.dietary_flags_list) setDietaryFlags(metadata.dietary_flags_list);
+      if (metadata.allergen_alert_list) setAllergenAlerts(metadata.allergen_alert_list);
+      if (metadata.nutritional_highlights) setNutritionalHighlights(metadata.nutritional_highlights);
+      if (metadata.suitable_for_diet_preferences) setSuitableForDiets(metadata.suitable_for_diet_preferences);
+      if (metadata.key_preparation_notes) setPreparationNotes(metadata.key_preparation_notes);
+      if (metadata.guidance_for_customer_short) setCustomerGuidance(metadata.guidance_for_customer_short);
+      if (metadata.available_lot_sizes) setAvailableLotSizes(metadata.available_lot_sizes);
+    }
+  }, [isEditing, menuItem]);
+
   // Create or update menu item mutation
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -115,6 +132,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
         key_preparation_notes: preparationNotes || undefined,
         suitable_for_diet_preferences: suitableForDiets.length > 0 ? suitableForDiets : undefined,
         guidance_for_customer_short: customerGuidance || undefined,
+        available_lot_sizes: availableLotSizes.length > 0 ? availableLotSizes : undefined,
       };
 
       const formattedValues = {
@@ -677,6 +695,66 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                       onChange={(e) => setCustomerGuidance(e.target.value)}
                       rows={2}
                     />
+                  </div>
+
+                  {/* Available Lot Sizes */}
+                  <div>
+                    <FormLabel>Available Lot Sizes</FormLabel>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {availableLotSizes.map((size, index) => (
+                          <div key={index} className="flex items-center gap-2 bg-white border rounded px-3 py-2">
+                            <span className="text-sm">{size} pieces</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setAvailableLotSizes(prev => prev.filter((_, i) => i !== index));
+                              }}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Enter lot size (e.g., 24)"
+                          className="w-32"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = parseInt((e.target as HTMLInputElement).value);
+                              if (value > 0 && !availableLotSizes.includes(value)) {
+                                setAvailableLotSizes(prev => [...prev, value].sort((a, b) => a - b));
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = (e.target as HTMLElement).parentElement?.querySelector('input') as HTMLInputElement;
+                            const value = parseInt(input?.value || '');
+                            if (value > 0 && !availableLotSizes.includes(value)) {
+                              setAvailableLotSizes(prev => [...prev, value].sort((a, b) => a - b));
+                              if (input) input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Add quantity options for catering orders (e.g., 24, 48, 72 pieces)
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
