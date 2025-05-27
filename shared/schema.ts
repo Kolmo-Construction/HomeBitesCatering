@@ -26,6 +26,7 @@ export interface AdditionalDietaryMetadata {
   key_preparation_notes?: string;      // e.g., "Pan-seared, contains white wine"
   suitable_for_diet_preferences?: string[]; // e.g., ["KETO", "MEDITERRANEAN"] (from DietPreferenceCategory type)
   guidance_for_customer_short?: string; // A concise tip, e.g., "Great choice for a light, healthy meal."
+  available_lot_sizes?: number[];      // e.g., [24, 48, 72] - available quantity options for catering orders
 }
 
 // Nutritional range schema for structured nutrition data
