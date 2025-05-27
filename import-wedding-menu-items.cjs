@@ -25,29 +25,52 @@ async function importWeddingMenuItems() {
     const weddingDataFile = './client/src/pages/wedding/data/weddingAppt-dessert-sand-Import.ts';
     const fileContent = readFileSync(weddingDataFile, 'utf-8');
     
-    // Extract JSON array from the TypeScript file with error handling
-    let jsonContent = fileContent.trim();
-    
-    // Try to fix common JSON syntax issues
-    jsonContent = jsonContent.replace(/,(\s*[\]}])/g, '$1'); // Remove trailing commas
-    jsonContent = jsonContent.replace(/}\s*\n\s*{/g, '},\n  {'); // Add missing commas between objects
-    
+    // Extract JSON array from the TypeScript file with robust error handling
     let weddingItems;
     try {
-      weddingItems = JSON.parse(jsonContent);
-    } catch (error) {
-      console.log('⚠️  JSON parsing failed, attempting to fix syntax issues...');
-      // Try alternative parsing approach
-      try {
-        // Remove any problematic trailing content and ensure proper closure
-        let cleanContent = jsonContent;
-        if (!cleanContent.trim().endsWith(']')) {
-          cleanContent = cleanContent.trim() + ']';
+      // Read and parse the JSON content
+      let jsonContent = fileContent.trim();
+      
+      // Handle potential JSON syntax issues
+      if (!jsonContent.startsWith('[')) {
+        throw new Error('File does not start with array bracket');
+      }
+      
+      // Find the last complete object and ensure proper array closure
+      const lastUpchargeIndex = jsonContent.lastIndexOf('"upcharge":');
+      if (lastUpchargeIndex > -1) {
+        const afterUpcharge = jsonContent.indexOf('}', lastUpchargeIndex);
+        if (afterUpcharge > -1) {
+          // Ensure we have a complete JSON array
+          jsonContent = jsonContent.substring(0, afterUpcharge + 1) + '\n  ]';
         }
-        weddingItems = JSON.parse(cleanContent);
+      }
+      
+      weddingItems = JSON.parse(jsonContent);
+      console.log('✅ Successfully parsed wedding menu data');
+      
+    } catch (error) {
+      console.log('⚠️  JSON parsing failed, using fallback parsing method...');
+      
+      // Fallback: try to extract individual objects from the file
+      try {
+        const objectMatches = fileContent.match(/{[^{}]*"upcharge":\s*\d+[^{}]*}/g);
+        if (objectMatches && objectMatches.length > 0) {
+          weddingItems = objectMatches.map(objStr => {
+            try {
+              return JSON.parse(objStr);
+            } catch (e) {
+              return null;
+            }
+          }).filter(item => item !== null);
+          
+          console.log('✅ Used fallback parsing method');
+        } else {
+          throw new Error('Could not extract valid objects from file');
+        }
       } catch (e) {
-        console.error('❌ Could not parse JSON file:', e.message);
-        console.error('Please check the wedding data file for syntax errors.');
+        console.error('❌ All parsing methods failed. The wedding data file may be corrupted.');
+        console.error('Original error:', error.message);
         process.exit(1);
       }
     }

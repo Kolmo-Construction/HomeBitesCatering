@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ts_pate_veg",
+    "name": "Pate with pickled veg",
+    "description": "A delicate tea sandwich featuring savory pate, often liver-based, complemented by the crisp texture and tangy flavor of assorted pickled vegetables, served on soft bread.",
+    "category": "Tea Sandwich",
+    "price": null,
+    "ingredients": "Bread, pate (e.g., chicken liver, duck liver), pickled vegetables (e.g., cornichons, carrots, onions), butter or mayonnaise (optional). [Note: Specific ingredients may vary by recipe.]",
+    "is_vegetarian": false,
+    "is_vegan": false,
+    "is_gluten_free": false,
+    "is_dairy_free": null,
+    "is_nut_free": true,
+    "image": null,
+    "created_at": "2025-05-27T21:35:10.123Z",
+    "updated_at": "2025-05-27T21:35:10.123Z",
+    "additional_dietary_metadata": {
+      "dietary_flags_list": [],
+      "allergen_alert_list": ["CONTAINS_WHEAT", "CONTAINS_SOY"],
+      "key_preparation_notes": "Thinly sliced bread with a smooth pate spread and finely chopped or sliced pickled vegetables. Typically served chilled.",
+  }
+]
