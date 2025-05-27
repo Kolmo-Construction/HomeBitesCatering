@@ -1,0 +1,64 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:286 Adding item with ID: saltimbocca_w Type: string
+MenuBuilder.tsx:287 Available menu items: Array(352)
+MenuBuilder.tsx:301 Found item to add: Object
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:358 Submitting menu data: Object
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+/api/menus:1 
+            
+            
+           Failed to load resource: the server responded with a status of 400 (Bad Request)
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
+menus.tsx:73 Selected menu data: undefined
+hook.js:377 Selected menu data: undefined
+MenuBuilder.tsx:133 Menu data in MenuBuilder: undefined
+hook.js:377 Menu data in MenuBuilder: undefined
