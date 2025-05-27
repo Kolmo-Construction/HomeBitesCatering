@@ -141,14 +141,14 @@ export default function MenuItems() {
                     )}
                     
                     {/* Enhanced Dietary Flags */}
-                    {menuItem.additionalDietaryMetadata?.dietary_flags_list?.map((flag: string) => (
+                    {menuItem.additional_dietary_metadata?.dietary_flags_list?.map((flag: string) => (
                       <Badge key={flag} variant="outline" className="bg-green-50 text-green-700">
                         {flag.replace(/_/g, ' ')}
                       </Badge>
                     ))}
                     
                     {/* Diet Preferences */}
-                    {menuItem.additionalDietaryMetadata?.suitable_for_diet_preferences?.map((diet: string) => (
+                    {menuItem.additional_dietary_metadata?.suitable_for_diet_preferences?.map((diet: string) => (
                       <Badge key={diet} variant="outline" className="bg-blue-50 text-blue-700">
                         {diet.replace(/_/g, ' ')}
                       </Badge>
@@ -157,18 +157,18 @@ export default function MenuItems() {
                     {!menuItem.isVegetarian && !menuItem.isVegan && 
                      !menuItem.isGlutenFree && !menuItem.isDairyFree && 
                      !menuItem.isNutFree && 
-                     !menuItem.additionalDietaryMetadata?.dietary_flags_list?.length && (
+                     !menuItem.additional_dietary_metadata?.dietary_flags_list?.length && (
                       <span className="text-gray-500">No special dietary information</span>
                     )}
                   </div>
                 </div>
 
                 {/* Enhanced Nutritional Information */}
-                {menuItem.additionalDietaryMetadata?.nutritional_highlights && (
+                {menuItem.additional_dietary_metadata?.nutritional_highlights && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Nutritional Information</h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
-                      {Object.entries(menuItem.additionalDietaryMetadata.nutritional_highlights).map(([nutrient, data]: [string, any]) => (
+                      {Object.entries(menuItem.additional_dietary_metadata.nutritional_highlights).map(([nutrient, data]: [string, any]) => (
                         <div key={nutrient} className="bg-gray-50 p-3 rounded">
                           <span className="font-medium capitalize">{nutrient}:</span>
                           <div className="text-gray-600 text-lg">
@@ -181,11 +181,11 @@ export default function MenuItems() {
                 )}
 
                 {/* Allergen Alerts */}
-                {menuItem.additionalDietaryMetadata?.allergen_alert_list?.length > 0 && (
+                {menuItem.additional_dietary_metadata?.allergen_alert_list?.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-500 mb-1">Allergen Alerts</h3>
                     <div className="flex flex-wrap gap-2">
-                      {menuItem.additionalDietaryMetadata.allergen_alert_list.map((allergen: string) => (
+                      {menuItem.additional_dietary_metadata.allergen_alert_list.map((allergen: string) => (
                         <Badge key={allergen} variant="destructive" className="bg-red-50 text-red-700">
                           {allergen.replace(/CONTAINS_/, '').replace(/_/g, ' ')}
                         </Badge>
@@ -195,18 +195,18 @@ export default function MenuItems() {
                 )}
 
                 {/* Customer Guidance */}
-                {menuItem.additionalDietaryMetadata?.guidance_for_customer_short && (
+                {menuItem.additional_dietary_metadata?.guidance_for_customer_short && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-500 mb-1">Customer Guidance</h3>
-                    <p className="text-gray-700 italic bg-blue-50 p-3 rounded">{menuItem.additionalDietaryMetadata.guidance_for_customer_short}</p>
+                    <p className="text-gray-700 italic bg-blue-50 p-3 rounded">{menuItem.additional_dietary_metadata.guidance_for_customer_short}</p>
                   </div>
                 )}
 
                 {/* Preparation Notes */}
-                {menuItem.additionalDietaryMetadata?.key_preparation_notes && (
+                {menuItem.additional_dietary_metadata?.key_preparation_notes && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-500 mb-1">Preparation Notes</h3>
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded">{menuItem.additionalDietaryMetadata.key_preparation_notes}</p>
+                    <p className="text-gray-700 bg-gray-50 p-3 rounded">{menuItem.additional_dietary_metadata.key_preparation_notes}</p>
                   </div>
                 )}
                 
