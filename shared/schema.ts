@@ -192,8 +192,14 @@ export const menus = pgTable("menus", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Schema for simple menu items array (id and quantity)
+const simpleMenuItemsSchema = z.array(z.object({
+  id: z.union([z.string(), z.number()]), // Support both string and number IDs
+  quantity: z.number()
+}));
+
 export const insertMenuSchema = createInsertSchema(menus, {
-  items: menuPackageStructureSchema,
+  items: simpleMenuItemsSchema,
 }).omit({
   id: true,
   createdAt: true,
