@@ -22,7 +22,7 @@ async function importWeddingMenuItems() {
     console.log('🔄 Starting wedding menu items import...');
     
     // Read the wedding import data
-    const weddingDataFile = './client/src/pages/wedding/data/WeddingImport.ts';
+    const weddingDataFile = './client/src/pages/wedding/data/weddingAppt-dessert-sand-Import.ts';
     const fileContent = readFileSync(weddingDataFile, 'utf-8');
     
     // Extract JSON array from the TypeScript file
