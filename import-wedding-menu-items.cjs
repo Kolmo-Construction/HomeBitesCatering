@@ -25,9 +25,32 @@ async function importWeddingMenuItems() {
     const weddingDataFile = './client/src/pages/wedding/data/weddingAppt-dessert-sand-Import.ts';
     const fileContent = readFileSync(weddingDataFile, 'utf-8');
     
-    // Extract JSON array from the TypeScript file
-    const jsonContent = fileContent.trim();
-    const weddingItems = JSON.parse(jsonContent);
+    // Extract JSON array from the TypeScript file with error handling
+    let jsonContent = fileContent.trim();
+    
+    // Try to fix common JSON syntax issues
+    jsonContent = jsonContent.replace(/,(\s*[\]}])/g, '$1'); // Remove trailing commas
+    jsonContent = jsonContent.replace(/}\s*\n\s*{/g, '},\n  {'); // Add missing commas between objects
+    
+    let weddingItems;
+    try {
+      weddingItems = JSON.parse(jsonContent);
+    } catch (error) {
+      console.log('⚠️  JSON parsing failed, attempting to fix syntax issues...');
+      // Try alternative parsing approach
+      try {
+        // Remove any problematic trailing content and ensure proper closure
+        let cleanContent = jsonContent;
+        if (!cleanContent.trim().endsWith(']')) {
+          cleanContent = cleanContent.trim() + ']';
+        }
+        weddingItems = JSON.parse(cleanContent);
+      } catch (e) {
+        console.error('❌ Could not parse JSON file:', e.message);
+        console.error('Please check the wedding data file for syntax errors.');
+        process.exit(1);
+      }
+    }
     
     console.log(`📊 Found ${weddingItems.length} wedding menu items to import`);
     
