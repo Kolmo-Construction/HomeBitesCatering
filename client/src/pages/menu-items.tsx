@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/utils";
 export default function MenuItems() {
   const [location] = useLocation();
   const [mode, setMode] = useState<"list" | "new" | "edit" | "view">("list");
-  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
   // Extract mode and ID from location
   useEffect(() => {
@@ -20,12 +20,12 @@ export default function MenuItems() {
     } else if (location === "/menu-items/new") {
       setMode("new");
       setSelectedItemId(null);
-    } else if (location.match(/^\/menu-items\/\d+\/edit$/)) {
+    } else if (location.match(/^\/menu-items\/[^\/]+\/edit$/)) {
       setMode("edit");
-      setSelectedItemId(parseInt(location.split("/")[2], 10));
-    } else if (location.match(/^\/menu-items\/\d+$/)) {
+      setSelectedItemId(location.split("/")[2]);
+    } else if (location.match(/^\/menu-items\/[^\/]+$/)) {
       setMode("view");
-      setSelectedItemId(parseInt(location.split("/")[2], 10));
+      setSelectedItemId(location.split("/")[2]);
     }
   }, [location]);
   
