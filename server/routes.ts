@@ -712,6 +712,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new menu
   app.post('/api/menus', isAuthenticated, async (req: Request, res: Response) => {
     try {
+      console.log('Menu creation request body:', JSON.stringify(req.body, null, 2));
+      console.log('Items field type:', typeof req.body.items);
+      console.log('Items field value:', req.body.items);
+      
       const menuData = insertMenuSchema.parse(req.body);
       
       const newMenu = await storage.createMenu(menuData);
