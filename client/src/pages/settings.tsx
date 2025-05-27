@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
 
 // Password change form schema
 const passwordFormSchema = z.object({
