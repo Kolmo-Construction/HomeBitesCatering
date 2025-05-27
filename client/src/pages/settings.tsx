@@ -39,7 +39,9 @@ import {
   Key, 
   Building, 
   Users, 
-  LayoutGrid
+  LayoutGrid,
+  Database,
+  Download
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -156,6 +158,40 @@ export default function Settings() {
       });
     },
   });
+
+  // Database export mutation
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/export-database");
+      if (!res.ok) {
+        throw new Error('Failed to export database');
+      }
+      return res.blob();
+    },
+    onSuccess: (blob) => {
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `database-backup-${new Date().toISOString().split('T')[0]}.sql`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Database exported",
+        description: "Database backup has been downloaded successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Export failed",
+        description: `Failed to export database: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
   
   // Handle profile form submission
   const onProfileSubmit = (values: ProfileFormValues) => {
@@ -241,6 +277,12 @@ export default function Settings() {
             <TabsTrigger value="integrations" className="flex items-center">
               <LayoutGrid className="mr-2 h-4 w-4" />
               Integrations
+            </TabsTrigger>
+          )}
+          {user?.role === "admin" && (
+            <TabsTrigger value="admin" className="flex items-center">
+              <Database className="mr-2 h-4 w-4" />
+              System Admin
             </TabsTrigger>
           )}
         </TabsList>
@@ -631,6 +673,73 @@ export default function Settings() {
                   Save Integration Settings
                 </Button>
               </CardFooter>
+            </Card>
+          </TabsContent>
+        )}
+        
+        {user?.role === "admin" && (
+          <TabsContent value="admin" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Database Management</CardTitle>
+                <CardDescription>
+                  Export and manage your database for backup and migration purposes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Database Export</h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <div className="flex items-start space-x-4">
+                        <Database className="h-8 w-8 text-blue-500 mt-1" />
+                        <div className="flex-1">
+                          <h4 className="font-medium mb-2">Export Database</h4>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Download a complete backup of your database including all tables, data, and structure. 
+                            This creates a SQL file that can be used to restore your data.
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => exportMutation.mutate()}
+                              disabled={exportMutation.isPending}
+                              className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
+                            >
+                              {exportMutation.isPending ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Exporting...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Export Database
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">System Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        <h4 className="font-medium mb-2">Database Status</h4>
+                        <div className="text-sm text-green-600">✓ Connected</div>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        <h4 className="font-medium mb-2">Last Backup</h4>
+                        <div className="text-sm text-muted-foreground">Manual export only</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         )}

@@ -1745,6 +1745,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Server error' });
     }
   });
+
+  // Database export endpoint for admin users
+  app.post('/api/admin/export-database', isAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log('Starting database export...');
+      
+      // Use pg_dump to export the database
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      const dbUrl = process.env.DATABASE_URL;
+      if (!dbUrl) {
+        throw new Error('DATABASE_URL not configured');
+      }
+      
+      // Generate timestamp for filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `homebites-backup-${timestamp}.sql`;
+      
+      // Execute pg_dump command
+      const command = `pg_dump "${dbUrl}" --no-owner --no-privileges`;
+      console.log('Executing pg_dump...');
+      
+      const { stdout, stderr } = await execAsync(command);
+      
+      if (stderr && !stderr.includes('NOTICE')) {
+        console.error('pg_dump stderr:', stderr);
+      }
+      
+      console.log('Database export completed successfully');
+      
+      // Set headers for file download
+      res.setHeader('Content-Type', 'application/sql');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', Buffer.byteLength(stdout, 'utf8'));
+      
+      // Send the SQL content
+      res.send(stdout);
+      
+    } catch (error) {
+      console.error('Database export error:', error);
+      res.status(500).json({ 
+        message: 'Failed to export database', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
   
   // ===== AI Suggestions =====
   
