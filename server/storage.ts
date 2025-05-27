@@ -306,10 +306,12 @@ export class DatabaseStorage implements IStorage {
   // Menu Item methods
   async getMenuItem(id: string): Promise<MenuItem | undefined> {
     try {
-      const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
-      return menuItem;
+      console.log('Storage: Getting menu item with ID:', id);
+      const result = await db.select().from(menuItems).where(eq(menuItems.id, id));
+      console.log('Storage: Query result:', result.length > 0 ? 'Found' : 'Not found');
+      return result[0];
     } catch (error) {
-      console.error('Error getting menu item:', error);
+      console.error('Storage: Error getting menu item:', error);
       return undefined;
     }
   }

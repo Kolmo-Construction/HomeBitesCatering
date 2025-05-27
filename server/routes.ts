@@ -582,12 +582,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const menuItemId = req.params.id; // Accept both string and numeric IDs
+      console.log('Getting menu item with ID:', menuItemId, 'Type:', typeof menuItemId);
       
       if (!menuItemId) {
+        console.log('Missing menu item ID');
         return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       
       const menuItem = await storage.getMenuItem(menuItemId);
+      console.log('Found menu item:', menuItem ? 'YES' : 'NO');
       
       if (!menuItem) {
         return res.status(404).json({ message: 'Menu item not found' });
