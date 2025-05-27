@@ -83,8 +83,8 @@ function SortableMenuItem({
   onRemove
 }: { 
   item: MenuItemWithQuantity; 
-  onQuantityChange: (id: number, quantity: number) => void;
-  onRemove: (id: number) => void;
+  onQuantityChange: (id: string | number, quantity: number) => void;
+  onRemove: (id: string | number) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   
@@ -268,23 +268,25 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   };
   
   // Handle quantity change
-  const handleQuantityChange = (id: number, quantity: number) => {
+  const handleQuantityChange = (id: string | number, quantity: number) => {
     setSelectedItems(items => 
       items.map(item => 
-        item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
+        item.id.toString() === id.toString() ? { ...item, quantity: Math.max(1, quantity) } : item
       )
     );
   };
   
   // Handle remove item
-  const handleRemoveItem = (id: number) => {
-    setSelectedItems(items => items.filter(item => item.id !== id));
+  const handleRemoveItem = (id: string | number) => {
+    setSelectedItems(items => items.filter(item => item.id.toString() !== id.toString()));
   };
   
   // Handle add item
   const handleAddItem = (id: string) => {
-    const selectedId = parseInt(id, 10);
-    const itemExists = selectedItems.some(item => item.id === selectedId);
+    console.log('Adding item with ID:', id, 'Type:', typeof id);
+    console.log('Available menu items:', menuItems.map(item => ({ id: item.id, name: item.name })));
+    
+    const itemExists = selectedItems.some(item => item.id.toString() === id);
     
     if (itemExists) {
       toast({
@@ -295,18 +297,33 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       return;
     }
     
-    const itemToAdd = menuItems.find((item: any) => item.id === selectedId);
+    const itemToAdd = menuItems.find((item: any) => item.id === id);
+    console.log('Found item to add:', itemToAdd);
+    
     if (itemToAdd) {
+      const priceValue = itemToAdd.price ? Number(itemToAdd.price) * 100 : 0; // Convert to cents
       setSelectedItems([
         ...selectedItems,
         {
           id: itemToAdd.id,
           name: itemToAdd.name,
-          price: itemToAdd.price,
+          price: priceValue,
           quantity: 1,
           category: itemToAdd.category
         }
       ]);
+      
+      toast({
+        title: "Item added",
+        description: `${itemToAdd.name} has been added to the menu.`,
+      });
+    } else {
+      console.error('Item not found with ID:', id);
+      toast({
+        title: "Error",
+        description: "Could not find the selected menu item.",
+        variant: "destructive"
+      });
     }
   };
   
