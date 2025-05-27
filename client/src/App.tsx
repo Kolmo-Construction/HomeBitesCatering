@@ -12,6 +12,7 @@ import Estimates from "@/pages/estimates";
 import MenuItems from "@/pages/menu-items";
 import Menus from "@/pages/menus";
 import Calendar from "@/pages/calendar";
+import Settings from "@/pages/settings";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
@@ -157,6 +158,7 @@ function AppContent() {
           <Route path="/menus/:id" component={Menus} />
           <Route path="/menus/:id/edit" component={Menus} />
           <Route path="/calendar" component={Calendar} />
+          <Route path="/settings" component={Settings} />
           <Route path="/raw-leads" component={RawLeadsPage} />
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
