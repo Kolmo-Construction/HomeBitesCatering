@@ -581,9 +581,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific menu item
   app.get('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const menuItemId = parseInt(req.params.id);
+      const menuItemId = req.params.id; // Accept both string and numeric IDs
       
-      if (isNaN(menuItemId)) {
+      if (!menuItemId) {
         return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       
@@ -622,9 +622,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a menu item
   app.patch('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const menuItemId = parseInt(req.params.id);
+      const menuItemId = req.params.id; // Accept both string and numeric IDs
       
-      if (isNaN(menuItemId)) {
+      if (!menuItemId) {
         return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       
@@ -651,9 +651,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a menu item
   app.delete('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const menuItemId = parseInt(req.params.id);
+      const menuItemId = req.params.id; // Accept both string and numeric IDs
       
-      if (isNaN(menuItemId)) {
+      if (!menuItemId) {
         return res.status(400).json({ message: 'Invalid menu item ID' });
       }
       

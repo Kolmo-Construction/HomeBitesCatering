@@ -304,7 +304,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Menu Item methods
-  async getMenuItem(id: number): Promise<MenuItem | undefined> {
+  async getMenuItem(id: string): Promise<MenuItem | undefined> {
     const [menuItem] = await db.select().from(menuItems).where(eq(menuItems.id, id));
     return menuItem;
   }
@@ -314,7 +314,7 @@ export class DatabaseStorage implements IStorage {
     return createdMenuItem;
   }
 
-  async updateMenuItem(id: number, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined> {
+  async updateMenuItem(id: string, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined> {
     const [updatedMenuItem] = await db
       .update(menuItems)
       .set({ ...menuItem, updatedAt: new Date() })
@@ -323,7 +323,7 @@ export class DatabaseStorage implements IStorage {
     return updatedMenuItem;
   }
 
-  async deleteMenuItem(id: number): Promise<boolean> {
+  async deleteMenuItem(id: string): Promise<boolean> {
     const [deletedMenuItem] = await db
       .delete(menuItems)
       .where(eq(menuItems.id, id))
