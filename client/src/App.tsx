@@ -31,6 +31,9 @@ import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionSt
 import { eventTypes } from "@/data/event-types"; // For the EventTypeSelectionStep props
 import { EventType } from "@/pages/wedding/types/weddingFormTypes"; // Get EventType for onSelectEventType
 
+// Import the new Public Event Inquiry page
+import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
+
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
 
@@ -98,8 +101,9 @@ function AppContent() {
   // Check if the current path is for any public-facing inquiry form
   // For this refactor, we are focusing on /wedding-inquiry
   const isWeddingInquiryPage = location === "/wedding-inquiry";
+  const isPublicInquiryPage = location === "/event-inquiry";
   // You can add more conditions here for other public forms like /corporate-inquiry, /event-selection etc.
-  const isPublicFormPage = isWeddingInquiryPage || location === "/inquiry" || location === "/event-selection";
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || location === "/inquiry" || location === "/event-selection";
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -108,6 +112,7 @@ function AppContent() {
         <Toaster />
         <Switch>
           <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
+          <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           {/* Route for the generic event selection page */}
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
@@ -172,6 +177,7 @@ function AppContent() {
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
           <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
+          <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
 

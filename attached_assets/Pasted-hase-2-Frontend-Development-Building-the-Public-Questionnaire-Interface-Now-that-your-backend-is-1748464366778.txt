@@ -1,0 +1,31 @@
+hase 2: Frontend Development - Building the Public Questionnaire Interface
+
+Now that your backend is ready to receive and process the inquiry data as an Opportunity, let's focus on the frontend component that customers will interact with.
+
+Step 2.1: Design the Core Questionnaire Page/Component
+
+Create the main React component: This will house your public-facing questionnaire (e.g., client/src/pages/PublicEventInquiryPage.tsx).
+Initial State Management: Use React's useState for managing form data. For a multi-step form, you'll also need state for the current step.
+Event Type Selection (First Interaction):
+This is crucial as it will drive the rest of the form's logic.
+Use your Select component or RadioGroup to allow users to pick an eventType (e.g., "Wedding," "Birthday," "Corporate Event," "Private Dinner," "Graduation," "Ceremony," "Other").
+The list of event types can initially be hardcoded in the frontend or fetched from a simple backend endpoint if you want it to be database-driven later (your client/src/data/event-types.tsx could be a source for this).
+Step 2.2: Build Common Information Sections
+
+Create reusable "step" components or sections within your main page for common information:
+Contact Information:
+Inputs for firstName, lastName, email, phone using your Input component.
+You can draw inspiration from client/src/pages/wedding/components/WeddingBasicInformationStep.tsx for layout and field grouping.
+Basic Event Details:
+eventDate: Use your Calendar component.
+guestCount: Input component (type "number").
+venue: Input or Textarea.
+notes (for general event description or initial thoughts from the customer): Textarea.
+Step 2.3: Implement Dynamic Sections/Questions Based on eventType
+
+This is where the form adapts to the user's needs. Based on the eventType selected in Step 2.1:
+Use conditional rendering in React (e.g., {selectedEventType === 'Wedding' && <WeddingSpecificQuestions />}) to show specific sets of questions or entire steps.
+Example - Wedding: You might show questions about "Number of Ceremony Guests vs. Reception Guests," "Need for Bar Service," "Desired Wedding Style (e.g., formal, casual, rustic)."
+Example - Birthday: "Theme of Party," "Age being Celebrated," "Specific Entertainment Needs."
+Example - Corporate: "Company Name," "Purpose of Event (e.g., holiday party, product launch, team building)," "A/V Requirements."
+The questions themselves will be composed using your standard UI components.
