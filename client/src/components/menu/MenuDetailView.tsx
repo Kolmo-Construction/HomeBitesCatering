@@ -1,42 +1,32 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Edit, Save, X, Eye, EyeOff } from "lucide-react";
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Edit, X, Eye, EyeOff } from 'lucide-react';
 
 interface MenuDetailViewProps {
   menu: any;
-  onEdit?: () => void;
+  onUpdate?: () => void;
 }
 
-interface MenuItemDetails {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  description?: string;
-  additional_dietary_metadata?: any;
-}
-
-export default function MenuDetailView({ menu, onEdit }: MenuDetailViewProps) {
+export function MenuDetailView({ menu, onUpdate }: MenuDetailViewProps) {
   const [isEditingItems, setIsEditingItems] = useState(false);
-  const [itemsJson, setItemsJson] = useState("");
+  const [itemsJson, setItemsJson] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch menu items for details
+  // Fetch all menu items for enrichment
   const { data: allMenuItems = [] } = useQuery({
-    queryKey: ["/api/menu-items"],
-  }) as { data: any[] };
+    queryKey: ['/api/menu-items'],
+  });
 
-  // Parse menu items from JSONB
-  const getMenuItemsWithDetails = () => {
+  // Parse and enrich menu items with full details
+  const menuItemsWithDetails = useMemo(() => {
     if (!menu?.items) return [];
     
     try {
@@ -66,143 +56,105 @@ export default function MenuDetailView({ menu, onEdit }: MenuDetailViewProps) {
       console.error("Error parsing menu items:", error);
       return [];
     }
+  }, [menu?.items, allMenuItems]);
+
+  // Helper function to format price
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
   };
 
-  const menuItemsWithDetails = getMenuItemsWithDetails();
-
-  // Initialize JSON editor with current items
-  const initializeJsonEditor = () => {
-    try {
-      const itemsData = typeof menu.items === 'string' 
-        ? JSON.parse(menu.items) 
-        : menu.items;
-      setItemsJson(JSON.stringify(itemsData, null, 2));
-    } catch (error) {
-      setItemsJson('[]');
-    }
-  };
-
-  // Mutation for updating menu items
-  const updateMenuMutation = useMutation({
-    mutationFn: async (newItems: any[]) => {
-      const res = await apiRequest("PATCH", `/api/menus/${menu.id}`, {
-        items: newItems
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/menus", menu.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
-      toast({
-        title: "Menu updated",
-        description: "Menu items have been updated successfully."
-      });
-      setIsEditingItems(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to update menu: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Handle saving JSON changes
-  const handleSaveJson = () => {
-    try {
-      const parsedItems = JSON.parse(itemsJson);
-      if (!Array.isArray(parsedItems)) {
-        throw new Error("Items must be an array");
-      }
-      
-      // Validate structure
-      parsedItems.forEach((item, index) => {
-        if (!item.id || typeof item.quantity !== 'number') {
-          throw new Error(`Item at index ${index} must have 'id' and 'quantity' fields`);
-        }
-      });
-
-      updateMenuMutation.mutate(parsedItems);
-    } catch (error) {
-      toast({
-        title: "Invalid JSON",
-        description: error instanceof Error ? error.message : "Please check your JSON syntax",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Calculate total price per person
+  // Helper function to calculate total price
   const calculateTotalPrice = () => {
     return menuItemsWithDetails.reduce((total, item) => {
       return total + (Number(item.price || 0) * item.quantity);
     }, 0);
   };
 
-  // Format price display
-  const formatPrice = (price: any) => {
-    const numPrice = Number(price || 0);
-    return `$${numPrice.toFixed(2)}`;
+  // Initialize JSON editing with current items
+  const handleStartEditing = () => {
+    const currentItems = menuItemsWithDetails.map(item => item.originalItem);
+    setItemsJson(JSON.stringify(currentItems, null, 2));
+    setIsEditingItems(true);
+  };
+
+  // Mutation to update menu items
+  const updateMenuMutation = useMutation({
+    mutationFn: async (newItems: any) => {
+      const response = await fetch(`/api/menus/${menu.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...menu,
+          items: newItems
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update menu');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/menus'] });
+      setIsEditingItems(false);
+      onUpdate?.();
+      toast({
+        title: "Success",
+        description: "Menu items updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update menu items",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveItems = () => {
+    try {
+      const parsedItems = JSON.parse(itemsJson);
+      updateMenuMutation.mutate(parsedItems);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Invalid JSON format",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Menu Header */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>{menu.name}</CardTitle>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline">{menu.type}</Badge>
-              <span className="text-sm text-gray-500">
-                {menuItemsWithDetails.length} items
-              </span>
-              <span className="text-sm font-medium">
-                Total: {formatPrice(calculateTotalPrice())} per person
-              </span>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Menu Items</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowRawJson(!showRawJson)}
+                variant="outline"
+                size="sm"
+              >
+                {showRawJson ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showRawJson ? "Hide JSON" : "Show JSON"}
+              </Button>
+              <Button
+                onClick={isEditingItems ? () => setIsEditingItems(false) : handleStartEditing}
+                variant="outline"
+                size="sm"
+              >
+                {isEditingItems ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                {isEditingItems ? "Cancel" : "Edit Items"}
+              </Button>
             </div>
-          </div>
-          {onEdit && (
-            <Button onClick={onEdit} variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Menu
-            </Button>
-          )}
-        </CardHeader>
-        {menu.description && (
-          <CardContent>
-            <p className="text-gray-600">{menu.description}</p>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Menu Items Display */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Menu Items</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setShowRawJson(!showRawJson)}
-              variant="outline"
-              size="sm"
-            >
-              {showRawJson ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showRawJson ? "Hide" : "Show"} JSON
-            </Button>
-            <Button
-              onClick={() => {
-                if (!isEditingItems) {
-                  initializeJsonEditor();
-                }
-                setIsEditingItems(!isEditingItems);
-              }}
-              variant="outline"
-              size="sm"
-            >
-              {isEditingItems ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-              {isEditingItems ? "Cancel" : "Edit Items"}
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -218,8 +170,10 @@ export default function MenuDetailView({ menu, onEdit }: MenuDetailViewProps) {
                 placeholder='[{"id": "item_id", "quantity": 1}]'
               />
               <div className="flex gap-2">
-                <Button onClick={handleSaveJson} disabled={updateMenuMutation.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
+                <Button 
+                  onClick={handleSaveItems}
+                  disabled={updateMenuMutation.isPending}
+                >
                   {updateMenuMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button 
@@ -276,36 +230,37 @@ export default function MenuDetailView({ menu, onEdit }: MenuDetailViewProps) {
                               <p className="text-sm text-gray-600 mt-2">{item.description}</p>
                             )}
                           
-                          {/* Dietary Information */}
-                          {item.additional_dietary_metadata && (
-                            <div className="mt-3 space-y-2">
-                              {item.additional_dietary_metadata.dietary_flags_list && (
-                                <div className="flex flex-wrap gap-1">
-                                  {item.additional_dietary_metadata.dietary_flags_list.map((flag: string) => (
-                                    <Badge key={flag} variant="outline" className="text-xs">
-                                      {flag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {item.additional_dietary_metadata.guidance_for_customer_short && (
-                                <p className="text-xs text-blue-600 italic">
-                                  {item.additional_dietary_metadata.guidance_for_customer_short}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                            {/* Dietary Information */}
+                            {item.additional_dietary_metadata && (
+                              <div className="mt-3 space-y-2">
+                                {item.additional_dietary_metadata.dietary_flags_list && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {item.additional_dietary_metadata.dietary_flags_list.map((flag: string) => (
+                                      <Badge key={flag} variant="outline" className="text-xs">
+                                        {flag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {item.additional_dietary_metadata.guidance_for_customer_short && (
+                                  <p className="text-xs text-blue-600 italic">
+                                    {item.additional_dietary_metadata.guidance_for_customer_short}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         
-                        <div className="text-right">
-                          <div className="text-sm font-medium">
-                            Subtotal: {formatPrice(Number(item.price || 0) * item.quantity)}
+                          <div className="text-right">
+                            <div className="text-sm font-medium">
+                              Subtotal: {formatPrice(Number(item.price || 0) * item.quantity)}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
