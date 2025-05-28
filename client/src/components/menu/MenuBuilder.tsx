@@ -499,8 +499,87 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                   <div className="space-y-6">
                     <h3 className="text-lg font-medium">Menu Package Structure Builder</h3>
                     <p className="text-sm text-gray-600">Configure your menu package with complete JSONB structure according to MenuPackageStructure schema.</p>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm text-blue-800">This form builder allows you to create the complete MenuPackageStructure with theme information, package details, and organized categories.</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Theme Key */}
+                      <div>
+                        <FormLabel>Theme Key</FormLabel>
+                        <Input 
+                          placeholder="e.g., lebanese_cuisine"
+                          defaultValue={`custom_${form.watch("name")?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Unique theme identifier (e.g., "lebanese_cuisine")</p>
+                      </div>
+                      
+                      {/* Package ID */}
+                      <div>
+                        <FormLabel>Package ID</FormLabel>
+                        <Input 
+                          placeholder="e.g., lebanese_fiesta_deluxe_v1"
+                          defaultValue={`custom_package_${Date.now()}`}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Unique package identifier</p>
+                      </div>
+                      
+                      {/* Package Name */}
+                      <div>
+                        <FormLabel>Package Name</FormLabel>
+                        <Input 
+                          placeholder="e.g., Lebanese Fiesta Deluxe Package"
+                          defaultValue={form.watch("name")}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Display name for the package</p>
+                      </div>
+                      
+                      {/* Price Per Person */}
+                      <div>
+                        <FormLabel>Price Per Person ($)</FormLabel>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g., 65.00"
+                          defaultValue="0"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Base price per person</p>
+                      </div>
+                      
+                      {/* Min Guest Count */}
+                      <div>
+                        <FormLabel>Minimum Guest Count</FormLabel>
+                        <Input 
+                          type="number"
+                          placeholder="e.g., 25"
+                          defaultValue="1"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Minimum number of guests required</p>
+                      </div>
+                      
+                      {/* Customizable Toggle */}
+                      <div className="flex items-center space-x-3">
+                        <FormLabel>Customizable Package</FormLabel>
+                        <input 
+                          type="checkbox"
+                          defaultChecked={true}
+                          className="rounded"
+                        />
+                        <p className="text-xs text-gray-500">Allow clients to modify selections</p>
+                      </div>
+                    </div>
+                    
+                    {/* Package Description */}
+                    <div>
+                      <FormLabel>Package Description</FormLabel>
+                      <Textarea 
+                        rows={4}
+                        placeholder="Detailed description of your menu package including what's included, dietary options, service style, etc."
+                        defaultValue={`Custom menu: ${form.watch("name") || 'Untitled Package'}`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Rich description for client-facing displays</p>
+                    </div>
+                    
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-green-800 mb-2">Package Structure Preview</h4>
+                      <p className="text-sm text-green-700">Your form data will generate a complete MenuPackageStructure with organized categories and all the details above.</p>
                     </div>
                   </div>
                 ) : (
