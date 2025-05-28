@@ -581,6 +581,47 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                       <h4 className="font-medium text-green-800 mb-2">Package Structure Preview</h4>
                       <p className="text-sm text-green-700">Your form data will generate a complete MenuPackageStructure with organized categories and all the details above.</p>
                     </div>
+                    
+                    {/* Menu Items Selection for Form Builder */}
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Menu Items Selection</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Select items to include in your package. They will be automatically organized by category.
+                      </p>
+                      
+                      {selectedItems.length === 0 ? (
+                        <div className="border border-dashed rounded-md p-6 text-center">
+                          <p className="text-gray-500">
+                            No items added yet. Use the panel on the right to add items.
+                          </p>
+                        </div>
+                      ) : (
+                        <DndContext 
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <SortableContext
+                            items={selectedItems.map(item => item.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {selectedItems.map(item => (
+                              <SortableMenuItem
+                                key={item.id}
+                                item={item}
+                                onQuantityChange={handleQuantityChange}
+                                onRemove={handleRemoveItem}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                      )}
+                      
+                      <div className="mt-4 text-right text-lg">
+                        <span className="font-medium">Total per person:</span>{" "}
+                        <span className="font-bold">{formatCurrency(calculateTotalPrice() / 100)}</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   // Standard Menu Items UI - Show for other types
