@@ -1,11 +1,11 @@
 // src/App.tsx
-import React, { Suspense } from "react"; // Removed useState, useEffect, lazy as they weren't used in the modified version
+import React, { Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Switch, Route, Router, useLocation } from "wouter"; // Added Router and useLocation for path-based rendering
+import { Switch, Route, Router } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
-import { queryClient } from "./lib/queryClient"; // Assuming this path is correct
-import Login from "@/pages/login"; // Assuming this path is correct
-import Dashboard from "@/pages/dashboard"; // Assuming this path is correct
+import { queryClient } from "./lib/queryClient";
+import Login from "@/pages/login";
+import Dashboard from "@/pages/dashboard";
 import Opportunities from "@/pages/opportunities";
 import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
@@ -23,69 +23,14 @@ import FormManager from "@/pages/FormManager";
 import FormEditor from "@/pages/FormEditor";
 // Calculator Test
 import CalculatorTest from "@/pages/CalculatorTest";
-
-// Import the new WeddingInquiryForm
-import WeddingInquiryForm from "@/pages/wedding/WeddingInquiryForm";
-// Import the EventTypeSelectionStep if you want a general landing page for event types
-import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionStep"; // Assuming this is now a shared component
-import { eventTypes } from "@/data/event-types"; // For the EventTypeSelectionStep props
-import { EventType } from "@/pages/wedding/types/weddingFormTypes"; // Get EventType for onSelectEventType
-
-// Import the new Public Event Inquiry page
-import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
-
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
 
-import Layout from "@/components/layout/Layout"; // Assuming this path is correct
-import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
-
-// Component to handle public form routing logic
-const PublicRoutes = () => {
-  const [location] = useLocation(); // Use wouter's useLocation hook
-
-  // Example: General inquiry landing page showing event type selection
-  if (location === "/inquiry" || location === "/event-selection") {
-    // This is a conceptual landing page. You'd pass a handler to navigate
-    // to specific forms like /wedding-inquiry based on selection.
-    const handleSelectEventType = (type: EventType) => {
-        // For wouter, you might use navigate hook or window.location.href
-        if (type === "Wedding") {
-             // navigate("/wedding-inquiry"); // If using useNavigation hook from wouter
-             window.location.href = "/wedding-inquiry";
-        } else if (type === "Corporate") {
-            // window.location.href = "/corporate-inquiry"; // For future corporate form
-        }
-        // Add other event types
-    };
-    return (
-        <div className="min-h-screen bg-gray-50 pb-12">
-            {/* You might want a simpler header for this page */}
-            <div className="w-full bg-gradient-to-r from-gray-700 to-gray-800 text-white p-6 mb-8">
-                <div className="container mx-auto text-center">
-                <h1 className="text-4xl font-extrabold mb-3">Plan Your Event</h1>
-                <p className="text-lg">Select the type of event you're planning.</p>
-                </div>
-            </div>
-             <EventTypeSelectionStep
-                onSelectEventType={handleSelectEventType}
-                selectedEventType={null} // No pre-selection on this page
-                // Ensure eventTypes data is correctly imported and passed if needed by the component
-                // eventTypesData={eventTypes} // Assuming EventTypeSelectionStep takes this prop
-            />
-        </div>
-    );
-  }
-
-  // Specific route for the Wedding Inquiry Form
-  // The <Route> component from wouter will handle this in AppContent
-  return null; // Fallback, routing is handled by <Route>
-};
-
+import Layout from "@/components/layout/Layout";
+import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 
 function AppContent() {
   const { user, loading } = useAuthContext();
-  const [location] = useLocation(); // Get current location
 
   if (loading) {
     return (
@@ -98,34 +43,7 @@ function AppContent() {
     );
   }
 
-  // Check if the current path is for any public-facing inquiry form
-  // For this refactor, we are focusing on /wedding-inquiry
-  const isWeddingInquiryPage = location === "/wedding-inquiry";
-  const isPublicInquiryPage = location === "/event-inquiry";
-  // You can add more conditions here for other public forms like /corporate-inquiry, /event-selection etc.
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || location === "/inquiry" || location === "/event-selection";
-
-
-  if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Toaster />
-        <Switch>
-          <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
-          <Route path="/event-inquiry" component={PublicEventInquiryPage} />
-          {/* Route for the generic event selection page */}
-          <Route path="/inquiry" component={PublicRoutes} />
-          <Route path="/event-selection" component={PublicRoutes} />
-          {/* Fallback for public routes if needed, or redirect */}
-          <Route>
-            <div className="flex items-center justify-center h-screen text-xl">404 - Page Not Found</div>
-          </Route>
-        </Switch>
-      </div>
-    );
-  }
-
-  // If user is not logged in and not accessing a public form, show Login
+  // If user is not logged in, show Login
   if (!user) {
     return (
         <div className="min-h-screen bg-gray-50">
@@ -175,15 +93,9 @@ function AppContent() {
           <Route path="/calculator-test" component={CalculatorTest} />
           <Route path="/dietary-demo" component={DietaryDemo} />
 
-          {/* Public forms accessible even when logged in, if desired, or redirect from here */}
-          <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
-          <Route path="/event-inquiry" component={PublicEventInquiryPage} />
-          <Route path="/inquiry" component={PublicRoutes} />
-          <Route path="/event-selection" component={PublicRoutes} />
-
           {/* Fallback Route for authenticated users */}
           <Route>
-            <Dashboard /> {/* Or a 404 component within the Layout */}
+            <Dashboard />
           </Route>
         </Switch>
       </Layout>
@@ -193,7 +105,6 @@ function AppContent() {
 
 function App() {
   return (
-    // Wrap with Wouter's Router for useLocation hook to work correctly
     <Router>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
