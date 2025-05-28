@@ -16,6 +16,11 @@ import {
   type GmailSyncState, type InsertGmailSyncState,
   type ProcessedEmail, type InsertProcessedEmail
 } from "@shared/schema";
+import {
+  formSubmissions, formSubmissionAnswers,
+  type FormSubmission, type InsertFormSubmission,
+  type FormSubmissionAnswer, type InsertFormSubmissionAnswer
+} from "@shared/form-schema";
 import { db, pool } from "./db";
 import { eq, gte, lte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added lte for date range query
 import { z } from "zod";
@@ -109,6 +114,10 @@ export interface IStorage {
   deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }>;
   findContactsByIdentifier(identifier: string, type?: string): Promise<any[]>;
   getLeadSystemSettings(): Promise<any>;
+
+  // Form Submissions
+  createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
+  createFormSubmissionAnswer(answer: InsertFormSubmissionAnswer): Promise<FormSubmissionAnswer>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -754,6 +763,17 @@ export class DatabaseStorage implements IStorage {
         interval: 5, // minutes
       }
     };
+  }
+
+  // Form Submissions
+  async createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission> {
+    const [newSubmission] = await db.insert(formSubmissions).values(submission).returning();
+    return newSubmission;
+  }
+
+  async createFormSubmissionAnswer(answer: InsertFormSubmissionAnswer): Promise<FormSubmissionAnswer> {
+    const [newAnswer] = await db.insert(formSubmissionAnswers).values(answer).returning();
+    return newAnswer;
   }
 }
 

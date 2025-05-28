@@ -563,6 +563,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Server error' });
     }
   });
+
+  // ===== Public Inquiry Route (No Authentication Required) =====
+  
+  // Create opportunity from public inquiry form
+  app.post('/api/opportunities/public-inquiry', async (req: Request, res: Response) => {
+    try {
+      // Define schema for public inquiry data
+      const publicInquirySchema = z.object({
+        // Required contact information
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
+        email: z.string().email("Valid email address is required"),
+        phone: z.string().optional(),
+        
+        // Required event information
+        eventType: z.string().min(1, "Event type is required"),
+        eventDate: z.string().optional().nullable().transform(date => date ? new Date(date) : null),
+        guestCount: z.coerce.number().int().positive().optional().nullable(),
+        venue: z.string().optional(),
+        
+        // Optional details
+        notes: z.string().optional(),
+        
+        // Form metadata
+        formId: z.number().optional(), // Which form was submitted
+        formVersion: z.number().optional().default(1),
+        source: z.string().optional().default("website"), // Track where inquiry came from
+        
+        // Detailed form responses for historical record
+        formResponses: z.array(z.object({
+          questionId: z.number(),
+          questionKey: z.string(),
+          answer: z.any()
+        })).optional()
+      });
+
+      const inquiryData = publicInquirySchema.parse(req.body);
+      
+      // Create the opportunity with appropriate defaults for public inquiries
+      const opportunityData = {
+        firstName: inquiryData.firstName,
+        lastName: inquiryData.lastName,
+        email: inquiryData.email,
+        phone: inquiryData.phone || null,
+        eventType: inquiryData.eventType,
+        eventDate: inquiryData.eventDate,
+        guestCount: inquiryData.guestCount || null,
+        venue: inquiryData.venue || null,
+        notes: inquiryData.notes || null,
+        status: "new",
+        opportunitySource: inquiryData.source,
+        priority: "medium" as const, // Default priority for public inquiries
+        assignedTo: null // Will be assigned later by admin
+      };
+
+      // Create the opportunity
+      const newOpportunity = await storage.createOpportunity(opportunityData);
+      
+      // If form data is provided, create form submission record
+      if (inquiryData.formId && inquiryData.formResponses) {
+        try {
+          // Create form submission record
+          const submissionData = {
+            formId: inquiryData.formId,
+            formVersion: inquiryData.formVersion || 1,
+            opportunityId: newOpportunity.id,
+            status: "completed",
+            submittedAt: new Date()
+          };
+          
+          const formSubmission = await storage.createFormSubmission(submissionData);
+          
+          // Store individual answers
+          for (const response of inquiryData.formResponses) {
+            await storage.createFormSubmissionAnswer({
+              formSubmissionId: formSubmission.id,
+              formPageQuestionId: response.questionId,
+              answerValue: response.answer
+            });
+          }
+          
+          console.log(`Created form submission ${formSubmission.id} for opportunity ${newOpportunity.id}`);
+        } catch (formError) {
+          console.error('Error creating form submission record:', formError);
+          // Don't fail the opportunity creation if form submission fails
+        }
+      }
+      
+      // Return success response with opportunity ID
+      res.status(201).json({
+        message: 'Inquiry received successfully',
+        opportunityId: newOpportunity.id,
+        status: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Error processing public inquiry:', error);
+      
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid inquiry data', 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      res.status(500).json({ message: 'Server error processing inquiry' });
+    }
+  });
   
   // ===== Menu Items Routes =====
   
