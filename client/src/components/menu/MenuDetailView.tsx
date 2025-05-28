@@ -13,7 +13,7 @@ interface MenuDetailViewProps {
   onUpdate?: () => void;
 }
 
-export function MenuDetailView({ menu, onUpdate }: MenuDetailViewProps) {
+export default function MenuDetailView({ menu, onUpdate }: MenuDetailViewProps) {
   const [isEditingItems, setIsEditingItems] = useState(false);
   const [itemsJson, setItemsJson] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
