@@ -55,7 +55,7 @@ export default function Menus() {
   const { data: menus = [], isLoading } = useQuery({
     queryKey: ["/api/menus"],
     enabled: mode === "list",
-  });
+  }) as { data: any[], isLoading: boolean };
   
   // Fetch selected menu data
   const { data: selectedMenu, isLoading: isLoadingMenu } = useQuery({
@@ -277,93 +277,13 @@ export default function Menus() {
           menu={selectedMenu} 
           onEdit={() => window.location.href = `/menus/${selectedMenu.id}/edit`}
         />
-        
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex justify-between">
-              <div>
-                <CardTitle>Menu Details</CardTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  Last updated on {formatDate(new Date(selectedMenu.updatedAt))}
-                </p>
-              </div>
-              <Badge>
-                {selectedMenu.type.charAt(0).toUpperCase() + selectedMenu.type.slice(1)}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {selectedMenu.description && (
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
-                <p className="text-gray-700">{selectedMenu.description}</p>
-              </div>
-            )}
-            
-            <div className="mt-4">
-              <h3 className="text-lg font-medium mb-3">Menu Items</h3>
-              
-              <div className="bg-gray-50 rounded-md p-4">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                      <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {menuItemsDetails.map((item) => {
-                      const categoryLabels: Record<string, string> = {
-                        appetizer: "Appetizer",
-                        entree: "Main Course",
-                        side: "Side",
-                        dessert: "Dessert",
-                        beverage: "Beverage"
-                      };
-                      
-                      return (
-                        <tr key={item.id} className="border-b border-gray-200">
-                          <td className="py-3 px-3">
-                            <div className="font-medium">{item.name}</div>
-                            <div className="flex mt-1 flex-wrap gap-1">
-                              {item.isVegetarian && <Badge variant="outline" className="text-xs">Veg</Badge>}
-                              {item.isVegan && <Badge variant="outline" className="text-xs">Vegan</Badge>}
-                              {item.isGlutenFree && <Badge variant="outline" className="text-xs">GF</Badge>}
-                            </div>
-                          </td>
-                          <td className="py-3 px-3 text-center">{categoryLabels[item.category] || item.category}</td>
-                          <td className="py-3 px-3 text-center">{item.quantity}</td>
-                          <td className="py-3 px-3 text-right">{formatCurrency(item.price / 100)}</td>
-                          <td className="py-3 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
-                        </tr>
-                      );
-                    })}
-                    
-                    <tr className="bg-gray-100">
-                      <td colSpan={4} className="py-3 px-3 text-right font-semibold">
-                        Total Per Person:
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold">
-                        {formatCurrency(totalPrice / 100)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     );
   }
   
   return (
     <div className="text-center py-12">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Menu Not Found</h2>
-      <p className="text-gray-600">The menu you're looking for doesn't exist or has been deleted.</p>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading...</h2>
     </div>
   );
 }
