@@ -544,7 +544,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                     <span className="font-bold">{formatCurrency(calculateTotalPrice() / 100)}</span>
                   </div>
                 </div>
-                ))}
+                )}
                 
                 <CardFooter className="px-0 pt-4 flex justify-end space-x-2">
                   <Button
