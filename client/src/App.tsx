@@ -23,8 +23,6 @@ import FormManager from "@/pages/FormManager";
 import FormEditor from "@/pages/FormEditor";
 // Calculator Test
 import CalculatorTest from "@/pages/CalculatorTest";
-// Import the Dietary Demo page
-import DietaryDemo from "@/pages/DietaryDemo";
 
 import Layout from "@/components/layout/Layout";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
@@ -91,7 +89,6 @@ function AppContent() {
           <Route path="/admin/form-builder/forms" component={FormManager} />
           <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
           <Route path="/calculator-test" component={CalculatorTest} />
-          <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Fallback Route for authenticated users */}
           <Route>
