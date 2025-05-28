@@ -1051,7 +1051,8 @@ CREATE TABLE public.menus (
     type text NOT NULL,
     items jsonb NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    is_publicly_visible boolean DEFAULT true
 );
 
 
@@ -2106,8 +2107,10 @@ Lebanese Bread Salad (Fattoush)	Fattoush is a Levantine bread salad made from to
 -- Data for Name: menus; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.menus (id, name, description, type, items, created_at, updated_at) FROM stdin;
-1	Sample Appetizer Menu	A sample menu with appetizers	standard	[{"id": 1, "quantity": 2}, {"id": 2, "quantity": 1}]	2025-05-14 00:19:41.03843	2025-05-14 00:19:41.03843
+COPY public.menus (id, name, description, type, items, created_at, updated_at, is_publicly_visible) FROM stdin;
+1	Sample Appetizer Menu	A sample menu with appetizers	standard	[{"id": 1, "quantity": 2}, {"id": 2, "quantity": 1}]	2025-05-14 00:19:41.03843	2025-05-14 00:19:41.03843	t
+15	Bronze Celebration Package	An elegant introduction: Select 2 Mains, 3 Sides, 1 Pasta, and 1 Salad. Includes artisanal bread service.	themed_wedding	{"theme_key": "taste_of_italy_wedding", "categories": [{"description": "Choose your centerpiece main courses.", "category_key": "mains", "display_title": "Exquisite Italian Mains", "upcharge_info": {"osso_bucco_w": 8.00, "veal_saltimbocca_w": 3.00}, "selection_limit": 2, "available_item_ids": ["chicken_saltimbocca_w", "chicken_florentine_w", "chicken_piccata_w", "chicken_cacciatore_w", "chicken_parmesan_white_w", "chicken_parmesan_red_w", "chicken_marsala_w", "chicken_puttanesca_w", "beef_pizzaiola_w", "beef_braciole_w", "lasagna_w", "osso_bucco_w", "brasato_al_barolo_w", "veal_saltimbocca_w", "pesce_all_acqua_pazza_w", "spinach_and_ricotta_cannelloni", "italian_meatballs", "vegetarian_lasagna_w"]}, {"description": "Select your accompanying side dishes.", "category_key": "sides", "display_title": "Refined Italian Sides", "upcharge_info": {}, "selection_limit": 3, "available_item_ids": ["rosemary_roasted_potatoes", "green_beans_almondine", "baked_cauliflower_w", "asiago_zucchini_bites", "eggplant_parmesan", "cannellini_beans_w", "peas_w", "roasted_brussels_sprouts_w", "tuscan_roasted_carrots"]}, {"description": "Indulge in our freshly prepared pasta selections.", "category_key": "pasta", "display_title": "Artisanal Italian Pasta", "upcharge_info": {}, "selection_limit": 1, "available_item_ids": ["penne_pasta_with_butter", "penne_pasta_with_pesto", "penne_pasta_with_marinara", "rigatoni_with_butter", "rigatoni_with_pesto", "rigatoni_with_marinara", "conchiglie_with_butter", "conchiglie_with_pesto", "conchiglie_with_marinara"]}, {"description": "Choose from our vibrant and fresh salad creations.", "category_key": "salads", "display_title": "Fresh Italian Salads", "upcharge_info": {}, "selection_limit": 1, "available_item_ids": ["caprese_stuffed_avocado", "panzanella_bread_salad", "tossed_italian_cobb_salad", "sicilian_fennel_salad", "roasted_beets_with_burrata", "caprese", "pasta_salad", "tuscan_orzo_pesto_salad", "caesar_salad", "garden_salad"]}], "package_id": "italy_wedding_bronze", "customizable": false, "package_name": "Bronze Celebration Package", "min_guest_count": 50, "package_description": "An elegant introduction: Select 2 Mains, 3 Sides, 1 Pasta, and 1 Salad. Includes artisanal bread service.", "package_price_per_person": 32.00}	2025-05-28 02:25:14.352124	2025-05-28 02:25:14.352124	t
+16	Golden italian 	this is a test menu	standard	[{"id": "saltimbocca_w", "quantity": 1}, {"id": "florentine_w", "quantity": 1}, {"id": "piccata_w", "quantity": 1}, {"id": "parmesan_red_w", "quantity": 1}, {"id": "puttanesca_w", "quantity": 1}, {"id": "carolina_bbq_chicken", "quantity": 1}]	2025-05-28 05:42:15.361517	2025-05-28 05:42:15.361517	t
 \.
 
 
@@ -2218,8 +2221,7 @@ COPY public.raw_leads (id, source, raw_data, extracted_prospect_name, extracted_
 --
 
 COPY public.sessions (sid, sess, expire) FROM stdin;
-UpFgavc4AAY5aiX5sFbi7OMwBgFWKAir	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-28T18:36:31.745Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-29 02:04:15
-yuyemlPcjY4_dNi1hB5T1F47bDQGabXO	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-27T12:16:42.044Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-28 04:40:53
+UpFgavc4AAY5aiX5sFbi7OMwBgFWKAir	{"cookie":{"originalMaxAge":86400000,"expires":"2025-05-28T18:36:31.745Z","secure":false,"httpOnly":true,"domain":"92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev","path":"/","sameSite":"lax"},"userId":1}	2025-05-29 06:00:32
 \.
 
 
@@ -2341,7 +2343,7 @@ SELECT pg_catalog.setval('public.library_matrix_rows_id_seq', 7, true);
 -- Name: menus_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.menus_id_seq', 14, true);
+SELECT pg_catalog.setval('public.menus_id_seq', 16, true);
 
 
 --
