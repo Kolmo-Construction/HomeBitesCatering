@@ -1,80 +1,47 @@
-import React from "react";
-import { Cake, Calendar, Gift, Users, Truck, Wine, Utensils } from "lucide-react";
-import { EventType, EventTypeDetails } from "@/types/form-types";
+import { Heart, Cake, Briefcase, Users, Calendar, PartyPopper } from "lucide-react";
+import { EventTypeDetails } from "@/types/form-types";
 
-// Event type details including description and icon
 export const eventTypes: EventTypeDetails[] = [
   {
-    type: "Wedding",
-    description: "Elegant food service for your special day.",
-    icon: <Calendar className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-pink-500 to-rose-500",
+    type: "wedding",
+    title: "Wedding",
+    description: "Create unforgettable memories for your special day with our elegant wedding catering services.",
+    icon: <Heart className="h-12 w-12 mx-auto mb-3" />,
+    gradient: "from-pink-500 to-rose-400"
   },
   {
-    type: "Corporate",
-    description: "Professional catering for business events.",
-    icon: <Users className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-blue-500 to-indigo-600",
+    type: "birthday",
+    title: "Birthday Party",
+    description: "Celebrate another year of life with delicious food and joyful moments.",
+    icon: <Cake className="h-12 w-12 mx-auto mb-3" />,
+    gradient: "from-yellow-500 to-orange-400"
   },
   {
-    type: "Engagement",
-    description: "Celebrate your engagement with delicious food.",
-    icon: <Gift className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-purple-500 to-pink-500",
+    type: "corporate",
+    title: "Corporate Event",
+    description: "Professional catering for meetings, conferences, and company celebrations.",
+    icon: <Briefcase className="h-12 w-12 mx-auto mb-3" />,
+    gradient: "from-blue-600 to-indigo-500"
   },
   {
-    type: "Birthday",
-    description: "Make your birthday celebration memorable.",
-    icon: <Cake className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-amber-500 to-orange-500",
+    type: "anniversary",
+    title: "Anniversary",
+    description: "Honor your milestone moments with sophisticated catering and service.",
+    icon: <Calendar className="h-12 w-12 mx-auto mb-3" />,
+    gradient: "from-purple-500 to-pink-400"
   },
   {
-    type: "Food Truck",
-    description: "Mobile food service for any outdoor event.",
-    icon: <Truck className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-green-500 to-emerald-600",
+    type: "graduation",
+    title: "Graduation",
+    description: "Celebrate academic achievements with memorable food and festivities.",
+    icon: <Users className="h-12 w-12 mx-auto mb-3" />,
+    gradient: "from-green-500 to-emerald-400"
   },
   {
-    type: "Mobile Bartending",
-    description: "Professional bartending services at your venue.",
-    icon: <Wine className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-violet-500 to-purple-600",
-  },
-  {
-    type: "Other Private Party",
-    description: "Custom catering for your unique gathering.",
-    icon: <Utensils className="h-16 w-16 mb-4 text-white" />,
-    gradient: "from-teal-500 to-cyan-600",
-  },
+    type: "other",
+    title: "Other Event",
+    description: "Custom catering solutions for any special occasion you have in mind.",
+    icon: <PartyPopper className="h-12 w-12 mx-auto mb-3" />,
+    gradient: "from-gray-600 to-slate-500"
+  }
 ];
-
-// Helper function to map URL parameter to event type
-export function mapUrlToEventType(type: string): EventType | null {
-  const eventTypeMap: Record<string, EventType> = {
-    "wedding": "Wedding",
-    "corporate": "Corporate",
-    "engagement": "Engagement",
-    "birthday": "Birthday",
-    "foodtruck": "Food Truck",
-    "mobilebartending": "Mobile Bartending",
-    "otherprivateparty": "Other Private Party"
-  };
-  
-  return eventTypeMap[type.toLowerCase()] || null;
-}
-
-// Helper function to validate if a string is a valid event type
-export function validateEventType(type: string): boolean {
-  // Convert input to match case-sensitive event types
-  const eventTypeMap: Record<string, EventType> = {
-    "wedding": "Wedding",
-    "corporate": "Corporate",
-    "engagement": "Engagement",
-    "birthday": "Birthday",
-    "foodtruck": "Food Truck",
-    "mobilebartending": "Mobile Bartending",
-    "otherprivateparty": "Other Private Party"
-  };
-  
-  return !!eventTypeMap[type.toLowerCase()];
-}
