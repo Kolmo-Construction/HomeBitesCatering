@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from './db';
-import { menus, menuItems, AdditionalDietaryMetadata } from '../shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { menus, menuItems, type AdditionalDietaryMetadata } from '../shared/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 /**
  * API Routes for Wedding Questionnaire Menu Integration
@@ -14,7 +14,7 @@ export const getWeddingMenuThemes = async (req: Request, res: Response) => {
     const weddingMenus = await db
       .select()
       .from(menus)
-      .where(eq(menus.type, 'standard')); // Using 'type' field instead of 'category'
+      .where(eq(menus.type, 'standard'));
 
     const formattedMenus = weddingMenus.map(menu => {
       let menuStructure;
@@ -54,7 +54,7 @@ export const getWeddingMenuThemes = async (req: Request, res: Response) => {
 // Get menu items by category with dietary information
 export const getMenuItemsByCategory = async (req: Request, res: Response) => {
   try {
-    const { category, menuId } = req.query;
+    const { category } = req.query;
 
     let items;
     
@@ -66,7 +66,7 @@ export const getMenuItemsByCategory = async (req: Request, res: Response) => {
 
     // Enrich items with dietary information
     const enrichedItems = items.map(item => {
-      const dietaryMetadata = item.additional_dietary_metadata || {};
+      const dietaryMetadata = item.additional_dietary_metadata as AdditionalDietaryMetadata || {};
       
       return {
         id: item.id,
@@ -119,7 +119,7 @@ export const getMenuItemsByIds = async (req: Request, res: Response) => {
 
     // Enrich items with dietary information
     const enrichedItems = items.map(item => {
-      const dietaryMetadata = item.additional_dietary_metadata || {};
+      const dietaryMetadata = item.additional_dietary_metadata as AdditionalDietaryMetadata || {};
       
       return {
         id: item.id,
@@ -171,7 +171,7 @@ export const getDietaryRecommendations = async (req: Request, res: Response) => 
     
     // Filter items based on dietary preferences and allergens
     const filteredItems = allItems.filter(item => {
-      const dietaryMetadata = (item.additional_dietary_metadata as AdditionalDietaryMetadata) || {};
+      const dietaryMetadata = item.additional_dietary_metadata as AdditionalDietaryMetadata || {};
       
       // Check allergen restrictions
       if (allergens) {
@@ -220,7 +220,7 @@ export const getDietaryRecommendations = async (req: Request, res: Response) => 
     
     // Enrich and return filtered items
     const enrichedItems = filteredItems.map(item => {
-      const dietaryMetadata = (item.additional_dietary_metadata as AdditionalDietaryMetadata) || {};
+      const dietaryMetadata = item.additional_dietary_metadata as AdditionalDietaryMetadata || {};
       
       return {
         id: item.id,

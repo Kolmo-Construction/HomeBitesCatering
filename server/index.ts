@@ -4,6 +4,12 @@ import { registerFormRoutes } from "./formRoutes";
 import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
 import formBuilderRoutes from "./formBuilderRoutes";
 import { fixedCloneQuestion } from "./fixedCloneRoute";
+import { 
+  getWeddingMenuThemes, 
+  getMenuItemsByCategory, 
+  getMenuItemsByIds, 
+  getDietaryRecommendations 
+} from "./menuQuestionnaireRoutes";
 import { setupVite, serveStatic, log } from "./vite";
 // Gmail sync service has been retired in favor of more specialized services
 import { LeadGenerationService } from './services/leadGenerationService';
@@ -63,6 +69,12 @@ app.use((req, res, next) => {
   
   // Register the fixed clone question endpoint
   app.post('/api/form-builder/library-questions/:id/clone', fixedCloneQuestion);
+  
+  // Register menu questionnaire routes for rich menu data integration
+  app.get('/api/questionnaire/wedding-menu-themes', getWeddingMenuThemes);
+  app.get('/api/questionnaire/menu-items', getMenuItemsByCategory);
+  app.post('/api/questionnaire/menu-items-by-ids', getMenuItemsByIds);
+  app.get('/api/questionnaire/dietary-recommendations', getDietaryRecommendations);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
