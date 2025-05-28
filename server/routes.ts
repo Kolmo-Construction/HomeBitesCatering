@@ -716,7 +716,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Items field type:', typeof req.body.items);
       console.log('Items field value:', req.body.items);
       
+      // Parse the incoming menu data
       const menuData = insertMenuSchema.parse(req.body);
+      
+      // If items is just a simple array of {id, quantity}, convert to MenuPackageStructure
+      if (Array.isArray(menuData.items) && menuData.items.length > 0) {
+        const simpleItems = menuData.items as Array<{id: string, quantity: number}>;
+        
+        // Fetch menu item details to organize by category
+        const allMenuItems = await storage.listMenuItems();
+        const selectedItems = allMenuItems.filter(item => 
+          simpleItems.some(simpleItem => simpleItem.id === item.id)
+        );
+        
+        // Group items by category
+        const categoriesMap = new Map<string, any[]>();
+        selectedItems.forEach(item => {
+          const category = item.category || 'Uncategorized';
+          if (!categoriesMap.has(category)) {
+            categoriesMap.set(category, []);
+          }
+          categoriesMap.get(category)!.push(item);
+        });
+        
+        // Create MenuPackageStructure
+        const packageStructure = {
+          theme_key: `custom_${menuData.name.toLowerCase().replace(/\s+/g, '_')}`,
+          package_id: `custom_package_${Date.now()}`,
+          package_name: menuData.name,
+          package_price_per_person: 0, // Will be calculated based on items
+          package_description: menuData.description || `Custom menu: ${menuData.name}`,
+          customizable: true,
+          categories: Array.from(categoriesMap.entries()).map(([categoryName, items]) => ({
+            category_key: categoryName.toLowerCase().replace(/\s+/g, '_'),
+            display_title: categoryName,
+            description: `${categoryName} selection`,
+            available_item_ids: items.map(item => item.id),
+            selection_limit: items.length, // Allow all items in the category
+            upcharge_info: items.reduce((acc, item) => {
+              if (item.upcharge && parseFloat(item.upcharge) > 0) {
+                acc[item.id] = parseFloat(item.upcharge);
+              }
+              return acc;
+            }, {} as Record<string, number>)
+          }))
+        };
+        
+        // Replace simple items array with rich package structure
+        menuData.items = packageStructure;
+        
+        console.log('Converted to MenuPackageStructure:', JSON.stringify(packageStructure, null, 2));
+      }
       
       const newMenu = await storage.createMenu(menuData);
       

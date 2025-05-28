@@ -34,24 +34,56 @@ export default function MenuDetailView({ menu, onUpdate }: MenuDetailViewProps) 
         ? JSON.parse(menu.items) 
         : menu.items;
       
-      if (!Array.isArray(itemsData)) return [];
+      // Handle MenuPackageStructure format
+      if (itemsData.categories && Array.isArray(itemsData.categories)) {
+        const allItemsFromCategories: any[] = [];
+        itemsData.categories.forEach((category: any) => {
+          if (category.available_item_ids) {
+            category.available_item_ids.forEach((itemId: string) => {
+              allItemsFromCategories.push({
+                id: itemId,
+                quantity: 1, // Default quantity for package items
+                category: category.display_title
+              });
+            });
+          }
+        });
+        
+        // Enrich with details from menu items database
+        return allItemsFromCategories.map((item: any) => {
+          const menuItem = (allMenuItems as any[])?.find((mi: any) => mi.id === item.id);
+          return {
+            id: item.id,
+            quantity: item.quantity,
+            name: menuItem?.name || `Unknown Item (${item.id})`,
+            category: item.category || menuItem?.category || 'Unknown',
+            price: menuItem?.price || 0,
+            description: menuItem?.description || 'No description available',
+            additional_dietary_metadata: menuItem?.additional_dietary_metadata,
+            originalItem: item
+          };
+        });
+      }
       
-      // Enrich with details from menu items database
-      return itemsData.map((item: any) => {
-        const menuItem = allMenuItems.find((mi: any) => mi.id === item.id);
-        console.log(`Looking for menu item with ID: ${item.id}`, menuItem);
-        return {
-          id: item.id,
-          quantity: item.quantity,
-          name: menuItem?.name || `Unknown Item (${item.id})`,
-          category: menuItem?.category || 'Unknown',
-          price: menuItem?.price || 0,
-          description: menuItem?.description || 'No description available',
-          additional_dietary_metadata: menuItem?.additional_dietary_metadata,
-          // Keep original structure for editing
-          originalItem: item
-        };
-      });
+      // Handle simple array format (legacy)
+      if (Array.isArray(itemsData)) {
+        return itemsData.map((item: any) => {
+          const menuItem = (allMenuItems as any[])?.find((mi: any) => mi.id === item.id);
+          console.log(`Looking for menu item with ID: ${item.id}`, menuItem);
+          return {
+            id: item.id,
+            quantity: item.quantity,
+            name: menuItem?.name || `Unknown Item (${item.id})`,
+            category: menuItem?.category || 'Unknown',
+            price: menuItem?.price || 0,
+            description: menuItem?.description || 'No description available',
+            additional_dietary_metadata: menuItem?.additional_dietary_metadata,
+            originalItem: item
+          };
+        });
+      }
+      
+      return [];
     } catch (error) {
       console.error("Error parsing menu items:", error);
       return [];
