@@ -408,7 +408,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                       
                       // Set custom menu type mode if the value doesn't match predefined ones
                       useEffect(() => {
-                        if (field.value && !["standard", "custom", "seasonal"].includes(field.value)) {
+                        if (field.value && !["standard", "custom", "seasonal", "form_builder"].includes(field.value)) {
                           setIsCustomMenuType(true);
                           setCustomMenuType(field.value);
                         }
@@ -439,6 +439,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                                   <SelectItem value="standard">Standard</SelectItem>
                                   <SelectItem value="custom">Custom</SelectItem>
                                   <SelectItem value="seasonal">Seasonal</SelectItem>
+                                  <SelectItem value="form_builder">Form Builder</SelectItem>
                                   <SelectItem value="add_custom">Add New Menu Type...</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -493,6 +494,17 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                   )}
                 />
                 
+                {/* Form Builder UI - Show when type is "form_builder" */}
+                {form.watch("type") === "form_builder" ? (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-medium">Menu Package Structure Builder</h3>
+                    <p className="text-sm text-gray-600">Configure your menu package with complete JSONB structure according to MenuPackageStructure schema.</p>
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <p className="text-sm text-blue-800">This form builder allows you to create the complete MenuPackageStructure with theme information, package details, and organized categories.</p>
+                    </div>
+                  </div>
+                ) : (
+                  // Standard Menu Items UI - Show for other types
                 <div>
                   <h3 className="text-lg font-medium mb-2">Menu Items</h3>
                   <p className="text-sm text-gray-500 mb-4">
@@ -532,6 +544,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                     <span className="font-bold">{formatCurrency(calculateTotalPrice() / 100)}</span>
                   </div>
                 </div>
+                ))}
                 
                 <CardFooter className="px-0 pt-4 flex justify-end space-x-2">
                   <Button
