@@ -5,7 +5,8 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import { Menu } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, EyeIcon, PenIcon, TrashIcon } from "lucide-react";
+import { PlusIcon, EyeIcon, PenIcon, TrashIcon, ArrowLeft } from "lucide-react";
+import MenuDetailView from "@/components/menu/MenuDetailView";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -260,46 +261,22 @@ export default function Menus() {
   }
   
   if (mode === "view" && selectedMenu) {
-    // Get menu items details
-    const menuItemsDetails = [];
-    if (selectedMenu?.items) {
-      try {
-        const items = typeof selectedMenu.items === 'string' 
-          ? JSON.parse(selectedMenu.items) 
-          : selectedMenu.items;
-        
-        if (Array.isArray(items)) {
-          for (const item of items) {
-            const menuItem = menuItems.find((mi: any) => mi.id === item.id);
-            if (menuItem) {
-              menuItemsDetails.push({
-                ...menuItem,
-                quantity: item.quantity
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing menu items in menu details:", error);
-      }
-    }
-    
-    // Calculate total menu price
-    const totalPrice = menuItemsDetails.reduce((total, item) => {
-      return total + (item.price * item.quantity);
-    }, 0);
     
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="font-poppins text-2xl font-bold text-neutral-900">{selectedMenu.name}</h1>
-          <Link to={`/menus/${selectedMenu.id}/edit`}>
-            <Button variant="outline">
-              <PenIcon className="mr-2 h-4 w-4" />
-              Edit Menu
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <Link to="/menus">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Menus
             </Button>
           </Link>
         </div>
+        
+        <MenuDetailView 
+          menu={selectedMenu} 
+          onEdit={() => window.location.href = `/menus/${selectedMenu.id}/edit`}
+        />
         
         <Card className="mb-6">
           <CardHeader>

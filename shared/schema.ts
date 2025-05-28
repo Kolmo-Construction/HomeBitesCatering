@@ -52,6 +52,7 @@ export const additionalDietaryMetadataSchema = z.object({
   key_preparation_notes: z.string().optional(),
   suitable_for_diet_preferences: z.array(z.string()).optional(),
   guidance_for_customer_short: z.string().optional(),
+  available_lot_sizes: z.array(z.number()).optional(),
 }).optional();
 
 // Define the structure for menus.items JSONB field
