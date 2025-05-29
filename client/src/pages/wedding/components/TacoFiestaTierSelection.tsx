@@ -161,27 +161,30 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
     setValue("selectedPackages", { taco_fiesta: tierId });
   };
 
-  const handleItemSelection = (category: string, itemId: string, isSelected: boolean) => {
+  const handleItemSelection = useCallback((category: string, itemId: string, isSelected: boolean) => {
     const tier = selectedTier ? TACO_FIESTA_TIERS[selectedTier as keyof typeof TACO_FIESTA_TIERS] : null;
     if (!tier) return;
 
-    const currentSelections = selectedItems[category] || [];
-    const limit = tier.limits[category as keyof typeof tier.limits];
+    setSelectedItems(prev => {
+      const currentSelections = prev[category] || [];
+      const limit = tier.limits[category as keyof typeof tier.limits];
 
-    if (isSelected) {
-      if (currentSelections.length < limit) {
-        setSelectedItems(prev => ({
+      if (isSelected) {
+        if (currentSelections.length < limit && !currentSelections.includes(itemId)) {
+          return {
+            ...prev,
+            [category]: [...currentSelections, itemId]
+          };
+        }
+      } else {
+        return {
           ...prev,
-          [category]: [...currentSelections, itemId]
-        }));
+          [category]: currentSelections.filter(id => id !== itemId)
+        };
       }
-    } else {
-      setSelectedItems(prev => ({
-        ...prev,
-        [category]: currentSelections.filter(id => id !== itemId)
-      }));
-    }
-  };
+      return prev;
+    });
+  }, [selectedTier]);
 
   const isItemSelected = (category: string, itemId: string) => {
     return selectedItems[category]?.includes(itemId) || false;
@@ -336,14 +339,13 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
                       return (
                         <div
                           key={item.id}
-                          className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                          className={`p-3 border rounded-lg transition-all ${
                             isSelected 
                               ? 'bg-red-50 border-red-500 shadow-md' 
                               : isDisabled
-                              ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                              ? 'bg-gray-50 border-gray-200 opacity-60'
                               : 'border-gray-200 hover:border-red-300 hover:bg-red-25'
                           }`}
-                          onClick={() => !isDisabled && handleItemSelection(category, item.id, !isSelected)}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
