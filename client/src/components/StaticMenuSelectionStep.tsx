@@ -109,6 +109,69 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
         item.cuisine?.toLowerCase().includes('mexican')
       );
     }
+
+    if (theme === 'italy') {
+      // Match the exact Italian wedding items from the original theme
+      const italyNames = [
+        'Chicken Saltimbocca', 'Chicken Florentine', 'Chicken Piccata', 'Chicken Cacciatore', 'Chicken Parmesan', 'Chicken Marsala', 'Chicken Puttanesca',
+        'Beef Pizzaiola', 'Beef Braciole', 'Lasagna', 'Osso Bucco', 'Brasato Al Barolo', 'Veal Saltimbocca', 'Pesce All\'Acqua Pazza', 'Italian Meatballs',
+        'Spinach and Ricotta Cannelloni', 'Vegetarian Lasagna', 'Rosemary Roasted Potatoes', 'Green Beans Almondine', 'Baked Cauliflower', 'Asiago Zucchini',
+        'Eggplant Parmesan', 'Cannellini Beans', 'Peas with Pancetta', 'Brussels Sprouts', 'Tuscan Carrots', 'Penne Pasta', 'Rigatoni', 'Conchiglie',
+        'Marinara', 'Pesto', 'Caprese', 'Panzanella', 'Italian Cobb', 'Sicilian Fennel', 'Burrata', 'Tuscan Orzo', 'Caesar Salad'
+      ];
+      return allItems.filter(item => 
+        italyNames.some(name => 
+          item.name?.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(item.name?.toLowerCase() || '')
+        ) ||
+        item.name?.toLowerCase().includes('italian') ||
+        item.name?.toLowerCase().includes('pasta') ||
+        item.name?.toLowerCase().includes('risotto') ||
+        item.name?.toLowerCase().includes('pizza') ||
+        item.cuisine?.toLowerCase().includes('italian')
+      );
+    }
+
+    if (theme === 'mediterranean') {
+      // Match the exact Greek/Mediterranean items from the original theme
+      const mediterraneanNames = [
+        'Papoutsakia', 'Soutzoukakia', 'Kokinisto', 'Kleftiko', 'Pastitsio', 'Kotopoulo lemonato', 'Paidakia', 'Kotsi Arni',
+        'Bifteki Gemisto', 'Psari Plaki', 'Salmon', 'Bakaliaros', 'Aginares', 'Gemista', 'Greek', 'Tzatziki', 'Hummus',
+        'Olive', 'Feta', 'Mediterranean', 'Dolmades', 'Moussaka', 'Gyro', 'Souvlaki'
+      ];
+      return allItems.filter(item => 
+        mediterraneanNames.some(name => 
+          item.name?.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(item.name?.toLowerCase() || '')
+        ) ||
+        item.name?.toLowerCase().includes('greek') ||
+        item.name?.toLowerCase().includes('mediterranean') ||
+        item.cuisine?.toLowerCase().includes('greek') ||
+        item.cuisine?.toLowerCase().includes('mediterranean')
+      );
+    }
+
+    if (theme === 'american') {
+      // Match the exact American BBQ items from the original theme
+      const americanNames = [
+        'Prime Rib', 'Smoked Brisket', 'Beef Ribs', 'Short Ribs', 'Bacon Wrapped Fillet', 'BBQ Chicken', 'Smoked Turkey', 'Pulled Pork',
+        'Baby Back Ribs', 'Pork Shoulder', 'Andouille Sausage', 'Smoked Salmon', 'Portobello Mushroom', 'BBQ Jackfruit', 'Mac and Cheese',
+        'Baked Beans', 'Coleslaw', 'Cornbread', 'Potato Salad', 'Corn on the Cob', 'Collard Greens', 'Sweet Potato', 'Onion Rings',
+        'BBQ Sauce', 'Kansas City', 'Carolina', 'Alabama White', 'Texas', 'Bourbon', 'Mustard', 'Ketchup', 'Pickles'
+      ];
+      return allItems.filter(item => 
+        americanNames.some(name => 
+          item.name?.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(item.name?.toLowerCase() || '')
+        ) ||
+        item.name?.toLowerCase().includes('bbq') ||
+        item.name?.toLowerCase().includes('barbecue') ||
+        item.name?.toLowerCase().includes('smoked') ||
+        item.name?.toLowerCase().includes('grilled') ||
+        item.cuisine?.toLowerCase().includes('american') ||
+        item.cuisine?.toLowerCase().includes('bbq')
+      );
+    }
     return allItems;
   };
 
