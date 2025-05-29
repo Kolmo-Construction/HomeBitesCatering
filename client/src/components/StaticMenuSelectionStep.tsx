@@ -88,7 +88,7 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
       ...getMenuItemsByCategory('beverage')
     ];
 
-    if (theme === 'taco_fiesta') {
+    if (theme === 'taco_fiesta_wedding') {
       // Match the exact Taco Fiesta items from the original theme
       const tacoFiestaNames = [
         'Barbacoa', 'Ground Beef', 'Pork Carnitas', 'Pork Belly', 'Chorizo', 'Beef Birria', 'Mexican Chicken', 'Cod', 'Shrimp', 'Tofu',
@@ -106,11 +106,11 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
         item.name?.toLowerCase().includes('carnitas') ||
         item.name?.toLowerCase().includes('barbacoa') ||
         item.name?.toLowerCase().includes('birria') ||
-        item.cuisine?.toLowerCase().includes('mexican')
+        item.category?.toLowerCase().includes('mexican')
       );
     }
 
-    if (theme === 'italy') {
+    if (theme === 'taste_of_italy_wedding') {
       // Match the exact Italian wedding items from the original theme
       const italyNames = [
         'Chicken Saltimbocca', 'Chicken Florentine', 'Chicken Piccata', 'Chicken Cacciatore', 'Chicken Parmesan', 'Chicken Marsala', 'Chicken Puttanesca',
@@ -128,11 +128,11 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
         item.name?.toLowerCase().includes('pasta') ||
         item.name?.toLowerCase().includes('risotto') ||
         item.name?.toLowerCase().includes('pizza') ||
-        item.cuisine?.toLowerCase().includes('italian')
+        item.category?.toLowerCase().includes('italian')
       );
     }
 
-    if (theme === 'mediterranean') {
+    if (theme === 'taste_of_greece_wedding') {
       // Match the exact Greek/Mediterranean items from the original theme
       const mediterraneanNames = [
         'Papoutsakia', 'Soutzoukakia', 'Kokinisto', 'Kleftiko', 'Pastitsio', 'Kotopoulo lemonato', 'Paidakia', 'Kotsi Arni',
@@ -146,12 +146,12 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
         ) ||
         item.name?.toLowerCase().includes('greek') ||
         item.name?.toLowerCase().includes('mediterranean') ||
-        item.cuisine?.toLowerCase().includes('greek') ||
-        item.cuisine?.toLowerCase().includes('mediterranean')
+        item.category?.toLowerCase().includes('greek') ||
+        item.category?.toLowerCase().includes('mediterranean')
       );
     }
 
-    if (theme === 'american') {
+    if (theme === 'american_bbq_wedding') {
       // Match the exact American BBQ items from the original theme
       const americanNames = [
         'Prime Rib', 'Smoked Brisket', 'Beef Ribs', 'Short Ribs', 'Bacon Wrapped Fillet', 'BBQ Chicken', 'Smoked Turkey', 'Pulled Pork',
@@ -168,10 +168,37 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
         item.name?.toLowerCase().includes('barbecue') ||
         item.name?.toLowerCase().includes('smoked') ||
         item.name?.toLowerCase().includes('grilled') ||
-        item.cuisine?.toLowerCase().includes('american') ||
-        item.cuisine?.toLowerCase().includes('bbq')
+        item.category?.toLowerCase().includes('american') ||
+        item.category?.toLowerCase().includes('bbq')
       );
     }
+
+    if (theme === 'kebab_party_wedding') {
+      // Match the exact Kebab Party items from the original theme
+      const kebabNames = [
+        'Kebab', 'Shish', 'Kofta', 'Gyro', 'Shawarma', 'Lamb', 'Beef', 'Chicken', 'Hummus', 'Tahini', 'Pita', 'Tabouleh', 'Fattoush', 'Baba Ganoush'
+      ];
+      return allItems.filter(item => 
+        kebabNames.some(name => 
+          item.name?.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(item.name?.toLowerCase() || '')
+        ) ||
+        item.name?.toLowerCase().includes('middle eastern') ||
+        item.name?.toLowerCase().includes('lebanese') ||
+        item.category?.toLowerCase().includes('middle eastern')
+      );
+    }
+
+    if (theme === 'vegan_wedding_feast') {
+      // Match vegan items from the original theme
+      return allItems.filter(item => 
+        item.isVegan === true ||
+        item.name?.toLowerCase().includes('vegan') ||
+        item.name?.toLowerCase().includes('plant-based') ||
+        item.suitableForDiets?.some((diet: string) => diet.toLowerCase().includes('vegan'))
+      );
+    }
+
     return allItems;
   };
 
@@ -400,27 +427,28 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
           Select one of our curated wedding themes, each featuring authentic dishes with detailed dietary and nutritional information.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Taste of Italy Wedding Theme */}
           <Card 
             className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
-              selectedTheme === 'italy' ? 'border-red-500 bg-red-50' : 'border-gray-200'
+              selectedTheme === 'taste_of_italy_wedding' ? 'border-red-500 bg-red-50' : 'border-gray-200'
             }`}
-            onClick={() => setSelectedTheme(selectedTheme === 'italy' ? null : 'italy')}
+            onClick={() => setSelectedTheme(selectedTheme === 'taste_of_italy_wedding' ? null : 'taste_of_italy_wedding')}
           >
             <CardHeader className="bg-red-50 p-4">
-              <CardTitle className="text-xl font-semibold text-gray-800">Taste of Italy Wedding</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-800">A Taste of Italy</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-gray-600 mb-4">Celebrate with authentic Italian flavors and traditional recipes</p>
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Bronze Package - $32/person</div>
-                <div className="text-sm font-medium">Silver Package - $45/person</div>
-                <div className="text-sm font-medium">Gold Package - $58/person</div>
+            <CardContent className="p-4">
+              <p className="text-gray-600 mb-3 text-sm">Elegant Italian cuisine for your wedding reception</p>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">Bronze - $32/person</div>
+                <div className="text-xs font-medium">Silver - $38/person</div>
+                <div className="text-xs font-medium">Gold - $46/person</div>
+                <div className="text-xs font-medium">Diamond - $58/person</div>
               </div>
-              <div className="mt-4 text-xs text-gray-500">Minimum 50 guests</div>
-              {selectedTheme === 'italy' && (
-                <div className="mt-3 text-sm font-medium text-red-600">✓ Selected - View items below</div>
+              <div className="mt-3 text-xs text-gray-500">Minimum 50 guests</div>
+              {selectedTheme === 'taste_of_italy_wedding' && (
+                <div className="mt-2 text-xs font-medium text-red-600">✓ Selected - View items below</div>
               )}
             </CardContent>
           </Card>
@@ -428,71 +456,124 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
           {/* Taco Fiesta Wedding Theme */}
           <Card 
             className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
-              selectedTheme === 'taco_fiesta' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+              selectedTheme === 'taco_fiesta_wedding' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
             }`}
-            onClick={() => setSelectedTheme(selectedTheme === 'taco_fiesta' ? null : 'taco_fiesta')}
+            onClick={() => setSelectedTheme(selectedTheme === 'taco_fiesta_wedding' ? null : 'taco_fiesta_wedding')}
           >
             <CardHeader className="bg-orange-50 p-4">
-              <CardTitle className="text-xl font-semibold text-gray-800">Taco Fiesta Wedding</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-800">Taco Fiesta Celebration</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-gray-600 mb-4">Vibrant Mexican-inspired celebration with fresh, bold flavors</p>
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Casual Package - $28/person</div>
-                <div className="text-sm font-medium">Premium Package - $38/person</div>
-                <div className="text-sm font-medium">Deluxe Package - $48/person</div>
+            <CardContent className="p-4">
+              <p className="text-gray-600 mb-3 text-sm">Vibrant Mexican-inspired wedding celebration</p>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">Bronze - $28/person</div>
+                <div className="text-xs font-medium">Silver - $34/person</div>
+                <div className="text-xs font-medium">Gold - $40/person</div>
+                <div className="text-xs font-medium">Diamond - $46/person</div>
               </div>
-              <div className="mt-4 text-xs text-gray-500">Minimum 30 guests</div>
-              {selectedTheme === 'taco_fiesta' && (
-                <div className="mt-3 text-sm font-medium text-orange-600">✓ Selected - View items below</div>
+              <div className="mt-3 text-xs text-gray-500">Minimum 50 guests</div>
+              {selectedTheme === 'taco_fiesta_wedding' && (
+                <div className="mt-2 text-xs font-medium text-orange-600">✓ Selected - View items below</div>
               )}
             </CardContent>
           </Card>
 
-          {/* Mediterranean Wedding Theme */}
+          {/* American BBQ Wedding Theme */}
           <Card 
             className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
-              selectedTheme === 'mediterranean' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+              selectedTheme === 'american_bbq_wedding' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
             }`}
-            onClick={() => setSelectedTheme(selectedTheme === 'mediterranean' ? null : 'mediterranean')}
+            onClick={() => setSelectedTheme(selectedTheme === 'american_bbq_wedding' ? null : 'american_bbq_wedding')}
           >
             <CardHeader className="bg-blue-50 p-4">
-              <CardTitle className="text-xl font-semibold text-gray-800">Mediterranean Wedding</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-800">American BBQ</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-gray-600 mb-4">Fresh, healthy cuisine inspired by the Mediterranean coast</p>
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Classic Package - $35/person</div>
-                <div className="text-sm font-medium">Premium Package - $48/person</div>
-                <div className="text-sm font-medium">Luxury Package - $62/person</div>
+            <CardContent className="p-4">
+              <p className="text-gray-600 mb-3 text-sm">Classic American BBQ feast for your wedding</p>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">Bronze - $32/person</div>
+                <div className="text-xs font-medium">Silver - $38/person</div>
+                <div className="text-xs font-medium">Gold - $46/person</div>
+                <div className="text-xs font-medium">Diamond - $54/person</div>
               </div>
-              <div className="mt-4 text-xs text-gray-500">Minimum 40 guests</div>
-              {selectedTheme === 'mediterranean' && (
-                <div className="mt-3 text-sm font-medium text-blue-600">✓ Selected - View items below</div>
+              <div className="mt-3 text-xs text-gray-500">Minimum 50 guests</div>
+              {selectedTheme === 'american_bbq_wedding' && (
+                <div className="mt-2 text-xs font-medium text-blue-600">✓ Selected - View items below</div>
               )}
             </CardContent>
           </Card>
 
-          {/* American Classic Wedding Theme */}
+          {/* Taste of Greece Wedding Theme */}
           <Card 
             className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
-              selectedTheme === 'american' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+              selectedTheme === 'taste_of_greece_wedding' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'
             }`}
-            onClick={() => setSelectedTheme(selectedTheme === 'american' ? null : 'american')}
+            onClick={() => setSelectedTheme(selectedTheme === 'taste_of_greece_wedding' ? null : 'taste_of_greece_wedding')}
+          >
+            <CardHeader className="bg-purple-50 p-4">
+              <CardTitle className="text-lg font-semibold text-gray-800">A Taste of Greece</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <p className="text-gray-600 mb-3 text-sm">Authentic Mediterranean flavors from Greece</p>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">Bronze - $32/person</div>
+                <div className="text-xs font-medium">Silver - $38/person</div>
+                <div className="text-xs font-medium">Gold - $46/person</div>
+                <div className="text-xs font-medium">Diamond - $59/person</div>
+              </div>
+              <div className="mt-3 text-xs text-gray-500">Minimum 50 guests</div>
+              {selectedTheme === 'taste_of_greece_wedding' && (
+                <div className="mt-2 text-xs font-medium text-purple-600">✓ Selected - View items below</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Kebab Party Wedding Theme */}
+          <Card 
+            className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+              selectedTheme === 'kebab_party_wedding' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+            }`}
+            onClick={() => setSelectedTheme(selectedTheme === 'kebab_party_wedding' ? null : 'kebab_party_wedding')}
           >
             <CardHeader className="bg-green-50 p-4">
-              <CardTitle className="text-xl font-semibold text-gray-800">American Classic Wedding</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-800">Kebab Party</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-gray-600 mb-4">Traditional American favorites perfect for any celebration</p>
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Essential Package - $30/person</div>
-                <div className="text-sm font-medium">Premium Package - $42/person</div>
-                <div className="text-sm font-medium">Signature Package - $55/person</div>
+            <CardContent className="p-4">
+              <p className="text-gray-600 mb-3 text-sm">Middle Eastern feast with grilled specialties</p>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">Bronze - $32/person</div>
+                <div className="text-xs font-medium">Silver - $38/person</div>
+                <div className="text-xs font-medium">Gold - $46/person</div>
+                <div className="text-xs font-medium">Diamond - $56/person</div>
               </div>
-              <div className="mt-4 text-xs text-gray-500">Minimum 35 guests</div>
-              {selectedTheme === 'american' && (
-                <div className="mt-3 text-sm font-medium text-green-600">✓ Selected - View items below</div>
+              <div className="mt-3 text-xs text-gray-500">Minimum 50 guests</div>
+              {selectedTheme === 'kebab_party_wedding' && (
+                <div className="mt-2 text-xs font-medium text-green-600">✓ Selected - View items below</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Vegan Wedding Feast Theme */}
+          <Card 
+            className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+              selectedTheme === 'vegan_wedding_feast' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
+            }`}
+            onClick={() => setSelectedTheme(selectedTheme === 'vegan_wedding_feast' ? null : 'vegan_wedding_feast')}
+          >
+            <CardHeader className="bg-emerald-50 p-4">
+              <CardTitle className="text-lg font-semibold text-gray-800">Elegant Vegan Feast</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <p className="text-gray-600 mb-3 text-sm">Exquisite plant-based culinary selections</p>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">Pearl - $32/person</div>
+                <div className="text-xs font-medium">Sapphire - $40/person</div>
+                <div className="text-xs font-medium">Emerald - $48/person</div>
+                <div className="text-xs font-medium">Diamond - $58/person</div>
+              </div>
+              <div className="mt-3 text-xs text-gray-500">Plant-based options</div>
+              {selectedTheme === 'vegan_wedding_feast' && (
+                <div className="mt-2 text-xs font-medium text-emerald-600">✓ Selected - View items below</div>
               )}
             </CardContent>
           </Card>
@@ -503,10 +584,12 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
       {selectedTheme ? (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">
-            {selectedTheme === 'taco_fiesta' && 'Taco Fiesta Menu Items'}
-            {selectedTheme === 'italy' && 'Italian Wedding Menu Items'}
-            {selectedTheme === 'mediterranean' && 'Mediterranean Menu Items'}
-            {selectedTheme === 'american' && 'American Classic Menu Items'}
+            {selectedTheme === 'taco_fiesta_wedding' && 'Taco Fiesta Menu Items'}
+            {selectedTheme === 'taste_of_italy_wedding' && 'Italian Wedding Menu Items'}
+            {selectedTheme === 'taste_of_greece_wedding' && 'Greek Wedding Menu Items'}
+            {selectedTheme === 'american_bbq_wedding' && 'American BBQ Menu Items'}
+            {selectedTheme === 'kebab_party_wedding' && 'Kebab Party Menu Items'}
+            {selectedTheme === 'vegan_wedding_feast' && 'Vegan Wedding Menu Items'}
           </h3>
           <p className="text-gray-600">
             These authentic dishes are included in your selected theme, with rich dietary and nutritional information
