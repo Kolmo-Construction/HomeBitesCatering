@@ -213,6 +213,7 @@ function SortableMenuItem({
             <SelectItem value="sides">Sides</SelectItem>
             <SelectItem value="salads">Salads</SelectItem>
             <SelectItem value="sauces">Sauces</SelectItem>
+            <SelectItem value="condiments">Condiments</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)}>
