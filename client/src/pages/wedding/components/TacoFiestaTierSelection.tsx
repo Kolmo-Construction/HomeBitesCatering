@@ -231,9 +231,7 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
     return flags.length > 0 ? <div className="flex flex-wrap gap-1 mt-1">{flags}</div> : null;
   };
 
-  if (isLoading) {
-    return <div className="text-center py-8">Loading Taco Fiesta menu...</div>;
-  }
+
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
