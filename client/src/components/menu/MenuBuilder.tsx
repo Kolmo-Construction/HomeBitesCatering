@@ -47,7 +47,7 @@ const formSchema = insertMenuSchema.extend({
   package_name: z.string().optional(),
   items: z.array(z.object({
     id: z.number(),
-    quantity: z.number().min(1, "Quantity must be at least 1"),
+    type: z.string(),
   })).optional(),
 });
 
@@ -243,13 +243,13 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           }
         });
         
-        // Convert to MenuItemWithQuantity format
-        // We'll set quantity to 1 for now since the theme structure doesn't store quantities
+        // Convert to MenuItemWithType format
+        // We'll set type to 'mains' as default since the theme structure doesn't store types
         const parsedItems = allItemIds.map((itemId: string) => ({
           id: itemId,
           name: itemId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert ID to display name
           price: 0, // Will be populated when menu items are loaded
-          quantity: 1,
+          type: 'mains',
           category: 'standard'
         }));
         
@@ -361,7 +361,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       name: string;
       type: string;
       description?: string;
-      items: { id: number; quantity: number }[];
+      items: { id: number; type: string }[];
     }) => {
       if (isEditing && menu) {
         const res = await apiRequest("PATCH", `/api/menus/${menu.id}`, values);
@@ -453,7 +453,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           id: itemToAdd.id,
           name: itemToAdd.name,
           price: priceValue,
-          quantity: 1,
+          type: 'mains',
           category: itemToAdd.category
         }
       ]);
@@ -475,7 +475,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   // Calculate total menu price per person
   const calculateTotalPrice = () => {
     return selectedItems.reduce((total, item) => {
-      return total + (item.price * item.quantity);
+      return total + item.price;
     }, 0);
   };
   
@@ -790,7 +790,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                               <SortableMenuItem
                                 key={item.id}
                                 item={item}
-                                onQuantityChange={handleQuantityChange}
+                                onTypeChange={handleTypeChange}
                                 onRemove={handleRemoveItem}
                               />
                             ))}
