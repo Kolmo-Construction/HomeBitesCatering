@@ -124,33 +124,44 @@ function SortableMenuItem({
               </Badge>
             )}
             
+            {/* Debug: log the actual structure */}
+            {console.log('Item nutritional data:', (item as any).additional_dietary_metadata)}
+            
+            {/* Try multiple possible data structures */}
+            {(item as any).additional_dietary_metadata?.nutritional_info?.calories_range_kcal && (
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800">
+                {(item as any).additional_dietary_metadata.nutritional_info.calories_range_kcal}
+              </Badge>
+            )}
+            
+            {(item as any).additional_dietary_metadata?.nutritional_info?.protein_g_range && (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-800">
+                {(item as any).additional_dietary_metadata.nutritional_info.protein_g_range} protein
+              </Badge>
+            )}
+            
+            {(item as any).additional_dietary_metadata?.nutritional_info?.carbs_g_range && (
+              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-800">
+                {(item as any).additional_dietary_metadata.nutritional_info.carbs_g_range} carbs
+              </Badge>
+            )}
+            
+            {(item as any).additional_dietary_metadata?.nutritional_info?.fat_g_range && (
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-800">
+                {(item as any).additional_dietary_metadata.nutritional_info.fat_g_range} fat
+              </Badge>
+            )}
+            
+            {(item as any).additional_dietary_metadata?.nutritional_info?.fiber_g_range && (
+              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-800">
+                {(item as any).additional_dietary_metadata.nutritional_info.fiber_g_range} fiber
+              </Badge>
+            )}
+            
+            {/* Fallback: try nutritional_highlights structure */}
             {(item as any).additional_dietary_metadata?.nutritional_highlights?.calories && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800">
                 {(item as any).additional_dietary_metadata.nutritional_highlights.calories.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.calories.max} cal
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_highlights?.protein && (
-              <Badge variant="outline" className="text-xs">
-                {(item as any).additional_dietary_metadata.nutritional_highlights.protein.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.protein.max}g protein
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_highlights?.carbs && (
-              <Badge variant="outline" className="text-xs">
-                {(item as any).additional_dietary_metadata.nutritional_highlights.carbs.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.carbs.max}g carbs
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_highlights?.fat && (
-              <Badge variant="outline" className="text-xs">
-                {(item as any).additional_dietary_metadata.nutritional_highlights.fat.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.fat.max}g fat
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_highlights?.fiber && (
-              <Badge variant="outline" className="text-xs">
-                {(item as any).additional_dietary_metadata.nutritional_highlights.fiber.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.fiber.max}g fiber
               </Badge>
             )}
           </div>
