@@ -106,29 +106,55 @@ async function generateMenuData() {
     
     // Generate menu items by category
     console.log('🍽️ Generating menu items by category...');
-    const categories = ['appetizer', 'entree', 'side', 'dessert', 'beverage'];
+    
+    // First, get all unique categories from the database
+    const allItems = await db.select().from(menuItems);
+    const actualCategories = [...new Set(allItems.map(item => item.category))];
+    console.log('Actual categories found:', actualCategories);
+    
+    // Map actual categories to simplified names
+    const categoryMappings = {
+      'appetizer': actualCategories.filter(cat => cat.toLowerCase().includes('appetizer')),
+      'entree': actualCategories.filter(cat => 
+        cat.toLowerCase().includes('main course') || 
+        cat.toLowerCase().includes('entree') ||
+        cat.toLowerCase().includes('protein')
+      ),
+      'side': actualCategories.filter(cat => 
+        cat.toLowerCase().includes('side') || 
+        cat.toLowerCase().includes('vegetable') ||
+        cat.toLowerCase().includes('grain')
+      ),
+      'dessert': actualCategories.filter(cat => cat.toLowerCase().includes('dessert')),
+      'beverage': actualCategories.filter(cat => cat.toLowerCase().includes('beverage'))
+    };
+    
     const categoryData = {};
     
-    for (const category of categories) {
-      console.log(`  Processing ${category}...`);
+    for (const [simpleName, actualNames] of Object.entries(categoryMappings)) {
+      console.log(`  Processing ${simpleName} (${actualNames.length} actual categories)...`);
       
-      const items = await db
-        .select()
-        .from(menuItems)
-        .where(eq(menuItems.category, category));
+      let allCategoryItems = [];
+      for (const actualName of actualNames) {
+        const items = await db
+          .select()
+          .from(menuItems)
+          .where(eq(menuItems.category, actualName));
+        allCategoryItems.push(...items);
+      }
       
       const enrichedItems = await Promise.all(
-        items.map(item => enrichMenuItem(item))
+        allCategoryItems.map(item => enrichMenuItem(item))
       );
       
-      categoryData[category] = enrichedItems;
+      categoryData[simpleName] = enrichedItems;
       
       // Create individual category files
       await fs.writeFile(
-        path.join(OUTPUT_DIR, `menuItems_${category}.json`), 
+        path.join(OUTPUT_DIR, `menuItems_${simpleName}.json`), 
         JSON.stringify(enrichedItems, null, 2)
       );
-      console.log(`  ✓ ${category} items: ${enrichedItems.length} items`);
+      console.log(`  ✓ ${simpleName} items: ${enrichedItems.length} items`);
     }
     
     // Create combined category file
@@ -139,9 +165,9 @@ async function generateMenuData() {
     
     // Generate all menu items
     console.log('📦 Generating all menu items...');
-    const allItems = await db.select().from(menuItems);
+    const allMenuItems = await db.select().from(menuItems);
     const enrichedItems = await Promise.all(
-      allItems.map(item => enrichMenuItem(item))
+      allMenuItems.map(item => enrichMenuItem(item))
     );
     
     await fs.writeFile(
@@ -155,7 +181,7 @@ async function generateMenuData() {
     const allAllergens = new Set();
     const allDietPreferences = new Set();
     
-    allItems.forEach(item => {
+    allMenuItems.forEach(item => {
       const metadata = item.additional_dietary_metadata || {};
       
       if (metadata.dietary_flags_list) {

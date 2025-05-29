@@ -1,1 +1,3246 @@
-[]
+[
+  {
+    "id": "meatballs",
+    "name": "Italian Meatballs",
+    "description": "Classic Italian-American meatballs, typically made from ground beef and/or pork, breadcrumbs, Parmesan cheese, eggs, and herbs, simmered in tomato sauce.",
+    "category": "Appetizer / Main Course Component",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "CLASSIC_ITALIAN_AMERICAN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (breadcrumbs)",
+      "CONTAINS_DAIRY (Parmesan, milk if used)",
+      "CONTAINS_EGG"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 400,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Savory ground meat meatballs simmered in tomato sauce.",
+    "suitableForDiets": [],
+    "customerGuidance": "Tender and flavorful Italian meatballs, perfect for any occasion.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "zucchini_bites",
+    "name": "Asiago Zucchini Bites",
+    "description": "Small bites or fritters made with shredded zucchini, Asiago cheese, breadcrumbs, egg, and seasonings, then baked or fried until golden.",
+    "category": "Appetizer / Side Dish",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (breadcrumbs)",
+      "CONTAINS_DAIRY (Asiago)",
+      "CONTAINS_EGG"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 12,
+        "min": 8,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Savory zucchini and Asiago cheese bites, often baked or fried.",
+    "suitableForDiets": [],
+    "customerGuidance": "Cheesy and flavorful zucchini bites, perfect for starting a meal.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "avocado_deviled_eggs",
+    "name": "Avocado deviled Eggs",
+    "description": "A twist on classic deviled eggs, where creamy avocado is blended into the yolk filling, often with lime juice, cilantro, and a hint of spice.",
+    "category": "Appetizer / Side Dish",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "LOW_CARB"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_EGG"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 9,
+        "min": 5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 7,
+        "min": 5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 110,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Deviled eggs with avocado mixed into the yolk filling for creaminess and flavor.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY",
+      "PALEO_FRIENDLY (if mayo is compliant)"
+    ],
+    "customerGuidance": "Creamy deviled eggs with a healthy avocado twist. (Values per egg half).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "dolmades",
+    "name": "Dolmades - Grape leaves stuffed with rice and fresh herbs",
+    "description": "Dolmades (or Dolmadakia Yialantzi if meatless) are tender grape leaves stuffed with a savory mixture of rice, onions, and copious fresh herbs like parsley, mint, and dill. They are gently simmered in a lemony broth with olive oil.",
+    "category": "Appetizer / Side Dish",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": null,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "PLANT_BASED"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_NUTS (potentially pine nuts, please inquire)",
+      "CONTAINS_SULPHITES (brined grape leaves may contain)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 9,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1.5,
+        "min": 0.5,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1.5,
+        "min": 0.5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 60,
+        "min": 30,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Grape leaves stuffed with herbed rice. A classic vegan Greek meze. Check if pine nuts are included.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Tender, flavorful rice-stuffed grape leaves. (Values per dolma).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "patatas_bravas",
+    "name": "Patatas Bravas",
+    "description": "A classic Spanish tapas dish consisting of white potatoes that have been cut into irregular shapes of about 2 centimeters, then fried in oil and served warm with a spicy tomato-based 'salsa brava' and often a garlic aioli.",
+    "category": "Appetizer / Side Dish",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": null,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "SPICY_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_EGG (if served with traditional aioli, please inquire)",
+      "CONTAINS_SULPHITES (if vinegar is used in salsa/aioli)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 30,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 40,
+        "min": 25,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Crispy fried potatoes with a spicy tomato sauce (salsa brava). Often served with garlic aioli (contains egg). Vegan if aioli is omitted or a vegan version is used.",
+    "suitableForDiets": [
+      "VEGAN_DIET (without aioli or with vegan aioli)",
+      "VEGETARIAN_DIET"
+    ],
+    "customerGuidance": "A Spanish classic: crispy potatoes with a zesty, spicy tomato sauce.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "potato_croquettes",
+    "name": "Potato Croquettes",
+    "description": "Mashed potatoes, often mixed with cheese, herbs, or other flavorings, shaped into small logs or balls, coated in breadcrumbs, and deep-fried until golden and crispy on the outside and soft on the inside.",
+    "category": "Appetizer / Side Dish",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (flour, breadcrumbs)",
+      "CONTAINS_EGG (binder)",
+      "CONTAINS_DAIRY (if cheese or butter/milk in mashed potatoes is used)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 12,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 5,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 180,
+        "min": 100,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Crispy fried mashed potato balls or logs. Contain wheat and egg. Usually contain dairy from cheese or mashed potato preparation; please inquire.",
+    "suitableForDiets": [],
+    "customerGuidance": "Crispy on the outside, soft and fluffy potato croquettes. (Values per croquette).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "stuffed_avocado",
+    "name": "Caprese Stuffed Avocado",
+    "description": "Avocado halves filled with a classic Caprese salad mixture of fresh mozzarella, tomatoes, basil, and often drizzled with balsamic glaze.",
+    "category": "Appetizer / Salad / Light Meal",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "LOW_CARB_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (mozzarella)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 30,
+        "min": 20,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 9,
+        "min": 5,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 400,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Avocado halves filled with fresh mozzarella, tomatoes, and basil.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY (check carb count)"
+    ],
+    "customerGuidance": "Fresh and flavorful Caprese salad nestled in creamy avocado halves.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "beets_with_burrata",
+    "name": "Roasted Beets with Burrata",
+    "description": "A delightful contrast of sweet roasted beets (often mixed varieties) and creamy, rich burrata cheese, typically dressed with olive oil, balsamic glaze, and perhaps fresh herbs or toasted nuts.",
+    "category": "Appetizer / Salad",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (burrata)",
+      "CONTAINS_NUTS (if nuts are added as garnish)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 30,
+        "min": 20,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 300,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Sweet roasted beets paired with creamy burrata cheese.",
+    "suitableForDiets": [],
+    "customerGuidance": "Earthy roasted beets beautifully complemented by luxurious, creamy burrata.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "caprese",
+    "name": "Caprese",
+    "description": "A simple Italian salad, made of sliced fresh mozzarella, tomatoes, and sweet basil, seasoned with salt and olive oil. Often arranged in layers.",
+    "category": "Appetizer / Salad",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "CLASSIC_ITALIAN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (mozzarella)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 15,
+        "min": 10,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 350,
+        "min": 200,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Slices of fresh mozzarella, ripe tomatoes, and basil, drizzled with olive oil.",
+    "suitableForDiets": [],
+    "customerGuidance": "The epitome of Italian simplicity: fresh mozzarella, tomatoes, and basil.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "cabbage_rolls",
+    "name": "Cabbage Rolls with rice, dried figs, pine nuts, and aromatic herbs",
+    "description": "Tender cabbage leaves wrapped around a savory filling of rice, dried figs, toasted pine nuts, and aromatic herbs, often simmered in a light broth or tomato sauce.",
+    "category": "Main Course / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_NUTS (pine nuts)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 45,
+        "min": 30,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 10,
+        "min": 5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 400,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Cabbage leaves stuffed with a fragrant mixture of rice, figs, pine nuts, and herbs.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET (check specific recipe)"
+    ],
+    "customerGuidance": "Delicate cabbage rolls with a unique sweet and savory filling.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "eggplant_napolean",
+    "name": "Eggplant Napolean layered with roasted red peppers",
+    "description": "A stacked dish (Napolean) featuring layers of grilled or roasted eggplant slices and roasted red peppers, often with a balsamic glaze, fresh herbs, and sometimes goat cheese or mozzarella (though not specified here, making it potentially vegan).",
+    "category": "Appetizer / Light Main - Vegetarian",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 300,
+        "min": 180,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Layers of roasted eggplant and red peppers, often drizzled with balsamic glaze.",
+    "suitableForDiets": [],
+    "customerGuidance": "An elegant stack of roasted eggplant and sweet red peppers.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "gigante_beans",
+    "name": "Gigante Beans baked in a rich tomato dill sauce",
+    "description": "Large, creamy Greek gigante beans baked in a savory tomato sauce infused with dill, garlic, onions, and olive oil until tender and flavorful.",
+    "category": "Appetizer / Meze / Side Dish / Light Main",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION",
+      "HIGH_FIBER",
+      "HIGH_PROTEIN (plant-based)"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 55,
+        "min": 40,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 15,
+        "min": 10,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 18,
+        "min": 12,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 300,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Large white beans baked in a rich tomato sauce with fresh dill.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Creamy, large Greek beans baked in a flavorful tomato and dill sauce.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "vegan_dolmades",
+    "name": "Dolmades with bulgur, currants, and dried figs",
+    "description": "A vegan version of Dolmades (stuffed grape leaves), where tender grape leaves are filled with a mixture of bulgur wheat, sweet currants, chopped dried figs, onions, fresh herbs (like parsley, mint, dill), and pine nuts (optional), then simmered in a lemony broth.",
+    "category": "Appetizer / Meze",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "DAIRY_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (bulgur)",
+      "CONTAINS_NUTS (pine nuts, if used)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 70,
+        "min": 40,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Grape leaves stuffed with bulgur, currants, figs, and herbs, simmered until tender.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Flavorful vegan stuffed grape leaves with a unique sweet and savory filling. (Nutritional values per dolma)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "southwest_spring_rolls",
+    "name": "Southwest Style Spring Rolls with a zesty dip",
+    "description": "Crispy spring rolls filled with a Southwestern-inspired mixture, often including ingredients like chicken or black beans, corn, bell peppers, onions, cheese, and spices, served with a zesty dipping sauce (e.g., avocado-lime crema, chipotle aioli).",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "FLAVORFUL_APPETIZER"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (wrappers)",
+      "POTENTIAL_DAIRY (cheese in filling, some dips)",
+      "POTENTIAL_SOY (some wrappers/oils)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 10,
+        "min": 5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 15,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 180,
+        "min": 100,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Crispy spring rolls with a savory Southwestern filling, served with dip.",
+    "suitableForDiets": [],
+    "customerGuidance": "Crispy spring rolls packed with Southwestern flavors, served with a zesty dip. (Nutritional values per roll, before dip)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "jalapeno_poppers",
+    "name": "Jalapeño Poppers",
+    "description": "Jalapeño peppers halved, deseeded, filled with a creamy cheese mixture (often cream cheese and cheddar), then breaded and deep-fried or baked until golden.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "SPICY_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cream cheese, cheddar)",
+      "CONTAINS_WHEAT (breadcrumbs)",
+      "CONTAINS_EGG (binder for breadcrumbs)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 9,
+        "min": 5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 6,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 120,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Spicy jalapeños filled with cheese, breaded, and fried or baked. Contains dairy, wheat, and egg. May sometimes include bacon.",
+    "suitableForDiets": [],
+    "customerGuidance": "Cheesy, spicy, and crispy jalapeño poppers. (Values per popper).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "tyrokroketes",
+    "name": "Tyrokroketes - A blend of three Greek cheeses rolled into delightful tangy balls and coated with sesame seeds",
+    "description": "Tyrokroketes are Greek cheese croquettes. They are made from a blend of tangy and melty Greek cheeses (often feta, kefalotyri, graviera), sometimes with a hint of spice or herbs, rolled into balls, coated (this version specifies sesame seeds, traditionally often breadcrumbs), and fried until golden and crispy.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (various cheeses)",
+      "CONTAINS_EGG (binder)",
+      "CONTAINS_WHEAT (flour for dusting/binding)",
+      "CONTAINS_SESAME (coating)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 12,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 150,
+        "min": 80,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Fried cheese balls made with a blend of Greek cheeses and coated in sesame seeds. Contains dairy, egg, wheat, and sesame.",
+    "suitableForDiets": [],
+    "customerGuidance": "Crispy, tangy, and irresistible Greek cheese balls with sesame. (Values per ball).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "saganaki",
+    "name": "Saganaki Cheese - Cheese is deep fried to make a crispy outside, with a melty gooey inside. Flambeed tableside! (Family style only)",
+    "description": "A spectacular Greek appetizer where a firm, salty Greek cheese (like Kefalotyri, Kefalograviera, or Kasseri) is pan-fried or deep-fried until it has a crispy golden-brown crust and a molten, gooey interior. It is famously flambéed tableside with brandy or ouzo, and a squeeze of lemon is added to douse the flames.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 2,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "INTERACTIVE_PRESENTATION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cheese, butter if used)",
+      "CONTAINS_WHEAT (flour for dredging)",
+      "CONTAINS_SULPHITES (from brandy/ouzo if used)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 35,
+        "min": 20,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 300,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Fried Greek cheese, flambéed tableside. Contains dairy and wheat. Alcohol is used in flambé.",
+    "suitableForDiets": [],
+    "customerGuidance": "Opa! Crispy, melty fried cheese with a tableside flambé. (Family style only).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "bacon_jalapeno_poppers",
+    "name": "Bacon-Wrapped Jalapeño Poppers",
+    "description": "Jalapeño peppers stuffed with a creamy cheese filling (often cream cheese and cheddar), wrapped in bacon, and then baked or grilled until crispy.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0.5,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "SPICY_OPTION",
+      "HIGH_FAT"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cream cheese, cheddar cheese)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 12,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 5,
+        "min": 2,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 150,
+        "min": 80,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Spicy jalapeños filled with cheese and wrapped in crispy bacon.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY"
+    ],
+    "customerGuidance": "Spicy, cheesy, and smoky bacon-wrapped delights. (Nutritional info per popper)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "spanakopita_triangles",
+    "name": "Spanakopita Triangles (Spinach & feta pastries)",
+    "description": "Savory Greek pastries made with flaky phyllo dough filled with a mixture of spinach, feta cheese, onions, dill, and sometimes egg.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (phyllo dough)",
+      "CONTAINS_DAIRY (feta cheese)",
+      "May contain CONTAINS_EGG"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 12,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 180,
+        "min": 100,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Crispy, flaky triangles filled with a savory spinach and feta mixture.",
+    "suitableForDiets": [],
+    "customerGuidance": "Deliciously flaky Greek spinach and feta pastries. (Nutritional info per triangle)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "grilled_halloumi_octopus",
+    "name": "Grilled Halloumi & Marinated Octopus Skewers",
+    "description": "Skewers featuring salty, semi-hard halloumi cheese grilled until golden and tender, paired with succulent marinated octopus, offering a delightful contrast of textures and Mediterranean flavors.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 7,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "GLUTEN_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (halloumi cheese)",
+      "CONTAINS_SHELLFISH (octopus - though technically a cephalopod, often grouped with shellfish for allergies)",
+      "CONTAINS_SULPHITES (lemon juice, wine in marinade if used)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 30,
+        "min": 20,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 380,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Grilled skewers with savory halloumi and tender, flavorful octopus.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET",
+      "KETO_FRIENDLY"
+    ],
+    "customerGuidance": "A taste of the Mediterranean: grilled halloumi and octopus skewers.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "dolmades_yalantzi",
+    "name": "Dolmades Yalantzi (Stuffed grape leaves with rice & herbs)",
+    "description": "A classic Greek meze, 'Dolmades Yalantzi' are tender grape leaves stuffed with a fragrant mixture of rice, onions, fresh herbs like parsley, dill, and mint, and sometimes pine nuts, then simmered in lemon-infused olive oil.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0.5,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": null,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "May contain CONTAINS_NUTS (pine nuts). Please inquire if nut-free is required.",
+      "CONTAINS_SULPHITES (lemon juice, preserved grape leaves)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 70,
+        "min": 40,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Tender grape leaves filled with an aromatic rice and herb mixture. Usually served cold or at room temperature.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Delicate and flavorful rice-stuffed grape leaves. (Nutritional info per piece)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "mini_spanakopita",
+    "name": "Mini Spanakopita (Spinach & Feta Puffs)",
+    "description": "Bite-sized versions of the classic Greek savory pastry, featuring a rich filling of spinach, feta cheese, onions, and herbs, all encased in flaky phyllo dough.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (phyllo dough)",
+      "CONTAINS_DAIRY (feta cheese, butter if used)",
+      "CONTAINS_EGG (often used in filling)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 120,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Small, savory pastries with a classic spinach and feta filling in crisp phyllo.",
+    "suitableForDiets": [],
+    "customerGuidance": "Irresistible bite-sized spinach and feta puffs. (Nutritional info per piece)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "stuffed_grape_leaves",
+    "name": "Stuffed Grape Leaves (Dolmades)",
+    "description": "Tender grape leaves wrapped around a savory filling, typically made with rice, fresh herbs like parsley, mint, and dill, onions, and sometimes pine nuts or ground meat. Served cold or warm, often with a lemon wedge or yogurt sauce.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": null,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "May contain CONTAINS_NUTS (pine nuts). Please inquire if nut-free is required.",
+      "CONTAINS_SULPHITES (lemon juice, preserved grape leaves)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 60,
+        "min": 35,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Classic Mediterranean delight of herbed rice wrapped in tender grape leaves. Assumed meatless (Yalantzi style).",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Flavorful and tender stuffed grape leaves. (Nutritional info per piece)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "patatas_bravas_aioli",
+    "name": "Patatas Bravas with Smoked Paprika Aioli",
+    "description": "A classic Spanish tapa featuring crispy fried potato cubes served with a zesty, slightly spicy tomato-based 'bravas' sauce and a creamy, garlicky smoked paprika aioli.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "SPICY_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_EGG (aioli/mayonnaise)",
+      "CONTAINS_SULPHITES (vinegar, lemon juice)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 30,
+        "min": 18,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 40,
+        "min": 30,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 300,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Crispy potatoes with two distinct sauces: a spicy tomato sauce and a creamy smoked paprika aioli.",
+    "suitableForDiets": [],
+    "customerGuidance": "Irresistible Spanish crispy potatoes with spicy bravas sauce and smoky aioli.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "sh_chicken_satay",
+    "name": "Chicken Satay",
+    "description": "A popular Southeast Asian appetizer of grilled marinated chicken skewers, served in a shooter glass, often with a rich and flavorful peanut dipping sauce.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 2.45,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "HIGH_PROTEIN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_PEANUTS",
+      "CONTAINS_SOY"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 7,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1.5,
+        "min": 0.5,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 12,
+        "min": 8,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 150,
+        "min": 80,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Marinated chicken pieces threaded onto skewers, grilled or baked, and served with peanut sauce. Soy sauce used in marinade may contain wheat; check if gluten-free version is used.",
+    "suitableForDiets": [],
+    "customerGuidance": "Tender grilled chicken skewer with a classic savory peanut dipping sauce.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "sh_greek_village",
+    "name": "Greek Village - Tomato, feta, cucumber and olive",
+    "description": "A refreshing shooter version of a Greek salad (Horiatiki), featuring chunks of ripe tomato, crisp cucumber, salty feta cheese, and Kalamata olives, typically dressed with olive oil and oregano.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 2.25,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN",
+      "GLUTEN_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 100,
+        "min": 60,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A deconstructed Greek salad served in a shooter glass. Ingredients are typically diced or layered.",
+    "suitableForDiets": [
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "A bite-sized burst of fresh Greek salad flavors.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "ms_korean_bbq_pork_belly",
+    "name": "Korean BBQ pork belly",
+    "description": "Succulent pieces of pork belly marinated in a sweet and savory Korean BBQ sauce (often Gochujang-based), grilled or pan-seared, and served on a mini skewer.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 2.75,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SOY",
+      "CONTAINS_SESAME"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 16,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 2,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 12,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 180,
+        "min": 130,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Pork belly marinated and cooked until tender with slightly crispy edges. Gochujang and soy sauce may contain wheat; check for gluten-free versions if needed.",
+    "suitableForDiets": [],
+    "customerGuidance": "Rich and flavorful Korean BBQ pork belly on a skewer.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "can_french_onion_tartlets",
+    "name": "French onion tartlets with Gruyere and dill",
+    "description": "Bite-sized tartlets filled with sweet caramelized onions, savory Gruyère cheese, and a hint of fresh dill, encased in a crispy pastry shell, often phyllo or shortcrust.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 2.75,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT",
+      "CONTAINS_DAIRY",
+      "CONTAINS_EGG"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 5,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 80,
+        "min": 40,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Slowly caramelized onions mixed with cheese and herbs, baked in small pastry cups until golden and bubbly.",
+    "suitableForDiets": [
+      "VEGETARIAN_DIET"
+    ],
+    "customerGuidance": "Classic French onion soup flavors in an elegant, bite-sized tartlet.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "vav_spinach_feta_leek",
+    "name": "Spinach, feta and leek",
+    "description": "A savory vol-au-vent (puff pastry case) filled with a creamy mixture of sautéed spinach, tangy feta cheese, and mild leeks.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 3,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT",
+      "CONTAINS_DAIRY",
+      "CONTAINS_SOY"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Flaky puff pastry shells filled with a warm, savory mixture of spinach, feta, and leeks.",
+    "suitableForDiets": [
+      "VEGETARIAN_DIET"
+    ],
+    "customerGuidance": "A classic savory pastry with a delicious spinach, feta, and leek filling.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "sf_loaded_potato_skins",
+    "name": "Loaded Potato Skins",
+    "description": "Crispy potato skins typically filled with melted cheddar cheese, crispy bacon bits, and often topped with sour cream and chives.",
+    "category": "Appetizer",
+    "price": 0,
+    "upcharge": 1.95,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "GLUTEN_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 14,
+        "min": 7,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 26,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 4,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 11,
+        "min": 5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 180,
+        "min": 130,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Baked or fried potato skins filled with cheese and bacon, then often broiled until bubbly. Served hot.",
+    "suitableForDiets": [],
+    "customerGuidance": "A classic, crowd-pleasing appetizer: cheesy, bacony potato skins.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "crispy_falafel",
+    "name": "Crispy Falafel with tahini drizzle",
+    "description": "Deep-fried balls or patties made from ground chickpeas and/or fava beans, herbs, and spices. Served crispy, often with a drizzle of tahini sauce.",
+    "category": "Appetizer / Main Course - Vegan",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "DAIRY_FREE_OPTION",
+      "HIGH_FIBER",
+      "HIGH_PROTEIN (plant-based)"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SESAME (tahini)",
+      "POTENTIAL_WHEAT (if wheat flour used as binder, verify if chickpea flour only)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 6,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 9,
+        "min": 6,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 100,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Crispy fried patties of ground chickpeas and herbs, served with tahini sauce.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Deliciously crispy falafel made from chickpeas and herbs, drizzled with tahini. (Nutritional values approximate per piece)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "chorizo_queso_dip",
+    "name": "Chorizo Queso Dip",
+    "description": "A rich and savory melted cheese dip (queso) with spicy chorizo sausage mixed in. Served warm, typically with tortilla chips.",
+    "category": "Appetizer / Dip",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "FLAVORFUL",
+      "SHAREABLE",
+      "GLUTEN_FREE_OPTION (dip itself, verify chips)"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cheese, milk/cream)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 22,
+        "min": 14,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 15,
+        "min": 10,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 280,
+        "min": 180,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Warm, creamy queso dip blended with spicy chorizo sausage.",
+    "suitableForDiets": [],
+    "customerGuidance": "Indulgent and savory queso dip with a kick of chorizo. (Nutritional values per serving of dip, excludes chips)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "queso_dip",
+    "name": "Queso Dip",
+    "description": "A warm, creamy, melted cheese dip, popular in Tex-Mex cuisine. Often made with processed cheese (like Velveeta) or a blend of cheeses (like cheddar, Monterey Jack) mixed with milk or cream, and typically includes chili peppers (e.g., jalapeños, green chilies) and sometimes tomatoes, onions, or spices. Served with tortilla chips.",
+    "category": "Appetizer / Dip",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION (dip itself, verify chips)",
+      "COMFORT_FOOD",
+      "SHAREABLE"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cheese, milk/cream)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 12,
+        "min": 8,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Warm, creamy melted cheese dip, often with chilies.",
+    "suitableForDiets": [],
+    "customerGuidance": "Rich and creamy queso dip, perfect for sharing. (Nutritional values per serving of dip, excludes chips)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "escabeche",
+    "name": "Escabeche - House-made picked vegetable medley",
+    "description": "A Latin American and Mediterranean condiment or side dish of pickled vegetables. This house-made version is a medley, likely featuring carrots, onions, jalapeños, cauliflower, and herbs in a vinegar-based brine.",
+    "category": "Condiment / Side Dish / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION",
+      "TANGY_FLAVOR"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 4,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 50,
+        "min": 20,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A house-made medley of pickled vegetables in a tangy brine.",
+    "suitableForDiets": [],
+    "customerGuidance": "Our signature house-made pickled vegetable medley, Escabeche. (Nutritional values per small serving)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "veg_empanadas",
+    "name": "Vegetarian Empanadas",
+    "description": "Savory turnovers made with pastry dough and filled with a vegetarian mixture, which can include ingredients like spiced potatoes, peas, corn, cheese, spinach, mushrooms, or lentils. Baked or fried.",
+    "category": "Appetizer / Snack",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (dough)",
+      "POTENTIAL_DAIRY (if cheese in filling)",
+      "POTENTIAL_EGG (if used in dough or as wash)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Pastry turnovers with a savory vegetarian filling; filling specifics vary.",
+    "suitableForDiets": [],
+    "customerGuidance": "Delicious vegetarian empanadas with a savory filling. Inquire for today's filling. (Nutritional values per empanada)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "guacamole",
+    "name": "Guacamole",
+    "description": "An avocado-based dip or spread, traditionally made by mashing ripe avocados with salt. Modern versions often include lime juice, cilantro, onions, and jalapeños or serranos.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "VEGAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "DAIRY_FREE_OPTION",
+      "HEALTHY_FATS"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 2,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 80,
+        "min": 50,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Creamy mashed avocado dip with lime, onion, cilantro, and peppers.",
+    "suitableForDiets": [],
+    "customerGuidance": "Freshly made creamy guacamole. (Nutritional values per 2 tablespoons)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "hummus",
+    "name": "Hummus - Chickpea, tahini, lemon",
+    "description": "A smooth and creamy Middle Eastern dip or spread made from cooked, mashed chickpeas blended with tahini (sesame paste), fresh lemon juice, and garlic. Often garnished with olive oil and paprika or parsley.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "PLANT_BASED",
+      "HIGH_FIBER"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SESAME (tahini)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 8,
+        "min": 5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 6,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1.5,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 100,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Classic chickpea and tahini dip. Contains sesame.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Creamy and savory chickpea dip with tahini and lemon. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "tzatziki",
+    "name": "Tzatziki - Yogurt, garlic, cucumber, herbs",
+    "description": "A classic Greek and Middle Eastern dip or sauce made from strained yogurt, grated or finely diced cucumber, minced garlic, olive oil, and fresh herbs such as dill or mint. Often includes lemon juice.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "LOW_CARB (in moderation)"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (yogurt)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 4.5,
+        "min": 1.5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 60,
+        "min": 30,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A refreshing yogurt and cucumber dip. Contains dairy.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY (in moderation)",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Cool, creamy, and refreshing Greek yogurt dip. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "melitzanosalata",
+    "name": "Melitzanosalata - Eggplant, garlic, tahini, cilantro",
+    "description": "A flavorful roasted eggplant dip. This version combines smoky roasted eggplant pulp with garlic, tahini for added creaminess, fresh cilantro for a distinct herbal note, lemon juice, and olive oil.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "PLANT_BASED"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SESAME (tahini)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 70,
+        "min": 40,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Smoky roasted eggplant dip with tahini and fresh cilantro. Contains sesame.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Smoky eggplant dip with a creamy texture from tahini and a fresh cilantro twist. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "spicy_feta",
+    "name": "Spicy Feta - Feta cheese puree with spicy peppers",
+    "description": "Known as Tirokafteri in Greek, this is a zesty and creamy dip made from puréed or crumbled feta cheese blended with spicy peppers (such as hot chili peppers or roasted red peppers with a kick), olive oil, and sometimes a touch of yogurt or red wine vinegar.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "SPICY_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (feta cheese, yogurt if used)",
+      "CONTAINS_SULPHITES (if vinegar is used)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 10,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 120,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A creamy and spicy feta cheese dip. Contains dairy.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY (in moderation)",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Creamy, tangy, and spicy feta cheese spread. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "taramasalata",
+    "name": "Taramasalata - Cod roe, potato, extra virgin olive oil",
+    "description": "A traditional Greek meze dip made from tarama (salted and cured fish roe, typically from cod, carp, or mullet), emulsified with either bread or potato, extra virgin olive oil, and lemon juice to create a creamy, savory spread.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": null,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [],
+    "allergenAlerts": [
+      "CONTAINS_FISH (fish roe)",
+      "CONTAINS_WHEAT (if bread is used as emulsifier instead of potato, please inquire)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 14,
+        "min": 8,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 6,
+        "min": 2,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 150,
+        "min": 90,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A creamy dip made from cured fish roe. This version uses potato. Confirm if bread is used as an alternative for gluten concerns.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Unique and savory cured fish roe dip. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "beet_hummus",
+    "name": "Beet Hummus - Roasted beets, chickpea, garlic, tahini, evoo",
+    "description": "A vibrant and earthy variation of traditional hummus, where roasted beets are blended with chickpeas, tahini (sesame paste), garlic, lemon juice, and extra virgin olive oil (EVOO).",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "PLANT_BASED",
+      "HIGH_FIBER"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SESAME (tahini)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 7,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 7,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 2,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 3,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 90,
+        "min": 60,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A colorful and flavorful hummus variant with roasted beets. Contains sesame.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Vibrant beet hummus, both earthy and tangy. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "baba_ghanoush",
+    "name": "Baba Ghanoush",
+    "description": "A Levantine appetizer consisting of finely chopped roasted eggplant, olive oil, lemon juice, various seasonings, and tahini. The eggplant is typically baked or broiled over an open flame before peeling, so that the pulp is soft and has a smoky taste.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "PLANT_BASED"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SESAME (tahini)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 7,
+        "min": 3.5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2.5,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 80,
+        "min": 45,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Smoky and creamy roasted eggplant dip with tahini. Contains sesame.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET",
+      "KETO_FRIENDLY (in moderation)"
+    ],
+    "customerGuidance": "Rich, smoky, and creamy eggplant dip. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "muhammara",
+    "name": "Muhammara",
+    "description": "A rich, savory, and slightly tangy Middle Eastern dip made primarily from roasted red peppers, ground walnuts, breadcrumbs, and pomegranate molasses, often seasoned with garlic, olive oil, lemon juice, and spices like cumin and red pepper flakes.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "PLANT_BASED",
+      "SPICY_OPTION (mildly)"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_NUTS (walnuts)",
+      "CONTAINS_WHEAT (breadcrumbs)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 10,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 9,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 120,
+        "min": 70,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A robust dip with a unique sweet, tangy, nutty, and slightly spicy flavor profile. Contains walnuts and wheat.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Savory roasted red pepper and walnut dip with a hint of pomegranate. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "fresh_guacamole",
+    "name": "Signature Fresh Guacamole",
+    "description": "A signature, freshly prepared guacamole made from ripe avocados mashed with lime juice, diced onions, chopped cilantro, tomatoes (optional), jalapeños (optional), and salt.",
+    "category": "Dip / Condiment / Appetizer",
+    "price": 0,
+    "upcharge": 1,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION",
+      "PLANT_BASED",
+      "HEALTHY_FATS"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 7,
+        "min": 4.5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 5,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3.5,
+        "min": 2,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1.5,
+        "min": 0.5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 80,
+        "min": 50,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Freshly made guacamole with classic ingredients.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_FRIENDLY"
+    ],
+    "customerGuidance": "Our signature fresh and creamy guacamole. (Values per 2 tbsp serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "smoked_pork_belly",
+    "name": "Smoked pork Belly",
+    "description": "Rich and succulent pork belly, slow-smoked to achieve a tender texture and often a crispy exterior or skin.",
+    "category": "Main Course - Pork / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_FAT",
+      "SLOW_COOKED"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 60,
+        "min": 45,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 5,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 15,
+        "min": 10,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 600,
+        "min": 450,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Pork belly, typically salt-cured or brined, then slow-smoked. May be served as slices or cubes. Check if any glaze is used.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY"
+    ],
+    "customerGuidance": "Indulgently rich and flavorful smoked pork belly. (Values per approx. 100g serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "bbq_prawns",
+    "name": "BBQ Prawns",
+    "description": "Large prawns (shrimp) grilled or pan-seared and coated in a flavorful barbecue sauce.",
+    "category": "Main Course - Seafood / Appetizer",
+    "price": 0,
+    "upcharge": 1,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SHELLFISH (prawns)",
+      "CONTAINS_WHEAT (potentially in BBQ sauce)",
+      "CONTAINS_SOY (potentially in BBQ sauce)",
+      "CONTAINS_SULPHITES (potentially in BBQ sauce)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 8,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 28,
+        "min": 20,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Prawns cooked and tossed in BBQ sauce. Inquire about BBQ sauce ingredients for specific allergen concerns.",
+    "suitableForDiets": [],
+    "customerGuidance": "Succulent BBQ prawns with a smoky, sweet, or tangy glaze.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "black_tiger_prawns",
+    "name": "BBQ Black Tiger Prawns",
+    "description": "Large, meaty Black Tiger prawns grilled or pan-seared and basted with barbecue sauce.",
+    "category": "Main Course - Seafood / Appetizer",
+    "price": 0,
+    "upcharge": 2,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SHELLFISH (prawns)",
+      "CONTAINS_WHEAT (potentially in BBQ sauce)",
+      "CONTAINS_SOY (potentially in BBQ sauce)",
+      "CONTAINS_SULPHITES (potentially in BBQ sauce)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 10,
+        "min": 3,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 30,
+        "min": 22,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 280,
+        "min": 160,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Black Tiger prawns cooked and tossed in BBQ sauce. Inquire about BBQ sauce ingredients for specific allergen concerns.",
+    "suitableForDiets": [],
+    "customerGuidance": "Large, flavorful Black Tiger prawns with a delicious BBQ glaze.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "grilled_prawn_skewers",
+    "name": "Jumbo BBQ Prawn Skewers",
+    "description": "Large, succulent jumbo prawns (shrimp) threaded onto skewers, marinated or basted with a flavorful barbecue sauce, then grilled until perfectly cooked with a slight char.",
+    "category": "Main Course - Seafood / Appetizer",
+    "price": 0,
+    "upcharge": 2,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": null,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "GRILLED"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SHELLFISH (prawns)",
+      "CONTAINS_WHEAT (potentially in BBQ sauce)",
+      "CONTAINS_SOY (potentially in BBQ sauce)",
+      "CONTAINS_SULPHITES (potentially in BBQ sauce)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 8,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 15,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 25,
+        "min": 18,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 200,
+        "min": 120,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Jumbo prawns grilled on skewers with BBQ sauce. Please inquire about BBQ sauce ingredients for specific allergen concerns.",
+    "suitableForDiets": [],
+    "customerGuidance": "Plump and flavorful jumbo BBQ prawn skewers. (Values per skewer, approx 3-4 prawns).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "spanakopita",
+    "name": "Spanakopita - House made phyllo dough pouches stuffed with spinach, greens, herbs, and feta cheese",
+    "description": "A classic Greek savory pie or individual pouches made with flaky, house-made phyllo dough, filled with a mixture of spinach, various greens (like chard or leeks), fresh herbs (dill, parsley), and tangy feta cheese.",
+    "category": "Appetizer / Side Dish / Light Main",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (phyllo dough)",
+      "CONTAINS_DAIRY (feta cheese, butter if used in phyllo)",
+      "CONTAINS_EGG (if used as binder in filling)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 25,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 35,
+        "min": 20,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 5,
+        "min": 2,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 400,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Savory spinach and feta pie in flaky phyllo pastry. Contains wheat and dairy. Please inquire if egg is used in the filling.",
+    "suitableForDiets": [],
+    "customerGuidance": "Crispy, flaky, and flavorful spinach and feta phyllo pie. (Values per typical triangular portion).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "octapodi",
+    "name": "Octapodi - Spanish octopus slowly braised and served simply with lemon juice, EVOO, and fresh oregano",
+    "description": "Tender Spanish octopus, slowly braised to perfection, then often finished on the grill for a slight char. Served in a classic Greek style, dressed simply with fresh lemon juice, extra virgin olive oil (EVOO), and fresh oregano.",
+    "category": "Appetizer / Main Course - Seafood",
+    "price": 0,
+    "upcharge": 7,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "GRILLED (often finished on grill)"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SHELLFISH (octopus is a mollusc)",
+      "CONTAINS_SULPHITES (if vinegar/wine is used)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 10,
+        "min": 4,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 4,
+        "min": 1,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 35,
+        "min": 25,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Octopus braised until tender, then typically grilled and dressed with lemon, olive oil, and oregano.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET",
+      "PALEO_FRIENDLY"
+    ],
+    "customerGuidance": "Tender, flavorful braised and grilled octopus, a Greek delicacy. (Values per 100g serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "dakos",
+    "name": "Dakos Bread Salad - Fresh tomatoes, barley rusks, feta, capers, onion, oregano, and basil",
+    "description": "Dakos (or Ntakos) is a traditional Cretan salad or meze. It features a base of Paximadia (hard barley rusks) that are lightly moistened, then topped with grated or chopped fresh tomatoes, crumbled feta or mizithra cheese, capers, red onion, olives (often), and fresh herbs like oregano and basil, all drizzled with extra virgin olive oil.",
+    "category": "Salad / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "MEDITERRANEAN_DIET"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (barley rusks often contain wheat flour as well)",
+      "CONTAINS_GLUTEN (barley)",
+      "CONTAINS_DAIRY (feta/mizithra cheese)",
+      "CONTAINS_SULPHITES (capers, olives may contain)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 28,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 40,
+        "min": 25,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 280,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A Cretan salad built on barley rusks, topped with tomatoes, feta, and herbs. Contains gluten and dairy.",
+    "suitableForDiets": [],
+    "customerGuidance": "A hearty and flavorful Cretan bread salad with fresh toppings.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "mozzarella_glaze",
+    "name": "Vine-Ripened Tomato & Fresh Mozzarella Caprese with Balsamic Glaze",
+    "description": "A simple Italian salad, made of sliced fresh mozzarella, ripe vine-ripened tomatoes, and sweet basil, seasoned with salt and olive oil, and finished with a drizzle of rich balsamic glaze.",
+    "category": "Salad / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "GLUTEN_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (mozzarella cheese)",
+      "CONTAINS_SULPHITES (balsamic glaze)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 30,
+        "min": 18,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 18,
+        "min": 10,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 400,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Classic Caprese salad with fresh mozzarella, tomatoes, basil, and balsamic glaze. Contains dairy and sulphites.",
+    "suitableForDiets": [
+      "MEDITERRANEAN_DIET",
+      "LOW_CARB (in moderation)"
+    ],
+    "customerGuidance": "A fresh and elegant display of Italian flavors.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "bacon_wrapped_asparagus",
+    "name": "Bacon wrapped Asparagus",
+    "description": "Fresh asparagus spears wrapped in savory bacon strips, then typically roasted, grilled, or pan-fried until the bacon is crispy and the asparagus is tender-crisp.",
+    "category": "Side Dish / Appetizer",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "LOW_CARB"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 15,
+        "min": 7,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 6,
+        "min": 3,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 3,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 10,
+        "min": 6,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 180,
+        "min": 100,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Asparagus spears wrapped in bacon and cooked until bacon is crisp.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY"
+    ],
+    "customerGuidance": "A classic pairing of tender asparagus and crispy bacon. (Values per approx. 3-4 spears).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "falafel",
+    "name": "Falafel",
+    "description": "Crispy, deep-fried balls or patties made from ground chickpeas (or fava beans), fresh herbs like parsley and cilantro, and spices. A popular Middle Eastern street food.",
+    "category": "Appetizer / Protein Option (Vegetarian)",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": null,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN_OPTION",
+      "VEGETARIAN_OPTION",
+      "PLANT_BASED",
+      "HIGH_FIBER"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (potentially, if flour is used as a binder, please inquire)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 5,
+        "min": 2.5,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 8,
+        "min": 5,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 3,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 80,
+        "min": 50,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Deep-fried spiced chickpea patties. Often gluten-free, but please confirm if flour is used in the mixture.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "MEDITERRANEAN_DIET"
+    ],
+    "customerGuidance": "Crispy and flavorful chickpea fritters. (Values per falafel ball).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "sauteed_shrimp",
+    "name": "Garlic-Lime Sautéed Shrimp",
+    "description": "Succulent shrimp quickly sautéed in olive oil or butter with minced garlic and a generous squeeze of fresh lime juice, often finished with fresh cilantro or parsley.",
+    "category": "Protein Option / Appetizer",
+    "price": 0,
+    "upcharge": 2,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": null,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "QUICK_COOKED"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_SHELLFISH (shrimp)",
+      "CONTAINS_DAIRY (if cooked with butter, please inquire)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 15,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 4,
+        "min": 1,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 28,
+        "min": 20,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Shrimp sautéed with garlic and lime. Ask if butter is used if dairy is a concern.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY",
+      "PALEO_FRIENDLY (if oil used)"
+    ],
+    "customerGuidance": "Zesty and flavorful garlic-lime shrimp. (Values per 100g serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "smoked_pork_belly_bites",
+    "name": "Smoked Pork Belly Burnt Ends",
+    "description": "Cubes of rich pork belly, slow-smoked until tender, then often tossed in a sweet and tangy BBQ sauce or glaze and returned to the smoker or oven to caramelize, creating flavorful 'burnt ends'.",
+    "category": "Appetizer / Main Course - Pork",
+    "price": 0,
+    "upcharge": 1,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": null,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "HIGH_FAT",
+      "SLOW_COOKED",
+      "RICH_FLAVOR"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT (potentially in BBQ sauce)",
+      "CONTAINS_SOY (potentially in BBQ sauce)",
+      "CONTAINS_SULPHITES (potentially in BBQ sauce)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 22,
+        "min": 12,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 10,
+        "min": 4,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 9,
+        "min": 5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 150,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Tender, smoky, and caramelized cubes of pork belly. Inquire about BBQ sauce ingredients for specific allergen concerns.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY (if sauce is low sugar/carb)"
+    ],
+    "customerGuidance": "Indulgent bites of smoky, caramelized pork belly. (Values per 2-3 pieces/small serving).",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "cheese_and_fruit_grazing_board",
+    "name": "Cheese and Fruit Grazing Board",
+    "description": "An attractively arranged platter featuring a selection of cheeses, fresh seasonal fruits, and often accompanied by crackers or breadsticks.",
+    "category": "Appetizer / Platter",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGETARIAN_OPTION",
+      "ELEGANT_PRESENTATION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cheese)",
+      "MAY_CONTAIN_WHEAT (crackers/bread)",
+      "MAY_CONTAIN_GLUTEN (crackers/bread)",
+      "MAY_CONTAIN_NUTS (if included)",
+      "MAY_CONTAIN_SOY (crackers)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 30,
+        "min": 15,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 40,
+        "min": 20,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 5,
+        "min": 2,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 500,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A shareable platter with diverse flavors and textures. Gluten-free if served with GF crackers. Nut content varies.",
+    "suitableForDiets": [],
+    "customerGuidance": "A delightful assortment of cheeses and fresh fruits. Crackers may contain gluten; nuts may be present.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "meat_cheese_and_fruit_grazing_board",
+    "name": "Meat Cheese and Fruit Grazing Board",
+    "description": "An abundant platter featuring a selection of cured meats, assorted cheeses, fresh seasonal fruits, and often crackers, nuts, and olives.",
+    "category": "Appetizer / Platter",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": false,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "ELEGANT_PRESENTATION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (cheese)",
+      "MAY_CONTAIN_WHEAT (crackers/bread)",
+      "MAY_CONTAIN_GLUTEN (crackers/bread)",
+      "MAY_CONTAIN_NUTS (if included)",
+      "MAY_CONTAIN_SOY (crackers)",
+      "CONTAINS_NITRITES (in some cured meats)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 40,
+        "min": 20,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 35,
+        "min": 15,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 4,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 30,
+        "min": 15,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 600,
+        "min": 300,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A charcuterie-style board offering a variety of savory and sweet items. Gluten-free if served with GF crackers. Nut content varies.",
+    "suitableForDiets": [
+      "KETO_FRIENDLY (with careful selection, without crackers/high-sugar fruits)"
+    ],
+    "customerGuidance": "A lavish spread of cured meats, cheeses, and fruits. Crackers may contain gluten; nuts may be present.",
+    "availableLotSizes": [],
+    "image": null
+  }
+]
