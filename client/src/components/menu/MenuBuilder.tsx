@@ -147,7 +147,29 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
         
       console.log("Parsed menu items:", itemsData);
       
-      // If items is an array, map it to the required format
+      // Handle the new theme-based structure with categories
+      if (itemsData.categories && Array.isArray(itemsData.categories)) {
+        const allItemIds: string[] = [];
+        
+        // Extract all item IDs from all categories
+        itemsData.categories.forEach((category: any) => {
+          if (category.available_item_ids && Array.isArray(category.available_item_ids)) {
+            allItemIds.push(...category.available_item_ids);
+          }
+        });
+        
+        // Convert to MenuItemWithQuantity format
+        // We'll set quantity to 1 for now since the theme structure doesn't store quantities
+        return allItemIds.map((itemId: string) => ({
+          id: itemId,
+          name: itemId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert ID to display name
+          price: 0, // Will be populated when menu items are loaded
+          quantity: 1,
+          category: 'standard'
+        }));
+      }
+      
+      // Handle legacy array format
       if (Array.isArray(itemsData)) {
         // We need to look up additional data from the menuItems list
         return itemsData.map((item: any) => ({
@@ -180,7 +202,10 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       console.log("Updating selected items with menu item details");
       const updatedItems = getMenuItems().map((item: MenuItemWithQuantity) => {
         // Try to find matching menu item to get additional details
-        const menuItem = menuItems.find((mi: any) => mi.id === item.id);
+        // Handle both string and numeric IDs
+        const menuItem = menuItems.find((mi: any) => 
+          mi.id === item.id || mi.id.toString() === item.id.toString()
+        );
         if (menuItem) {
           return {
             ...item,
