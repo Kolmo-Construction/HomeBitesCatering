@@ -122,9 +122,20 @@ async function generateMenuData() {
       }
       
       // Get actual menu items with full metadata for this menu
+      console.log(`  Processing menu: ${menu.name} (ID: ${menu.id})`);
+      console.log(`  Item IDs found: ${Array.from(menuItemIds).join(', ')}`);
+      
       const menuItems = Array.from(menuItemIds)
-        .map(itemId => itemsLookup[itemId])
+        .map(itemId => {
+          const item = itemsLookup[itemId];
+          if (!item) {
+            console.log(`    Warning: Item ID '${itemId}' not found in database`);
+          }
+          return item;
+        })
         .filter(Boolean); // Remove any null/undefined items
+      
+      console.log(`  Successfully mapped ${menuItems.length} items`);
       
       // Organize items by category for this menu
       const itemsByCategory = {};
