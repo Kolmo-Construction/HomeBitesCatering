@@ -7,11 +7,13 @@
  */
 
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import pg from 'pg';
 import { menus, menuItems } from './shared/schema.js';
 import { eq } from 'drizzle-orm';
 import fs from 'fs/promises';
 import path from 'path';
+
+const { Pool } = pg;
 
 // Database connection
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
