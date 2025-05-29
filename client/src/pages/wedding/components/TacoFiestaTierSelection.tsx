@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Check as CheckIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 
 import { WeddingInquiryFormData } from "../types/weddingFormTypes";
+import { getTacoFiestaItemsByType, type DatabaseMenuItem } from "../data/generatedMenuData";
 
 // Taco Fiesta Tier Configuration
 const TACO_FIESTA_TIERS = {
@@ -143,30 +143,10 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
     condiments: []
   });
 
-  // Fetch menu items from API
-  const { data: menuItems = [], isLoading } = useQuery({
-    queryKey: ["/api/menu-items"],
-  }) as { data: any[], isLoading: boolean };
-
-  // Get Taco Fiesta menu items organized by category
+  // Get Taco Fiesta menu items from generated database data
   const organizedMenuItems = React.useMemo(() => {
-    const organized: Record<string, any[]> = {
-      mains: [],
-      sides: [],
-      salads: [],
-      sauces: [],
-      condiments: []
-    };
-
-    menuItems.forEach(item => {
-      const category = CATEGORY_MAPPING[item.id as keyof typeof CATEGORY_MAPPING];
-      if (category && organized[category]) {
-        organized[category].push(item);
-      }
-    });
-
-    return organized;
-  }, [menuItems]);
+    return getTacoFiestaItemsByType();
+  }, []);
 
   const handleTierSelection = (tierId: string) => {
     setSelectedTier(tierId);
@@ -373,6 +353,7 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
                                 <Checkbox 
                                   checked={isSelected}
                                   disabled={isDisabled}
+                                  onCheckedChange={(checked) => handleItemSelection(category, item.id, !!checked)}
                                   className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
                                 />
                                 <span className="font-medium text-sm">{item.name}</span>
