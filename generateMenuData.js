@@ -8,7 +8,7 @@
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import { menus, menuItems } from './shared/schema.js';
+import { menus, menuItems } from './shared/schema.ts';
 import { eq } from 'drizzle-orm';
 import fs from 'fs/promises';
 import path from 'path';
