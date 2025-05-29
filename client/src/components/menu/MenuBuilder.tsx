@@ -42,6 +42,9 @@ const formSchema = insertMenuSchema.extend({
   name: z.string().min(1, "Menu name is required"),
   description: z.string().optional(),
   type: z.string().min(1, "Menu type is required"),
+  theme_key: z.string().optional(),
+  package_id: z.string().optional(),
+  package_name: z.string().optional(),
   items: z.array(z.object({
     id: z.number(),
     quantity: z.number().min(1, "Quantity must be at least 1"),
@@ -200,12 +203,18 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           name: menu.name || "",
           description: menu.description || "",
           type: menu.type || "standard",
+          theme_key: menu.theme_key || `custom_${menu.name?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`,
+          package_id: menu.package_id || `custom_package_${Date.now()}`,
+          package_name: menu.package_name || "",
           // items are handled separately in the selectedItems state
         }
       : {
           name: "",
           description: "",
           type: "standard",
+          theme_key: "",
+          package_id: "",
+          package_name: "",
           items: [],
         },
   });
@@ -502,34 +511,64 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Theme Key */}
-                      <div>
-                        <FormLabel>Theme Key</FormLabel>
-                        <Input 
-                          placeholder="e.g., lebanese_cuisine"
-                          defaultValue={`custom_${form.watch("name")?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Unique theme identifier (e.g., "lebanese_cuisine")</p>
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="theme_key"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Theme Key</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., lebanese_cuisine"
+                                {...field}
+                                value={field.value || `custom_${form.watch("name")?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">Unique theme identifier (e.g., "lebanese_cuisine")</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       
                       {/* Package ID */}
-                      <div>
-                        <FormLabel>Package ID</FormLabel>
-                        <Input 
-                          placeholder="e.g., lebanese_fiesta_deluxe_v1"
-                          defaultValue={`custom_package_${Date.now()}`}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Unique package identifier</p>
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="package_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Package ID</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., lebanese_fiesta_deluxe_v1"
+                                {...field}
+                                value={field.value || `custom_package_${Date.now()}`}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">Unique package identifier</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       
                       {/* Package Name */}
-                      <div>
-                        <FormLabel>Package Name</FormLabel>
-                        <Input 
-                          placeholder="e.g., Lebanese Fiesta Deluxe Package"
-                          defaultValue={form.watch("name")}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Display name for the package</p>
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="package_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Package Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., Lebanese Fiesta Deluxe Package"
+                                {...field}
+                                value={field.value || form.watch("name") || ""}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">Display name for the package</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       
                       {/* Price Per Person */}
                       <div>
