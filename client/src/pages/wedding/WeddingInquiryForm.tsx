@@ -463,8 +463,10 @@ export default function WeddingInquiryForm() {
                     <SimpleDietaryDashboard />
                   </div>
                   
-                  {/* Enhanced Menu Selection with Rich Database Data */}
-                  <StaticMenuSelectionStep
+                  {/* Wedding Menu Selection with Theme-Based Selection */}
+                  <WeddingMenuSelectionStep
+                    selectedTheme={selectedTheme}
+                    guestCount={guestCount}
                     onPrevious={handlePrevious}
                     onNext={handleNext}
                   />
