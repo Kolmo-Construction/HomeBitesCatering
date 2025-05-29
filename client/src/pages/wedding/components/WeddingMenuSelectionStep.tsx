@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Check as CheckIcon, Info as InfoIcon } from 
 
 import { WeddingInquiryFormData } from "../types/weddingFormTypes";
 import { weddingThemeMenuData } from "../data/weddingThemeMenuData";
+import TacoFiestaTierSelection from "./TacoFiestaTierSelection";
 
 interface WeddingMenuSelectionStepProps {
   selectedTheme: string;
@@ -160,6 +161,17 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
     return 0;
   };
 
+
+  // Taco Fiesta Tier Selection Logic
+  if (selectedTheme === "taco_fiesta_wedding") {
+    return (
+      <TacoFiestaTierSelection
+        guestCount={guestCount}
+        onPrevious={onPrevious}
+        onNext={onNext}
+      />
+    );
+  }
 
   // Custom Menu Logic
   if (selectedTheme === "custom_menu" && currentWeddingThemeDetails?.customizable) {
