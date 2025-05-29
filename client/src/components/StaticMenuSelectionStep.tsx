@@ -75,6 +75,7 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
   
   // State for filtering and display
   const [selectedCategory, setSelectedCategory] = useState<string>("appetizer");
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [showDietaryInfo, setShowDietaryInfo] = useState<Record<string, boolean>>({});
   
   // Get menu data from pre-generated static files
@@ -295,49 +296,153 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
         </p>
       </div>
 
-      {/* Menu theme selection */}
-      {menuThemes && menuThemes.length > 0 && (
+      {/* Wedding Theme Menus */}
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold">Choose Your Wedding Menu Theme</h3>
+        <p className="text-gray-600 mb-6">
+          Select one of our curated wedding themes, each featuring authentic dishes with detailed dietary and nutritional information.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Taste of Italy Wedding Theme */}
+          <Card 
+            className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+              selectedTheme === 'italy' ? 'border-red-500 bg-red-50' : 'border-gray-200'
+            }`}
+            onClick={() => setSelectedTheme(selectedTheme === 'italy' ? null : 'italy')}
+          >
+            <CardHeader className="bg-red-50 p-4">
+              <CardTitle className="text-xl font-semibold text-gray-800">Taste of Italy Wedding</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-gray-600 mb-4">Celebrate with authentic Italian flavors and traditional recipes</p>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Bronze Package - $32/person</div>
+                <div className="text-sm font-medium">Silver Package - $45/person</div>
+                <div className="text-sm font-medium">Gold Package - $58/person</div>
+              </div>
+              <div className="mt-4 text-xs text-gray-500">Minimum 50 guests</div>
+              {selectedTheme === 'italy' && (
+                <div className="mt-3 text-sm font-medium text-red-600">✓ Selected - View items below</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Taco Fiesta Wedding Theme */}
+          <Card 
+            className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+              selectedTheme === 'taco_fiesta' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'
+            }`}
+            onClick={() => setSelectedTheme(selectedTheme === 'taco_fiesta' ? null : 'taco_fiesta')}
+          >
+            <CardHeader className="bg-orange-50 p-4">
+              <CardTitle className="text-xl font-semibold text-gray-800">Taco Fiesta Wedding</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-gray-600 mb-4">Vibrant Mexican-inspired celebration with fresh, bold flavors</p>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Casual Package - $28/person</div>
+                <div className="text-sm font-medium">Premium Package - $38/person</div>
+                <div className="text-sm font-medium">Deluxe Package - $48/person</div>
+              </div>
+              <div className="mt-4 text-xs text-gray-500">Minimum 30 guests</div>
+              {selectedTheme === 'taco_fiesta' && (
+                <div className="mt-3 text-sm font-medium text-orange-600">✓ Selected - View items below</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Mediterranean Wedding Theme */}
+          <Card 
+            className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+              selectedTheme === 'mediterranean' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+            }`}
+            onClick={() => setSelectedTheme(selectedTheme === 'mediterranean' ? null : 'mediterranean')}
+          >
+            <CardHeader className="bg-blue-50 p-4">
+              <CardTitle className="text-xl font-semibold text-gray-800">Mediterranean Wedding</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-gray-600 mb-4">Fresh, healthy cuisine inspired by the Mediterranean coast</p>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Classic Package - $35/person</div>
+                <div className="text-sm font-medium">Premium Package - $48/person</div>
+                <div className="text-sm font-medium">Luxury Package - $62/person</div>
+              </div>
+              <div className="mt-4 text-xs text-gray-500">Minimum 40 guests</div>
+              {selectedTheme === 'mediterranean' && (
+                <div className="mt-3 text-sm font-medium text-blue-600">✓ Selected - View items below</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* American Classic Wedding Theme */}
+          <Card 
+            className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+              selectedTheme === 'american' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+            }`}
+            onClick={() => setSelectedTheme(selectedTheme === 'american' ? null : 'american')}
+          >
+            <CardHeader className="bg-green-50 p-4">
+              <CardTitle className="text-xl font-semibold text-gray-800">American Classic Wedding</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-gray-600 mb-4">Traditional American favorites perfect for any celebration</p>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Essential Package - $30/person</div>
+                <div className="text-sm font-medium">Premium Package - $42/person</div>
+                <div className="text-sm font-medium">Signature Package - $55/person</div>
+              </div>
+              <div className="mt-4 text-xs text-gray-500">Minimum 35 guests</div>
+              {selectedTheme === 'american' && (
+                <div className="mt-3 text-sm font-medium text-green-600">✓ Selected - View items below</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Menu Items Section */}
+      {selectedTheme ? (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Menu Themes</h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {menuThemes.map((theme: any) => (
-              <Card key={theme.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle>{theme.name}</CardTitle>
-                  <CardDescription>{theme.description}</CardDescription>
-                  {theme.packages.map((pkg: any) => (
-                    <div key={pkg.id} className="mt-2">
-                      <div className="font-medium">{pkg.name}</div>
-                      <div className="text-sm text-gray-600">${pkg.price} per person</div>
-                      {pkg.minGuestCount && (
-                        <div className="text-xs text-gray-500">Minimum {pkg.minGuestCount} guests</div>
-                      )}
-                    </div>
-                  ))}
-                </CardHeader>
-              </Card>
+          <h3 className="text-lg font-semibold">
+            {selectedTheme === 'taco_fiesta' && 'Taco Fiesta Menu Items'}
+            {selectedTheme === 'italy' && 'Italian Wedding Menu Items'}
+            {selectedTheme === 'mediterranean' && 'Mediterranean Menu Items'}
+            {selectedTheme === 'american' && 'American Classic Menu Items'}
+          </h3>
+          <p className="text-gray-600">
+            These authentic dishes are included in your selected theme, with rich dietary and nutritional information
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedTheme(null)}
+            className="mb-4"
+          >
+            ← Back to Theme Selection
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Browse All Menu Items by Category</h3>
+          <p className="text-gray-600">Or explore our complete database of dishes with comprehensive dietary information</p>
+          
+          {/* Category tabs for browsing database items */}
+          <div className="flex gap-2 flex-wrap">
+            {categories.map(category => (
+              <Button
+                key={category.key}
+                variant={selectedCategory === category.key ? "default" : "outline"}
+                onClick={() => setSelectedCategory(category.key)}
+                className="flex items-center gap-2"
+              >
+                <span>{category.icon}</span>
+                {category.label}
+              </Button>
             ))}
           </div>
         </div>
       )}
-
-      {/* Category selection */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Browse Menu Items by Category</h3>
-        <div className="flex gap-2 flex-wrap">
-          {categories.map(category => (
-            <Button
-              key={category.key}
-              variant={selectedCategory === category.key ? "default" : "outline"}
-              onClick={() => setSelectedCategory(category.key)}
-              className="flex items-center gap-2"
-            >
-              <span>{category.icon}</span>
-              {category.label}
-            </Button>
-          ))}
-        </div>
-      </div>
 
       {/* Menu items display */}
       <div className="space-y-4">
