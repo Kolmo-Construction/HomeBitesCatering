@@ -318,6 +318,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
             category: menuItem.category || item.category,
             description: menuItem.description,
             origin: menuItem.origin,
+            additional_dietary_metadata: menuItem.additional_dietary_metadata,
             calories: menuItem.calories,
             protein: menuItem.protein,
             carbs: menuItem.carbs,
