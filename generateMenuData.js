@@ -67,12 +67,26 @@ async function generateMenuData() {
   try {
     await ensureOutputDirectory();
     
-    // Generate menu themes
-    console.log('📋 Generating menu themes data...');
+    // Get all menu items first (with full metadata)
+    console.log('🍽️ Fetching all menu items with metadata...');
+    const allItems = await db.select().from(menuItems);
+    const enrichedItems = allItems.map(enrichMenuItem);
+    
+    // Create a lookup map for quick item access
+    const itemsLookup = {};
+    enrichedItems.forEach(item => {
+      itemsLookup[item.id] = item;
+    });
+    
+    // Generate menu themes with organized items
+    console.log('📋 Generating menu themes with associated items...');
     const weddingMenus = await db
       .select()
       .from(menus)
       .where(eq(menus.type, 'standard'));
+
+    const menusByTheme = {};
+    const organizedMenuData = {};
 
     const formattedMenus = weddingMenus.map(menu => {
       let menuStructure;
@@ -85,11 +99,58 @@ async function generateMenuData() {
         menuStructure = null;
       }
 
+      const themeKey = menuStructure?.theme_key || `theme_${menu.id}`;
+      
+      // Collect all item IDs for this menu
+      const menuItemIds = new Set();
+      if (menuStructure?.categories) {
+        menuStructure.categories.forEach(category => {
+          if (category.available_item_ids) {
+            category.available_item_ids.forEach(itemId => menuItemIds.add(itemId));
+          }
+        });
+      }
+      
+      // Get actual menu items with full metadata for this menu
+      const menuItems = Array.from(menuItemIds)
+        .map(itemId => itemsLookup[itemId])
+        .filter(Boolean); // Remove any null/undefined items
+      
+      // Organize items by category for this menu
+      const itemsByCategory = {};
+      if (menuStructure?.categories) {
+        menuStructure.categories.forEach(category => {
+          const categoryItems = category.available_item_ids
+            .map(itemId => itemsLookup[itemId])
+            .filter(Boolean);
+          
+          itemsByCategory[category.category_key] = {
+            title: category.display_title,
+            description: category.description || '',
+            selectionLimit: category.selection_limit,
+            items: categoryItems
+          };
+        });
+      }
+      
+      // Store organized data for this menu
+      organizedMenuData[themeKey] = {
+        id: menu.id,
+        name: menu.name,
+        description: menu.description,
+        allItems: menuItems,
+        itemsByCategory: itemsByCategory,
+        totalItemCount: menuItems.length
+      };
+      
+      // Store theme mapping
+      menusByTheme[themeKey] = menu.id;
+
       return {
         id: menu.id,
         name: menu.name,
         description: menu.description,
-        theme_key: menuStructure?.theme_key || `theme_${menu.id}`,
+        theme_key: themeKey,
         packages: menuStructure?.categories ? [{
           id: menuStructure.package_id || `package_${menu.id}`,
           name: menuStructure.package_name || menu.name,
@@ -98,17 +159,20 @@ async function generateMenuData() {
           minGuestCount: menuStructure.min_guest_count,
           customizable: menuStructure.customizable || false
         }] : [],
-        categories: menuStructure?.categories || []
+        categories: menuStructure?.categories || [],
+        itemCount: menuItemIds.size
       };
     });
 
+    // Write the organized menu data
+    await fs.writeFile(path.join(OUTPUT_DIR, 'menusByTheme.json'), JSON.stringify(organizedMenuData, null, 2));
     await fs.writeFile(path.join(OUTPUT_DIR, 'menuThemes.json'), JSON.stringify(formattedMenus, null, 2));
+    await fs.writeFile(path.join(OUTPUT_DIR, 'themeToMenuMapping.json'), JSON.stringify(menusByTheme, null, 2));
     
     // Generate menu items by category
     console.log('🍽️ Generating menu items by category...');
     
-    // First, get all unique categories from the database
-    const allItems = await db.select().from(menuItems);
+    // Use the items we already fetched
     const actualCategories = [...new Set(allItems.map(item => item.category))];
     console.log('Actual categories found:', actualCategories);
     
@@ -165,10 +229,7 @@ async function generateMenuData() {
     
     // Generate all menu items
     console.log('📦 Generating all menu items...');
-    const allMenuItems = await db.select().from(menuItems);
-    const enrichedItems = await Promise.all(
-      allMenuItems.map(item => enrichMenuItem(item))
-    );
+    const allEnrichedItems = enrichedItems;
     
     await fs.writeFile(
       path.join(OUTPUT_DIR, 'allMenuItems.json'), 
@@ -181,7 +242,7 @@ async function generateMenuData() {
     const allAllergens = new Set();
     const allDietPreferences = new Set();
     
-    allMenuItems.forEach(item => {
+    allItems.forEach(item => {
       const metadata = item.additional_dietary_metadata || {};
       
       if (metadata.dietary_flags_list) {

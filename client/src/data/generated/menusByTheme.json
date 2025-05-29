@@ -1,11 +1,10 @@
-[
-  {
+{
+  "theme_1": {
     "id": 1,
     "name": "Sample Appetizer Menu",
     "description": "A sample menu with appetizers",
-    "theme_key": "theme_1",
-    "packages": [],
-    "categories": [],
-    "itemCount": 0
+    "allItems": [],
+    "itemsByCategory": {},
+    "totalItemCount": 0
   }
-]
+}
