@@ -78,8 +78,42 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [showDietaryInfo, setShowDietaryInfo] = useState<Record<string, boolean>>({});
   
-  // Get menu data from pre-generated static files
-  const categoryItems = getMenuItemsByCategory(selectedCategory);
+  // Define the exact items for each theme based on the original weddingThemeMenuData
+  const getThemeItems = (theme: string) => {
+    const allItems = [
+      ...getMenuItemsByCategory('appetizer'),
+      ...getMenuItemsByCategory('entree'),
+      ...getMenuItemsByCategory('side'),
+      ...getMenuItemsByCategory('dessert'),
+      ...getMenuItemsByCategory('beverage')
+    ];
+
+    if (theme === 'taco_fiesta') {
+      // Match the exact Taco Fiesta items from the original theme
+      const tacoFiestaNames = [
+        'Barbacoa', 'Ground Beef', 'Pork Carnitas', 'Pork Belly', 'Chorizo', 'Beef Birria', 'Mexican Chicken', 'Cod', 'Shrimp', 'Tofu',
+        'Refried Beans', 'Mexican Street corn', 'Elotes', 'Queso Dip', 'Chorizo Queso Dip', 'Stuffed Poblano', 'Mexican Rice', 'Cilantro Lime Rice', 'Rice and Beans', 'Jalapeno cornbread', 'Grilled Vegetables', 'Mexican Slaw', 'Vegetarian Empanadas',
+        'Pico de Gallo', 'Fresh Mango Salsa', 'Pineapple Habanero Salsa', 'Cucumber Apple Salsa', 'Jicama Papaya Salsa', 'Salsa Roja', 'Salsa Verde', 'Creamy Salsa Verde', 'Salsa Macha',
+        'Guacamole', 'Sour Cream', 'Shredded cheese', 'Diced Onions', 'Lime wedges', 'Jalapeños', 'Cilantro', 'Escabeche'
+      ];
+      return allItems.filter(item => 
+        tacoFiestaNames.some(name => 
+          item.name?.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(item.name?.toLowerCase() || '')
+        ) ||
+        item.name?.toLowerCase().includes('taco') ||
+        item.name?.toLowerCase().includes('mexican') ||
+        item.name?.toLowerCase().includes('carnitas') ||
+        item.name?.toLowerCase().includes('barbacoa') ||
+        item.name?.toLowerCase().includes('birria') ||
+        item.cuisine?.toLowerCase().includes('mexican')
+      );
+    }
+    return allItems;
+  };
+
+  // Get menu data from pre-generated static files or theme
+  const categoryItems = selectedTheme ? getThemeItems(selectedTheme) : getMenuItemsByCategory(selectedCategory);
   
   // Get dietary recommendations based on user preferences
   const userDietaryPrefs = Object.keys(dietaryRestrictions).filter(key => dietaryRestrictions[key]);
