@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Check as CheckIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ChevronLeft, ChevronRight, Check as CheckIcon, Info } from "lucide-react";
 
 import { WeddingInquiryFormData } from "../types/weddingFormTypes";
 import { getTacoFiestaItemsByType, type DatabaseMenuItem } from "../data/generatedMenuData";
@@ -234,6 +235,53 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
     return flags.length > 0 ? <div className="flex flex-wrap gap-1 mt-1">{flags}</div> : null;
   };
 
+  const MenuItemModal = ({ item }: { item: DatabaseMenuItem }) => (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="p-1 h-auto text-gray-500 hover:text-red-600"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Info className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            {item.name}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {item.description && (
+            <div>
+              <h4 className="font-medium text-gray-700 mb-2">Description</h4>
+              <p className="text-sm text-gray-600">{item.description}</p>
+            </div>
+          )}
+          
+          {renderDietaryFlags(item)}
+          {renderNutritionalBadges(item)}
+          
+          {item.price && (
+            <div>
+              <h4 className="font-medium text-gray-700 mb-1">Price</h4>
+              <p className="text-sm text-gray-600">${item.price}</p>
+            </div>
+          )}
+          
+          {item.category && (
+            <div>
+              <h4 className="font-medium text-gray-700 mb-1">Category</h4>
+              <p className="text-sm text-gray-600 capitalize">{item.category}</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
 
 
   return (
@@ -365,6 +413,9 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
                               )}
                               {renderDietaryFlags(item)}
                               {renderNutritionalBadges(item)}
+                            </div>
+                            <div className="flex-shrink-0 ml-2">
+                              <MenuItemModal item={item} />
                             </div>
                           </div>
                         </div>
