@@ -7,12 +7,57 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronLeft, ChevronRight, Info, Heart, AlertTriangle } from "lucide-react";
 
 // Import the pre-generated menu data (no API calls needed!)
-import {
-  menuThemes,
-  getMenuItemsByCategory,
-  filterMenuItemsByDietary,
-  dietaryFilters
-} from "@/data/generated/index.js";
+import menuThemes from "@/data/generated/menuThemes.json";
+import appetizerItems from "@/data/generated/menuItems_appetizer.json";
+import entreeItems from "@/data/generated/menuItems_entree.json";
+import sideItems from "@/data/generated/menuItems_side.json";
+import dessertItems from "@/data/generated/menuItems_dessert.json";
+import beverageItems from "@/data/generated/menuItems_beverage.json";
+
+// Create category mapping
+const categoryData = {
+  appetizer: appetizerItems,
+  entree: entreeItems,
+  side: sideItems,
+  dessert: dessertItems,
+  beverage: beverageItems
+};
+
+// Utility functions
+function getMenuItemsByCategory(category: string) {
+  return categoryData[category as keyof typeof categoryData] || [];
+}
+
+function filterMenuItemsByDietary(items: any[], dietaryPrefs: string[] = [], allergens: string[] = []) {
+  return items.filter(item => {
+    if (allergens.length > 0) {
+      const hasRestrictedAllergen = item.allergenAlerts?.some((allergen: string) =>
+        allergens.some(userAllergen =>
+          allergen.toLowerCase().includes(userAllergen.toLowerCase())
+        )
+      );
+      if (hasRestrictedAllergen) return false;
+    }
+    
+    if (dietaryPrefs.length > 0) {
+      const suitsPreferences = dietaryPrefs.some(pref => {
+        const prefLower = pref.toLowerCase();
+        switch (prefLower) {
+          case 'vegetarian': return item.isVegetarian;
+          case 'vegan': return item.isVegan;
+          case 'gluten_free': return item.isGlutenFree;
+          case 'dairy_free': return item.isDairyFree;
+          case 'nut_free': return item.isNutFree;
+        }
+        return item.suitableForDiets?.some((diet: string) =>
+          diet.toLowerCase().includes(prefLower)
+        );
+      });
+      if (!suitsPreferences) return false;
+    }
+    return true;
+  });
+}
 
 interface StaticMenuSelectionStepProps {
   onPrevious: () => void;
