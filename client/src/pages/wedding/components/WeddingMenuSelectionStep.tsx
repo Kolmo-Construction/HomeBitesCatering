@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Check as CheckIcon, Info as InfoIcon } from 
 
 import { WeddingInquiryFormData } from "../types/weddingFormTypes";
 import { weddingThemeMenuData } from "../data/weddingThemeMenuData";
+import { getTacoFiestaMenuData, getTacoFiestaItemsByType, type DatabaseMenuItem } from "../data/generatedMenuData";
 import TacoFiestaTierSelection from "./TacoFiestaTierSelection";
 
 interface WeddingMenuSelectionStepProps {

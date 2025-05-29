@@ -70,7 +70,7 @@ async function generateMenuData() {
     // Get all menu items first (with full metadata)
     console.log('🍽️ Fetching all menu items with metadata...');
     const allItems = await db.select().from(menuItems);
-    const enrichedItems = allItems.map(enrichMenuItem);
+    const enrichedItems = await Promise.all(allItems.map(item => enrichMenuItem(item)));
     
     // Create a lookup map for quick item access
     const itemsLookup = {};
