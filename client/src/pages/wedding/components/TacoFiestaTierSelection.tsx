@@ -237,11 +237,11 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
 
   const MenuItemModal = ({ item }: { item: DatabaseMenuItem }) => {
     const dietaryFlags = [];
-    if (item.is_vegetarian) dietaryFlags.push("Vegetarian");
-    if (item.is_vegan) dietaryFlags.push("Vegan");
-    if (item.is_gluten_free) dietaryFlags.push("Gluten-Free");
-    if (item.is_dairy_free) dietaryFlags.push("Dairy-Free");
-    if (item.is_nut_free) dietaryFlags.push("Nut-Free");
+    if (item.isVegetarian) dietaryFlags.push("Vegetarian");
+    if (item.isVegan) dietaryFlags.push("Vegan");
+    if (item.isGlutenFree) dietaryFlags.push("Gluten-Free");
+    if (item.isDairyFree) dietaryFlags.push("Dairy-Free");
+    if (item.isNutFree) dietaryFlags.push("Nut-Free");
 
     return (
       <Dialog>
@@ -289,28 +289,28 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
               </div>
             )}
 
-            {item.nutritional_metadata && (
+            {item.nutritionalHighlights && (
               <div>
                 <h4 className="font-medium text-gray-700 mb-2">Nutritional Information</h4>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  {item.nutritional_metadata.calories && (
+                  {item.nutritionalHighlights.calories && (
                     <div className="bg-gray-50 p-2 rounded">
-                      <span className="font-medium">Calories:</span> {item.nutritional_metadata.calories.min}-{item.nutritional_metadata.calories.max}
+                      <span className="font-medium">Calories:</span> {item.nutritionalHighlights.calories.min}-{item.nutritionalHighlights.calories.max}
                     </div>
                   )}
-                  {item.nutritional_metadata.protein && (
+                  {item.nutritionalHighlights.protein && (
                     <div className="bg-gray-50 p-2 rounded">
-                      <span className="font-medium">Protein:</span> {item.nutritional_metadata.protein.min}-{item.nutritional_metadata.protein.max}g
+                      <span className="font-medium">Protein:</span> {item.nutritionalHighlights.protein.min}-{item.nutritionalHighlights.protein.max}g
                     </div>
                   )}
-                  {item.nutritional_metadata.carbs && (
+                  {item.nutritionalHighlights.carbs && (
                     <div className="bg-gray-50 p-2 rounded">
-                      <span className="font-medium">Carbs:</span> {item.nutritional_metadata.carbs.min}-{item.nutritional_metadata.carbs.max}g
+                      <span className="font-medium">Carbs:</span> {item.nutritionalHighlights.carbs.min}-{item.nutritionalHighlights.carbs.max}g
                     </div>
                   )}
-                  {item.nutritional_metadata.fat && (
+                  {item.nutritionalHighlights.fat && (
                     <div className="bg-gray-50 p-2 rounded">
-                      <span className="font-medium">Fat:</span> {item.nutritional_metadata.fat.min}-{item.nutritional_metadata.fat.max}g
+                      <span className="font-medium">Fat:</span> {item.nutritionalHighlights.fat.min}-{item.nutritionalHighlights.fat.max}g
                     </div>
                   )}
                 </div>
