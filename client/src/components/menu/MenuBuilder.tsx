@@ -28,12 +28,12 @@ import { insertMenuSchema } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import MenuItemSelector from "./MenuItemSelector";
 
-// Define the menu item with quantity
-interface MenuItemWithQuantity {
+// Define the menu item with type
+interface MenuItemWithType {
   id: number;
   name: string;
   price: number;
-  quantity: number;
+  type: string;
   category: string;
 }
 
@@ -82,11 +82,11 @@ const getCategoryDisplayName = (categoryKey: string): string => {
 // Sortable item component
 function SortableMenuItem({ 
   item, 
-  onQuantityChange, 
+  onTypeChange, 
   onRemove
 }: { 
-  item: MenuItemWithQuantity; 
-  onQuantityChange: (id: string | number, quantity: number) => void;
+  item: MenuItemWithType; 
+  onTypeChange: (id: string | number, type: string) => void;
   onRemove: (id: string | number) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
@@ -124,21 +124,33 @@ function SortableMenuItem({
               </Badge>
             )}
             
-            {(item as any).calories && (
+            {(item as any).additional_dietary_metadata?.nutritional_highlights?.calories && (
               <Badge variant="outline" className="text-xs">
-                {(item as any).calories} cal
+                {(item as any).additional_dietary_metadata.nutritional_highlights.calories.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.calories.max} cal
               </Badge>
             )}
             
-            {(item as any).protein && (
+            {(item as any).additional_dietary_metadata?.nutritional_highlights?.protein && (
               <Badge variant="outline" className="text-xs">
-                {(item as any).protein}g protein
+                {(item as any).additional_dietary_metadata.nutritional_highlights.protein.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.protein.max}g protein
               </Badge>
             )}
             
-            {(item as any).carbs && (
+            {(item as any).additional_dietary_metadata?.nutritional_highlights?.carbs && (
               <Badge variant="outline" className="text-xs">
-                {(item as any).carbs}g carbs
+                {(item as any).additional_dietary_metadata.nutritional_highlights.carbs.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.carbs.max}g carbs
+              </Badge>
+            )}
+            
+            {(item as any).additional_dietary_metadata?.nutritional_highlights?.fat && (
+              <Badge variant="outline" className="text-xs">
+                {(item as any).additional_dietary_metadata.nutritional_highlights.fat.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.fat.max}g fat
+              </Badge>
+            )}
+            
+            {(item as any).additional_dietary_metadata?.nutritional_highlights?.fiber && (
+              <Badge variant="outline" className="text-xs">
+                {(item as any).additional_dietary_metadata.nutritional_highlights.fiber.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.fiber.max}g fiber
               </Badge>
             )}
           </div>
@@ -173,21 +185,25 @@ function SortableMenuItem({
           </div>
           
           {/* Allergens warning */}
-          {(item as any).allergens && (item as any).allergens.length > 0 && (
+          {(item as any).additional_dietary_metadata?.allergen_alert_list && (item as any).additional_dietary_metadata.allergen_alert_list.length > 0 && (
             <div className="text-xs text-red-600">
-              ⚠️ Contains: {(item as any).allergens.join(', ')}
+              ⚠️ Contains: {(item as any).additional_dietary_metadata.allergen_alert_list.join(', ')}
             </div>
           )}
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          value={item.quantity}
-          onChange={(e) => onQuantityChange(item.id, parseInt(e.target.value))}
-          className="w-16 text-center"
-          min={1}
-        />
+        <Select value={item.type} onValueChange={(value) => onTypeChange(item.id, value)}>
+          <SelectTrigger className="w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="mains">Mains</SelectItem>
+            <SelectItem value="sides">Sides</SelectItem>
+            <SelectItem value="salads">Salads</SelectItem>
+            <SelectItem value="sauces">Sauces</SelectItem>
+          </SelectContent>
+        </Select>
         <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)}>
           <Trash2 className="h-4 w-4 text-red-500" />
         </Button>
@@ -248,7 +264,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           id: item.id,
           name: item.name || `Item #${item.id}`, // Fallback name
           price: item.price || 0,
-          quantity: item.quantity || 1,
+          type: item.type || 'mains',
           category: item.category || 'standard'
         }));
       }
@@ -261,7 +277,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   };
 
   // State for selected items
-  const [selectedItems, setSelectedItems] = useState<MenuItemWithQuantity[]>(getMenuItems());
+  const [selectedItems, setSelectedItems] = useState<MenuItemWithType[]>(getMenuItems());
   
   // Debug log to see what selectedItems contains
   useEffect(() => {
@@ -277,7 +293,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   useEffect(() => {
     if (isEditing && menu && menu.items && menuItems.length > 0) {
       console.log("Updating selected items with menu item details");
-      const updatedItems = getMenuItems().map((item: MenuItemWithQuantity) => {
+      const updatedItems = getMenuItems().map((item: MenuItemWithType) => {
         // Try to find matching menu item to get additional details
         // Handle both string and numeric IDs
         const menuItem = menuItems.find((mi: any) => 
@@ -396,11 +412,11 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     }
   };
   
-  // Handle quantity change
-  const handleQuantityChange = (id: string | number, quantity: number) => {
+  // Handle type change
+  const handleTypeChange = (id: string | number, type: string) => {
     setSelectedItems(items => 
       items.map(item => 
-        item.id.toString() === id.toString() ? { ...item, quantity: Math.max(1, quantity) } : item
+        item.id.toString() === id.toString() ? { ...item, type: type } : item
       )
     );
   };
@@ -480,7 +496,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       // Map to the required format for the API
       items: selectedItems.map(item => ({
         id: item.id,
-        quantity: item.quantity
+        type: item.type
       }))
     };
 
@@ -816,7 +832,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                           <SortableMenuItem
                             key={item.id}
                             item={item}
-                            onQuantityChange={handleQuantityChange}
+                            onTypeChange={handleTypeChange}
                             onRemove={handleRemoveItem}
                           />
                         ))}
