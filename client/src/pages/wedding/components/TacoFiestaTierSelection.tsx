@@ -235,52 +235,99 @@ const TacoFiestaTierSelection: React.FC<TacoFiestaTierSelectionProps> = ({
     return flags.length > 0 ? <div className="flex flex-wrap gap-1 mt-1">{flags}</div> : null;
   };
 
-  const MenuItemModal = ({ item }: { item: DatabaseMenuItem }) => (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="p-1 h-auto text-gray-500 hover:text-red-600"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Info className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-gray-900">
-            {item.name}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {item.description && (
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">Description</h4>
-              <p className="text-sm text-gray-600">{item.description}</p>
-            </div>
-          )}
-          
-          {renderDietaryFlags(item)}
-          {renderNutritionalBadges(item)}
-          
-          {item.price && (
-            <div>
-              <h4 className="font-medium text-gray-700 mb-1">Price</h4>
-              <p className="text-sm text-gray-600">${item.price}</p>
-            </div>
-          )}
-          
-          {item.category && (
-            <div>
-              <h4 className="font-medium text-gray-700 mb-1">Category</h4>
-              <p className="text-sm text-gray-600 capitalize">{item.category}</p>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const MenuItemModal = ({ item }: { item: DatabaseMenuItem }) => {
+    const dietaryFlags = [];
+    if (item.is_vegetarian) dietaryFlags.push("Vegetarian");
+    if (item.is_vegan) dietaryFlags.push("Vegan");
+    if (item.is_gluten_free) dietaryFlags.push("Gluten-Free");
+    if (item.is_dairy_free) dietaryFlags.push("Dairy-Free");
+    if (item.is_nut_free) dietaryFlags.push("Nut-Free");
+
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="p-1 h-auto text-gray-500 hover:text-red-600"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm mx-auto max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-gray-900 pr-6">
+              {item.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {item.description && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2">Description</h4>
+                <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+              </div>
+            )}
+            
+            {item.category && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Category</h4>
+                <p className="text-sm text-gray-600 capitalize">{item.category}</p>
+              </div>
+            )}
+
+            {dietaryFlags.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2">Dietary Information</h4>
+                <div className="flex flex-wrap gap-1">
+                  {dietaryFlags.map(flag => (
+                    <Badge key={flag} variant="secondary" className="text-xs bg-green-100 text-green-800">
+                      {flag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {item.nutritional_metadata && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2">Nutritional Information</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {item.nutritional_metadata.calories && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-medium">Calories:</span> {item.nutritional_metadata.calories.min}-{item.nutritional_metadata.calories.max}
+                    </div>
+                  )}
+                  {item.nutritional_metadata.protein && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-medium">Protein:</span> {item.nutritional_metadata.protein.min}-{item.nutritional_metadata.protein.max}g
+                    </div>
+                  )}
+                  {item.nutritional_metadata.carbs && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-medium">Carbs:</span> {item.nutritional_metadata.carbs.min}-{item.nutritional_metadata.carbs.max}g
+                    </div>
+                  )}
+                  {item.nutritional_metadata.fat && (
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-medium">Fat:</span> {item.nutritional_metadata.fat.min}-{item.nutritional_metadata.fat.max}g
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {item.price && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Price</h4>
+                <p className="text-sm text-gray-600">${item.price}</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
 
 
