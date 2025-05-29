@@ -101,12 +101,23 @@ async function generateMenuData() {
 
       const themeKey = menuStructure?.theme_key || `theme_${menu.id}`;
       
-      // Collect all item IDs for this menu
+      // Collect all item IDs for this menu - handle both formats
       const menuItemIds = new Set();
+      
+      // Handle complex structure with categories and available_item_ids
       if (menuStructure?.categories) {
         menuStructure.categories.forEach(category => {
           if (category.available_item_ids) {
             category.available_item_ids.forEach(itemId => menuItemIds.add(itemId));
+          }
+        });
+      }
+      
+      // Handle simple array format: [{"id": "item_id", "type": "category"}, ...]
+      if (Array.isArray(menu.items)) {
+        menu.items.forEach(item => {
+          if (item.id) {
+            menuItemIds.add(item.id);
           }
         });
       }
@@ -118,7 +129,9 @@ async function generateMenuData() {
       
       // Organize items by category for this menu
       const itemsByCategory = {};
+      
       if (menuStructure?.categories) {
+        // Handle complex structure with categories and available_item_ids
         menuStructure.categories.forEach(category => {
           const categoryItems = category.available_item_ids
             .map(itemId => itemsLookup[itemId])
@@ -129,6 +142,29 @@ async function generateMenuData() {
             description: category.description || '',
             selectionLimit: category.selection_limit,
             items: categoryItems
+          };
+        });
+      } else if (Array.isArray(menu.items)) {
+        // Handle simple array format: organize by type field
+        const typeGroups = {};
+        menu.items.forEach(item => {
+          const itemData = itemsLookup[item.id];
+          if (itemData) {
+            const type = item.type || 'other';
+            if (!typeGroups[type]) {
+              typeGroups[type] = [];
+            }
+            typeGroups[type].push(itemData);
+          }
+        });
+        
+        // Convert type groups to proper category structure
+        Object.entries(typeGroups).forEach(([type, items]) => {
+          itemsByCategory[type] = {
+            title: type.charAt(0).toUpperCase() + type.slice(1),
+            description: `${type} items for ${menu.name}`,
+            selectionLimit: null,
+            items: items
           };
         });
       }
@@ -362,7 +398,7 @@ export function filterMenuItemsByDietary(items, dietaryPrefs = [], allergens = [
     console.log(`📊 Summary:`);
     console.log(`   - Menu themes: ${formattedMenus.length}`);
     console.log(`   - Total menu items: ${enrichedItems.length}`);
-    console.log(`   - Categories: ${categories.length}`);
+    console.log(`   - Categories: ${actualCategories.length}`);
     console.log(`   - Dietary flags: ${allDietaryFlags.size}`);
     console.log(`   - Available allergens: ${allAllergens.size}`);
     

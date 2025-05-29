@@ -1,1 +1,1126 @@
-[]
+[
+  {
+    "id": "home_bites_96_oz_box_of_coffee_regular",
+    "name": "Home Bites 96 oz Box of Coffee - Regular",
+    "description": "A large, 96 oz insulated box of regular caffeinated brewed coffee, suitable for serving multiple people.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 5,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Bulk regular coffee. Typically serves 8-12 cups. Nutritional values are for black coffee.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "Freshly brewed regular coffee in a convenient 96 oz serving box. (Nutrition per 8oz serving, black)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "home_bites_96_oz_box_of_coffee_decaf",
+    "name": "Home Bites 96 oz Box of Coffee - Decaf",
+    "description": "A large, 96 oz insulated box of decaffeinated brewed coffee, suitable for serving multiple people.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE",
+      "CAFFEINE_FREE_OPTION"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 5,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Bulk decaf coffee. Typically serves 8-12 cups. Nutritional values are for black coffee.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "Freshly brewed decaf coffee in a 96 oz serving box. (Nutrition per 8oz serving, black)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "starbucks_coffee_traveler_pike_regular",
+    "name": "Starbucks Coffee Traveler - Pike Regular",
+    "description": "A Starbucks Coffee Traveler filled with their signature Pike Place Roast regular caffeinated coffee, holding approximately 96 fl oz.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 5,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Starbucks Pike Place Roast regular coffee in a portable 96 oz traveler. Serves about 12 (8oz) cups. Nutritional values for black coffee.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "Enjoy Starbucks Pike Place Roast regular coffee, serves a group. (Nutrition per 8oz serving, black)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "starbucks_coffee_traveler_pike_decaf",
+    "name": "Starbucks Coffee Traveler - Pike Decaf",
+    "description": "A Starbucks Coffee Traveler filled with their signature Pike Place Roast decaffeinated coffee, holding approximately 96 fl oz.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE",
+      "CAFFEINE_FREE_OPTION"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 5,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Starbucks Pike Place Roast decaf coffee in a portable 96 oz traveler. Serves about 12 (8oz) cups. Nutritional values for black coffee.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "Enjoy Starbucks Decaf Pike Place Roast coffee, serves a group. (Nutrition per 8oz serving, black)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "dunkin_box_o_joe_regular",
+    "name": "Dunkin Box O' Joe - Regular",
+    "description": "A Dunkin' Box O' Joe filled with their Original Blend regular caffeinated coffee, holding approximately 10 (10oz) servings.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 5,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Dunkin' Original Blend regular coffee in a portable box. Nutritional values for black coffee.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "Dunkin's classic regular coffee, ready to serve a crowd. (Nutrition per 10oz serving, black)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "dunkin_box_o_joe_decaf",
+    "name": "Dunkin Box O' Joe - Decaf",
+    "description": "A Dunkin' Box O' Joe filled with their Original Blend decaffeinated coffee, holding approximately 10 (10oz) servings.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE",
+      "CAFFEINE_FREE_OPTION"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 5,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Dunkin' Original Blend decaf coffee in a portable box. Nutritional values for black coffee.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "Dunkin's classic decaf coffee, ready to serve a crowd. (Nutrition per 10oz serving, black)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "starbucks_ready_to_drink_coffee_espresso_cream_6_5oz",
+    "name": "Starbucks Ready to Drink Coffee, Espresso & Cream, 6.5oz Cans",
+    "description": "A canned Starbucks ready-to-drink beverage blending bold espresso with rich cream and sugar.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGETARIAN",
+      "GLUTEN_FREE"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 3,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 24,
+        "min": 20,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 6,
+        "min": 4,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 150,
+        "min": 130,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A sweet and creamy canned espresso beverage.",
+    "suitableForDiets": [
+      "GLUTEN_FREE_DIET"
+    ],
+    "customerGuidance": "A chilled, sweet, and creamy espresso drink for a quick coffee fix.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "dunkin_hot_chocolate_box_o_joe_hot",
+    "name": "Dunkin Hot Chocolate -Box O'Joe Hot",
+    "description": "A Dunkin' Box O' Joe filled with their classic hot chocolate, holding approximately 10 (10oz) servings.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": true,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGETARIAN",
+      "GLUTEN_FREE_OPTION"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY (sodium caseinate, nonfat dry milk)",
+      "CONTAINS_SOY (soy lecithin)",
+      "CONTAINS_COCONUT (coconut oil)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 9,
+        "min": 6,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 45,
+        "min": 35,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 250,
+        "min": 200,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Creamy hot chocolate served in a bulk container. Gluten status can vary for hot chocolate mixes.",
+    "suitableForDiets": [],
+    "customerGuidance": "Rich and comforting Dunkin' hot chocolate, perfect for sharing. (Nutrition per 10oz serving)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "home_bites_96_oz_box_of_tea_assorted_flavors",
+    "name": "Home Bites 96 oz Box of Tea - Assorted Flavors",
+    "description": "A large, 96 oz insulated box of hot water accompanied by a selection of assorted tea bags (e.g., black, green, herbal).",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "LOW_CALORIE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 2,
+        "min": 0,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Bulk hot water with a variety of tea bags for individual selection. Nutritional values for plain, unsweetened tea.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET",
+      "KETO_FRIENDLY",
+      "PALEO_DIET"
+    ],
+    "customerGuidance": "A selection of teas with hot water, served in a convenient 96 oz box. (Nutrition per 8oz serving, plain tea)",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "lucky_jack_cold_brew_coffee_vanilla_draft_pour_nitro_latte_oat_milk_cold",
+    "name": "Lucky Jack Cold Brew Coffee Vanilla - Draft Pour Nitro Latte w/Oat Milk - cold",
+    "description": "A canned nitro cold brew coffee latte from Lucky Jack, flavored with vanilla and made with oat milk.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": false,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "DAIRY_FREE"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_OATS (may or may not be certified gluten-free)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 4,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 18,
+        "min": 12,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 120,
+        "min": 80,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A creamy, dairy-free nitro cold brew latte with vanilla flavor. Check oat milk source for gluten-free certification if required.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "A smooth and creamy vanilla nitro cold brew latte made with oat milk.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "juice_orange",
+    "name": "Juice - Orange",
+    "description": "Classic orange juice, typically 100% juice, served chilled.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "VITAMIN_C_RICH"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 29,
+        "min": 25,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 120,
+        "min": 100,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Standard orange juice. Nutritional values per 8oz (240ml) serving.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "Refreshing and classic 100% orange juice.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "juice_apple",
+    "name": "Juice - Apple",
+    "description": "Classic apple juice, typically 100% juice, served chilled.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 32,
+        "min": 28,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 130,
+        "min": 110,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Standard apple juice. Nutritional values per 8oz (240ml) serving.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "Sweet and refreshing 100% apple juice.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "juice_grapefruit",
+    "name": "Juice - Grapefruit",
+    "description": "Tart and tangy grapefruit juice, typically 100% juice, served chilled.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "VITAMIN_C_RICH"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 26,
+        "min": 22,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1.5,
+        "min": 1,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 110,
+        "min": 90,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Standard grapefruit juice. Nutritional values per 8oz (240ml) serving. Can interact with certain medications.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "Tangy and invigorating 100% grapefruit juice. Note: may interact with some medications.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "juice_cranberry",
+    "name": "Juice - Cranberry",
+    "description": "Tart cranberry juice, often a juice cocktail blend due to cranberry's natural tartness.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 35,
+        "min": 28,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 140,
+        "min": 110,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Typically cranberry juice cocktail. Nutritional values per 8oz (240ml) serving reflect this.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "Crisp and tart cranberry juice beverage.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "juice_tomato",
+    "name": "Juice - Tomato",
+    "description": "Savory tomato juice, often lightly seasoned.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "SOURCE_OF_LYCOPENE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0.5,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 12,
+        "min": 9,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 2.5,
+        "min": 1.5,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 50,
+        "min": 40,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "Standard tomato juice. Nutritional values per 8oz (240ml) serving.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "Savory and wholesome tomato juice.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "juice_v8_classic",
+    "name": "Juice - V8 Classic",
+    "description": "V8 Original 100% Vegetable Juice, a blend of eight vegetables.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "SOURCE_OF_VITAMINS"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 11,
+        "min": 9,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 2.5,
+        "min": 1.5,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 3,
+        "min": 2,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 55,
+        "min": 45,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A classic vegetable juice blend. Nutritional values per 8oz (240ml) serving.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "A savory blend of 8 vegetables, packed with nutrients.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "v8_energy_peach_mango",
+    "name": "V8 +ENERGY Peach Mango",
+    "description": "A V8 +Energy drink flavored with peach and mango, providing steady energy from black and green tea.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "CONTAINS_CAFFEINE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 13,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 55,
+        "min": 45,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A fruit and vegetable juice beverage with added caffeine from tea. Nutritional values per 8oz can.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "A refreshing peach mango energy drink with caffeine from tea.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "v8_energy_black_cherry",
+    "name": "V8 +ENERGY Black Cherry",
+    "description": "A V8 +Energy drink flavored with black cherry, providing steady energy from black and green tea.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "CONTAINS_CAFFEINE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 13,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 55,
+        "min": 45,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A fruit and vegetable juice beverage with added caffeine from tea. Nutritional values per 8oz can.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "A delicious black cherry energy drink with caffeine from tea.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "v8_energy_pomegranate_blueberry",
+    "name": "V8 +ENERGY Pomegranate Blueberry",
+    "description": "A V8 +Energy drink flavored with pomegranate and blueberry, providing steady energy from black and green tea.",
+    "category": "Beverage",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": true,
+    "isGlutenFree": true,
+    "isDairyFree": true,
+    "isNutFree": true,
+    "dietaryFlags": [
+      "VEGAN",
+      "VEGETARIAN",
+      "GLUTEN_FREE",
+      "DAIRY_FREE",
+      "NUT_FREE",
+      "CONTAINS_CAFFEINE"
+    ],
+    "allergenAlerts": [],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 0,
+        "min": 0,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 13,
+        "min": 10,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 1,
+        "min": 0,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 55,
+        "min": 45,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A fruit and vegetable juice beverage with added caffeine from tea. Nutritional values per 8oz can.",
+    "suitableForDiets": [
+      "VEGAN_DIET",
+      "VEGETARIAN_DIET",
+      "GLUTEN_FREE_DIET",
+      "DAIRY_FREE_DIET"
+    ],
+    "customerGuidance": "A tasty pomegranate blueberry energy drink with caffeine from tea.",
+    "availableLotSizes": [],
+    "image": null
+  }
+]

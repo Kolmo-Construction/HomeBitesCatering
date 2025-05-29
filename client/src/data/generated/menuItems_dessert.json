@@ -1,1 +1,169 @@
-[]
+[
+  {
+    "id": "greek_yogurt_parfait_2_percent_fage_granola_berries",
+    "name": "Greek Yogurt Parfait - 2% FAGE yogurt, granola, berries",
+    "description": "A layered parfait featuring FAGE Total 2% Milkfat Plain Greek Yogurt, crunchy granola, and fresh mixed berries.",
+    "category": "Snack / Dessert",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "VEGETARIAN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY",
+      "CONTAINS_NUTS (from granola)",
+      "MAY_CONTAIN_WHEAT (from granola)",
+      "MAY_CONTAIN_GLUTEN (from granola)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 15,
+        "min": 8,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 50,
+        "min": 30,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 25,
+        "min": 18,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 450,
+        "min": 280,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A wholesome and satisfying parfait. Granola type determines gluten and specific nut content.",
+    "suitableForDiets": [],
+    "customerGuidance": "Creamy Greek yogurt layered with crunchy granola and fresh berries. Check granola for specific allergens.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "greek_yogurt_parfait_0_percent_fage_granola_berries",
+    "name": "Greek Yogurt Parfait -0% FAGE yogurt, granola, berries",
+    "description": "A layered parfait featuring FAGE Total 0% Milkfat Nonfat Plain Greek Yogurt, crunchy granola, and fresh mixed berries.",
+    "category": "Snack / Dessert",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "HIGH_PROTEIN",
+      "LOW_FAT",
+      "VEGETARIAN"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_DAIRY",
+      "CONTAINS_NUTS (from granola)",
+      "MAY_CONTAIN_WHEAT (from granola)",
+      "MAY_CONTAIN_GLUTEN (from granola)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 10,
+        "min": 2,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 50,
+        "min": 30,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 8,
+        "min": 4,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 28,
+        "min": 20,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 400,
+        "min": 250,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A lighter parfait option with nonfat Greek yogurt. Granola type determines gluten and specific nut content.",
+    "suitableForDiets": [],
+    "customerGuidance": "A delicious nonfat Greek yogurt parfait with granola and berries. Check granola for specific allergens.",
+    "availableLotSizes": [],
+    "image": null
+  },
+  {
+    "id": "bread_pudding_breakfast",
+    "name": "Bread pudding",
+    "description": "A baked dessert or sweet breakfast dish made with bread, milk or cream, eggs, sugar, and often spices like cinnamon and nutmeg. May include raisins or other additions.",
+    "category": "Sweet Breakfast / Dessert",
+    "price": 0,
+    "upcharge": 0,
+    "isVegetarian": true,
+    "isVegan": false,
+    "isGlutenFree": false,
+    "isDairyFree": false,
+    "isNutFree": false,
+    "dietaryFlags": [
+      "VEGETARIAN",
+      "COMFORT_FOOD"
+    ],
+    "allergenAlerts": [
+      "CONTAINS_WHEAT",
+      "CONTAINS_GLUTEN",
+      "CONTAINS_DAIRY (milk/cream, butter)",
+      "CONTAINS_EGG",
+      "MAY_CONTAIN_NUTS (if added)"
+    ],
+    "nutritionalHighlights": {
+      "fat": {
+        "max": 20,
+        "min": 10,
+        "unit": "g"
+      },
+      "carbs": {
+        "max": 70,
+        "min": 40,
+        "unit": "g"
+      },
+      "fiber": {
+        "max": 4,
+        "min": 1,
+        "unit": "g"
+      },
+      "protein": {
+        "max": 12,
+        "min": 7,
+        "unit": "g"
+      },
+      "calories": {
+        "max": 500,
+        "min": 300,
+        "unit": "kcal"
+      }
+    },
+    "preparationNotes": "A rich, custard-like bread-based dish. Often served warm. May contain nuts.",
+    "suitableForDiets": [],
+    "customerGuidance": "Warm and comforting bread pudding, a sweet treat. (Nutrition per serving)",
+    "availableLotSizes": [],
+    "image": null
+  }
+]
