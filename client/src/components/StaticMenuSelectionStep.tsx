@@ -12,7 +12,7 @@ import {
   getMenuItemsByCategory,
   filterMenuItemsByDietary,
   dietaryFilters
-} from "@/data/generated";
+} from "@/data/generated/index.js";
 
 interface StaticMenuSelectionStepProps {
   onPrevious: () => void;

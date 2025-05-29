@@ -13,6 +13,7 @@ import WeddingBasicInformationStep from "./components/WeddingBasicInformationSte
 import WeddingEventDetailsStep from "./components/WeddingEventDetailsStep";
 import WeddingServiceStyleStep from "./components/WeddingServiceStyleStep"; // <-- IMPORT NEW STEP
 import WeddingMenuSelectionStep from "./components/WeddingMenuSelectionStep";
+import StaticMenuSelectionStep from "../../components/StaticMenuSelectionStep";
 import WeddingAppetizerQuestionStep from "./components/WeddingAppetizerQuestionStep";
 import WeddingAppetizersStep from "./components/WeddingAppetizersStep";
 import WeddingFoodTruckMenuStep from "./components/WeddingFoodTruckMenuStep";
@@ -462,10 +463,8 @@ export default function WeddingInquiryForm() {
                     <SimpleDietaryDashboard />
                   </div>
                   
-                  {/* Menu Selection Below */}
-                  <WeddingMenuSelectionStep
-                    selectedTheme={selectedTheme}
-                    guestCount={guestCount}
+                  {/* Enhanced Menu Selection with Rich Database Data */}
+                  <StaticMenuSelectionStep
                     onPrevious={handlePrevious}
                     onNext={handleNext}
                   />
