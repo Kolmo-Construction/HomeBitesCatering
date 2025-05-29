@@ -160,13 +160,16 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
         
         // Convert to MenuItemWithQuantity format
         // We'll set quantity to 1 for now since the theme structure doesn't store quantities
-        return allItemIds.map((itemId: string) => ({
+        const parsedItems = allItemIds.map((itemId: string) => ({
           id: itemId,
           name: itemId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert ID to display name
           price: 0, // Will be populated when menu items are loaded
           quantity: 1,
           category: 'standard'
         }));
+        
+        console.log("Parsed menu items from categories:", parsedItems);
+        return parsedItems;
       }
       
       // Handle legacy array format
@@ -190,6 +193,11 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
 
   // State for selected items
   const [selectedItems, setSelectedItems] = useState<MenuItemWithQuantity[]>(getMenuItems());
+  
+  // Debug log to see what selectedItems contains
+  useEffect(() => {
+    console.log("Selected items state updated:", selectedItems);
+  }, [selectedItems]);
   
   // Get all menu items
   const { data: menuItems = [], isLoading: isLoadingMenuItems } = useQuery({
@@ -546,7 +554,9 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                               <Input 
                                 placeholder="e.g., lebanese_cuisine"
                                 {...field}
-                                value={field.value || `custom_${form.watch("name")?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
                               />
                             </FormControl>
                             <p className="text-xs text-gray-500 mt-1">Unique theme identifier (e.g., "lebanese_cuisine")</p>
@@ -566,7 +576,9 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                               <Input 
                                 placeholder="e.g., lebanese_fiesta_deluxe_v1"
                                 {...field}
-                                value={field.value || `custom_package_${Date.now()}`}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
                               />
                             </FormControl>
                             <p className="text-xs text-gray-500 mt-1">Unique package identifier</p>
@@ -586,7 +598,9 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                               <Input 
                                 placeholder="e.g., Lebanese Fiesta Deluxe Package"
                                 {...field}
-                                value={field.value || form.watch("name") || ""}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
                               />
                             </FormControl>
                             <p className="text-xs text-gray-500 mt-1">Display name for the package</p>
