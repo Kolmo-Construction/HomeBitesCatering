@@ -107,8 +107,77 @@ function SortableMenuItem({
       </div>
       <div className="flex-1">
         <div className="font-medium">{item.name}</div>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 mb-1">
           {formatCurrency(item.price / 100)} • {getCategoryDisplayName(item.category)}
+        </div>
+        
+        {/* Enhanced metadata display */}
+        <div className="text-xs text-gray-600 space-y-1">
+          {(item as any).description && (
+            <div className="italic">{(item as any).description}</div>
+          )}
+          
+          <div className="flex flex-wrap gap-2">
+            {(item as any).origin && (
+              <Badge variant="outline" className="text-xs">
+                Origin: {(item as any).origin}
+              </Badge>
+            )}
+            
+            {(item as any).calories && (
+              <Badge variant="outline" className="text-xs">
+                {(item as any).calories} cal
+              </Badge>
+            )}
+            
+            {(item as any).protein && (
+              <Badge variant="outline" className="text-xs">
+                {(item as any).protein}g protein
+              </Badge>
+            )}
+            
+            {(item as any).carbs && (
+              <Badge variant="outline" className="text-xs">
+                {(item as any).carbs}g carbs
+              </Badge>
+            )}
+          </div>
+          
+          {/* Dietary flags */}
+          <div className="flex flex-wrap gap-1">
+            {(item as any).isVegetarian && (
+              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                Vegetarian
+              </Badge>
+            )}
+            {(item as any).isVegan && (
+              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                Vegan
+              </Badge>
+            )}
+            {(item as any).isGlutenFree && (
+              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                Gluten-Free
+              </Badge>
+            )}
+            {(item as any).isDairyFree && (
+              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+                Dairy-Free
+              </Badge>
+            )}
+            {(item as any).isNutFree && (
+              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                Nut-Free
+              </Badge>
+            )}
+          </div>
+          
+          {/* Allergens warning */}
+          {(item as any).allergens && (item as any).allergens.length > 0 && (
+            <div className="text-xs text-red-600">
+              ⚠️ Contains: {(item as any).allergens.join(', ')}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -219,7 +288,25 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
             ...item,
             name: menuItem.name || item.name,
             price: menuItem.price || item.price,
-            category: menuItem.category || item.category
+            category: menuItem.category || item.category,
+            description: menuItem.description,
+            origin: menuItem.origin,
+            calories: menuItem.calories,
+            protein: menuItem.protein,
+            carbs: menuItem.carbs,
+            fat: menuItem.fat,
+            fiber: menuItem.fiber,
+            sugar: menuItem.sugar,
+            sodium: menuItem.sodium,
+            isVegetarian: menuItem.isVegetarian,
+            isVegan: menuItem.isVegan,
+            isGlutenFree: menuItem.isGlutenFree,
+            isDairyFree: menuItem.isDairyFree,
+            isNutFree: menuItem.isNutFree,
+            allergens: menuItem.allergens,
+            spiceLevel: menuItem.spiceLevel,
+            prepTime: menuItem.prepTime,
+            servingSize: menuItem.servingSize
           };
         }
         return item;
