@@ -49,9 +49,9 @@ export const WEDDING_FORM_STEPS: FormStep[] = [
   },
   {
     id: 7,
-    title: "Budget & Timeline",
-    description: "Help us create the perfect proposal",
-    fields: ['budgetInfo', 'timeline'],
+    title: "Timeline & Planning",
+    description: "Help us understand your planning stage",
+    fields: ['timeline'],
     isRequired: false
   },
   {
