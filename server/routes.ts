@@ -827,22 +827,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Items field type:', typeof req.body.items);
       console.log('Items field value:', req.body.items);
       
-      // For form_builder menus, we need to handle items differently
-      let menuData;
-      if (req.body.type === 'form_builder') {
-        // For form_builder menus, items don't need quantity, just add default quantity of 1
-        const itemsWithQuantity = req.body.items.map((item: any) => ({
-          id: item.id,
-          quantity: item.quantity || 1,
-          type: item.type
-        }));
-        menuData = insertMenuSchema.parse({
-          ...req.body,
-          items: itemsWithQuantity
-        });
-      } else {
-        menuData = insertMenuSchema.parse(req.body);
-      }
+      // Parse the incoming menu data with schema that now has default quantity
+      const menuData = insertMenuSchema.parse(req.body);
       
       // If items is just a simple array of {id, quantity}, convert to MenuPackageStructure
       if (Array.isArray(menuData.items) && menuData.items.length > 0) {

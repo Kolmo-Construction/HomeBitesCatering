@@ -197,7 +197,7 @@ export const menus = pgTable("menus", {
 // Schema for simple menu items array (id and quantity)
 const simpleMenuItemsSchema = z.array(z.object({
   id: z.union([z.string(), z.number()]), // Support both string and number IDs
-  quantity: z.number().optional(), // Make quantity optional for form_builder menus
+  quantity: z.number().default(1), // Default quantity to 1 for form_builder menus
   type: z.string().optional() // Allow type field for categorization
 }));
 
