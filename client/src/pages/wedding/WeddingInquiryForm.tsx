@@ -260,12 +260,31 @@ export default function WeddingInquiryForm() {
                 break;
         }
     } else if (currentStepKey === "menuSelection") {
-      if (currentRequestedTheme === "hors_doeuvres") { // This theme implies appetizers are central
-        setValue("wantsAppetizers", true);
-        nextStepKey = "appetizers";
-      } else {
-        nextStepKey = "appetizerQuestion";
+      // Route to tier selection based on selected theme
+      switch (currentRequestedTheme) {
+        case "theme_21":
+          nextStepKey = "tacoFiestaTierSelection";
+          break;
+        case "custom_american_bbq":
+          nextStepKey = "americanBBQTierSelection";
+          break;
+        case "theme_23":
+          nextStepKey = "greekTierSelection";
+          break;
+        case "theme_24":
+          nextStepKey = "kebabPartyTierSelection";
+          break;
+        case "hors_doeuvres":
+          setValue("wantsAppetizers", true);
+          nextStepKey = "appetizers";
+          break;
+        default:
+          nextStepKey = "appetizerQuestion";
+          break;
       }
+    } else if (["tacoFiestaTierSelection", "americanBBQTierSelection", "greekTierSelection", "kebabPartyTierSelection"].includes(currentStepKey)) {
+      // After tier selection, proceed to appetizer question
+      nextStepKey = "appetizerQuestion";
     } else if (currentStepKey === "appetizerQuestion") {
       nextStepKey = watch("wantsAppetizers") ? "appetizers" : "dessertQuestion";
     } else if (currentStepKey === "appetizers") {
@@ -331,11 +350,31 @@ export default function WeddingInquiryForm() {
 
     } else if (currentStepKey === "serviceStyleSelection") {
         prevStepKey = "eventDetails";
+    } else if (["tacoFiestaTierSelection", "americanBBQTierSelection", "greekTierSelection", "kebabPartyTierSelection"].includes(currentStepKey)) {
+        // From tier selection, go back to menu selection
+        prevStepKey = "menuSelection";
     } else if (currentStepKey === "appetizerQuestion") {
-        // If coming back to appetizerQuestion, the previous step was menuSelection (unless it was a theme like hors_doeuvres)
-        // or one of the specialized menus that might not have a general menuSelection.
-        // The serviceStyleSelection step is now more central.
-        if (currentRequestedTheme === "hors_doeuvres" && currentServiceStyle !== "cocktail_party") {
+        // Check if we came from a tier selection or directly from menu selection
+        if (["theme_21", "custom_american_bbq", "theme_23", "theme_24"].includes(currentRequestedTheme)) {
+            // We came from a tier selection, determine which one
+            switch (currentRequestedTheme) {
+                case "theme_21":
+                    prevStepKey = "tacoFiestaTierSelection";
+                    break;
+                case "custom_american_bbq":
+                    prevStepKey = "americanBBQTierSelection";
+                    break;
+                case "theme_23":
+                    prevStepKey = "greekTierSelection";
+                    break;
+                case "theme_24":
+                    prevStepKey = "kebabPartyTierSelection";
+                    break;
+                default:
+                    prevStepKey = "menuSelection";
+                    break;
+            }
+        } else if (currentRequestedTheme === "hors_doeuvres" && currentServiceStyle !== "cocktail_party") {
              prevStepKey = "menuSelection"; // hors_doeuvres theme selected in menuSelection
         } else {
              prevStepKey = "menuSelection"; // Default from appetizerQuestion
