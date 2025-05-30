@@ -175,6 +175,7 @@ function AppContent() {
           <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
           <Route path="/calculator-test" component={CalculatorTest} />
           <Route path="/dietary-demo" component={DietaryDemo} />
+          <Route path="/database-menus" component={DatabaseMenuDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
           <Route path="/wedding-inquiry" component={WeddingInquiryForm} />

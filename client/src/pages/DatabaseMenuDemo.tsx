@@ -76,9 +76,9 @@ const DatabaseMenuDemo = () => {
                       Category: {item.category}
                     </div>
                     
-                    {item.allergenAlerts && item.allergenAlerts.length > 0 && (
+                    {item.allergens && item.allergens.length > 0 && (
                       <div className="mt-2 text-xs text-red-600">
-                        ⚠️ {item.allergenAlerts.slice(0, 2).join(', ')}
+                        ⚠️ {item.allergens.slice(0, 2).join(', ')}
                       </div>
                     )}
                   </div>
