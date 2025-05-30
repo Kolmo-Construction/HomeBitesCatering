@@ -153,32 +153,34 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {Object.keys(themeData).map((themeKey) => {
-            const theme = themeData[themeKey as keyof typeof themeData];
-            return (
-              <Card
-                key={themeKey}
-                className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
-                  selectedTheme === themeKey ? "ring-4 ring-pink-500 ring-offset-2 scale-105" : "border-gray-200"
-                }`}
-                onClick={() => handleThemeSelection(themeKey)}
-              >
-                <CardHeader className="bg-gray-50 p-4">
-                    <CardTitle className="text-xl font-semibold text-gray-800">{theme.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <p className="text-gray-600 mb-4 text-sm">{theme.description}</p>
-                  <Button
-                    variant={selectedTheme === themeKey ? "default" : "outline"}
-                    size="sm"
-                    className={`w-full ${selectedTheme === themeKey ? 'bg-pink-600 hover:bg-pink-700' : 'text-pink-600 border-pink-600 hover:bg-pink-50'}`}
-                  >
-                    {selectedTheme === themeKey ? "Selected Theme" : "Select This Theme"}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {Object.entries(themeData).map(([themeKey, theme]) => (
+            <Card
+              key={themeKey}
+              className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+                selectedTheme === themeKey ? "ring-4 ring-pink-500 ring-offset-2 scale-105" : "border-gray-200"
+              }`}
+              onClick={() => handleThemeSelection(themeKey)}
+            >
+              <CardHeader className="bg-gray-50 p-4">
+                <CardTitle className="text-xl font-semibold text-gray-800">{theme.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <p className="text-gray-600 mb-4 text-sm">{theme.description}</p>
+                {generatedMenusByTheme[themeKey] && (
+                  <div className="text-xs text-gray-500 mb-3">
+                    {generatedMenusByTheme[themeKey].totalItemCount} menu items
+                  </div>
+                )}
+                <Button
+                  variant={selectedTheme === themeKey ? "default" : "outline"}
+                  size="sm"
+                  className={`w-full ${selectedTheme === themeKey ? 'bg-pink-600 hover:bg-pink-700' : 'text-pink-600 border-pink-600 hover:bg-pink-50'}`}
+                >
+                  {selectedTheme === themeKey ? "Selected Theme" : "Select This Theme"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
         <div className="flex justify-between mt-10">
           <Button type="button" variant="outline" onClick={onPrevious} className="flex items-center px-6 py-3 text-lg">
