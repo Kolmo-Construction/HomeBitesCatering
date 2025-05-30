@@ -127,7 +127,7 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
     return acc;
   }, {} as any);
 
-  const themeData = { ...weddingThemeMenuData, ...databaseThemes };
+  const themeData = databaseThemes;
 
   const handleThemeSelection = (themeKey: string) => {
     setValue("requestedTheme", themeKey);
