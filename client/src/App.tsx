@@ -36,6 +36,7 @@ import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
+import DatabaseMenuDemo from "@/pages/DatabaseMenuDemo";
 
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct

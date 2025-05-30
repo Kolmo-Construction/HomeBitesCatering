@@ -29,6 +29,7 @@ import WeddingEquipmentStep from "./components/WeddingEquipmentStep";
 import WeddingDietaryRestrictionsStep from "./components/WeddingDietaryRestrictionsStep";
 // import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
 import SimpleDietaryDashboard from "./components/SimpleDietaryDashboard";
+import DatabaseMenuThemesStep from "./components/DatabaseMenuThemesStep";
 // WeddingReviewStep would be the component for the "review" step
 // import WeddingReviewStep from "./components/WeddingReviewStep";
 

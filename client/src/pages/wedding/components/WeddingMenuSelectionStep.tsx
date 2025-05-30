@@ -43,6 +43,18 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
     }
   }, [formSelectedPackages, setValue]);
 
+  // Add database themes to the static theme data
+  const databaseThemes = Object.entries(generatedMenusByTheme).reduce((acc, [key, theme]) => {
+    acc[key] = {
+      title: theme.name,
+      description: theme.description || `Experience authentic ${theme.name} cuisine for your wedding.`,
+      packages: []
+    };
+    return acc;
+  }, {} as any);
+
+  const themeData = { ...weddingThemeMenuData, ...databaseThemes };
+
   const handleThemeSelection = (themeKey: string) => {
     setValue("requestedTheme", themeKey);
     setValue("selectedPackages", { ...formSelectedPackages, [themeKey]: undefined });
@@ -51,89 +63,8 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
   };
 
   const currentWeddingThemeDetails = selectedTheme
-    ? combinedThemeData[selectedTheme as keyof typeof combinedThemeData]
+    ? themeData[selectedTheme as keyof typeof themeData]
     : null;
-
-  // Merge static themes with database-generated themes
-  const getDatabaseThemeAsWeddingTheme = (themeKey: string, theme: any) => {
-    return {
-      title: theme.name,
-      description: theme.description || `Experience authentic ${theme.name} cuisine for your wedding.`,
-      packages: [
-        {
-          id: `${themeKey}_bronze`,
-          name: "Bronze Package",
-          price: 32.00,
-          description: `Classic ${theme.name} selections with essential menu items.`,
-          limits: { mains: 2, sides: 3, salads: 1, sauces: 2 }
-        },
-        {
-          id: `${themeKey}_silver`, 
-          name: "Silver Package",
-          price: 38.00,
-          description: `Enhanced ${theme.name} experience with additional choices.`,
-          limits: { mains: 3, sides: 4, salads: 2, sauces: 3 }
-        },
-        {
-          id: `${themeKey}_gold`,
-          name: "Gold Package", 
-          price: 46.00,
-          description: `Premium ${theme.name} celebration with full menu access.`,
-          limits: { mains: 4, sides: 5, salads: 2, sauces: 4 }
-        }
-      ],
-      categories: {
-        mains: {
-          title: "Main Courses",
-          description: "Select your main course options",
-          items: theme.allItems?.filter((item: DatabaseMenuItem) => 
-            item.category.toLowerCase().includes('main') || 
-            item.category.toLowerCase().includes('entree') ||
-            item.category.toLowerCase().includes('protein')
-          ) || []
-        },
-        sides: {
-          title: "Side Dishes", 
-          description: "Choose your side dishes",
-          items: theme.allItems?.filter((item: DatabaseMenuItem) => 
-            item.category.toLowerCase().includes('side') ||
-            item.category.toLowerCase().includes('vegetable')
-          ) || []
-        },
-        salads: {
-          title: "Salads",
-          description: "Fresh salad selections", 
-          items: theme.allItems?.filter((item: DatabaseMenuItem) => 
-            item.category.toLowerCase().includes('salad')
-          ) || []
-        },
-        sauces: {
-          title: "Sauces & Condiments",
-          description: "Enhance your meal with our signature sauces",
-          items: theme.allItems?.filter((item: DatabaseMenuItem) => 
-            item.category.toLowerCase().includes('sauce') ||
-            item.category.toLowerCase().includes('condiment') ||
-            item.category.toLowerCase().includes('salsa') ||
-            item.category.toLowerCase().includes('dip')
-          ) || []
-        }
-      }
-    };
-  };
-
-  // Combine static and generated themes
-  const combinedThemeData = {
-    ...weddingThemeMenuData,
-    // Add database themes
-    ...Object.fromEntries(
-      Object.entries(generatedMenusByTheme).map(([key, theme]) => [
-        key,
-        getDatabaseThemeAsWeddingTheme(key, theme)
-      ])
-    )
-  };
-
-  const themeData = combinedThemeData || {};
 
   if (!currentWeddingThemeDetails) {
     return (
