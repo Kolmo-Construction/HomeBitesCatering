@@ -1,695 +1,553 @@
-// src/pages/wedding/WeddingInquiryForm.tsx
 import React, { useState } from "react";
-import { useForm, FormProvider } from "react-hook-form";
-import { Helmet } from "react-helmet";
-
-// Import UI Components
+import { useForm } from "react-hook-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar, Users, MapPin, Clock, Utensils, Info, ChevronRight, ChevronLeft } from "lucide-react";
 
-// Import ALL step components
-import WeddingBasicInformationStep from "./components/WeddingBasicInformationStep";
-import WeddingEventDetailsStep from "./components/WeddingEventDetailsStep";
-import WeddingServiceStyleStep from "./components/WeddingServiceStyleStep"; // <-- IMPORT NEW STEP
-import WeddingMenuSelectionStep from "./components/WeddingMenuSelectionStep";
-import StaticMenuSelectionStep from "../../components/StaticMenuSelectionStep";
-import WeddingAppetizerQuestionStep from "./components/WeddingAppetizerQuestionStep";
-import WeddingAppetizersStep from "./components/WeddingAppetizersStep";
-import WeddingFoodTruckMenuStep from "./components/WeddingFoodTruckMenuStep";
-import WeddingSandwichFactoryMenuStep from "./components/WeddingSandwichFactoryMenuStep";
-import WeddingBreakfastMenuStep from "./components/WeddingBreakfastMenuStep";
-import WeddingDessertQuestionStep from "./components/WeddingDessertQuestionStep";
-import WeddingDessertsStep from "./components/WeddingDessertsStep";
-import WeddingBeverageQuestionStep from "./components/WeddingBeverageQuestionStep";
-import WeddingNonAlcoholicBeveragesStep from "./components/WeddingNonAlcoholicBeveragesStep";
-import WeddingAlcoholicBeveragesStep from "./components/WeddingAlcoholicBeveragesStep";
-import WeddingEquipmentQuestionStep from "./components/WeddingEquipmentQuestionStep";
-import WeddingEquipmentStep from "./components/WeddingEquipmentStep";
-import WeddingDietaryRestrictionsStep from "./components/WeddingDietaryRestrictionsStep";
-// import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
-import SimpleDietaryDashboard from "./components/SimpleDietaryDashboard";
-import DatabaseMenuThemesStep from "./components/DatabaseMenuThemesStep";
-import TacoFiestaTierSelection from "./components/TacoFiestaTierSelection";
-import AmericanBBQTierSelection from "./components/AmericanBBQTierSelection";
-import GreekTierSelection from "./components/GreekTierSelection";
-import KebabPartyTierSelection from "./components/KebabPartyTierSelection";
-// WeddingReviewStep would be the component for the "review" step
-// import WeddingReviewStep from "./components/WeddingReviewStep";
+// Import the generated menu data from the database
+import { menusByTheme, allMenuItems } from "@/data/generated";
 
-
-// Import Wedding-Specific Types
-import {
-  WeddingInquiryFormData,
-  WeddingFormStep,
-  EventType as LocalEventType, 
-} from "./types/weddingFormTypes";
-
-// --- Helper Components (Progress Bar, Header) ---
-const WeddingFormHeader = () => {
-  return (
-    <div className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-6 mb-8">
-      <div className="container mx-auto">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-3 text-center">
-          Plan Your Dream Wedding
-        </h1>
-        <p className="text-lg md:text-xl text-center max-w-2xl mx-auto">
-          Tell us about your special day, and we'll help create an unforgettable culinary experience.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-const FormProgressBar = ({
-  currentStepNumber,
-  totalSteps,
-  currentStepKey,
-}: {
-  currentStepNumber: number;
-  totalSteps: number;
-  currentStepKey: string;
-}) => {
-  const progressPercentage = totalSteps > 0 ? (currentStepNumber / totalSteps) * 100 : 0;
-  const formatStepName = (key: string) => {
-    // Simple formatter, can be expanded
-    if (key === "serviceStyleSelection") return "Service Style";
-    if (key === "dietaryGuidance") return "Dietary Preferences";
-    return key
-      .replace(/([A-Z])/g, ' $1') 
-      .replace(/^./, (str) => str.toUpperCase()); 
-  };
-  const stepName = formatStepName(currentStepKey);
-
-  return (
-    <div className="w-full mb-8 px-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">
-          Step {currentStepNumber} of {totalSteps}: <span className="font-semibold text-pink-600">{stepName}</span>
-        </span>
-        <span className="text-sm font-medium text-gray-700">
-          {Math.floor(progressPercentage)}% Complete
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
-        <div
-          className="bg-pink-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-          style={{ width: `${progressPercentage}%` }}
-        ></div>
-      </div>
-    </div>
-  );
-};
-
-// --- Main Wedding Inquiry Form Orchestrator ---
-export default function WeddingInquiryForm() {
-  const weddingSteps: WeddingFormStep[] = [
-    "basicInfo",
-    "eventDetails",
-    "dietaryGuidance", // <-- ADDED NEW DIETARY STEP
-    "serviceStyleSelection", // <-- ADDED NEW STEP IN SEQUENCE
-    "menuSelection",
-    "appetizerQuestion",
-    "appetizers",
-    "foodTruckMenu",
-    "sandwichFactoryMenu",
-    "breakfastMenu",
-    "dessertQuestion",
-    "desserts",
-    "beverageQuestion",
-    "nonAlcoholicBeverages",
-    "alcoholicBeverages",
-    "equipmentQuestion",
-    "equipment",
-    "dietaryRestrictions",
-    "review",
-  ];
-
-  const methods = useForm<WeddingInquiryFormData>({
-    defaultValues: {
-      eventType: "Wedding",
-      companyName: "",
-      billingAddress: { street: "", street2: "", city: "", state: "", zipCode: "" },
-      contactName: { firstName: "", lastName: "" },
-      email: "",
-      phone: "",
-      eventDate: "",
-      hasPromoCode: false,
-      promoCode: "",
-      venueSecured: false,
-      venueName: "",
-      venueLocation: { street: "", street2: "", city: "", state: "", zipCode: "" },
-      eventStartTime: "",
-      eventEndTime: "",
-      ceremonyStartTime: "",
-      ceremonyEndTime: "",
-      setupBeforeCeremony: false,
-      hasCocktailHour: true, // Defaulting to true, can be changed in eventDetails
-      cocktailStartTime: "",
-      cocktailEndTime: "",
-      hasMainCourse: true, // Defaulting to true
-      foodServiceStartTime: "",
-      foodServiceEndTime: "",
-      guestCount: 100,
-      serviceStyle: "", // Initialize as empty, user will select in the new step
-      serviceDuration: 0,
-      laborHours: 0,
-      requestedTheme: "",
-      selectedPackages: {},
-      menuSelections: { proteins: [], sides: [], salads: [], salsas: [], desserts: [], addons: [] },
-      foodTruckSelections: {
-        smallBites: [], bigBites: [], vegetarianVegan: [], kidsBites: [],
-        glutenFreeBuns: 0, includeMenuPoster: false, includeDesserts: true,
-      },
-      sandwichFactorySelections: {
-        package: "", meats: [], cheeses: [], vegetables: [],
-        breads: [], spreads: [], salads: [],
-        wantsGlutenFreeBread: false, glutenFreeBreadCount: 0, notes: "",
-      },
-      breakfastMenuSelections: {
-        menuType: "", serviceStyle: "", grab_and_go_bites: [], grab_and_go_snacks: [],
-        grab_and_go_beverages: [], continental_staples: [], continental_beverages: [],
-        eggs: "", meats: [], potatoes: "", breads: "", sweet_selections: [],
-        savory_selections: [], sides_selections: [], beverages: [], notes: "",
-      },
-      wantsAppetizers: true, // Default, can be changed
-      appetizerService: "stationary",
-      appetizers: {},
-      horsDoeurvesSelections: { serviceStyle: "stationary", categories: {} },
-      wantsDesserts: true, 
-      dessertSelections: {},
-      beverageServiceChoice: undefined,
-      nonAlcoholicBeverageSelections: {},
-      alcoholicBeverageSelections: { alcoholTypes: {}, otherBarEquipment: {} },
-      wantsEquipmentRental: undefined,
-      equipment: { furniture: {}, linens: {}, servingWare: {}, decor: {} },
-      // Enhanced Dietary Guidance
-      dietaryGuidance: {
-        primaryDietGoal: "",
-        secondaryDietGoals: [],
-        dietaryRestrictions: [],
-        allergenConcerns: [],
-        customNotes: ""
-      },
-      selectedMenuItems: [],
-      
-      dietaryRestrictions: {
-        vegetarian: false, vegan: false, gluten_free: false, dairy_free: false,
-        nut_free: false, shellfish_allergy: false, kosher: false, halal: false,
-      },
-      dietaryCount: {
-        vegetarian: 0, vegan: 0, gluten_free: 0, dairy_free: 0,
-        nut_free: 0, shellfish_allergy: 0, kosher: 0, halal: 0,
-      },
-      dietaryNotes: "",
-      adminFee: 0,
-      otherFeesDescription: "",
-      otherFeesAmount: 0,
-      beverageNotes: "",
-      specialRequests: "",
-      generalNotes: "",
-    },
-  });
-
-  const { watch, setValue, getValues } = methods;
-  const [currentStepKey, setCurrentStepKey] = useState<WeddingFormStep>(weddingSteps[0]);
-
-  const currentStepIndex = weddingSteps.indexOf(currentStepKey);
-  const currentStepNumber = currentStepIndex + 1;
-  const totalSteps = weddingSteps.length;
-
-  const handleNext = () => {
-    const currentIndex = weddingSteps.indexOf(currentStepKey);
-    if (currentIndex === -1 || currentIndex >= weddingSteps.length - 1) {
-       if (currentStepKey === "review") {
-        console.log("Submitting Wedding Inquiry:", getValues());
-        alert("Wedding Inquiry Submitted (see console for data)!");
-       }
-      return; 
-    }
-
-    let nextStepKey: WeddingFormStep = weddingSteps[currentIndex + 1]; // Default next step
-
-    const currentServiceStyle = watch("serviceStyle");
-    const currentRequestedTheme = watch("requestedTheme");
-
-    if (currentStepKey === "eventDetails") {
-      nextStepKey = "dietaryGuidance"; // Go to dietary guidance after event details
-    } else if (currentStepKey === "dietaryGuidance") {
-      nextStepKey = "serviceStyleSelection"; // Then go to service style selection
-    } else if (currentStepKey === "serviceStyleSelection") {
-        // Logic based on the selected serviceStyle
-        switch (currentServiceStyle) {
-            case "food_truck":
-                nextStepKey = "foodTruckMenu";
-                break;
-            case "sandwich_factory":
-                setValue("requestedTheme", "sandwich_factory"); // Set theme for this style
-                nextStepKey = "sandwichFactoryMenu";
-                break;
-            case "breakfast_brunch":
-                setValue("requestedTheme", "breakfast_brunch"); // Set theme for this style
-                nextStepKey = "breakfastMenu";
-                break;
-            case "cocktail_party":
-                setValue("wantsAppetizers", true); // Appetizers are key for cocktail party
-                nextStepKey = "appetizers"; // Go directly to appetizer selection
-                break;
-            default: // "catering_buffet", "family_style", "plated_dinner"
-                nextStepKey = "menuSelection"; // Go to general menu selection
-                break;
-        }
-    } else if (currentStepKey === "menuSelection") {
-      // Route to tier selection based on selected theme
-      switch (currentRequestedTheme) {
-        case "theme_21":
-          nextStepKey = "tacoFiestaTierSelection";
-          break;
-        case "custom_american_bbq":
-          nextStepKey = "americanBBQTierSelection";
-          break;
-        case "theme_23":
-          nextStepKey = "greekTierSelection";
-          break;
-        case "theme_24":
-          nextStepKey = "kebabPartyTierSelection";
-          break;
-        case "hors_doeuvres":
-          setValue("wantsAppetizers", true);
-          nextStepKey = "appetizers";
-          break;
-        default:
-          nextStepKey = "appetizerQuestion";
-          break;
-      }
-    } else if (["tacoFiestaTierSelection", "americanBBQTierSelection", "greekTierSelection", "kebabPartyTierSelection"].includes(currentStepKey)) {
-      // After tier selection, proceed to appetizer question
-      nextStepKey = "appetizerQuestion";
-    } else if (currentStepKey === "appetizerQuestion") {
-      nextStepKey = watch("wantsAppetizers") ? "appetizers" : "dessertQuestion";
-    } else if (currentStepKey === "appetizers") {
-      // After appetizers, always go to dessert question, regardless of initial service style
-      nextStepKey = "dessertQuestion";
-    } else if (["foodTruckMenu", "sandwichFactoryMenu", "breakfastMenu"].includes(currentStepKey)) {
-      // After specialized menus, proceed to dessert question
-      nextStepKey = "dessertQuestion";
-    } else if (currentStepKey === "dessertQuestion") {
-      nextStepKey = watch("wantsDesserts") ? "desserts" : "beverageQuestion";
-    } else if (currentStepKey === "desserts") {
-      nextStepKey = "beverageQuestion";
-    } else if (currentStepKey === "beverageQuestion") {
-      const beverageChoice = watch("beverageServiceChoice");
-      if (beverageChoice === "non-alcoholic") nextStepKey = "nonAlcoholicBeverages";
-      else if (beverageChoice === "alcoholic") nextStepKey = "alcoholicBeverages";
-      else nextStepKey = "equipmentQuestion"; 
-    } else if (currentStepKey === "nonAlcoholicBeverages" || currentStepKey === "alcoholicBeverages") {
-      nextStepKey = "equipmentQuestion";
-    } else if (currentStepKey === "equipmentQuestion") {
-      nextStepKey = watch("wantsEquipmentRental") ? "equipment" : "dietaryRestrictions";
-    } else if (currentStepKey === "equipment") {
-      nextStepKey = "dietaryRestrictions";
-    } else if (currentStepKey === "dietaryRestrictions") {
-      nextStepKey = "review";
-    }
-    // Ensure nextStepKey is valid, otherwise fallback to default progression
-    if (weddingSteps.includes(nextStepKey)) {
-        setCurrentStepKey(nextStepKey);
-    } else if (currentIndex < weddingSteps.length -1 ) {
-        setCurrentStepKey(weddingSteps[currentIndex + 1]);
-    }
-  };
-
-  const handlePrevious = () => {
-    const currentIndex = weddingSteps.indexOf(currentStepKey);
-    if (currentIndex <= 0) return;
-
-    let prevStepKey: WeddingFormStep = weddingSteps[currentIndex - 1]; // Default previous step
-    const currentServiceStyle = watch("serviceStyle");
-    const currentRequestedTheme = watch("requestedTheme");
-
-    // Specific backward navigation logic:
-    if (currentStepKey === "menuSelection" || 
-        currentStepKey === "appetizers" || // If coming back from appetizers (and not a cocktail party)
-        currentStepKey === "foodTruckMenu" || 
-        currentStepKey === "sandwichFactoryMenu" || 
-        currentStepKey === "breakfastMenu") {
-
-        // If cocktail_party was selected, appetizers is the main "menu"
-        if (currentStepKey === "appetizers" && currentServiceStyle === "cocktail_party") {
-             prevStepKey = "serviceStyleSelection";
-        } 
-        // For other menu types or appetizers (when not cocktail_party), go back to serviceStyleSelection
-        else if (currentStepKey !== "appetizers" || watch("wantsAppetizers")) { // Added condition for appetizers
-            prevStepKey = "serviceStyleSelection";
-        }
-        // If wantsAppetizers was false, then appetizerQuestion was skipped, so from dessertQuestion back to appetizerQuestion
-         else if (currentStepKey === "dessertQuestion" && !watch("wantsAppetizers")) {
-            prevStepKey = "appetizerQuestion";
-        }
-
-
-    } else if (currentStepKey === "serviceStyleSelection") {
-        prevStepKey = "eventDetails";
-    } else if (["tacoFiestaTierSelection", "americanBBQTierSelection", "greekTierSelection", "kebabPartyTierSelection"].includes(currentStepKey)) {
-        // From tier selection, go back to menu selection
-        prevStepKey = "menuSelection";
-    } else if (currentStepKey === "appetizerQuestion") {
-        // Check if we came from a tier selection or directly from menu selection
-        if (["theme_21", "custom_american_bbq", "theme_23", "theme_24"].includes(currentRequestedTheme)) {
-            // We came from a tier selection, determine which one
-            switch (currentRequestedTheme) {
-                case "theme_21":
-                    prevStepKey = "tacoFiestaTierSelection";
-                    break;
-                case "custom_american_bbq":
-                    prevStepKey = "americanBBQTierSelection";
-                    break;
-                case "theme_23":
-                    prevStepKey = "greekTierSelection";
-                    break;
-                case "theme_24":
-                    prevStepKey = "kebabPartyTierSelection";
-                    break;
-                default:
-                    prevStepKey = "menuSelection";
-                    break;
-            }
-        } else if (currentRequestedTheme === "hors_doeuvres" && currentServiceStyle !== "cocktail_party") {
-             prevStepKey = "menuSelection"; // hors_doeuvres theme selected in menuSelection
-        } else {
-             prevStepKey = "menuSelection"; // Default from appetizerQuestion
-        }
-
-    } else if (currentStepKey === "dessertQuestion") {
-        // If coming back to dessertQuestion, check what preceded it
-        const cameFromSpecialMenu = ["food_truck", "sandwich_factory", "breakfast_brunch"].includes(currentServiceStyle);
-        const wasAppetizersSelected = watch("wantsAppetizers");
-
-        if (cameFromSpecialMenu) {
-            // Find the correct special menu step
-            if (currentServiceStyle === "food_truck") prevStepKey = "foodTruckMenu";
-            else if (currentServiceStyle === "sandwich_factory") prevStepKey = "sandwichFactoryMenu";
-            else if (currentServiceStyle === "breakfast_brunch") prevStepKey = "breakfastMenu";
-        } else if (wasAppetizersSelected) {
-            prevStepKey = "appetizers";
-        } else { // Skipped appetizers
-            prevStepKey = "appetizerQuestion";
-        }
-    } else if (currentStepKey === "beverageQuestion") {
-      prevStepKey = watch("wantsDesserts") ? "desserts" : "dessertQuestion";
-    } else if (currentStepKey === "equipmentQuestion") {
-      const beverageChoice = watch("beverageServiceChoice");
-      if (beverageChoice === "non-alcoholic") prevStepKey = "nonAlcoholicBeverages";
-      else if (beverageChoice === "alcoholic") prevStepKey = "alcoholicBeverages";
-      else prevStepKey = "beverageQuestion";
-    } else if (currentStepKey === "dietaryRestrictions") {
-      prevStepKey = watch("wantsEquipmentRental") ? "equipment" : "equipmentQuestion";
-    }
-
-    setCurrentStepKey(prevStepKey);
-  };
-
-  const guestCount = watch("guestCount");
-  const selectedTheme = watch("requestedTheme");
-  const fixedWeddingEventType: LocalEventType = "Wedding";
-
-  return (
-    <>
-      <Helmet>
-        <title>Wedding Inquiry | Home Bites Catering Services</title>
-        <meta name="description" content="Plan your dream wedding with Home Bites Catering. Fill out our inquiry form to get started." />
-      </Helmet>
-      <div className="min-h-screen bg-gray-100 pb-12">
-        <WeddingFormHeader />
-        <FormProvider {...methods}>
-          <form noValidate onSubmit={methods.handleSubmit(handleNext)} className="space-y-8">
-            {currentStepKey !== "basicInfo" && ( // Optionally hide progress bar on first step
-                 <FormProgressBar
-                    currentStepNumber={currentStepNumber}
-                    totalSteps={totalSteps}
-                    currentStepKey={currentStepKey}
-                />
-            )}
-            <div className="container mx-auto px-4">
-              {currentStepKey === "basicInfo" && (
-                <WeddingBasicInformationStep
-                  eventType={fixedWeddingEventType}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "eventDetails" && (
-                <WeddingEventDetailsStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "dietaryGuidance" && (
-                <div className="space-y-6">
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                      Dietary Preferences & Guidance
-                    </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                      Help us curate the perfect menu for your wedding guests by sharing your dietary goals and any restrictions we should consider.
-                    </p>
-                  </div>
-
-                  <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {["BALANCED", "HIGH_PROTEIN", "LOW_CARB", "VEGAN", "VEGETARIAN", "HEART_HEALTHY"].map((diet) => (
-                        <div
-                          key={diet}
-                          className="p-4 border rounded-lg cursor-pointer hover:border-pink-500 hover:bg-pink-50 transition-all"
-                          onClick={() => setValue("dietaryGuidance.primaryDietGoal", diet)}
-                        >
-                          <div className="text-sm font-medium text-center">
-                            {diet.replace(/_/g, " ")}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="text-center text-sm text-gray-600 mt-4">
-                      Selected: {watch("dietaryGuidance.primaryDietGoal") || "None"}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between pt-6">
-                    <button 
-                      type="button" 
-                      onClick={handlePrevious}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                    >
-                      Previous
-                    </button>
-                    
-                    <button 
-                      type="button" 
-                      onClick={handleNext}
-                      className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600"
-                    >
-                      Continue to Menu Selection
-                    </button>
-                  </div>
-                </div>
-              )}
-              {currentStepKey === "serviceStyleSelection" && ( // <-- RENDER NEW STEP
-                <WeddingServiceStyleStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "menuSelection" && (
-                <div className="space-y-6">
-                  {/* Dietary Dashboard at the top for better visibility */}
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                    <SimpleDietaryDashboard />
-                  </div>
-                  
-                  {/* Wedding Menu Selection with Theme-Based Selection */}
-                  <WeddingMenuSelectionStep
-                    selectedTheme={selectedTheme}
-                    guestCount={guestCount}
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                </div>
-              )}
-              
-              {/* Database Menu Tier Selection Components */}
-              {currentStepKey === "tacoFiestaTierSelection" && selectedTheme === "theme_21" && (
-                <TacoFiestaTierSelection
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "americanBBQTierSelection" && selectedTheme === "custom_american_bbq" && (
-                <AmericanBBQTierSelection
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "greekTierSelection" && selectedTheme === "theme_23" && (
-                <GreekTierSelection
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "kebabPartyTierSelection" && selectedTheme === "theme_24" && (
-                <KebabPartyTierSelection
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              
-              {currentStepKey === "appetizerQuestion" && (
-                <div className="flex gap-6">
-                  <div className="flex-1">
-                    <WeddingAppetizerQuestionStep
-                      onPrevious={handlePrevious}
-                      onNext={handleNext}
-                    />
-                  </div>
-                  <div className="w-80">
-                    <SimpleDietaryDashboard />
-                  </div>
-                </div>
-              )}
-              {currentStepKey === "appetizers" && watch("wantsAppetizers") && (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                    <SimpleDietaryDashboard />
-                  </div>
-                  <WeddingAppetizersStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                </div>
-              )}
-              {currentStepKey === "foodTruckMenu" && (
-                <WeddingFoodTruckMenuStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext} 
-                  onSkipDessert={() => { // Example skip logic
-                    setValue("foodTruckSelections.includeDesserts", false, { shouldValidate: true });
-                    setValue("wantsDesserts", false); 
-                    setCurrentStepKey("beverageQuestion"); 
-                  }}
-                />
-              )}
-              {currentStepKey === "sandwichFactoryMenu" && (
-                <WeddingSandwichFactoryMenuStep
-                  guestCount={guestCount}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "breakfastMenu" && (
-                <WeddingBreakfastMenuStep
-                  guestCount={guestCount}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "dessertQuestion" && (
-                 <WeddingDessertQuestionStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "desserts" && watch("wantsDesserts") && (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                    <SimpleDietaryDashboard />
-                  </div>
-                  <WeddingDessertsStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                </div>
-              )}
-              {currentStepKey === "beverageQuestion" && (
-                <WeddingBeverageQuestionStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "nonAlcoholicBeverages" && watch("beverageServiceChoice") === "non-alcoholic" && (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                    <SimpleDietaryDashboard />
-                  </div>
-                  <WeddingNonAlcoholicBeveragesStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                </div>
-              )}
-              {currentStepKey === "alcoholicBeverages" && watch("beverageServiceChoice") === "alcoholic" && (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                    <SimpleDietaryDashboard />
-                  </div>
-                  <WeddingAlcoholicBeveragesStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                  />
-                </div>
-              )}
-              {currentStepKey === "equipmentQuestion" && (
-                 <WeddingEquipmentQuestionStep
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "equipment" && watch("wantsEquipmentRental") && (
-                <WeddingEquipmentStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "dietaryRestrictions" && (
-                <WeddingDietaryRestrictionsStep
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                />
-              )}
-              {currentStepKey === "review" && (
-                <div className="space-y-6">
-                  {/* Dietary Summary at the top of review */}
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                    <SimpleDietaryDashboard />
-                  </div>
-                  
-                  {/* Review Content */}
-                  <div className="container mx-auto px-4 py-8 max-w-3xl text-center">
-                      <Card>
-                          <CardContent className="p-6">
-                              <h2 className="text-3xl font-bold mb-4 text-pink-600">Review Your Wedding Inquiry</h2>
-                              <p className="text-gray-700 mb-6">
-                                  Please review all the details you've provided, including your dietary preferences and menu selections above.
-                              </p>
-                              <pre className="text-left bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
-                                  {JSON.stringify(getValues(), null, 2)}
-                              </pre>
-                               <div className="flex justify-between mt-8">
-                                  <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStepIndex <= 0}>
-                                      <ChevronLeft className="mr-2 h-4 w-4" /> Back
-                                  </Button>
-                                  <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
-                                      Submit Wedding Inquiry <ChevronRight className="ml-2 h-4 w-4" />
-                                  </Button>
-                              </div>
-                          </CardContent>
-                      </Card>
-                  </div>
-                </div>
-              )}
-            </div>
-          </form>
-        </FormProvider>
-      </div>
-    </>
-  );
+interface CustomerInquiryData {
+  // Basic Information
+  customerName: string;
+  email: string;
+  phone: string;
+  
+  // Event Details
+  eventDate: string;
+  eventTime: string;
+  venue: string;
+  guestCount: number;
+  
+  // Menu Selection
+  selectedTheme: string;
+  selectedTier: string;
+  selectedItems: Record<string, string[]>;
+  
+  // Additional Requirements
+  dietaryRestrictions: string;
+  specialRequests: string;
 }
+
+const TIER_PACKAGES = {
+  bronze: {
+    name: "Bronze Package",
+    price: 32,
+    description: "Classic selections with essential menu items",
+    limits: { mains: 2, sides: 3, appetizers: 1, desserts: 1 }
+  },
+  silver: {
+    name: "Silver Package", 
+    price: 38,
+    description: "Enhanced experience with additional choices",
+    limits: { mains: 3, sides: 4, appetizers: 2, desserts: 1 }
+  },
+  gold: {
+    name: "Gold Package",
+    price: 46, 
+    description: "Premium celebration with full menu access",
+    limits: { mains: 4, sides: 5, appetizers: 2, desserts: 2 }
+  },
+  platinum: {
+    name: "Platinum Package",
+    price: 55,
+    description: "Ultimate experience with unlimited selections",
+    limits: { mains: 6, sides: 6, appetizers: 3, desserts: 2 }
+  }
+};
+
+const WeddingInquiryForm: React.FC = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedTheme, setSelectedTheme] = useState<string>("");
+  const [selectedTier, setSelectedTier] = useState<string>("");
+  const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CustomerInquiryData>();
+
+  const guestCount = watch("guestCount") || 50;
+
+  // Get available themes from database
+  const availableThemes = Object.entries(menusByTheme).map(([key, theme]) => ({
+    id: key,
+    name: theme.name,
+    description: theme.description || `Experience authentic ${theme.name} cuisine`,
+    itemCount: theme.itemCount
+  }));
+
+  // Get items for selected theme organized by category
+  const getThemeItems = (themeKey: string) => {
+    if (!themeKey || !menusByTheme[themeKey]) return {};
+    
+    const themeItems = menusByTheme[themeKey].allItems || [];
+    
+    return {
+      mains: themeItems.filter(item => 
+        item.category?.toLowerCase().includes('main') ||
+        item.category?.toLowerCase().includes('entree') ||
+        item.category?.toLowerCase().includes('protein')
+      ),
+      sides: themeItems.filter(item =>
+        item.category?.toLowerCase().includes('side') ||
+        item.category?.toLowerCase().includes('vegetable')
+      ),
+      appetizers: themeItems.filter(item =>
+        item.category?.toLowerCase().includes('appetizer') ||
+        item.category?.toLowerCase().includes('meze')
+      ),
+      desserts: themeItems.filter(item =>
+        item.category?.toLowerCase().includes('dessert')
+      )
+    };
+  };
+
+  const organizedItems = getThemeItems(selectedTheme);
+
+  const handleItemToggle = (category: string, itemId: string) => {
+    if (!selectedTier) return;
+    
+    const tier = TIER_PACKAGES[selectedTier as keyof typeof TIER_PACKAGES];
+    const limit = tier.limits[category as keyof typeof tier.limits];
+    const currentItems = selectedItems[category] || [];
+    
+    if (currentItems.includes(itemId)) {
+      setSelectedItems(prev => ({
+        ...prev,
+        [category]: currentItems.filter(id => id !== itemId)
+      }));
+    } else if (currentItems.length < limit) {
+      setSelectedItems(prev => ({
+        ...prev,
+        [category]: [...currentItems, itemId]
+      }));
+    }
+  };
+
+  const onSubmit = (data: CustomerInquiryData) => {
+    const inquiryData = {
+      ...data,
+      selectedTheme,
+      selectedTier,
+      selectedItems,
+      totalPrice: selectedTier ? TIER_PACKAGES[selectedTier as keyof typeof TIER_PACKAGES].price * guestCount : 0
+    };
+    
+    console.log("Customer Inquiry Submitted:", inquiryData);
+    // Here you would send the data to your backend
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Event Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="customerName">Your Name *</Label>
+                  <Input
+                    id="customerName"
+                    {...register("customerName", { required: "Name is required" })}
+                    placeholder="Full name"
+                  />
+                  {errors.customerName && (
+                    <p className="text-sm text-red-600">{errors.customerName.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register("email", { required: "Email is required" })}
+                    placeholder="your@email.com"
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-600">{errors.email.message}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    {...register("phone")}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="guestCount">Number of Guests *</Label>
+                  <Input
+                    id="guestCount"
+                    type="number"
+                    {...register("guestCount", { required: "Guest count is required", min: 1 })}
+                    placeholder="50"
+                  />
+                  {errors.guestCount && (
+                    <p className="text-sm text-red-600">{errors.guestCount.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="eventDate">Event Date *</Label>
+                  <Input
+                    id="eventDate"
+                    type="date"
+                    {...register("eventDate", { required: "Event date is required" })}
+                  />
+                  {errors.eventDate && (
+                    <p className="text-sm text-red-600">{errors.eventDate.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="eventTime">Event Time</Label>
+                  <Input
+                    id="eventTime"
+                    type="time"
+                    {...register("eventTime")}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="venue">Venue/Location</Label>
+                <Input
+                  id="venue"
+                  {...register("venue")}
+                  placeholder="Event venue or address"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 2:
+        return (
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-2">Choose Your Cuisine Theme</h2>
+              <p className="text-gray-600">Select from our authentic menu themes</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {availableThemes.map((theme) => (
+                <Card
+                  key={theme.id}
+                  className={`cursor-pointer transition-all hover:shadow-lg ${
+                    selectedTheme === theme.id ? "ring-2 ring-blue-500" : ""
+                  }`}
+                  onClick={() => setSelectedTheme(theme.id)}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      {theme.name}
+                      <Badge variant="outline">{theme.itemCount} items</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600">{theme.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-2">Select Your Package Tier</h2>
+              <p className="text-gray-600">Choose the perfect package for your event</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Object.entries(TIER_PACKAGES).map(([tierId, tier]) => (
+                <Card
+                  key={tierId}
+                  className={`cursor-pointer transition-all hover:shadow-lg ${
+                    selectedTier === tierId ? "ring-2 ring-blue-500" : ""
+                  }`}
+                  onClick={() => setSelectedTier(tierId)}
+                >
+                  <CardHeader className="text-center">
+                    <CardTitle>{tier.name}</CardTitle>
+                    <div className="text-2xl font-bold text-blue-600">${tier.price}</div>
+                    <div className="text-sm text-gray-500">per person</div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600 mb-4">{tier.description}</p>
+                    <div className="space-y-1 text-xs">
+                      <div>Mains: {tier.limits.mains}</div>
+                      <div>Sides: {tier.limits.sides}</div>
+                      <div>Appetizers: {tier.limits.appetizers}</div>
+                      <div>Desserts: {tier.limits.desserts}</div>
+                    </div>
+                    <div className="mt-4 text-lg font-semibold">
+                      Total: ${(tier.price * guestCount).toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 4:
+        if (!selectedTheme || !selectedTier) {
+          return <div>Please select a theme and tier first.</div>;
+        }
+
+        const tier = TIER_PACKAGES[selectedTier as keyof typeof TIER_PACKAGES];
+
+        return (
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-2">Customize Your Menu</h2>
+              <p className="text-gray-600">
+                {menusByTheme[selectedTheme]?.name} - {tier.name}
+              </p>
+            </div>
+
+            {Object.entries(organizedItems).map(([category, items]) => {
+              if (!items.length) return null;
+              
+              const limit = tier.limits[category as keyof typeof tier.limits];
+              const selected = selectedItems[category] || [];
+              
+              return (
+                <Card key={category} className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                      <Badge variant="outline">{selected.length}/{limit}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {items.map((item) => {
+                        const isSelected = selected.includes(item.id);
+                        const canSelect = selected.length < limit || isSelected;
+                        
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50"
+                                : canSelect
+                                ? "border-gray-200 hover:border-gray-300"
+                                : "border-gray-100 opacity-50 cursor-not-allowed"
+                            }`}
+                            onClick={() => canSelect && handleItemToggle(category, item.id)}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Checkbox checked={isSelected} disabled={!canSelect} />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h5 className="font-medium">{item.name}</h5>
+                                  {item.nutritionalHighlights && (
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="p-1 h-auto">
+                                          <Info className="h-4 w-4" />
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="max-w-md">
+                                        <DialogHeader>
+                                          <DialogTitle>{item.name}</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-3">
+                                          <p className="text-sm">{item.description}</p>
+                                          {item.nutritionalHighlights && (
+                                            <div>
+                                              <h4 className="font-medium mb-2">Nutritional Info</h4>
+                                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                                {item.nutritionalHighlights.calories && (
+                                                  <div>Calories: {item.nutritionalHighlights.calories.min}-{item.nutritionalHighlights.calories.max}</div>
+                                                )}
+                                                {item.nutritionalHighlights.protein && (
+                                                  <div>Protein: {item.nutritionalHighlights.protein.min}-{item.nutritionalHighlights.protein.max}g</div>
+                                                )}
+                                                {item.nutritionalHighlights.carbs && (
+                                                  <div>Carbs: {item.nutritionalHighlights.carbs.min}-{item.nutritionalHighlights.carbs.max}g</div>
+                                                )}
+                                                {item.nutritionalHighlights.fat && (
+                                                  <div>Fat: {item.nutritionalHighlights.fat.min}-{item.nutritionalHighlights.fat.max}g</div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+                                          {item.dietaryFlags && item.dietaryFlags.length > 0 && (
+                                            <div>
+                                              <h4 className="font-medium mb-2">Dietary Info</h4>
+                                              <div className="flex flex-wrap gap-1">
+                                                {item.dietaryFlags.map(flag => (
+                                                  <Badge key={flag} variant="secondary" className="text-xs">
+                                                    {flag}
+                                                  </Badge>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600">{item.description}</p>
+                                {item.dietaryFlags && item.dietaryFlags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {item.dietaryFlags.slice(0, 2).map(flag => (
+                                      <Badge key={flag} variant="secondary" className="text-xs">
+                                        {flag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        );
+
+      case 5:
+        return (
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle>Additional Requirements</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="dietaryRestrictions">Dietary Restrictions or Allergies</Label>
+                <Textarea
+                  id="dietaryRestrictions"
+                  {...register("dietaryRestrictions")}
+                  placeholder="Please list any allergies, dietary restrictions, or special dietary needs..."
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="specialRequests">Special Requests or Notes</Label>
+                <Textarea
+                  id="specialRequests"
+                  {...register("specialRequests")}
+                  placeholder="Any additional requests, setup requirements, or special considerations..."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return <div>Unknown step</div>;
+    }
+  };
+
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return watch("customerName") && watch("email") && watch("guestCount") && watch("eventDate");
+      case 2:
+        return selectedTheme;
+      case 3:
+        return selectedTier;
+      case 4:
+        return Object.keys(selectedItems).length > 0;
+      default:
+        return true;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        {/* Progress Indicator */}
+        <div className="mb-8">
+          <div className="flex items-center justify-center space-x-4">
+            {[1, 2, 3, 4, 5].map((step) => (
+              <div
+                key={step}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  step <= currentStep
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-500"
+                }`}
+              >
+                {step}
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-center mt-2">
+            <div className="text-sm text-gray-600">
+              Step {currentStep} of 5
+            </div>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {renderStep()}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8 max-w-4xl mx-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+              disabled={currentStep === 1}
+              className="flex items-center gap-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+
+            {currentStep < 5 ? (
+              <Button
+                type="button"
+                onClick={() => setCurrentStep(currentStep + 1)}
+                disabled={!canProceedToNext()}
+                className="flex items-center gap-2"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button type="submit" className="flex items-center gap-2">
+                Submit Inquiry
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default WeddingInquiryForm;
