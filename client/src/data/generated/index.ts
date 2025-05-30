@@ -30,14 +30,14 @@ export interface MenuTheme {
   id: number;
   name: string;
   description: string;
-  theme_key: string;
-  itemCount: number;
   allItems: MenuItem[];
+  itemsByCategory?: any;
+  totalItemCount?: number;
 }
 
 // Import the generated JSON files
-import allMenuItemsData from './allMenuItems.json';
-import menusByThemeData from './menusByTheme.json';
+import * as allMenuItemsData from './allMenuItems.json';
+import * as menusByThemeData from './menusByTheme.json';
 
-export const allMenuItems: MenuItem[] = allMenuItemsData;
-export const menusByTheme: Record<string, MenuTheme> = menusByThemeData;
+export const allMenuItems: MenuItem[] = allMenuItemsData as MenuItem[];
+export const menusByTheme: Record<string, MenuTheme> = menusByThemeData as Record<string, MenuTheme>;
