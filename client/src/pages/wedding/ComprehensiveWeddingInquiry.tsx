@@ -806,7 +806,7 @@ export default function ComprehensiveWeddingInquiry() {
               <div key={category}>
                 <h4 className="font-semibold text-lg mb-3 capitalize">{category}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {(items || []).map((item: any) => {
+                  {(items.items || []).map((item: any) => {
                     const isSelected = selectedItems[category]?.includes(item.id);
                     return (
                       <Card 
