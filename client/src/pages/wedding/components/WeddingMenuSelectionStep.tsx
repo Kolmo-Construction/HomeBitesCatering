@@ -48,7 +48,81 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
     acc[key] = {
       title: theme.name,
       description: theme.description || `Experience authentic ${theme.name} cuisine for your wedding.`,
-      packages: []
+      packages: [
+        {
+          id: `${key}_bronze`,
+          name: "Bronze Package",
+          price: 32.00,
+          description: `Classic ${theme.name} selections with essential menu items.`,
+          limits: { mains: 2, sides: 3, salads: 1, sauces: 2 }
+        },
+        {
+          id: `${key}_silver`, 
+          name: "Silver Package",
+          price: 38.00,
+          description: `Enhanced ${theme.name} experience with additional choices.`,
+          limits: { mains: 3, sides: 4, salads: 2, sauces: 3 }
+        },
+        {
+          id: `${key}_gold`,
+          name: "Gold Package", 
+          price: 46.00,
+          description: `Premium ${theme.name} celebration with full menu access.`,
+          limits: { mains: 4, sides: 5, salads: 2, sauces: 4 }
+        }
+      ],
+      categories: {
+        mains: {
+          title: "Main Courses",
+          description: "Select your main course options",
+          items: theme.allItems.filter(item => 
+            item.category.toLowerCase().includes('main') || 
+            item.category.toLowerCase().includes('entree') ||
+            item.category.toLowerCase().includes('protein')
+          ).map(item => ({
+            id: item.id,
+            name: item.name,
+            upcharge: item.upcharge || 0
+          }))
+        },
+        sides: {
+          title: "Side Dishes", 
+          description: "Choose your side dishes",
+          items: theme.allItems.filter(item => 
+            item.category.toLowerCase().includes('side') ||
+            item.category.toLowerCase().includes('vegetable')
+          ).map(item => ({
+            id: item.id,
+            name: item.name,
+            upcharge: item.upcharge || 0
+          }))
+        },
+        salads: {
+          title: "Salads",
+          description: "Fresh salad selections", 
+          items: theme.allItems.filter(item => 
+            item.category.toLowerCase().includes('salad')
+          ).map(item => ({
+            id: item.id,
+            name: item.name,
+            upcharge: item.upcharge || 0
+          }))
+        },
+        sauces: {
+          title: "Sauces & Condiments",
+          description: "Enhance your meal with our signature sauces",
+          items: theme.allItems.filter(item => 
+            item.category.toLowerCase().includes('sauce') ||
+            item.category.toLowerCase().includes('condiment') ||
+            item.category.toLowerCase().includes('salsa') ||
+            item.category.toLowerCase().includes('dip')
+          ).map(item => ({
+            id: item.id,
+            name: item.name,
+            upcharge: item.upcharge || 0
+          }))
+        }
+      }
     };
     return acc;
   }, {} as any);

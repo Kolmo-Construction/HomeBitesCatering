@@ -36,7 +36,6 @@ import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
-import DatabaseMenuDemo from "@/pages/DatabaseMenuDemo";
 
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
@@ -175,7 +174,6 @@ function AppContent() {
           <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
           <Route path="/calculator-test" component={CalculatorTest} />
           <Route path="/dietary-demo" component={DietaryDemo} />
-          <Route path="/database-menus" component={DatabaseMenuDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
           <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
