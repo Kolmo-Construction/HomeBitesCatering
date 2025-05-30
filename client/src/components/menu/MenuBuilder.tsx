@@ -213,6 +213,8 @@ function SortableMenuItem({
             <SelectItem value="sides">Sides</SelectItem>
             <SelectItem value="salads">Salads</SelectItem>
             <SelectItem value="sauces">Sauces</SelectItem>
+            <SelectItem value="salsas">Salsas</SelectItem>
+            <SelectItem value="spreads">Spreads</SelectItem>
             <SelectItem value="condiments">Condiments</SelectItem>
           </SelectContent>
         </Select>
