@@ -113,7 +113,7 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <Toaster />
         <Switch>
-          <Route path="/wedding-inquiry" component={SimpleWeddingInquiry} />
+          <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           {/* Route for the generic event selection page */}
           <Route path="/inquiry" component={PublicRoutes} />
@@ -178,7 +178,7 @@ function AppContent() {
           <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
-          <Route path="/wedding-inquiry" component={SimpleWeddingInquiry} />
+          <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
