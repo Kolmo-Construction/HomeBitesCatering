@@ -59,73 +59,27 @@ export default function ComprehensiveWeddingInquiry() {
   const [currentCost, setCurrentCost] = useState(0);
   const [quote, setQuote] = useState<QuoteBreakdown | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [menuLoading, setMenuLoading] = useState(true);
-  const [menuError, setMenuError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMenuThemes();
   }, []);
 
-  // Calculate cost when relevant data changes
-  useEffect(() => {
-    if (formData.menuSelections?.selectedTier && formData.guestInfo?.totalGuests) {
-      const guestCount = formData.guestInfo.totalGuests;
-      const selectedTier = formData.menuSelections.selectedTier;
-      
-      const tierPricing = {
-        bronze: 32,
-        silver: 38,
-        gold: 46,
-        platinum: 55
-      };
-
-      let baseCost = tierPricing[selectedTier as keyof typeof tierPricing] * guestCount;
-      
-      // Add upcharges for selected items
-      let upcharges = 0;
-      if (selectedThemeData && selectedItems) {
-        Object.entries(selectedItems).forEach(([category, itemIds]) => {
-          itemIds.forEach(itemId => {
-            const item = selectedThemeData.allItems?.find((item: any) => item.id === itemId);
-            if (item && item.upcharge > 0) {
-              upcharges += item.upcharge * guestCount;
-            }
-          });
-        });
-      }
-
-      setCurrentCost(baseCost + upcharges);
-    }
-  }, [formData.menuSelections?.selectedTier, formData.guestInfo?.totalGuests, selectedItems, selectedThemeData]);
-
   const loadMenuThemes = async () => {
     try {
-      setMenuLoading(true);
-      setMenuError(null);
-      
       const { menusByTheme } = await import('@/data/generated');
-      
-      if (!menusByTheme || Object.keys(menusByTheme).length === 0) {
-        throw new Error('No menu themes found in database');
-      }
-
-      const themes = Object.entries(menusByTheme).map(([key, theme]: [string, any]) => ({
+      const themes = Object.entries(menusByTheme || {}).map(([key, theme]: [string, any]) => ({
         id: key,
-        name: theme.name || 'Unknown Theme',
-        description: theme.description || `Experience authentic ${theme.name || 'cuisine'} cuisine`,
+        name: theme.name,
+        description: theme.description || `Experience authentic ${theme.name} cuisine`,
         itemCount: theme.totalItemCount || theme.allItems?.length || 0,
         categories: Object.keys(theme.itemsByCategory || {}),
         allItems: theme.allItems || [],
         itemsByCategory: theme.itemsByCategory || {},
         tierPackages: theme.tierPackages || {}
       }));
-      
       setAvailableThemes(themes);
-      setMenuLoading(false);
     } catch (error) {
       console.error('Error loading menu themes:', error);
-      setMenuError('Failed to load menu data from database. Please refresh the page.');
-      setMenuLoading(false);
     }
   };
 
@@ -139,6 +93,7 @@ export default function ComprehensiveWeddingInquiry() {
 
   const selectTier = (tierId: string) => {
     updateFormData('menuSelections', 'selectedTier', tierId);
+    calculateCurrentCost();
   };
 
   const toggleMenuItem = (category: string, itemId: string) => {
@@ -156,9 +111,39 @@ export default function ComprehensiveWeddingInquiry() {
 
     setSelectedItems(newSelectedItems);
     updateFormData('menuSelections', 'selectedItems', newSelectedItems);
+    calculateCurrentCost();
   };
 
+  const calculateCurrentCost = () => {
+    const guestCount = formData.guestInfo?.totalGuests || 100;
+    const selectedTier = formData.menuSelections?.selectedTier;
+    
+    if (!selectedTier) return;
 
+    const tierPricing = {
+      bronze: 32,
+      silver: 38,
+      gold: 46,
+      platinum: 55
+    };
+
+    let baseCost = tierPricing[selectedTier as keyof typeof tierPricing] * guestCount;
+    
+    // Add upcharges for selected items
+    let upcharges = 0;
+    if (selectedThemeData && selectedItems) {
+      Object.entries(selectedItems).forEach(([category, itemIds]) => {
+        itemIds.forEach(itemId => {
+          const item = selectedThemeData.allItems?.find((item: any) => item.id === itemId);
+          if (item && item.upcharge > 0) {
+            upcharges += item.upcharge * guestCount;
+          }
+        });
+      });
+    }
+
+    setCurrentCost(baseCost + upcharges);
+  };
 
   const calculateNutritionSummary = () => {
     if (!selectedThemeData || !selectedItems) return null;
@@ -745,45 +730,17 @@ export default function ComprehensiveWeddingInquiry() {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Choose Your Cuisine Theme</h3>
-        
-        {menuLoading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading menu themes from database...</p>
-          </div>
-        )}
-
-        {menuError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{menuError}</p>
-            <Button 
-              onClick={() => loadMenuThemes()} 
-              variant="outline" 
-              className="mt-2"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {availableThemes.map((theme) => (
+            <Card 
+              key={theme.id}
+              className={`cursor-pointer transition-all ${
+                formData.menuSelections?.selectedTheme === theme.id 
+                  ? 'ring-2 ring-blue-500 bg-blue-50' 
+                  : 'hover:shadow-md'
+              }`}
+              onClick={() => selectTheme(theme.id)}
             >
-              Retry Loading
-            </Button>
-          </div>
-        )}
-
-        {!menuLoading && !menuError && availableThemes.length === 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-yellow-800">No menu themes found in the database. Please add menu themes in the admin panel.</p>
-          </div>
-        )}
-
-        {!menuLoading && !menuError && availableThemes.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {availableThemes.map((theme) => (
-              <Card 
-                key={theme.id}
-                className={`cursor-pointer transition-all ${
-                  formData.menuSelections?.selectedTheme === theme.id 
-                    ? 'ring-2 ring-blue-500 bg-blue-50' 
-                    : 'hover:shadow-md'
-                }`}
-                onClick={() => selectTheme(theme.id)}
-              >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">{theme.name}</h4>
@@ -804,9 +761,8 @@ export default function ComprehensiveWeddingInquiry() {
                 </div>
               </CardContent>
             </Card>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {formData.menuSelections?.selectedTheme && (

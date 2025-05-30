@@ -27,7 +27,6 @@ import CalculatorTest from "@/pages/CalculatorTest";
 // Import the comprehensive wedding inquiry form
 import WeddingInquiryForm from "@/pages/wedding/WeddingInquiryForm";
 import ComprehensiveWeddingInquiry from "@/pages/wedding/ComprehensiveWeddingInquiry";
-import SimpleWeddingInquiry from "@/pages/wedding/SimpleWeddingInquiry";
 // Import the EventTypeSelectionStep if you want a general landing page for event types
 import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionStep"; // Assuming this is now a shared component
 import { eventTypes } from "@/data/event-types"; // For the EventTypeSelectionStep props
@@ -113,7 +112,7 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <Toaster />
         <Switch>
-          <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
+          <Route path="/wedding-inquiry" component={ComprehensiveWeddingInquiry} />
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           {/* Route for the generic event selection page */}
           <Route path="/inquiry" component={PublicRoutes} />
@@ -178,7 +177,7 @@ function AppContent() {
           <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
-          <Route path="/wedding-inquiry" component={WeddingInquiryForm} />
+          <Route path="/wedding-inquiry" component={ComprehensiveWeddingInquiry} />
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
