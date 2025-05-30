@@ -1,0 +1,62 @@
+The menus (specifically, the individual menu items within a selected theme) are not displaying properly on the form due to a runtime error: (items || []).map is not a function. This error is shown in the second screenshot you provided (Screenshot 2025-05-30 at 4.02.55 PM.png).
+
+Here's a breakdown of why this is happening, based on your code structure:
+
+Data Structure for itemsByCategory:
+In your menusByTheme.json file (and consequently in the selectedThemeData.itemsByCategory object in your ComprehensiveWeddingInquiry.tsx component), the structure is like this:
+
+JSON
+
+"itemsByCategory": {
+  "category_key_A": {  // This is one of the 'items' in your loop
+    "title": "Category A Title",
+    "description": "...",
+    "selectionLimit": N,
+    "items": [ /* Array of actual menu item objects */ ] // THIS is the array you want to map
+  },
+  // ... more categories
+}
+Code Causing the Error:
+The error occurs in ComprehensiveWeddingInquiry.tsx within the renderMenuSelectionStep function. The relevant part of the code is:
+
+TypeScript
+
+// client/src/pages/wedding/ComprehensiveWeddingInquiry.tsx
+{Object.entries(selectedThemeData.itemsByCategory || {}).map(([category, items]: [string, any]) => (
+  // ...
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+    {(items || []).map((item: any) => { // <--- ERROR HERE (line 809 in screenshot)
+      // ... logic to render individual menu item card ...
+    })}
+  </div>
+  // ...
+))}
+In this code:
+
+Object.entries(selectedThemeData.itemsByCategory || {}).map(...) iterates through each category in your theme.
+[category, items] means that for each entry, category is the category key (e.g., "salad_/_side_dish"), and items is the value associated with that key.
+This items variable (the one causing the error) is therefore an object like:
+JavaScript
+
+{
+  title: "Salad / Side Dish",
+  description: "Salad / Side Dish selection",
+  selectionLimit: 3,
+  items: [ /* array of menu item objects */ ]
+}
+The Reason for the Error:
+The line (items || []).map((item: any) => { ... }) is attempting to call the .map() function on the items object itself. However, .map() is a method for arrays, not for objects. The actual array of menu items you want to iterate over is nested inside this items object, under the key items.items.
+
+How to Fix It:
+
+You need to access the items array within the items object (which represents the category details). Change the problematic line from:
+
+TypeScript
+
+{(items || []).map((item: any) => { ... })}
+to:
+
+TypeScript
+
+{(items.items || []).map((item: any) => { ... })}
+This way, you'll be correctly calling .map() on the array of menu item objects for each category, allowing the individual menu items to be displayed as intended. The first screenshot shows that the theme selection part is working correctly, so the issue is specifically in rendering the items within a chosen theme and category.
