@@ -1,12 +1,4 @@
 {
-  "theme_1": {
-    "id": 1,
-    "name": "Sample Appetizer Menu",
-    "description": "A sample menu with appetizers",
-    "allItems": [],
-    "itemsByCategory": {},
-    "totalItemCount": 0
-  },
   "custom_american_bbq": {
     "id": 22,
     "name": "American BBQ",

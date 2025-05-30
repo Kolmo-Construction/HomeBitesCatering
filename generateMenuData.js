@@ -82,7 +82,8 @@ async function generateMenuData() {
     console.log('📋 Generating menu themes with associated items...');
     const weddingMenus = await db
       .select()
-      .from(menus);
+      .from(menus)
+      .where(eq(menus.type, 'form_builder'));
 
     const menusByTheme = {};
     const organizedMenuData = {};
