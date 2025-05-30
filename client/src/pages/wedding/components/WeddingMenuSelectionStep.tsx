@@ -69,6 +69,13 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
           price: 46.00,
           description: `Premium ${theme.name} celebration with full menu access.`,
           limits: { mains: 4, sides: 5, salads: 2, sauces: 4 }
+        },
+        {
+          id: `${key}_platinum`,
+          name: "Platinum Package",
+          price: 55.00,
+          description: `Ultimate ${theme.name} experience with unlimited menu selections and premium service.`,
+          limits: { mains: 6, sides: 6, salads: 3, sauces: 5 }
         }
       ],
       categories: {
