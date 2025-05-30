@@ -30,6 +30,10 @@ import WeddingDietaryRestrictionsStep from "./components/WeddingDietaryRestricti
 // import DietaryGuidanceStep from "./components/DietaryGuidanceStep";
 import SimpleDietaryDashboard from "./components/SimpleDietaryDashboard";
 import DatabaseMenuThemesStep from "./components/DatabaseMenuThemesStep";
+import TacoFiestaTierSelection from "./components/TacoFiestaTierSelection";
+import AmericanBBQTierSelection from "./components/AmericanBBQTierSelection";
+import GreekTierSelection from "./components/GreekTierSelection";
+import KebabPartyTierSelection from "./components/KebabPartyTierSelection";
 // WeddingReviewStep would be the component for the "review" step
 // import WeddingReviewStep from "./components/WeddingReviewStep";
 
@@ -473,6 +477,33 @@ export default function WeddingInquiryForm() {
                   />
                 </div>
               )}
+              
+              {/* Database Menu Tier Selection Components */}
+              {currentStepKey === "tacoFiestaTierSelection" && selectedTheme === "theme_21" && (
+                <TacoFiestaTierSelection
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "americanBBQTierSelection" && selectedTheme === "custom_american_bbq" && (
+                <AmericanBBQTierSelection
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "greekTierSelection" && selectedTheme === "theme_23" && (
+                <GreekTierSelection
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              {currentStepKey === "kebabPartyTierSelection" && selectedTheme === "theme_24" && (
+                <KebabPartyTierSelection
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                />
+              )}
+              
               {currentStepKey === "appetizerQuestion" && (
                 <div className="flex gap-6">
                   <div className="flex-1">

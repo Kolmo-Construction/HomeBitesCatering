@@ -18,6 +18,10 @@ export type WeddingFormStep =
   | "dietaryGuidance" // Added early in the process
   | "serviceStyleSelection"
   | "menuSelection"
+  | "tacoFiestaTierSelection"
+  | "americanBBQTierSelection"
+  | "greekTierSelection"
+  | "kebabPartyTierSelection"
   | "appetizerQuestion"
   | "appetizers" // This step now refers to the detailed hors d'oeuvres selection
   | "foodTruckMenu"
