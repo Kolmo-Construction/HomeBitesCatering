@@ -229,7 +229,11 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
           <Button type="button" variant="outline" onClick={onPrevious} className="flex items-center px-6 py-3 text-lg">
             <ChevronLeft className="mr-2 h-5 w-5" /> Back
           </Button>
-          {/* Next button is typically enabled by the orchestrator or if a theme is chosen */}
+          {selectedTheme && (
+            <Button type="button" onClick={onNext} className="flex items-center px-6 py-3 text-lg bg-pink-600 hover:bg-pink-700">
+              Continue <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
     );
