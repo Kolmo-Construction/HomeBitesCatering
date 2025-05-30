@@ -127,7 +127,7 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
     return acc;
   }, {} as any);
 
-  const themeData = databaseThemes;
+  const themeData = { ...weddingThemeMenuData, ...databaseThemes };
 
   const handleThemeSelection = (themeKey: string) => {
     setValue("requestedTheme", themeKey);
@@ -152,35 +152,78 @@ const WeddingMenuSelectionStep: React.FC<WeddingMenuSelectionStepProps> = ({
             Select one of our curated wedding themes, or opt for a 'Custom Wedding Menu' to tailor every detail. Each theme offers distinct packages to suit your preferences.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {Object.entries(themeData).map(([themeKey, theme]) => (
-            <Card
-              key={themeKey}
-              className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
-                selectedTheme === themeKey ? "ring-4 ring-pink-500 ring-offset-2 scale-105" : "border-gray-200"
-              }`}
-              onClick={() => handleThemeSelection(themeKey)}
-            >
-              <CardHeader className="bg-gray-50 p-4">
-                <CardTitle className="text-xl font-semibold text-gray-800">{theme.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <p className="text-gray-600 mb-4 text-sm">{theme.description}</p>
-                {generatedMenusByTheme[themeKey] && (
-                  <div className="text-xs text-gray-500 mb-3">
-                    {generatedMenusByTheme[themeKey].totalItemCount} menu items
+        {/* Priority Database Themes Section */}
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-center mb-4 text-gray-900">Featured Wedding Themes</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(generatedMenusByTheme).map(([themeKey, menuData]) => (
+              <Card
+                key={themeKey}
+                className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl transform hover:scale-105 rounded-lg ${
+                  selectedTheme === themeKey ? "ring-4 ring-pink-500 ring-offset-2 scale-105" : "border-gray-200"
+                }`}
+                onClick={() => handleThemeSelection(themeKey)}
+              >
+                <CardHeader className="bg-gradient-to-r from-pink-50 to-purple-50 p-6">
+                  <CardTitle className="text-xl font-bold text-gray-900">{menuData.name}</CardTitle>
+                  <div className="text-sm text-gray-600 mt-2">
+                    {menuData.totalItemCount} authentic menu items
                   </div>
-                )}
-                <Button
-                  variant={selectedTheme === themeKey ? "default" : "outline"}
-                  size="sm"
-                  className={`w-full ${selectedTheme === themeKey ? 'bg-pink-600 hover:bg-pink-700' : 'text-pink-600 border-pink-600 hover:bg-pink-50'}`}
-                >
-                  {selectedTheme === themeKey ? "Selected Theme" : "Select This Theme"}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="p-6">
+                  <p className="text-gray-700 mb-4 text-sm leading-relaxed">
+                    {menuData.description || `Experience authentic ${menuData.name} cuisine with our carefully curated selections for your wedding celebration.`}
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Available Tiers</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded">Bronze</div>
+                      <div className="bg-gray-100 text-gray-800 px-2 py-1 rounded">Silver</div>
+                      <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Gold</div>
+                      <div className="bg-purple-100 text-purple-800 px-2 py-1 rounded">Platinum</div>
+                    </div>
+                  </div>
+                  <Button
+                    variant={selectedTheme === themeKey ? "default" : "outline"}
+                    size="sm"
+                    className={`w-full font-medium ${selectedTheme === themeKey ? 'bg-pink-600 hover:bg-pink-700' : 'text-pink-600 border-pink-600 hover:bg-pink-50'}`}
+                  >
+                    {selectedTheme === themeKey ? "✓ Selected Theme" : "Select This Theme"}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Additional Themes Section */}
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold text-center mb-4 text-gray-700">Additional Themes</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(weddingThemeMenuData).map(([themeKey, theme]) => (
+              <Card
+                key={themeKey}
+                className={`overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md ${
+                  selectedTheme === themeKey ? "ring-2 ring-pink-400 ring-offset-1" : "border-gray-200"
+                }`}
+                onClick={() => handleThemeSelection(themeKey)}
+              >
+                <CardHeader className="bg-gray-50 p-4">
+                  <CardTitle className="text-lg font-semibold text-gray-800">{theme.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <p className="text-gray-600 mb-3 text-sm">{theme.description}</p>
+                  <Button
+                    variant={selectedTheme === themeKey ? "default" : "outline"}
+                    size="sm"
+                    className={`w-full ${selectedTheme === themeKey ? 'bg-pink-600 hover:bg-pink-700' : 'text-pink-600 border-pink-600 hover:bg-pink-50'}`}
+                  >
+                    {selectedTheme === themeKey ? "✓ Selected" : "Select Theme"}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
         <div className="flex justify-between mt-10">
           <Button type="button" variant="outline" onClick={onPrevious} className="flex items-center px-6 py-3 text-lg">
