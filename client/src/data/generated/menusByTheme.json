@@ -17462,5 +17462,132 @@
       }
     },
     "totalItemCount": 40
+  },
+  "custom_pascal_matta": {
+    "id": 25,
+    "name": "PASCAL MATTA",
+    "description": "",
+    "allItems": [
+      {
+        "id": "cacciatore_w",
+        "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+        "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+        "category": "Main Course - Poultry",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "DAIRY_FREE_OPTION",
+          "GLUTEN_FREE_OPTION"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_SULPHITES (if wine used)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 6,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 45,
+            "min": 30,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 550,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+        "suitableForDiets": [
+          "PALEO_FRIENDLY (check ingredients)"
+        ],
+        "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "main_course_-_poultry": {
+        "title": "Main Course - Poultry",
+        "description": "Main Course - Poultry selection",
+        "selectionLimit": 1,
+        "items": [
+          {
+            "id": "cacciatore_w",
+            "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+            "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+            "category": "Main Course - Poultry",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "DAIRY_FREE_OPTION",
+              "GLUTEN_FREE_OPTION"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_SULPHITES (if wine used)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 6,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 45,
+                "min": 30,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 550,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+            "suitableForDiets": [
+              "PALEO_FRIENDLY (check ingredients)"
+            ],
+            "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 1
   }
 }

@@ -257,5 +257,33 @@
     "packages": [],
     "categories": [],
     "itemCount": 40
+  },
+  {
+    "id": 25,
+    "name": "PASCAL MATTA",
+    "description": "",
+    "theme_key": "custom_pascal_matta",
+    "packages": [
+      {
+        "id": "custom_package_1748667099509",
+        "name": "PASCAL MATTA",
+        "price": 0,
+        "description": "Custom menu: PASCAL MATTA",
+        "customizable": true
+      }
+    ],
+    "categories": [
+      {
+        "description": "Main Course - Poultry selection",
+        "category_key": "main_course_-_poultry",
+        "display_title": "Main Course - Poultry",
+        "upcharge_info": {},
+        "selection_limit": 1,
+        "available_item_ids": [
+          "cacciatore_w"
+        ]
+      }
+    ],
+    "itemCount": 1
   }
 ]

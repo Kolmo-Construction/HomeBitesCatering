@@ -157,6 +157,7 @@ async function generateMenuData() {
         });
       } else if (Array.isArray(menu.items)) {
         // Handle simple array format: organize by type field from MenuBuilder
+        console.log(`    Using simple array format for menu: ${menu.name}`);
         const typeGroups = {};
         menu.items.forEach(item => {
           const itemData = itemsLookup[item.id];
@@ -166,6 +167,7 @@ async function generateMenuData() {
               typeGroups[type] = [];
             }
             typeGroups[type].push(itemData);
+            console.log(`      Added ${itemData.name} to type: ${type}`);
           }
         });
         
@@ -191,6 +193,7 @@ async function generateMenuData() {
             selectionLimit: null,
             items: items
           };
+          console.log(`      Created category: ${typeDisplayNames[type]} with ${items.length} items`);
         });
       }
       
