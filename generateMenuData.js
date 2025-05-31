@@ -223,7 +223,14 @@ async function generateMenuData() {
           minGuestCount: menuStructure.min_guest_count,
           customizable: menuStructure.customizable || false
         }] : [],
-        categories: menuStructure?.categories || [],
+        categories: menuStructure?.categories || Object.entries(itemsByCategory).map(([typeKey, categoryData]) => ({
+          description: categoryData.description,
+          category_key: typeKey,
+          display_title: categoryData.title,
+          upcharge_info: {},
+          selection_limit: categoryData.selectionLimit,
+          available_item_ids: categoryData.items.map(item => item.id)
+        })),
         itemCount: menuItemIds.size
       };
     });

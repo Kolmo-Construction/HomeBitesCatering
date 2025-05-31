@@ -237,7 +237,70 @@
     "description": "",
     "theme_key": "theme_21",
     "packages": [],
-    "categories": [],
+    "categories": [
+      {
+        "description": "Main Courses for Taco Fiesta ",
+        "category_key": "mains",
+        "display_title": "Main Courses",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "stuffed_poblano",
+          "cilantro_lime_rice",
+          "mexican_rice",
+          "grilled_vegetables",
+          "barbacoa",
+          "pork_carnitas",
+          "pork_belly",
+          "flank_steak_fajitas",
+          "ground_beef",
+          "chorizo",
+          "mexican_chicken",
+          "chorizo_queso_dip",
+          "queso_dip",
+          "beef_birria",
+          "cod",
+          "shrimp",
+          "tofu",
+          "roasted_vegetables",
+          "escabeche",
+          "refried_beans",
+          "jalapeno_cornbread",
+          "elotes",
+          "rice_and_beans",
+          "mexican_slaw",
+          "veg_empanadas",
+          "pico_de_gallo",
+          "fresh_mango_salsa",
+          "pineapple_habanero",
+          "cucumber_apple",
+          "salsa_roja",
+          "salsa_verde",
+          "creamy_salsa_verde",
+          "shredded_cheese",
+          "diced_onions",
+          "jalapenos",
+          "sour_cream",
+          "pickled_cabbage",
+          "vegan_cheese",
+          "lime_wedges",
+          "sliced_radish",
+          "diced_bell_peppers",
+          "fire_roasted_peppers",
+          "guacamole"
+        ]
+      },
+      {
+        "description": "Side Dishes for Taco Fiesta ",
+        "category_key": "sides",
+        "display_title": "Side Dishes",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "cilantro"
+        ]
+      }
+    ],
     "itemCount": 44
   },
   {
@@ -246,7 +309,82 @@
     "description": "",
     "theme_key": "theme_23",
     "packages": [],
-    "categories": [],
+    "categories": [
+      {
+        "description": "Main Courses for A Taste of Greece",
+        "category_key": "mains",
+        "display_title": "Main Courses",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "papoutsakia",
+          "soutzoukakia",
+          "kokinisto",
+          "kleftiko",
+          "pastitsio",
+          "kotopoulo_lemonato",
+          "paidakia",
+          "kotsi_arni",
+          "bifteki_gemisto",
+          "psari_plaki",
+          "solomou",
+          "bakaliaros",
+          "aginares",
+          "gemista"
+        ]
+      },
+      {
+        "description": "Side Dishes for A Taste of Greece",
+        "category_key": "sides",
+        "display_title": "Side Dishes",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "lemon_potatoes",
+          "spanakopita",
+          "kritharaki",
+          "fasolakia",
+          "gigandes_plaki",
+          "tyrokroketes",
+          "octapodi",
+          "dolmades",
+          "saganaki",
+          "greek_rice_pilaf",
+          "baked_vegetables"
+        ]
+      },
+      {
+        "description": "Salads for A Taste of Greece",
+        "category_key": "salads",
+        "display_title": "Salads",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "horiatiki",
+          "lahanosalata",
+          "maroulosalata",
+          "patatosalata",
+          "dakos",
+          "garden_salad",
+          "tabouli"
+        ]
+      },
+      {
+        "description": "Spreads for A Taste of Greece",
+        "category_key": "spreads",
+        "display_title": "Spreads",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "tzatziki",
+          "hummus",
+          "melitzanosalata",
+          "spicy_feta",
+          "taramasalata",
+          "beet_hummus"
+        ]
+      }
+    ],
     "itemCount": 38
   },
   {
@@ -255,7 +393,84 @@
     "description": "",
     "theme_key": "theme_24",
     "packages": [],
-    "categories": [],
+    "categories": [
+      {
+        "description": "Main Courses for Kebab party",
+        "category_key": "mains",
+        "display_title": "Main Courses",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "pork_tenderloin",
+          "saltimbocca_w",
+          "beef_tenderloin",
+          "beef_flank",
+          "lamb",
+          "swordfish",
+          "shrimp",
+          "bacon_wrapped_asparagus",
+          "tofu",
+          "mushrooms",
+          "tomato_gnocchi",
+          "mixed_vegetables"
+        ]
+      },
+      {
+        "description": "Side Dishes for Kebab party",
+        "category_key": "sides",
+        "display_title": "Side Dishes",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "falafel",
+          "spanakopita",
+          "dolmades",
+          "yellow_rice_pilaf",
+          "wild_rice_mushroom",
+          "patatas_bravas",
+          "potato_croquettes",
+          "roasted_beets",
+          "roasted_brussels",
+          "moroccan_cauliflower",
+          "roasted_carrots",
+          "grilled_vegetables"
+        ]
+      },
+      {
+        "description": "Salads for Kebab party",
+        "category_key": "salads",
+        "display_title": "Salads",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "tabouli_salad",
+          "fattoush",
+          "cous_cous",
+          "lebanese_potato",
+          "greek_village",
+          "tomato_cucumber",
+          "caprese_pasta",
+          "caesar",
+          "garden_salad"
+        ]
+      },
+      {
+        "description": "Spreads for Kebab party",
+        "category_key": "spreads",
+        "display_title": "Spreads",
+        "upcharge_info": {},
+        "selection_limit": null,
+        "available_item_ids": [
+          "tzatziki",
+          "sp_hummus",
+          "baba_ghanoush",
+          "spicy_feta",
+          "taramasalata",
+          "muhammara",
+          "lebanese_garlic"
+        ]
+      }
+    ],
     "itemCount": 40
   },
   {
