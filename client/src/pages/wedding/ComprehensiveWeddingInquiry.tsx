@@ -927,6 +927,11 @@ export default function ComprehensiveWeddingInquiry() {
               className="mt-2"
             />
           </div>
+
+          {/* Dietary Information Panel */}
+          <div className="mt-8">
+            <DietaryInfoPanel selectedItems={selectedMenuItems} />
+          </div>
         </div>
       )}
     </div>
