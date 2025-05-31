@@ -164,6 +164,7 @@ function AppContent() {
           <Route path="/menus/new" component={Menus} />
           <Route path="/menus/:id" component={Menus} />
           <Route path="/menus/:id/edit" component={Menus} />
+          <Route path="/event-types" component={EventTypes} />
           <Route path="/calendar" component={Calendar} />
           <Route path="/settings" component={Settings} />
           <Route path="/raw-leads" component={RawLeadsPage} />
