@@ -3,6 +3,22 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Event types enum for menu categorization
+export const eventTypeEnum = pgEnum("event_type", [
+  "wedding", 
+  "corporate", 
+  "birthday", 
+  "anniversary", 
+  "graduation", 
+  "holiday_party", 
+  "fundraiser", 
+  "conference", 
+  "workshop", 
+  "reunion", 
+  "celebration", 
+  "other"
+]);
+
 // Nutritional range interface for structured nutrition data
 export interface NutritionalRange {
   min: number;
@@ -189,7 +205,9 @@ export const menus = pgTable("menus", {
   name: text("name").notNull(),
   description: text("description"),
   type: text("type").notNull(), // standard, custom, seasonal
+  eventType: eventTypeEnum("event_type").default("other").notNull(), // wedding, corporate, birthday, etc.
   items: jsonb("items").notNull(), // array of menu item IDs with quantities
+  isPubliclyVisible: boolean("is_publicly_visible").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
