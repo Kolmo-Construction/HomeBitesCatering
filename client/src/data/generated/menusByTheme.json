@@ -6370,8 +6370,8 @@
     ],
     "itemsByCategory": {
       "mains": {
-        "title": "Mains",
-        "description": "mains items for Taco Fiesta ",
+        "title": "Main Courses",
+        "description": "Main Courses for Taco Fiesta ",
         "selectionLimit": null,
         "items": [
           {
@@ -8675,8 +8675,8 @@
         ]
       },
       "sides": {
-        "title": "Sides",
-        "description": "sides items for Taco Fiesta ",
+        "title": "Side Dishes",
+        "description": "Side Dishes for Taco Fiesta ",
         "selectionLimit": null,
         "items": [
           {
@@ -10840,8 +10840,8 @@
     ],
     "itemsByCategory": {
       "mains": {
-        "title": "Mains",
-        "description": "mains items for A Taste of Greece",
+        "title": "Main Courses",
+        "description": "Main Courses for A Taste of Greece",
         "selectionLimit": null,
         "items": [
           {
@@ -11605,8 +11605,8 @@
         ]
       },
       "sides": {
-        "title": "Sides",
-        "description": "sides items for A Taste of Greece",
+        "title": "Side Dishes",
+        "description": "Side Dishes for A Taste of Greece",
         "selectionLimit": null,
         "items": [
           {
@@ -12211,7 +12211,7 @@
       },
       "salads": {
         "title": "Salads",
-        "description": "salads items for A Taste of Greece",
+        "description": "Salads for A Taste of Greece",
         "selectionLimit": null,
         "items": [
           {
@@ -12616,7 +12616,7 @@
       },
       "spreads": {
         "title": "Spreads",
-        "description": "spreads items for A Taste of Greece",
+        "description": "Spreads for A Taste of Greece",
         "selectionLimit": null,
         "items": [
           {
@@ -13027,7 +13027,7 @@
         "id": "saltimbocca_w",
         "name": "Chicken Saltimbocca with Prosciutto & Sage",
         "description": "A classic Italian dish featuring pan-seared chicken cutlets topped with prosciutto and fresh sage, typically finished with a pan sauce.",
-        "category": "Main Course - Poultry",
+        "category": "Main",
         "price": 0,
         "upcharge": 0,
         "isVegetarian": false,
@@ -15203,8 +15203,8 @@
     ],
     "itemsByCategory": {
       "mains": {
-        "title": "Mains",
-        "description": "mains items for Kebab party",
+        "title": "Main Courses",
+        "description": "Main Courses for Kebab party",
         "selectionLimit": null,
         "items": [
           {
@@ -15264,7 +15264,7 @@
             "id": "saltimbocca_w",
             "name": "Chicken Saltimbocca with Prosciutto & Sage",
             "description": "A classic Italian dish featuring pan-seared chicken cutlets topped with prosciutto and fresh sage, typically finished with a pan sauce.",
-            "category": "Main Course - Poultry",
+            "category": "Main",
             "price": 0,
             "upcharge": 0,
             "isVegetarian": false,
@@ -15860,8 +15860,8 @@
         ]
       },
       "sides": {
-        "title": "Sides",
-        "description": "sides items for Kebab party",
+        "title": "Side Dishes",
+        "description": "Side Dishes for Kebab party",
         "selectionLimit": null,
         "items": [
           {
@@ -16537,7 +16537,7 @@
       },
       "salads": {
         "title": "Salads",
-        "description": "salads items for Kebab party",
+        "description": "Salads for Kebab party",
         "selectionLimit": null,
         "items": [
           {
@@ -17054,7 +17054,7 @@
       },
       "spreads": {
         "title": "Spreads",
-        "description": "spreads items for Kebab party",
+        "description": "Spreads for Kebab party",
         "selectionLimit": null,
         "items": [
           {

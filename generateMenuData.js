@@ -156,7 +156,7 @@ async function generateMenuData() {
           };
         });
       } else if (Array.isArray(menu.items)) {
-        // Handle simple array format: organize by type field
+        // Handle simple array format: organize by type field from MenuBuilder
         const typeGroups = {};
         menu.items.forEach(item => {
           const itemData = itemsLookup[item.id];
@@ -169,11 +169,25 @@ async function generateMenuData() {
           }
         });
         
-        // Convert type groups to proper category structure
+        // Convert type groups to proper category structure with proper display names
+        const typeDisplayNames = {
+          'mains': 'Main Courses',
+          'sides': 'Side Dishes', 
+          'salads': 'Salads',
+          'sauces': 'Sauces',
+          'salsas': 'Salsas',
+          'spreads': 'Spreads',
+          'condiments': 'Condiments',
+          'appetizers': 'Appetizers',
+          'desserts': 'Desserts',
+          'beverages': 'Beverages',
+          'other': 'Other Items'
+        };
+        
         Object.entries(typeGroups).forEach(([type, items]) => {
           itemsByCategory[type] = {
-            title: type.charAt(0).toUpperCase() + type.slice(1),
-            description: `${type} items for ${menu.name}`,
+            title: typeDisplayNames[type] || type.charAt(0).toUpperCase() + type.slice(1),
+            description: `${typeDisplayNames[type] || type} for ${menu.name}`,
             selectionLimit: null,
             items: items
           };

@@ -4110,59 +4110,6 @@
     "image": null
   },
   {
-    "id": "orzo_pesto_salad",
-    "name": "Tuscan Orzo Pesto Salad",
-    "description": "A flavorful pasta salad featuring orzo pasta tossed with pesto, sun-dried tomatoes, often with other additions like Kalamata olives, feta cheese, spinach, or toasted pine nuts.",
-    "category": "Salad / Side Dish",
-    "price": 0,
-    "upcharge": 0,
-    "isVegetarian": true,
-    "isVegan": false,
-    "isGlutenFree": false,
-    "isDairyFree": false,
-    "isNutFree": false,
-    "dietaryFlags": [
-      "VEGETARIAN_OPTION"
-    ],
-    "allergenAlerts": [
-      "CONTAINS_WHEAT (orzo)",
-      "CONTAINS_DAIRY (Parmesan in pesto, feta if used)",
-      "CONTAINS_NUTS (pine nuts in pesto and as garnish)"
-    ],
-    "nutritionalHighlights": {
-      "fat": {
-        "max": 28,
-        "min": 18,
-        "unit": "g"
-      },
-      "carbs": {
-        "max": 50,
-        "min": 35,
-        "unit": "g"
-      },
-      "fiber": {
-        "max": 5,
-        "min": 3,
-        "unit": "g"
-      },
-      "protein": {
-        "max": 15,
-        "min": 10,
-        "unit": "g"
-      },
-      "calories": {
-        "max": 500,
-        "min": 350,
-        "unit": "kcal"
-      }
-    },
-    "preparationNotes": "Orzo pasta with pesto, sun-dried tomatoes, and other Tuscan-inspired ingredients.",
-    "suitableForDiets": [],
-    "customerGuidance": "A vibrant and flavorful orzo salad with pesto and Tuscan accents.",
-    "availableLotSizes": [],
-    "image": null
-  },
-  {
     "id": "panzanella",
     "name": "Tuscan Panzanella Bread Salad",
     "description": "A classic Tuscan summer salad made with stale bread, ripe juicy tomatoes, cucumbers, red onions, and fresh basil, dressed with olive oil and vinegar. Variations may include other vegetables or anchovies.",
