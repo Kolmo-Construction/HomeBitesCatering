@@ -66,19 +66,49 @@ export default function ComprehensiveWeddingInquiry() {
 
   const loadMenuThemes = async () => {
     try {
-      const { menusByTheme } = await import('@/data/generated');
-      console.log('Raw menusByTheme data:', menusByTheme);
+      // Import both the themes and the menusByTheme data
+      const { menuThemes, allMenuItems } = await import('@/data/generated');
+      const menusByThemeModule = await import('@/data/generated/menusByTheme.json');
       
-      const themes = Object.entries(menusByTheme || {}).map(([key, theme]: [string, any]) => ({
-        id: key,
-        name: theme.name,
-        description: theme.description || `Experience authentic ${theme.name} cuisine`,
-        itemCount: theme.totalItemCount || theme.allItems?.length || 0,
-        categories: Object.keys(theme.itemsByCategory || {}),
-        allItems: theme.allItems || [],
-        itemsByCategory: theme.itemsByCategory || {},
-        tierPackages: theme.tierPackages || {}
-      }));
+      console.log('Raw menuThemes data:', menuThemes);
+      console.log('Raw menusByTheme data:', menusByThemeModule);
+      console.log('All menu items:', allMenuItems);
+      
+      // Process the themes from menuThemes.json
+      const themes = (menuThemes || []).map((theme: any) => {
+        // Get the corresponding detailed data from menusByTheme.json
+        const detailedThemeData = menusByThemeModule[theme.theme_key] || menusByThemeModule.default?.[theme.theme_key];
+        
+        // Build itemsByCategory structure from the theme's categories
+        const itemsByCategory: any = {};
+        
+        if (theme.categories && theme.categories.length > 0) {
+          theme.categories.forEach((category: any) => {
+            const categoryItems = (category.available_item_ids || []).map((itemId: string) => {
+              return allMenuItems?.find((item: any) => item.id === itemId);
+            }).filter(Boolean);
+            
+            itemsByCategory[category.category_key] = {
+              title: category.display_title,
+              description: category.description,
+              items: categoryItems,
+              selectionLimit: category.selection_limit,
+              upchargeInfo: category.upcharge_info || {}
+            };
+          });
+        }
+        
+        return {
+          id: theme.theme_key || theme.id.toString(),
+          name: theme.name,
+          description: theme.description || `Experience authentic ${theme.name} cuisine`,
+          itemCount: theme.itemCount || 0,
+          categories: Object.keys(itemsByCategory),
+          allItems: detailedThemeData?.allItems || [],
+          itemsByCategory,
+          tierPackages: {}
+        };
+      });
       
       console.log('Processed themes:', themes);
       setAvailableThemes(themes);
