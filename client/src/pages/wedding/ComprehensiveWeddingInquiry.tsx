@@ -1272,30 +1272,15 @@ export default function ComprehensiveWeddingInquiry() {
                 </div>
               )}
 
-              {nutritionSummary && (
-                <div>
-                  <Separator />
-                  <h4 className="font-medium mt-3 mb-2">Menu Balance</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="bg-blue-50 p-2 rounded">
-                      <div className="font-medium text-blue-800">{nutritionSummary.avgCalories}</div>
-                      <div className="text-blue-600">avg calories</div>
-                    </div>
-                    <div className="bg-green-50 p-2 rounded">
-                      <div className="font-medium text-green-800">{nutritionSummary.avgProtein}g</div>
-                      <div className="text-green-600">avg protein</div>
-                    </div>
-                    <div className="bg-orange-50 p-2 rounded">
-                      <div className="font-medium text-orange-800">{nutritionSummary.avgCarbs}g</div>
-                      <div className="text-orange-600">avg carbs</div>
-                    </div>
-                    <div className="bg-purple-50 p-2 rounded">
-                      <div className="font-medium text-purple-800">{nutritionSummary.totalItems}</div>
-                      <div className="text-purple-600">items selected</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="mt-4">
+                <MenuBalanceCard
+                  selectedItems={selectedItems}
+                  menuData={selectedThemeData}
+                  guestCount={formData.guestInfo?.expectedGuestCount || 0}
+                  selectedTier={formData.menuSelections?.selectedTier || ''}
+                  basePricing={TIER_PRICING}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
