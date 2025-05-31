@@ -16,6 +16,9 @@ export const eventTypeEnum = pgEnum("event_type", [
   "workshop", 
   "reunion", 
   "celebration", 
+  "baby_shower",
+  "bridal_shower", 
+  "retirement_party",
   "other"
 ]);
 

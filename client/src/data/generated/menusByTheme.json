@@ -3,6 +3,7 @@
     "id": 22,
     "name": "American BBQ",
     "description": "",
+    "eventType": "wedding",
     "allItems": [
       {
         "id": "pasta_salad",
@@ -4015,6 +4016,7 @@
     "id": 21,
     "name": "Taco Fiesta ",
     "description": "",
+    "eventType": "other",
     "allItems": [
       {
         "id": "stuffed_poblano",
@@ -8741,6 +8743,7 @@
     "id": 23,
     "name": "A Taste of Greece",
     "description": "",
+    "eventType": "corporate",
     "allItems": [
       {
         "id": "papoutsakia",
@@ -12969,6 +12972,7 @@
     "id": 24,
     "name": "Kebab party",
     "description": "",
+    "eventType": "celebration",
     "allItems": [
       {
         "id": "pork_tenderloin",
@@ -17467,6 +17471,7 @@
     "id": 25,
     "name": "PASCAL MATTA",
     "description": "",
+    "eventType": "corporate",
     "allItems": [
       {
         "id": "cacciatore_w",
@@ -17589,5 +17594,3822 @@
       }
     },
     "totalItemCount": 1
+  },
+  "elegant_wedding_reception": {
+    "id": 26,
+    "name": "Elegant Wedding Reception",
+    "description": "Sophisticated menu perfect for wedding celebrations with classic and contemporary options",
+    "eventType": "wedding",
+    "allItems": [
+      {
+        "id": "stuffed_poblano",
+        "name": "Stuffed Poblano Peppers with savory rice and beans",
+        "description": "Mild poblano peppers roasted and stuffed with a savory mixture of rice, black beans, corn, tomatoes, onions, and spices, often topped with cheese or a vegan alternative.",
+        "category": "Main Course - Vegetarian / Mexican-inspired",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION (if no dairy cheese)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION (if no dairy cheese)",
+          "HIGH_FIBER"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 55,
+            "min": 40,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 12,
+            "min": 8,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 10,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 450,
+            "min": 300,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Roasted poblano peppers filled with a flavorful rice, bean, and corn mixture.",
+        "suitableForDiets": [],
+        "customerGuidance": "Flavorful and satisfying stuffed poblano peppers with a savory rice and bean filling.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "grilled_vegetables",
+        "name": "Grilled Vegetables",
+        "description": "A medley of seasonal vegetables, such as bell peppers, zucchini, yellow squash, asparagus, and onions, lightly seasoned and grilled to bring out their natural sweetness and smoky flavor.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGAN_OPTION",
+          "VEGETARIAN_OPTION",
+          "GLUTEN_FREE_OPTION",
+          "HEALTHY_CHOICE"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 12,
+            "min": 5,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 20,
+            "min": 12,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 7,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 100,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "A mix of seasonal vegetables, grilled with simple seasonings. Check for any specific glazes or marinades used.",
+        "suitableForDiets": [
+          "VEGAN_DIET",
+          "VEGETARIAN_DIET",
+          "PALEO_FRIENDLY",
+          "MEDITERRANEAN_DIET"
+        ],
+        "customerGuidance": "A healthy and flavorful assortment of grilled seasonal vegetables. (Values per 1 cup serving).",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "cilantro_lime_rice",
+        "name": "Cilantro-Lime Rice, fresh and zesty",
+        "description": "Fluffy rice (typically long-grain white rice) seasoned with fresh cilantro, lime juice, and often a touch of lime zest and salt. A popular side for Mexican and Southwestern dishes.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION (if no butter)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION (if no butter)"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 5,
+            "min": 1,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 45,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 2,
+            "min": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 250,
+            "min": 180,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rice flavored with fresh cilantro and lime juice.",
+        "suitableForDiets": [],
+        "customerGuidance": "Bright, zesty, and refreshing cilantro-lime rice.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "cacciatore_w",
+        "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+        "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+        "category": "Main Course - Poultry",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "DAIRY_FREE_OPTION",
+          "GLUTEN_FREE_OPTION"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_SULPHITES (if wine used)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 6,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 45,
+            "min": 30,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 550,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+        "suitableForDiets": [
+          "PALEO_FRIENDLY (check ingredients)"
+        ],
+        "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "barbacoa",
+        "name": "Barbacoa",
+        "description": "Traditionally, barbacoa refers to meat (often beef, lamb, or goat) slow-cooked until tender, typically seasoned with chilies and spices. In modern Mexican-American cuisine, beef barbacoa often involves beef cheeks or chuck roast slow-cooked with chipotle peppers, cumin, cloves, and other seasonings.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 20,
+            "min": 10,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 350,
+            "min": 200,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Slow-cooked, tender, and flavorful shredded beef seasoned with chilies and spices.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY",
+          "PALEO_FRIENDLY"
+        ],
+        "customerGuidance": "Rich, savory, and tender slow-cooked barbacoa beef. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pork_carnitas",
+        "name": "Pork Carnitas",
+        "description": "A Mexican dish of pork (often shoulder or butt) slow-cooked until very tender, then typically shredded and crisped up. Seasoned with ingredients like oranges, lime, onion, garlic, and spices.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 28,
+            "min": 18,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 3,
+            "min": 1,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 380,
+            "min": 250,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Slow-cooked, tender, and crispy shredded pork with citrus and spice notes.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Juicy and flavorful slow-cooked pork carnitas. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pasta_salad",
+        "name": "Pasta Salad",
+        "description": "A versatile salad dish made with one or more types of pasta, almost always chilled, and most often tossed in a vinegar, oil, or mayonnaise-based dressing. Typically includes chopped vegetables, cheeses, and sometimes meats.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": false,
+        "isDairyFree": false,
+        "isNutFree": true,
+        "dietaryFlags": [],
+        "allergenAlerts": [
+          "CONTAINS_WHEAT (pasta)",
+          "POTENTIAL_DAIRY (cheese, some dressings)",
+          "POTENTIAL_EGG (mayonnaise dressings)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 50,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 500,
+            "min": 300,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chilled pasta tossed with vegetables and dressing. Specifics vary.",
+        "suitableForDiets": [],
+        "customerGuidance": "A refreshing pasta salad. Please ask for today's specific preparation.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "garden_salad",
+        "name": "Fresh Garden Salad with a choice of vegan dressings",
+        "description": "A crisp salad of mixed fresh greens and assorted garden vegetables like tomatoes, cucumbers, carrots, and red onions, served with a selection of vegan dressing options.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION",
+          "LOW_CALORIE_OPTION (dressing dependent)"
+        ],
+        "allergenAlerts": [
+          "ALLERGENS_DEPEND_ON_DRESSING_CHOICE (e.g., soy, nuts, sesame in some vegan dressings - please verify)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 8,
+            "min": 1,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 4,
+            "min": 2,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 70,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "A simple mix of fresh greens and vegetables, served with vegan dressing choices.",
+        "suitableForDiets": [],
+        "customerGuidance": "A classic fresh garden salad with a variety of vegan dressings available. (Nutritional values exclude dressing)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "mexican_rice",
+        "name": "Mexican Rice",
+        "description": "Also known as Spanish rice, this is a popular side dish made from white rice cooked in a tomato-based broth with onions, garlic, and various seasonings like cumin and chili powder.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION (if vegetable broth used)",
+          "VEGAN_OPTION (if vegetable broth and no lard)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 6,
+            "min": 2,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 45,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 2,
+            "min": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 250,
+            "min": 180,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rice cooked in a savory tomato broth with onions, garlic, and spices.",
+        "suitableForDiets": [],
+        "customerGuidance": "Flavorful and savory Mexican-style rice. (Nutritional values per serving)",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "appetizers": {
+        "title": "Wedding Appetizers",
+        "description": "Elegant starters for your special day",
+        "selectionLimit": 3,
+        "items": [
+          {
+            "id": "stuffed_poblano",
+            "name": "Stuffed Poblano Peppers with savory rice and beans",
+            "description": "Mild poblano peppers roasted and stuffed with a savory mixture of rice, black beans, corn, tomatoes, onions, and spices, often topped with cheese or a vegan alternative.",
+            "category": "Main Course - Vegetarian / Mexican-inspired",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION (if no dairy cheese)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION (if no dairy cheese)",
+              "HIGH_FIBER"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 55,
+                "min": 40,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 12,
+                "min": 8,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 10,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 450,
+                "min": 300,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Roasted poblano peppers filled with a flavorful rice, bean, and corn mixture.",
+            "suitableForDiets": [],
+            "customerGuidance": "Flavorful and satisfying stuffed poblano peppers with a savory rice and bean filling.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "grilled_vegetables",
+            "name": "Grilled Vegetables",
+            "description": "A medley of seasonal vegetables, such as bell peppers, zucchini, yellow squash, asparagus, and onions, lightly seasoned and grilled to bring out their natural sweetness and smoky flavor.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGAN_OPTION",
+              "VEGETARIAN_OPTION",
+              "GLUTEN_FREE_OPTION",
+              "HEALTHY_CHOICE"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 12,
+                "min": 5,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 20,
+                "min": 12,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 7,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 100,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "A mix of seasonal vegetables, grilled with simple seasonings. Check for any specific glazes or marinades used.",
+            "suitableForDiets": [
+              "VEGAN_DIET",
+              "VEGETARIAN_DIET",
+              "PALEO_FRIENDLY",
+              "MEDITERRANEAN_DIET"
+            ],
+            "customerGuidance": "A healthy and flavorful assortment of grilled seasonal vegetables. (Values per 1 cup serving).",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "cilantro_lime_rice",
+            "name": "Cilantro-Lime Rice, fresh and zesty",
+            "description": "Fluffy rice (typically long-grain white rice) seasoned with fresh cilantro, lime juice, and often a touch of lime zest and salt. A popular side for Mexican and Southwestern dishes.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION (if no butter)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION (if no butter)"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 5,
+                "min": 1,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 45,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 2,
+                "min": 1,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 250,
+                "min": 180,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rice flavored with fresh cilantro and lime juice.",
+            "suitableForDiets": [],
+            "customerGuidance": "Bright, zesty, and refreshing cilantro-lime rice.",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "main_courses": {
+        "title": "Main Course Selection",
+        "description": "Choose your wedding entrees",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "cacciatore_w",
+            "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+            "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+            "category": "Main Course - Poultry",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "DAIRY_FREE_OPTION",
+              "GLUTEN_FREE_OPTION"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_SULPHITES (if wine used)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 6,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 45,
+                "min": 30,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 550,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+            "suitableForDiets": [
+              "PALEO_FRIENDLY (check ingredients)"
+            ],
+            "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "barbacoa",
+            "name": "Barbacoa",
+            "description": "Traditionally, barbacoa refers to meat (often beef, lamb, or goat) slow-cooked until tender, typically seasoned with chilies and spices. In modern Mexican-American cuisine, beef barbacoa often involves beef cheeks or chuck roast slow-cooked with chipotle peppers, cumin, cloves, and other seasonings.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 20,
+                "min": 10,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 350,
+                "min": 200,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Slow-cooked, tender, and flavorful shredded beef seasoned with chilies and spices.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY",
+              "PALEO_FRIENDLY"
+            ],
+            "customerGuidance": "Rich, savory, and tender slow-cooked barbacoa beef. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pork_carnitas",
+            "name": "Pork Carnitas",
+            "description": "A Mexican dish of pork (often shoulder or butt) slow-cooked until very tender, then typically shredded and crisped up. Seasoned with ingredients like oranges, lime, onion, garlic, and spices.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 28,
+                "min": 18,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 3,
+                "min": 1,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 380,
+                "min": 250,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Slow-cooked, tender, and crispy shredded pork with citrus and spice notes.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Juicy and flavorful slow-cooked pork carnitas. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "sides": {
+        "title": "Wedding Sides",
+        "description": "Perfect accompaniments for your meal",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "pasta_salad",
+            "name": "Pasta Salad",
+            "description": "A versatile salad dish made with one or more types of pasta, almost always chilled, and most often tossed in a vinegar, oil, or mayonnaise-based dressing. Typically includes chopped vegetables, cheeses, and sometimes meats.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": false,
+            "isDairyFree": false,
+            "isNutFree": true,
+            "dietaryFlags": [],
+            "allergenAlerts": [
+              "CONTAINS_WHEAT (pasta)",
+              "POTENTIAL_DAIRY (cheese, some dressings)",
+              "POTENTIAL_EGG (mayonnaise dressings)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 50,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 500,
+                "min": 300,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chilled pasta tossed with vegetables and dressing. Specifics vary.",
+            "suitableForDiets": [],
+            "customerGuidance": "A refreshing pasta salad. Please ask for today's specific preparation.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "garden_salad",
+            "name": "Fresh Garden Salad with a choice of vegan dressings",
+            "description": "A crisp salad of mixed fresh greens and assorted garden vegetables like tomatoes, cucumbers, carrots, and red onions, served with a selection of vegan dressing options.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION",
+              "LOW_CALORIE_OPTION (dressing dependent)"
+            ],
+            "allergenAlerts": [
+              "ALLERGENS_DEPEND_ON_DRESSING_CHOICE (e.g., soy, nuts, sesame in some vegan dressings - please verify)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 8,
+                "min": 1,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 4,
+                "min": 2,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 70,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "A simple mix of fresh greens and vegetables, served with vegan dressing choices.",
+            "suitableForDiets": [],
+            "customerGuidance": "A classic fresh garden salad with a variety of vegan dressings available. (Nutritional values exclude dressing)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "mexican_rice",
+            "name": "Mexican Rice",
+            "description": "Also known as Spanish rice, this is a popular side dish made from white rice cooked in a tomato-based broth with onions, garlic, and various seasonings like cumin and chili powder.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION (if vegetable broth used)",
+              "VEGAN_OPTION (if vegetable broth and no lard)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 6,
+                "min": 2,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 45,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 2,
+                "min": 1,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 250,
+                "min": 180,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rice cooked in a savory tomato broth with onions, garlic, and spices.",
+            "suitableForDiets": [],
+            "customerGuidance": "Flavorful and savory Mexican-style rice. (Nutritional values per serving)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 9
+  },
+  "rustic_wedding_feast": {
+    "id": 27,
+    "name": "Rustic Wedding Feast",
+    "description": "Farm-to-table wedding menu with seasonal ingredients and comfort food classics",
+    "eventType": "wedding",
+    "allItems": [
+      {
+        "id": "grilled_vegetables",
+        "name": "Grilled Vegetables",
+        "description": "A medley of seasonal vegetables, such as bell peppers, zucchini, yellow squash, asparagus, and onions, lightly seasoned and grilled to bring out their natural sweetness and smoky flavor.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGAN_OPTION",
+          "VEGETARIAN_OPTION",
+          "GLUTEN_FREE_OPTION",
+          "HEALTHY_CHOICE"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 12,
+            "min": 5,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 20,
+            "min": 12,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 7,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 100,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "A mix of seasonal vegetables, grilled with simple seasonings. Check for any specific glazes or marinades used.",
+        "suitableForDiets": [
+          "VEGAN_DIET",
+          "VEGETARIAN_DIET",
+          "PALEO_FRIENDLY",
+          "MEDITERRANEAN_DIET"
+        ],
+        "customerGuidance": "A healthy and flavorful assortment of grilled seasonal vegetables. (Values per 1 cup serving).",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "crunchy_asian_salad",
+        "name": "Crunchy Asian Salad",
+        "description": "A vibrant salad with Asian-inspired flavors, typically featuring shredded cabbage or mixed greens, carrots, edamame, mandarin oranges, crispy wonton strips or chow mein noodles, and a sesame ginger or peanut dressing.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": false,
+        "isGlutenFree": false,
+        "isDairyFree": true,
+        "isNutFree": false,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "DAIRY_FREE_TYPICALLY",
+          "CRUNCHY_TEXTURE"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_NUTS (almonds/peanuts)",
+          "CONTAINS_SOY (edamame, dressing)",
+          "CONTAINS_WHEAT (wonton/chow mein)",
+          "CONTAINS_GLUTEN (wonton/chow mein)",
+          "CONTAINS_SESAME (dressing, seeds)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 28,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 35,
+            "min": 20,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 7,
+            "min": 4,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 450,
+            "min": 250,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Flavorful and textural salad. Vegan if dressing is honey-free. Gluten-free if crispy topping is omitted or GF.",
+        "suitableForDiets": [],
+        "customerGuidance": "A vibrant and crunchy Asian-inspired salad.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "cacciatore_w",
+        "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+        "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+        "category": "Main Course - Poultry",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "DAIRY_FREE_OPTION",
+          "GLUTEN_FREE_OPTION"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_SULPHITES (if wine used)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 6,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 45,
+            "min": 30,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 550,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+        "suitableForDiets": [
+          "PALEO_FRIENDLY (check ingredients)"
+        ],
+        "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "ground_beef",
+        "name": "Ground Beef",
+        "description": "Seasoned cooked ground beef, often served as a protein option for tacos, bowls, or salads. Seasonings typically include chili powder, cumin, garlic, and onion powder.",
+        "category": "Protein Option / Component",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 22,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 3,
+            "min": 1,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 25,
+            "min": 18,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 300,
+            "min": 220,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Seasoned and cooked ground beef.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Savory seasoned ground beef. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pork_belly",
+        "name": "Pork Belly",
+        "description": "A boneless cut of fatty meat from the belly of a pig. When cooked (e.g., roasted, braised, seared), it's known for its rich flavor, tender meat, and often crispy skin.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_FAT",
+          "RICH_FLAVOR",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 60,
+            "min": 45,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 2,
+            "min": 0,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 0,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 10,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 600,
+            "min": 450,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rich and succulent pork belly, preparation style varies.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Indulgent and flavorful pork belly. (Nutritional values per serving, e.g., 4oz, can vary significantly)",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "farm_fresh_appetizers": {
+        "title": "Farm Fresh Starters",
+        "description": "Seasonal appetizers made with local ingredients",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "grilled_vegetables",
+            "name": "Grilled Vegetables",
+            "description": "A medley of seasonal vegetables, such as bell peppers, zucchini, yellow squash, asparagus, and onions, lightly seasoned and grilled to bring out their natural sweetness and smoky flavor.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGAN_OPTION",
+              "VEGETARIAN_OPTION",
+              "GLUTEN_FREE_OPTION",
+              "HEALTHY_CHOICE"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 12,
+                "min": 5,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 20,
+                "min": 12,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 7,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 100,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "A mix of seasonal vegetables, grilled with simple seasonings. Check for any specific glazes or marinades used.",
+            "suitableForDiets": [
+              "VEGAN_DIET",
+              "VEGETARIAN_DIET",
+              "PALEO_FRIENDLY",
+              "MEDITERRANEAN_DIET"
+            ],
+            "customerGuidance": "A healthy and flavorful assortment of grilled seasonal vegetables. (Values per 1 cup serving).",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "crunchy_asian_salad",
+            "name": "Crunchy Asian Salad",
+            "description": "A vibrant salad with Asian-inspired flavors, typically featuring shredded cabbage or mixed greens, carrots, edamame, mandarin oranges, crispy wonton strips or chow mein noodles, and a sesame ginger or peanut dressing.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": false,
+            "isGlutenFree": false,
+            "isDairyFree": true,
+            "isNutFree": false,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "DAIRY_FREE_TYPICALLY",
+              "CRUNCHY_TEXTURE"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_NUTS (almonds/peanuts)",
+              "CONTAINS_SOY (edamame, dressing)",
+              "CONTAINS_WHEAT (wonton/chow mein)",
+              "CONTAINS_GLUTEN (wonton/chow mein)",
+              "CONTAINS_SESAME (dressing, seeds)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 28,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 35,
+                "min": 20,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 7,
+                "min": 4,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 450,
+                "min": 250,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Flavorful and textural salad. Vegan if dressing is honey-free. Gluten-free if crispy topping is omitted or GF.",
+            "suitableForDiets": [],
+            "customerGuidance": "A vibrant and crunchy Asian-inspired salad.",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "hearty_mains": {
+        "title": "Hearty Main Courses",
+        "description": "Comfort food classics for your celebration",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "cacciatore_w",
+            "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+            "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+            "category": "Main Course - Poultry",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "DAIRY_FREE_OPTION",
+              "GLUTEN_FREE_OPTION"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_SULPHITES (if wine used)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 6,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 45,
+                "min": 30,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 550,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+            "suitableForDiets": [
+              "PALEO_FRIENDLY (check ingredients)"
+            ],
+            "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "ground_beef",
+            "name": "Ground Beef",
+            "description": "Seasoned cooked ground beef, often served as a protein option for tacos, bowls, or salads. Seasonings typically include chili powder, cumin, garlic, and onion powder.",
+            "category": "Protein Option / Component",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 22,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 3,
+                "min": 1,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 25,
+                "min": 18,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 300,
+                "min": 220,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Seasoned and cooked ground beef.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Savory seasoned ground beef. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pork_belly",
+            "name": "Pork Belly",
+            "description": "A boneless cut of fatty meat from the belly of a pig. When cooked (e.g., roasted, braised, seared), it's known for its rich flavor, tender meat, and often crispy skin.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_FAT",
+              "RICH_FLAVOR",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 60,
+                "min": 45,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 2,
+                "min": 0,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 0,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 10,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 600,
+                "min": 450,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rich and succulent pork belly, preparation style varies.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Indulgent and flavorful pork belly. (Nutritional values per serving, e.g., 4oz, can vary significantly)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 5
+  },
+  "executive_business_lunch": {
+    "id": 28,
+    "name": "Executive Business Lunch",
+    "description": "Professional catering menu designed for corporate events and business meetings",
+    "eventType": "corporate",
+    "allItems": [
+      {
+        "id": "garden_salad",
+        "name": "Fresh Garden Salad with a choice of vegan dressings",
+        "description": "A crisp salad of mixed fresh greens and assorted garden vegetables like tomatoes, cucumbers, carrots, and red onions, served with a selection of vegan dressing options.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION",
+          "LOW_CALORIE_OPTION (dressing dependent)"
+        ],
+        "allergenAlerts": [
+          "ALLERGENS_DEPEND_ON_DRESSING_CHOICE (e.g., soy, nuts, sesame in some vegan dressings - please verify)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 8,
+            "min": 1,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 4,
+            "min": 2,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 70,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "A simple mix of fresh greens and vegetables, served with vegan dressing choices.",
+        "suitableForDiets": [],
+        "customerGuidance": "A classic fresh garden salad with a variety of vegan dressings available. (Nutritional values exclude dressing)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pasta_salad",
+        "name": "Pasta Salad",
+        "description": "A versatile salad dish made with one or more types of pasta, almost always chilled, and most often tossed in a vinegar, oil, or mayonnaise-based dressing. Typically includes chopped vegetables, cheeses, and sometimes meats.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": false,
+        "isDairyFree": false,
+        "isNutFree": true,
+        "dietaryFlags": [],
+        "allergenAlerts": [
+          "CONTAINS_WHEAT (pasta)",
+          "POTENTIAL_DAIRY (cheese, some dressings)",
+          "POTENTIAL_EGG (mayonnaise dressings)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 50,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 500,
+            "min": 300,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chilled pasta tossed with vegetables and dressing. Specifics vary.",
+        "suitableForDiets": [],
+        "customerGuidance": "A refreshing pasta salad. Please ask for today's specific preparation.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "cacciatore_w",
+        "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+        "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+        "category": "Main Course - Poultry",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "DAIRY_FREE_OPTION",
+          "GLUTEN_FREE_OPTION"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_SULPHITES (if wine used)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 6,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 45,
+            "min": 30,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 550,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+        "suitableForDiets": [
+          "PALEO_FRIENDLY (check ingredients)"
+        ],
+        "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "flank_steak_fajitas",
+        "name": "Flank steak Fajitas",
+        "description": "A popular Tex-Mex dish consisting of grilled strips of marinated flank steak, typically served sizzling with sautéed bell peppers and onions. Often accompanied by tortillas, salsa, guacamole, and sour cream.",
+        "category": "Main Course - Meat / Tex-Mex",
+        "price": 0,
+        "upcharge": 2,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION (if served without flour tortillas or with corn tortillas)",
+          "DAIRY_FREE_OPTION (if served without sour cream/cheese)"
+        ],
+        "allergenAlerts": [
+          "POTENTIAL_SOY (in marinade)",
+          "POTENTIAL_WHEAT (flour tortillas)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 20,
+            "min": 10,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 4,
+            "min": 2,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 35,
+            "min": 25,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 500,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Grilled marinated flank steak strips with sautéed peppers and onions.",
+        "suitableForDiets": [],
+        "customerGuidance": "Sizzling flank steak fajitas with colorful peppers and onions. (Nutritional values for steak & vegetables, excludes tortillas/sides)",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "professional_appetizers": {
+        "title": "Professional Appetizers",
+        "description": "Light starters perfect for business settings",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "garden_salad",
+            "name": "Fresh Garden Salad with a choice of vegan dressings",
+            "description": "A crisp salad of mixed fresh greens and assorted garden vegetables like tomatoes, cucumbers, carrots, and red onions, served with a selection of vegan dressing options.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION",
+              "LOW_CALORIE_OPTION (dressing dependent)"
+            ],
+            "allergenAlerts": [
+              "ALLERGENS_DEPEND_ON_DRESSING_CHOICE (e.g., soy, nuts, sesame in some vegan dressings - please verify)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 8,
+                "min": 1,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 4,
+                "min": 2,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 70,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "A simple mix of fresh greens and vegetables, served with vegan dressing choices.",
+            "suitableForDiets": [],
+            "customerGuidance": "A classic fresh garden salad with a variety of vegan dressings available. (Nutritional values exclude dressing)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pasta_salad",
+            "name": "Pasta Salad",
+            "description": "A versatile salad dish made with one or more types of pasta, almost always chilled, and most often tossed in a vinegar, oil, or mayonnaise-based dressing. Typically includes chopped vegetables, cheeses, and sometimes meats.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": false,
+            "isDairyFree": false,
+            "isNutFree": true,
+            "dietaryFlags": [],
+            "allergenAlerts": [
+              "CONTAINS_WHEAT (pasta)",
+              "POTENTIAL_DAIRY (cheese, some dressings)",
+              "POTENTIAL_EGG (mayonnaise dressings)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 50,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 500,
+                "min": 300,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chilled pasta tossed with vegetables and dressing. Specifics vary.",
+            "suitableForDiets": [],
+            "customerGuidance": "A refreshing pasta salad. Please ask for today's specific preparation.",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "business_entrees": {
+        "title": "Business Lunch Entrees",
+        "description": "Sophisticated main courses for corporate dining",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "cacciatore_w",
+            "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+            "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+            "category": "Main Course - Poultry",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "DAIRY_FREE_OPTION",
+              "GLUTEN_FREE_OPTION"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_SULPHITES (if wine used)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 6,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 45,
+                "min": 30,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 550,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+            "suitableForDiets": [
+              "PALEO_FRIENDLY (check ingredients)"
+            ],
+            "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "flank_steak_fajitas",
+            "name": "Flank steak Fajitas",
+            "description": "A popular Tex-Mex dish consisting of grilled strips of marinated flank steak, typically served sizzling with sautéed bell peppers and onions. Often accompanied by tortillas, salsa, guacamole, and sour cream.",
+            "category": "Main Course - Meat / Tex-Mex",
+            "price": 0,
+            "upcharge": 2,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION (if served without flour tortillas or with corn tortillas)",
+              "DAIRY_FREE_OPTION (if served without sour cream/cheese)"
+            ],
+            "allergenAlerts": [
+              "POTENTIAL_SOY (in marinade)",
+              "POTENTIAL_WHEAT (flour tortillas)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 20,
+                "min": 10,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 4,
+                "min": 2,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 35,
+                "min": 25,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 500,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Grilled marinated flank steak strips with sautéed peppers and onions.",
+            "suitableForDiets": [],
+            "customerGuidance": "Sizzling flank steak fajitas with colorful peppers and onions. (Nutritional values for steak & vegetables, excludes tortillas/sides)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 4
+  },
+  "corporate_conference_catering": {
+    "id": 29,
+    "name": "Corporate Conference Catering",
+    "description": "All-day catering solution for conferences and workshops",
+    "eventType": "corporate",
+    "allItems": [
+      {
+        "id": "mexican_rice",
+        "name": "Mexican Rice",
+        "description": "Also known as Spanish rice, this is a popular side dish made from white rice cooked in a tomato-based broth with onions, garlic, and various seasonings like cumin and chili powder.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION (if vegetable broth used)",
+          "VEGAN_OPTION (if vegetable broth and no lard)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 6,
+            "min": 2,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 45,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 2,
+            "min": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 250,
+            "min": 180,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rice cooked in a savory tomato broth with onions, garlic, and spices.",
+        "suitableForDiets": [],
+        "customerGuidance": "Flavorful and savory Mexican-style rice. (Nutritional values per serving)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "cilantro_lime_rice",
+        "name": "Cilantro-Lime Rice, fresh and zesty",
+        "description": "Fluffy rice (typically long-grain white rice) seasoned with fresh cilantro, lime juice, and often a touch of lime zest and salt. A popular side for Mexican and Southwestern dishes.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION (if no butter)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION (if no butter)"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 5,
+            "min": 1,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 45,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 2,
+            "min": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 250,
+            "min": 180,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rice flavored with fresh cilantro and lime juice.",
+        "suitableForDiets": [],
+        "customerGuidance": "Bright, zesty, and refreshing cilantro-lime rice.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "barbacoa",
+        "name": "Barbacoa",
+        "description": "Traditionally, barbacoa refers to meat (often beef, lamb, or goat) slow-cooked until tender, typically seasoned with chilies and spices. In modern Mexican-American cuisine, beef barbacoa often involves beef cheeks or chuck roast slow-cooked with chipotle peppers, cumin, cloves, and other seasonings.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 20,
+            "min": 10,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 350,
+            "min": 200,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Slow-cooked, tender, and flavorful shredded beef seasoned with chilies and spices.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY",
+          "PALEO_FRIENDLY"
+        ],
+        "customerGuidance": "Rich, savory, and tender slow-cooked barbacoa beef. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pork_carnitas",
+        "name": "Pork Carnitas",
+        "description": "A Mexican dish of pork (often shoulder or butt) slow-cooked until very tender, then typically shredded and crisped up. Seasoned with ingredients like oranges, lime, onion, garlic, and spices.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 28,
+            "min": 18,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 3,
+            "min": 1,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 380,
+            "min": 250,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Slow-cooked, tender, and crispy shredded pork with citrus and spice notes.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Juicy and flavorful slow-cooked pork carnitas. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "tofu",
+        "name": "Tofu",
+        "description": "Soybean curd, a versatile plant-based protein. As a menu item, it's typically prepared in various ways (e.g., grilled, baked, pan-fried, scrambled) and can be seasoned or marinated.",
+        "category": "Protein Option / Vegan / Vegetarian",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION",
+          "PLANT_BASED_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_SOY (tofu)",
+          "POTENTIAL_WHEAT (in some marinades/soy sauces - verify if GF needed)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 10,
+            "min": 5,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 2,
+            "min": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 10,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 100,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Prepared tofu; specific flavor profile depends on seasoning and cooking method.",
+        "suitableForDiets": [],
+        "customerGuidance": "Versatile plant-based tofu, prepared to order. (Nutritional values for plain cooked tofu, e.g., 4oz, before heavy sauces/marinades)",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "conference_breakfast": {
+        "title": "Conference Breakfast",
+        "description": "Energizing breakfast options",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "mexican_rice",
+            "name": "Mexican Rice",
+            "description": "Also known as Spanish rice, this is a popular side dish made from white rice cooked in a tomato-based broth with onions, garlic, and various seasonings like cumin and chili powder.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION (if vegetable broth used)",
+              "VEGAN_OPTION (if vegetable broth and no lard)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 6,
+                "min": 2,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 45,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 2,
+                "min": 1,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 250,
+                "min": 180,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rice cooked in a savory tomato broth with onions, garlic, and spices.",
+            "suitableForDiets": [],
+            "customerGuidance": "Flavorful and savory Mexican-style rice. (Nutritional values per serving)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "cilantro_lime_rice",
+            "name": "Cilantro-Lime Rice, fresh and zesty",
+            "description": "Fluffy rice (typically long-grain white rice) seasoned with fresh cilantro, lime juice, and often a touch of lime zest and salt. A popular side for Mexican and Southwestern dishes.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION (if no butter)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION (if no butter)"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 5,
+                "min": 1,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 45,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 2,
+                "min": 1,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 250,
+                "min": 180,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rice flavored with fresh cilantro and lime juice.",
+            "suitableForDiets": [],
+            "customerGuidance": "Bright, zesty, and refreshing cilantro-lime rice.",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "conference_lunch": {
+        "title": "Conference Lunch",
+        "description": "Satisfying lunch selections",
+        "selectionLimit": 3,
+        "items": [
+          {
+            "id": "barbacoa",
+            "name": "Barbacoa",
+            "description": "Traditionally, barbacoa refers to meat (often beef, lamb, or goat) slow-cooked until tender, typically seasoned with chilies and spices. In modern Mexican-American cuisine, beef barbacoa often involves beef cheeks or chuck roast slow-cooked with chipotle peppers, cumin, cloves, and other seasonings.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 20,
+                "min": 10,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 350,
+                "min": 200,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Slow-cooked, tender, and flavorful shredded beef seasoned with chilies and spices.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY",
+              "PALEO_FRIENDLY"
+            ],
+            "customerGuidance": "Rich, savory, and tender slow-cooked barbacoa beef. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pork_carnitas",
+            "name": "Pork Carnitas",
+            "description": "A Mexican dish of pork (often shoulder or butt) slow-cooked until very tender, then typically shredded and crisped up. Seasoned with ingredients like oranges, lime, onion, garlic, and spices.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 28,
+                "min": 18,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 3,
+                "min": 1,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 380,
+                "min": 250,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Slow-cooked, tender, and crispy shredded pork with citrus and spice notes.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Juicy and flavorful slow-cooked pork carnitas. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "tofu",
+            "name": "Tofu",
+            "description": "Soybean curd, a versatile plant-based protein. As a menu item, it's typically prepared in various ways (e.g., grilled, baked, pan-fried, scrambled) and can be seasoned or marinated.",
+            "category": "Protein Option / Vegan / Vegetarian",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION",
+              "PLANT_BASED_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_SOY (tofu)",
+              "POTENTIAL_WHEAT (in some marinades/soy sauces - verify if GF needed)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 10,
+                "min": 5,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 2,
+                "min": 1,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 10,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 100,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Prepared tofu; specific flavor profile depends on seasoning and cooking method.",
+            "suitableForDiets": [],
+            "customerGuidance": "Versatile plant-based tofu, prepared to order. (Nutritional values for plain cooked tofu, e.g., 4oz, before heavy sauces/marinades)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 5
+  },
+  "birthday_party_celebration": {
+    "id": 30,
+    "name": "Birthday Party Celebration",
+    "description": "Fun and festive menu perfect for birthday celebrations of all ages",
+    "eventType": "birthday",
+    "allItems": [
+      {
+        "id": "ground_beef",
+        "name": "Ground Beef",
+        "description": "Seasoned cooked ground beef, often served as a protein option for tacos, bowls, or salads. Seasonings typically include chili powder, cumin, garlic, and onion powder.",
+        "category": "Protein Option / Component",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 22,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 3,
+            "min": 1,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 25,
+            "min": 18,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 300,
+            "min": 220,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Seasoned and cooked ground beef.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Savory seasoned ground beef. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pork_belly",
+        "name": "Pork Belly",
+        "description": "A boneless cut of fatty meat from the belly of a pig. When cooked (e.g., roasted, braised, seared), it's known for its rich flavor, tender meat, and often crispy skin.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_FAT",
+          "RICH_FLAVOR",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 60,
+            "min": 45,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 2,
+            "min": 0,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 0,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 10,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 600,
+            "min": 450,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rich and succulent pork belly, preparation style varies.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Indulgent and flavorful pork belly. (Nutritional values per serving, e.g., 4oz, can vary significantly)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "flank_steak_fajitas",
+        "name": "Flank steak Fajitas",
+        "description": "A popular Tex-Mex dish consisting of grilled strips of marinated flank steak, typically served sizzling with sautéed bell peppers and onions. Often accompanied by tortillas, salsa, guacamole, and sour cream.",
+        "category": "Main Course - Meat / Tex-Mex",
+        "price": 0,
+        "upcharge": 2,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION (if served without flour tortillas or with corn tortillas)",
+          "DAIRY_FREE_OPTION (if served without sour cream/cheese)"
+        ],
+        "allergenAlerts": [
+          "POTENTIAL_SOY (in marinade)",
+          "POTENTIAL_WHEAT (flour tortillas)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 20,
+            "min": 10,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 4,
+            "min": 2,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 35,
+            "min": 25,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 500,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Grilled marinated flank steak strips with sautéed peppers and onions.",
+        "suitableForDiets": [],
+        "customerGuidance": "Sizzling flank steak fajitas with colorful peppers and onions. (Nutritional values for steak & vegetables, excludes tortillas/sides)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "mexican_rice",
+        "name": "Mexican Rice",
+        "description": "Also known as Spanish rice, this is a popular side dish made from white rice cooked in a tomato-based broth with onions, garlic, and various seasonings like cumin and chili powder.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION (if vegetable broth used)",
+          "VEGAN_OPTION (if vegetable broth and no lard)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 6,
+            "min": 2,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 45,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 2,
+            "min": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 250,
+            "min": 180,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Rice cooked in a savory tomato broth with onions, garlic, and spices.",
+        "suitableForDiets": [],
+        "customerGuidance": "Flavorful and savory Mexican-style rice. (Nutritional values per serving)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pasta_salad",
+        "name": "Pasta Salad",
+        "description": "A versatile salad dish made with one or more types of pasta, almost always chilled, and most often tossed in a vinegar, oil, or mayonnaise-based dressing. Typically includes chopped vegetables, cheeses, and sometimes meats.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": false,
+        "isDairyFree": false,
+        "isNutFree": true,
+        "dietaryFlags": [],
+        "allergenAlerts": [
+          "CONTAINS_WHEAT (pasta)",
+          "POTENTIAL_DAIRY (cheese, some dressings)",
+          "POTENTIAL_EGG (mayonnaise dressings)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 50,
+            "min": 35,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 500,
+            "min": 300,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chilled pasta tossed with vegetables and dressing. Specifics vary.",
+        "suitableForDiets": [],
+        "customerGuidance": "A refreshing pasta salad. Please ask for today's specific preparation.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "garden_salad",
+        "name": "Fresh Garden Salad with a choice of vegan dressings",
+        "description": "A crisp salad of mixed fresh greens and assorted garden vegetables like tomatoes, cucumbers, carrots, and red onions, served with a selection of vegan dressing options.",
+        "category": "Salad / Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION",
+          "LOW_CALORIE_OPTION (dressing dependent)"
+        ],
+        "allergenAlerts": [
+          "ALLERGENS_DEPEND_ON_DRESSING_CHOICE (e.g., soy, nuts, sesame in some vegan dressings - please verify)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 8,
+            "min": 1,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 5,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 4,
+            "min": 2,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 70,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "A simple mix of fresh greens and vegetables, served with vegan dressing choices.",
+        "suitableForDiets": [],
+        "customerGuidance": "A classic fresh garden salad with a variety of vegan dressings available. (Nutritional values exclude dressing)",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "party_favorites": {
+        "title": "Party Favorites",
+        "description": "Crowd-pleasing favorites everyone will love",
+        "selectionLimit": 3,
+        "items": [
+          {
+            "id": "ground_beef",
+            "name": "Ground Beef",
+            "description": "Seasoned cooked ground beef, often served as a protein option for tacos, bowls, or salads. Seasonings typically include chili powder, cumin, garlic, and onion powder.",
+            "category": "Protein Option / Component",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 22,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 3,
+                "min": 1,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 25,
+                "min": 18,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 300,
+                "min": 220,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Seasoned and cooked ground beef.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Savory seasoned ground beef. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pork_belly",
+            "name": "Pork Belly",
+            "description": "A boneless cut of fatty meat from the belly of a pig. When cooked (e.g., roasted, braised, seared), it's known for its rich flavor, tender meat, and often crispy skin.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_FAT",
+              "RICH_FLAVOR",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 60,
+                "min": 45,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 2,
+                "min": 0,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 0,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 10,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 600,
+                "min": 450,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rich and succulent pork belly, preparation style varies.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Indulgent and flavorful pork belly. (Nutritional values per serving, e.g., 4oz, can vary significantly)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "flank_steak_fajitas",
+            "name": "Flank steak Fajitas",
+            "description": "A popular Tex-Mex dish consisting of grilled strips of marinated flank steak, typically served sizzling with sautéed bell peppers and onions. Often accompanied by tortillas, salsa, guacamole, and sour cream.",
+            "category": "Main Course - Meat / Tex-Mex",
+            "price": 0,
+            "upcharge": 2,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION (if served without flour tortillas or with corn tortillas)",
+              "DAIRY_FREE_OPTION (if served without sour cream/cheese)"
+            ],
+            "allergenAlerts": [
+              "POTENTIAL_SOY (in marinade)",
+              "POTENTIAL_WHEAT (flour tortillas)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 20,
+                "min": 10,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 4,
+                "min": 2,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 35,
+                "min": 25,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 500,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Grilled marinated flank steak strips with sautéed peppers and onions.",
+            "suitableForDiets": [],
+            "customerGuidance": "Sizzling flank steak fajitas with colorful peppers and onions. (Nutritional values for steak & vegetables, excludes tortillas/sides)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "birthday_sides": {
+        "title": "Birthday Sides",
+        "description": "Perfect sides for your celebration",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "mexican_rice",
+            "name": "Mexican Rice",
+            "description": "Also known as Spanish rice, this is a popular side dish made from white rice cooked in a tomato-based broth with onions, garlic, and various seasonings like cumin and chili powder.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION (if vegetable broth used)",
+              "VEGAN_OPTION (if vegetable broth and no lard)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 6,
+                "min": 2,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 45,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 2,
+                "min": 1,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 250,
+                "min": 180,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Rice cooked in a savory tomato broth with onions, garlic, and spices.",
+            "suitableForDiets": [],
+            "customerGuidance": "Flavorful and savory Mexican-style rice. (Nutritional values per serving)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pasta_salad",
+            "name": "Pasta Salad",
+            "description": "A versatile salad dish made with one or more types of pasta, almost always chilled, and most often tossed in a vinegar, oil, or mayonnaise-based dressing. Typically includes chopped vegetables, cheeses, and sometimes meats.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": false,
+            "isDairyFree": false,
+            "isNutFree": true,
+            "dietaryFlags": [],
+            "allergenAlerts": [
+              "CONTAINS_WHEAT (pasta)",
+              "POTENTIAL_DAIRY (cheese, some dressings)",
+              "POTENTIAL_EGG (mayonnaise dressings)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 50,
+                "min": 35,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 500,
+                "min": 300,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chilled pasta tossed with vegetables and dressing. Specifics vary.",
+            "suitableForDiets": [],
+            "customerGuidance": "A refreshing pasta salad. Please ask for today's specific preparation.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "garden_salad",
+            "name": "Fresh Garden Salad with a choice of vegan dressings",
+            "description": "A crisp salad of mixed fresh greens and assorted garden vegetables like tomatoes, cucumbers, carrots, and red onions, served with a selection of vegan dressing options.",
+            "category": "Salad / Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION",
+              "LOW_CALORIE_OPTION (dressing dependent)"
+            ],
+            "allergenAlerts": [
+              "ALLERGENS_DEPEND_ON_DRESSING_CHOICE (e.g., soy, nuts, sesame in some vegan dressings - please verify)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 8,
+                "min": 1,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 5,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 4,
+                "min": 2,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 70,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "A simple mix of fresh greens and vegetables, served with vegan dressing choices.",
+            "suitableForDiets": [],
+            "customerGuidance": "A classic fresh garden salad with a variety of vegan dressings available. (Nutritional values exclude dressing)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 6
+  },
+  "holiday_celebration_menu": {
+    "id": 31,
+    "name": "Holiday Celebration Menu",
+    "description": "Festive holiday menu with seasonal flavors and traditional favorites",
+    "eventType": "holiday_party",
+    "allItems": [
+      {
+        "id": "stuffed_poblano",
+        "name": "Stuffed Poblano Peppers with savory rice and beans",
+        "description": "Mild poblano peppers roasted and stuffed with a savory mixture of rice, black beans, corn, tomatoes, onions, and spices, often topped with cheese or a vegan alternative.",
+        "category": "Main Course - Vegetarian / Mexican-inspired",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGETARIAN_OPTION",
+          "VEGAN_OPTION (if no dairy cheese)",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION (if no dairy cheese)",
+          "HIGH_FIBER"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 15,
+            "min": 8,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 55,
+            "min": 40,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 12,
+            "min": 8,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 15,
+            "min": 10,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 450,
+            "min": 300,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Roasted poblano peppers filled with a flavorful rice, bean, and corn mixture.",
+        "suitableForDiets": [],
+        "customerGuidance": "Flavorful and satisfying stuffed poblano peppers with a savory rice and bean filling.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "grilled_vegetables",
+        "name": "Grilled Vegetables",
+        "description": "A medley of seasonal vegetables, such as bell peppers, zucchini, yellow squash, asparagus, and onions, lightly seasoned and grilled to bring out their natural sweetness and smoky flavor.",
+        "category": "Side Dish",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": true,
+        "isVegan": true,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "VEGAN_OPTION",
+          "VEGETARIAN_OPTION",
+          "GLUTEN_FREE_OPTION",
+          "HEALTHY_CHOICE"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 12,
+            "min": 5,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 20,
+            "min": 12,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 7,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 5,
+            "min": 2,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 180,
+            "min": 100,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "A mix of seasonal vegetables, grilled with simple seasonings. Check for any specific glazes or marinades used.",
+        "suitableForDiets": [
+          "VEGAN_DIET",
+          "VEGETARIAN_DIET",
+          "PALEO_FRIENDLY",
+          "MEDITERRANEAN_DIET"
+        ],
+        "customerGuidance": "A healthy and flavorful assortment of grilled seasonal vegetables. (Values per 1 cup serving).",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "cacciatore_w",
+        "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+        "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+        "category": "Main Course - Poultry",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "DAIRY_FREE_OPTION",
+          "GLUTEN_FREE_OPTION"
+        ],
+        "allergenAlerts": [
+          "CONTAINS_SULPHITES (if wine used)"
+        ],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 25,
+            "min": 15,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 6,
+            "min": 3,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 45,
+            "min": 30,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 550,
+            "min": 350,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+        "suitableForDiets": [
+          "PALEO_FRIENDLY (check ingredients)"
+        ],
+        "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "prime_rib",
+        "name": "Prime Rib - Boneless -Carving station",
+        "description": "A tender and flavorful cut of beef from the primal rib, slow-roasted to perfection. Served from a carving station, typically boneless.",
+        "category": "Main Course - Beef / Carving Station",
+        "price": 0,
+        "upcharge": 4,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION (meat itself; check au jus/sauces)"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 35,
+            "min": 20,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 0,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 35,
+            "min": 25,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 450,
+            "min": 300,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Slow-roasted boneless prime rib, carved to order.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Succulent slow-roasted prime rib, carved fresh. (Nutritional values per slice, e.g., 4-6oz, varies by thickness)",
+        "availableLotSizes": [],
+        "image": null
+      },
+      {
+        "id": "pork_carnitas",
+        "name": "Pork Carnitas",
+        "description": "A Mexican dish of pork (often shoulder or butt) slow-cooked until very tender, then typically shredded and crisped up. Seasoned with ingredients like oranges, lime, onion, garlic, and spices.",
+        "category": "Main Course - Meat / Protein Option",
+        "price": 0,
+        "upcharge": 0,
+        "isVegetarian": false,
+        "isVegan": false,
+        "isGlutenFree": true,
+        "isDairyFree": true,
+        "isNutFree": true,
+        "dietaryFlags": [
+          "HIGH_PROTEIN",
+          "GLUTEN_FREE_OPTION",
+          "DAIRY_FREE_OPTION"
+        ],
+        "allergenAlerts": [],
+        "nutritionalHighlights": {
+          "fat": {
+            "max": 28,
+            "min": 18,
+            "unit": "g"
+          },
+          "carbs": {
+            "max": 3,
+            "min": 1,
+            "unit": "g"
+          },
+          "fiber": {
+            "max": 1,
+            "min": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "max": 30,
+            "min": 20,
+            "unit": "g"
+          },
+          "calories": {
+            "max": 380,
+            "min": 250,
+            "unit": "kcal"
+          }
+        },
+        "preparationNotes": "Slow-cooked, tender, and crispy shredded pork with citrus and spice notes.",
+        "suitableForDiets": [
+          "KETO_FRIENDLY"
+        ],
+        "customerGuidance": "Juicy and flavorful slow-cooked pork carnitas. (Nutritional values per serving, e.g., 4oz)",
+        "availableLotSizes": [],
+        "image": null
+      }
+    ],
+    "itemsByCategory": {
+      "holiday_appetizers": {
+        "title": "Holiday Appetizers",
+        "description": "Festive starters for your holiday gathering",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "stuffed_poblano",
+            "name": "Stuffed Poblano Peppers with savory rice and beans",
+            "description": "Mild poblano peppers roasted and stuffed with a savory mixture of rice, black beans, corn, tomatoes, onions, and spices, often topped with cheese or a vegan alternative.",
+            "category": "Main Course - Vegetarian / Mexican-inspired",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGETARIAN_OPTION",
+              "VEGAN_OPTION (if no dairy cheese)",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION (if no dairy cheese)",
+              "HIGH_FIBER"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 15,
+                "min": 8,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 55,
+                "min": 40,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 12,
+                "min": 8,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 15,
+                "min": 10,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 450,
+                "min": 300,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Roasted poblano peppers filled with a flavorful rice, bean, and corn mixture.",
+            "suitableForDiets": [],
+            "customerGuidance": "Flavorful and satisfying stuffed poblano peppers with a savory rice and bean filling.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "grilled_vegetables",
+            "name": "Grilled Vegetables",
+            "description": "A medley of seasonal vegetables, such as bell peppers, zucchini, yellow squash, asparagus, and onions, lightly seasoned and grilled to bring out their natural sweetness and smoky flavor.",
+            "category": "Side Dish",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": true,
+            "isVegan": true,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "VEGAN_OPTION",
+              "VEGETARIAN_OPTION",
+              "GLUTEN_FREE_OPTION",
+              "HEALTHY_CHOICE"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 12,
+                "min": 5,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 20,
+                "min": 12,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 7,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 5,
+                "min": 2,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 180,
+                "min": 100,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "A mix of seasonal vegetables, grilled with simple seasonings. Check for any specific glazes or marinades used.",
+            "suitableForDiets": [
+              "VEGAN_DIET",
+              "VEGETARIAN_DIET",
+              "PALEO_FRIENDLY",
+              "MEDITERRANEAN_DIET"
+            ],
+            "customerGuidance": "A healthy and flavorful assortment of grilled seasonal vegetables. (Values per 1 cup serving).",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      },
+      "holiday_mains": {
+        "title": "Holiday Main Courses",
+        "description": "Traditional holiday entrees",
+        "selectionLimit": 2,
+        "items": [
+          {
+            "id": "cacciatore_w",
+            "name": "Chicken Cacciatore with Mushrooms, Peppers & Onions",
+            "description": "A rustic Italian 'hunter-style' chicken stew, braised with onions, herbs, tomatoes, often bell peppers, and sometimes wine.",
+            "category": "Main Course - Poultry",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "DAIRY_FREE_OPTION",
+              "GLUTEN_FREE_OPTION"
+            ],
+            "allergenAlerts": [
+              "CONTAINS_SULPHITES (if wine used)"
+            ],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 25,
+                "min": 15,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 6,
+                "min": 3,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 45,
+                "min": 30,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 550,
+                "min": 350,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Chicken braised in a hearty tomato-based sauce with vegetables like mushrooms, peppers, and onions.",
+            "suitableForDiets": [
+              "PALEO_FRIENDLY (check ingredients)"
+            ],
+            "customerGuidance": "A flavorful and rustic 'hunter-style' chicken stew with simmered vegetables.",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "prime_rib",
+            "name": "Prime Rib - Boneless -Carving station",
+            "description": "A tender and flavorful cut of beef from the primal rib, slow-roasted to perfection. Served from a carving station, typically boneless.",
+            "category": "Main Course - Beef / Carving Station",
+            "price": 0,
+            "upcharge": 4,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION (meat itself; check au jus/sauces)"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 35,
+                "min": 20,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 0,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 35,
+                "min": 25,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 450,
+                "min": 300,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Slow-roasted boneless prime rib, carved to order.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Succulent slow-roasted prime rib, carved fresh. (Nutritional values per slice, e.g., 4-6oz, varies by thickness)",
+            "availableLotSizes": [],
+            "image": null
+          },
+          {
+            "id": "pork_carnitas",
+            "name": "Pork Carnitas",
+            "description": "A Mexican dish of pork (often shoulder or butt) slow-cooked until very tender, then typically shredded and crisped up. Seasoned with ingredients like oranges, lime, onion, garlic, and spices.",
+            "category": "Main Course - Meat / Protein Option",
+            "price": 0,
+            "upcharge": 0,
+            "isVegetarian": false,
+            "isVegan": false,
+            "isGlutenFree": true,
+            "isDairyFree": true,
+            "isNutFree": true,
+            "dietaryFlags": [
+              "HIGH_PROTEIN",
+              "GLUTEN_FREE_OPTION",
+              "DAIRY_FREE_OPTION"
+            ],
+            "allergenAlerts": [],
+            "nutritionalHighlights": {
+              "fat": {
+                "max": 28,
+                "min": 18,
+                "unit": "g"
+              },
+              "carbs": {
+                "max": 3,
+                "min": 1,
+                "unit": "g"
+              },
+              "fiber": {
+                "max": 1,
+                "min": 0,
+                "unit": "g"
+              },
+              "protein": {
+                "max": 30,
+                "min": 20,
+                "unit": "g"
+              },
+              "calories": {
+                "max": 380,
+                "min": 250,
+                "unit": "kcal"
+              }
+            },
+            "preparationNotes": "Slow-cooked, tender, and crispy shredded pork with citrus and spice notes.",
+            "suitableForDiets": [
+              "KETO_FRIENDLY"
+            ],
+            "customerGuidance": "Juicy and flavorful slow-cooked pork carnitas. (Nutritional values per serving, e.g., 4oz)",
+            "availableLotSizes": [],
+            "image": null
+          }
+        ]
+      }
+    },
+    "totalItemCount": 5
   }
 }
