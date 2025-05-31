@@ -29,6 +29,7 @@ import { WeddingInquiryFormData } from './types/WeddingInquiryTypes';
 import { WEDDING_FORM_STEPS, FORM_SECTIONS } from './config/FormConfiguration';
 import { QuoteCalculator, QuoteBreakdown } from './components/QuoteCalculator';
 import DietaryInfoPanel from '@/components/menu/DietaryInfoPanel';
+import MenuBalanceCard from '@/components/menu/MenuBalanceCard';
 import { useDietaryTracking } from '@/hooks/useDietaryTracking';
 
 interface MenuTheme {
@@ -39,6 +40,14 @@ interface MenuTheme {
   categories: string[];
   allItems: any[];
 }
+
+// Tier pricing configuration
+const TIER_PRICING = {
+  bronze: 32,
+  silver: 38,
+  gold: 46,
+  platinum: 55
+};
 
 export default function ComprehensiveWeddingInquiry() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -928,9 +937,23 @@ export default function ComprehensiveWeddingInquiry() {
             />
           </div>
 
-          {/* Dietary Information Panel */}
-          <div className="mt-8">
-            <DietaryInfoPanel selectedItems={selectedMenuItems} />
+          {/* Menu Analysis Cards */}
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Dietary Information Panel */}
+            <div>
+              <DietaryInfoPanel selectedItems={selectedMenuItems} />
+            </div>
+            
+            {/* Menu Balance Card */}
+            <div>
+              <MenuBalanceCard
+                selectedItems={selectedItems}
+                menuData={selectedThemeData}
+                guestCount={formData.guestInfo?.expectedGuestCount || 0}
+                selectedTier={formData.menuSelections?.selectedTier || ''}
+                basePricing={TIER_PRICING}
+              />
+            </div>
           </div>
         </div>
       )}
