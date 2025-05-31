@@ -1,0 +1,22 @@
+Goal: To have your chosen category names (e.g., "Main Courses," "Delicious Salads") appear correctly as section headings when a customer is selecting menu items for any theme in the wedding inquiry form.
+
+Step 1: Update How the Inquiry Form Displays Category Titles (A One-Time Code Adjustment)
+
+What you're doing: You'll tell the wedding inquiry form to use the nice, descriptive "Display Title" for each category section, instead of just its internal system name or key.
+File to modify: client/src/pages/wedding/ComprehensiveWeddingInquiry.tsx
+Specific change:
+Inside this file, find the part of the code that shows the menu items grouped by category when a customer has selected a theme (this is within the renderMenuSelectionStep function).
+You'll see a line that creates the heading for each category, which currently looks something like: <h4 className="font-semibold text-lg mb-3 capitalize">{categoryKeyFromFile}</h4>
+You need to change this line so it uses the title property from the category's details (this title property is sourced from the display_title you set in your database/CMS). Change it to: <h4 className="font-semibold text-lg mb-3">{categoryDetailsObject.title || categoryKeyFromFile}</h4>
+This tells the form: "Try to use the nice title for the heading. If for some reason it's missing, just use the categoryKeyFromFile as a backup."
+Step 2: Define Your Category Names and Structure in Your Catering Management System (CMS)
+
+What you're doing: For each menu theme (like "A Taste of Greece," "American BBQ," "Taco Fiesta," etc.), you need to go into your "Home Bites CMS" menu editor.
+File/Interface: Your CMS interface for editing individual menu themes (similar to what's shown in Screenshot 2025-05-30 at 4.26.32 PM.png).
+Specific actions within the CMS for each theme:
+Set Clear Display Titles: For every category group you create within a theme (e.g., the groups that will hold your main courses, your sides, your salads), make sure there's a field for its "Display Title." Enter the exact name you want customers to see here (e.g., "Main Courses," "Fresh Salads," "Delicious Pasta Options," "House-Made Salsas," "Signature Sauces," "Side Dishes," "Spreads & Dips").
+Use Consistent Internal Keys (Optional but Recommended): While the "Display Title" controls what the customer sees (after Step 1), it's good practice for the internal category_key to be simple and descriptive (e.g., mains, salads, pasta, salsas, sauces, sides, spreads). Your CMS should be saving this key.
+Assign Items Correctly: Make sure all the individual menu items (like "Papoutsakia" or "Lemon Potatoes") are placed into these correctly named and defined categories within the theme structure in your CMS.
+Step 3: Ensure Your CMS Saves This Structure to the Database
+
+What's happening: When you save your changes in the CMS for a menu theme, the system should store this structured information (your category keys, their display titles, and the list of items in each) into the items JSONB column in your menus database table for that specific menu record. This step is mostly about making sure your CMS is functioning correctly to save the data you've input.

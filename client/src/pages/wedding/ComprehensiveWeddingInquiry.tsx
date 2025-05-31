@@ -804,7 +804,7 @@ export default function ComprehensiveWeddingInquiry() {
           <div className="space-y-6">
             {Object.entries(selectedThemeData.itemsByCategory || {}).map(([category, items]: [string, any]) => (
               <div key={category}>
-                <h4 className="font-semibold text-lg mb-3 capitalize">{category}</h4>
+                <h4 className="font-semibold text-lg mb-3">{items.title || category}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {(items.items || []).map((item: any) => {
                     const isSelected = selectedItems[category]?.includes(item.id);
