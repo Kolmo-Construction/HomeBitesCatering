@@ -1,0 +1,39 @@
+File to Edit: client/src/pages/wedding/ComprehensiveWeddingInquiry.tsx
+Locate the Code: In the renderMenuSelectionStep function, find the part where it tries to list individual menu items within a category. It will look similar to this (around line 809 from your previous error screenshot):
+TypeScript
+
+// ... inside the loop for each category ...
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"> 
+  {(items || []).map((item: any) => { 
+    // ... item card rendering ...
+  })}
+</div>
+The Fix: The items variable in that line actually refers to the whole category object (which includes properties like title, description, and an array of actual items). You need to map over the array inside that object. Change: {(items || []).map((item: any) => { ... })} To: {(items.items || []).map((item: any) => { ... })}
+Step 2: Update Your Form to Use Proper Category Display Titles (One-Time Code Change)
+
+This change will make your form show the nice, human-readable names for categories instead of potentially cryptic internal keys.
+
+File to Edit: client/src/pages/wedding/ComprehensiveWeddingInquiry.tsx
+Locate the Code: In the same renderMenuSelectionStep function, find where the category heading is displayed. It currently might be using the category key directly:
+TypeScript
+
+// ...
+{Object.entries(selectedThemeData.itemsByCategory || {}).map(([categoryKeyFromFile, categoryDetailsObject]: [string, any]) => (
+  <div key={categoryKeyFromFile}>
+    <h4 className="font-semibold text-lg mb-3 capitalize">{categoryKeyFromFile}</h4> 
+    {/* ... items are listed below this heading ... */}
+The Fix: Modify the <h4> line to use the title property that generateMenuData.js should be creating from your database's display_title: Change: <h4 className="font-semibold text-lg mb-3 capitalize">{categoryKeyFromFile}</h4> To: <h4 className="font-semibold text-lg mb-3">{categoryDetailsObject.title || categoryKeyFromFile}</h4> (This tells the form to use the proper title, and if it's missing for some reason, it will fall back to showing the key).
+Step 3: Configure Your Category Names and Item Assignments in Your CMS
+
+This is where you define how each theme should look for the customer. You'll need to do this for every menu theme you want to display on the inquiry form.
+
+Interface: Your "Home Bites CMS" menu editor (the interface shown in Screenshot 2025-05-30 at 4.26.32 PM.png).
+For Each Menu Theme (e.g., "A Taste of Greece," "American BBQ"):
+Define Categories: When editing a theme, ensure you create category groupings with the exact display names you want customers to see. For "A Taste of Greece," these would be "Mains," "Salads," "Pasta," "Salsas," "Sauces," "Sides," "Spreads."
+Your CMS should allow you to set a "Display Title" (or similar field) for each of these category groupings. This is what will appear as the heading on the form after Step 2's code change.
+It will also likely have an internal "Category Key" (e.g., mains, pasta_dishes). Keep these simple and consistent.
+Assign Items: Carefully assign each of your individual menu items (which have their own general categories like "Main Course - Meat") to one of these theme-specific display categories you've just defined (e.g., assign "Papoutsakia" to your "Mains" category within the "A Taste of Greece" theme).
+Step 4: Ensure Your CMS Saves This Detailed Structure to the Database
+
+What happens: When you save a menu theme in your CMS, it must save this detailed category structure (including your desired display_title for each category, the category_key, and the list of available_item_ids for that category) into the items JSONB column of the public.menus table for that specific menu's record.
+Verification (Conceptual): This step is mostly about trusting your CMS works correctly. If it doesn't save the display_title properly, or if it doesn't structure the categories array as expected by generateMenuData.js (which expects objects with category_key, display_title, and available_item_ids), then the generated JSON will be incorrect.
