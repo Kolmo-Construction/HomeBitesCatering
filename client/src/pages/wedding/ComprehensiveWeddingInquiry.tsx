@@ -28,6 +28,8 @@ import {
 import { WeddingInquiryFormData } from './types/WeddingInquiryTypes';
 import { WEDDING_FORM_STEPS, FORM_SECTIONS } from './config/FormConfiguration';
 import { QuoteCalculator, QuoteBreakdown } from './components/QuoteCalculator';
+import DietaryInfoPanel from '@/components/menu/DietaryInfoPanel';
+import { useDietaryTracking } from '@/hooks/useDietaryTracking';
 
 interface MenuTheme {
   id: string;
@@ -59,6 +61,12 @@ export default function ComprehensiveWeddingInquiry() {
   const [currentCost, setCurrentCost] = useState(0);
   const [quote, setQuote] = useState<QuoteBreakdown | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Dietary tracking for selected menu items
+  const { selectedMenuItems, dietaryStats, nutritionalTotals, hasSelections } = useDietaryTracking(
+    selectedItems,
+    selectedThemeData
+  );
 
   useEffect(() => {
     loadMenuThemes();
