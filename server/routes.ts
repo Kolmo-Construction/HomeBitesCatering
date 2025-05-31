@@ -2014,7 +2014,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API routes removed
+  // Event Types API Routes
+  app.get("/api/event-types", async (req, res) => {
+    try {
+      const eventTypes = await storage.listEventTypes();
+      res.json(eventTypes);
+    } catch (error) {
+      console.error("Error fetching event types:", error);
+      res.status(500).json({ message: "Unable to fetch event types" });
+    }
+  });
+
+  app.post("/api/event-types", async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Event type name is required" });
+      }
+      
+      const eventType = await storage.createEventType({ name, description });
+      res.status(201).json(eventType);
+    } catch (error) {
+      console.error("Error creating event type:", error);
+      res.status(500).json({ message: "Unable to create event type" });
+    }
+  });
+
+  app.patch("/api/event-types/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+      
+      const eventType = await storage.updateEventType(id, { name, description });
+      if (!eventType) {
+        return res.status(404).json({ message: "Event type not found" });
+      }
+      
+      res.json(eventType);
+    } catch (error) {
+      console.error("Error updating event type:", error);
+      res.status(500).json({ message: "Unable to update event type" });
+    }
+  });
+
+  app.delete("/api/event-types/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteEventType(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Event type not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting event type:", error);
+      res.status(500).json({ message: "Unable to delete event type" });
+    }
+  });
 
   // Create an HTTP server
   const server = createServer(app);
