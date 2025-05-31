@@ -849,11 +849,13 @@ export default function ComprehensiveWeddingInquiry() {
         </div>
       )}
 
-      {selectedThemeData && formData.menuSelections?.selectedTier && (
+      {selectedThemeData && (
         <div>
-          <h3 className="text-lg font-semibold mb-4">Customize Your Menu</h3>
-          <div className="space-y-6">
-            {Object.entries(selectedThemeData.itemsByCategory || {}).map(([category, items]: [string, any]) => (
+          {formData.menuSelections?.selectedTier && (
+            <>
+              <h3 className="text-lg font-semibold mb-4">Customize Your Menu</h3>
+              <div className="space-y-6">
+                {Object.entries(selectedThemeData.itemsByCategory || {}).map(([category, items]: [string, any]) => (
               <div key={category}>
                 <h4 className="font-semibold text-lg mb-3">{items.title || category}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -926,18 +928,20 @@ export default function ComprehensiveWeddingInquiry() {
             ))}
           </div>
 
-          <div className="mt-6">
-            <Label htmlFor="customizations">Menu Customizations or Special Requests</Label>
-            <Textarea
-              id="customizations"
-              value={formData.menuSelections?.customizations || ''}
-              onChange={(e) => updateFormData('menuSelections', 'customizations', e.target.value)}
-              placeholder="Any specific menu items, preparations, or special requests..."
-              className="mt-2"
-            />
-          </div>
+              <div className="mt-6">
+                <Label htmlFor="customizations">Menu Customizations or Special Requests</Label>
+                <Textarea
+                  id="customizations"
+                  value={formData.menuSelections?.customizations || ''}
+                  onChange={(e) => updateFormData('menuSelections', 'customizations', e.target.value)}
+                  placeholder="Any specific menu items, preparations, or special requests..."
+                  className="mt-2"
+                />
+              </div>
+            </>
+          )}
 
-          {/* Menu Analysis Cards */}
+          {/* Menu Analysis Cards - Show once theme is selected */}
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Dietary Information Panel */}
             <div>
