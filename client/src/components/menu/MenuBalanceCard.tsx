@@ -10,7 +10,12 @@ import {
   Calculator,
   AlertCircle,
   CheckCircle,
-  Info
+  Info,
+  PieChart,
+  BarChart3,
+  Target,
+  Award,
+  Sparkles
 } from 'lucide-react';
 
 interface MenuItem {
@@ -50,7 +55,7 @@ const MenuBalanceCard: React.FC<MenuBalanceCardProps> = ({
 
   // Calculate upcharges and build detailed breakdown
   const calculateCostBreakdown = () => {
-    if (!menuData) return { upcharges: 0, breakdown: [], categoryStats: {} };
+    if (!menuData || !menuData.allItems) return { upcharges: 0, breakdown: [], categoryStats: {} };
 
     let totalUpcharges = 0;
     const breakdown: Array<{
@@ -61,49 +66,53 @@ const MenuBalanceCard: React.FC<MenuBalanceCardProps> = ({
     
     const categoryStats: Record<string, { selected: number; available: number; limit: number | null }> = {};
 
-    // Create lookup for all items
-    const itemsLookup: Record<string, MenuItem> = {};
+    // Create lookup for all items by ID
+    const itemsLookup: Record<string, any> = {};
     menuData.allItems.forEach(item => {
       itemsLookup[item.id] = item;
     });
 
-    // Process each category
+    // Process each category's selected items
     Object.entries(selectedItems).forEach(([categoryKey, itemIds]) => {
-      const categoryData = menuData.itemsByCategory[categoryKey];
-      if (!categoryData) return;
-
+      if (!itemIds || itemIds.length === 0) return;
+      
+      const categoryData = menuData.itemsByCategory?.[categoryKey];
       const categoryItems: Array<{ name: string; upcharge: number; perPerson: number; total: number }> = [];
       let categoryUpcharges = 0;
 
       itemIds.forEach(itemId => {
         const item = itemsLookup[itemId];
-        if (item && item.upcharge > 0) {
-          const itemTotal = item.upcharge * guestCount;
+        if (item) {
+          const upcharge = item.upcharge || 0;
+          const itemTotal = upcharge * guestCount;
           categoryUpcharges += itemTotal;
-          categoryItems.push({
-            name: item.name,
-            upcharge: item.upcharge,
-            perPerson: item.upcharge,
-            total: itemTotal
-          });
+          
+          if (upcharge > 0) {
+            categoryItems.push({
+              name: item.name,
+              upcharge: upcharge,
+              perPerson: upcharge,
+              total: itemTotal
+            });
+          }
         }
       });
 
+      totalUpcharges += categoryUpcharges;
+
       if (categoryItems.length > 0) {
         breakdown.push({
-          category: categoryData.title,
+          category: categoryData?.title || categoryKey,
           items: categoryItems,
           categoryTotal: categoryUpcharges
         });
       }
 
-      totalUpcharges += categoryUpcharges;
-
       // Track category selection stats
       categoryStats[categoryKey] = {
         selected: itemIds.length,
-        available: categoryData.items.length,
-        limit: categoryData.selectionLimit
+        available: categoryData?.items?.length || 0,
+        limit: categoryData?.selectionLimit || null
       };
     });
 
@@ -146,170 +155,257 @@ const MenuBalanceCard: React.FC<MenuBalanceCardProps> = ({
 
   if (guestCount === 0 || !selectedTier) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-blue-500" />
-            Menu Balance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-4">
-            Select guest count and package tier to see pricing breakdown
-          </p>
+      <Card className="w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300">
+        <CardContent className="p-6">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+              <Calculator className="h-8 w-8 text-gray-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-700 mb-2">Ready to Calculate?</h3>
+              <p className="text-sm text-gray-500">
+                Select guest count and package tier to see live pricing
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
+  // Visual cost breakdown with pie chart-like visualization
+  const baseCostPercentage = totalCost > 0 ? (baseTotalCost / totalCost) * 100 : 100;
+  const upchargePercentage = totalCost > 0 ? (upcharges / totalCost) * 100 : 0;
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-blue-500" />
-          Menu Balance
-          <Badge variant="outline" className="ml-auto">
-            {guestCount} guests
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Total Cost Display */}
-        <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border">
-          <div className="text-3xl font-bold text-blue-600">
-            ${totalCost.toLocaleString()}
+    <div className="w-full space-y-4">
+      {/* Main Cost Display Card */}
+      <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-0 shadow-2xl">
+        <CardContent className="p-6">
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Sparkles className="h-5 w-5 text-blue-200" />
+              <Badge variant="outline" className="bg-blue-500/20 text-blue-100 border-blue-300">
+                {guestCount} guests
+              </Badge>
+            </div>
+            
+            <div className="text-5xl font-bold mb-2">
+              ${totalCost.toLocaleString()}
+            </div>
+            
+            <div className="text-blue-100 text-lg">
+              ${costPerPerson.toFixed(2)} per person
+            </div>
+            
+            <div className="text-blue-200 text-sm uppercase tracking-wide">
+              {selectedTier} Package Experience
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            ${costPerPerson.toFixed(2)} per person
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)} Package
-          </p>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Cost Breakdown */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+      {/* Visual Cost Breakdown */}
+      <Card className="border-2">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <PieChart className="h-5 w-5 text-blue-600" />
             Cost Breakdown
-          </h4>
-          
-          <div className="space-y-2">
-            {/* Base Package */}
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <div>
-                <span className="font-medium">{selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)} Package Base</span>
-                <p className="text-xs text-muted-foreground">${baseCostPerPerson}/person</p>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Visual Bar Representation */}
+          <div className="space-y-4">
+            <div className="bg-gray-100 rounded-full h-6 overflow-hidden">
+              <div className="h-full flex">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium"
+                  style={{ width: `${baseCostPercentage}%` }}
+                >
+                  {baseCostPercentage > 20 && `${Math.round(baseCostPercentage)}%`}
+                </div>
+                {upchargePercentage > 0 && (
+                  <div 
+                    className="bg-gradient-to-r from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-medium"
+                    style={{ width: `${upchargePercentage}%` }}
+                  >
+                    {upchargePercentage > 10 && `+${Math.round(upchargePercentage)}%`}
+                  </div>
+                )}
               </div>
-              <span className="font-semibold">${baseTotalCost.toLocaleString()}</span>
             </div>
 
-            {/* Premium Items */}
-            {breakdown.map((category, index) => (
-              <div key={index} className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium text-amber-800">{category.category} Premiums</span>
-                  <span className="font-semibold text-amber-700">+${category.categoryTotal.toLocaleString()}</span>
+            {/* Breakdown Details */}
+            <div className="grid grid-cols-1 gap-3">
+              {/* Base Package */}
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <div>
+                    <div className="font-medium text-blue-900">{selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)} Base</div>
+                    <div className="text-sm text-blue-600">${baseCostPerPerson}/person</div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  {category.items.map((item, itemIndex) => (
-                    <div key={itemIndex} className="flex justify-between text-xs text-amber-700">
-                      <span>{item.name}</span>
-                      <span>+${item.perPerson}/person</span>
+                <div className="text-xl font-bold text-blue-700">
+                  ${baseTotalCost.toLocaleString()}
+                </div>
+              </div>
+
+              {/* Premium Items */}
+              {breakdown.map((category, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border-l-4 border-amber-500">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-amber-500 rounded"></div>
+                    <div>
+                      <div className="font-medium text-amber-900">{category.category}</div>
+                      <div className="text-sm text-amber-600">{category.items.length} premium item{category.items.length > 1 ? 's' : ''}</div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="text-xl font-bold text-amber-700">
+                    +${category.categoryTotal.toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Menu Progress Visualization */}
+      <Card className="border-2">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-green-600" />
+            Selection Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Overall Progress Ring */}
+            <div className="text-center">
+              <div className="relative inline-flex items-center justify-center w-24 h-24">
+                <svg className="w-24 h-24 transform -rotate-90">
+                  <circle
+                    cx="48"
+                    cy="48"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    className="text-gray-200"
+                  />
+                  <circle
+                    cx="48"
+                    cy="48"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray={`${2 * Math.PI * 40}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - overallCompletion / 100)}`}
+                    className="text-green-500 transition-all duration-300"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-green-600">
+                    {Math.round(overallCompletion)}%
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Selection Progress */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-            Menu Completion
-          </h4>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Overall Progress</span>
-              <span className="text-sm font-medium">{Math.round(overallCompletion)}%</span>
+              <p className="text-sm text-gray-600 mt-2">
+                {totalItemsSelected} items selected
+              </p>
             </div>
-            <Progress value={overallCompletion} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              {totalItemsSelected} items selected across {Object.keys(selectedItems).length} categories
-            </p>
-          </div>
 
-          {/* Category Breakdown */}
-          <div className="grid grid-cols-1 gap-2">
-            {Object.entries(categoryStats).map(([key, stats]) => {
-              const categoryData = menuData?.itemsByCategory[key];
-              if (!categoryData) return null;
-              
-              const isComplete = stats.limit ? stats.selected >= stats.limit : stats.selected > 0;
-              const isOverLimit = stats.limit && stats.selected > stats.limit;
-              
-              return (
-                <div key={key} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
-                  <span className="flex items-center gap-1">
-                    {isComplete && !isOverLimit && <CheckCircle className="h-3 w-3 text-green-500" />}
-                    {isOverLimit && <AlertCircle className="h-3 w-3 text-amber-500" />}
-                    {!isComplete && <Info className="h-3 w-3 text-muted-foreground" />}
-                    {categoryData.title}
-                  </span>
-                  <span className={`font-medium ${isOverLimit ? 'text-amber-600' : isComplete ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {stats.selected}{stats.limit ? `/${stats.limit}` : ''}
-                  </span>
-                </div>
-              );
-            })}
+            {/* Category Progress Bars */}
+            <div className="space-y-3">
+              {Object.entries(categoryStats).map(([key, stats]) => {
+                const categoryData = menuData?.itemsByCategory?.[key];
+                if (!categoryData || stats.selected === 0) return null;
+                
+                const completionPercentage = stats.limit 
+                  ? Math.min((stats.selected / stats.limit) * 100, 100)
+                  : 100;
+                const isOverLimit = stats.limit && stats.selected > stats.limit;
+                
+                return (
+                  <div key={key} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        {isOverLimit ? (
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                        ) : completionPercentage === 100 ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full bg-blue-500" />
+                        )}
+                        {categoryData.title}
+                      </span>
+                      <span className={`text-sm font-bold ${
+                        isOverLimit ? 'text-amber-600' : 
+                        completionPercentage === 100 ? 'text-green-600' : 
+                        'text-blue-600'
+                      }`}>
+                        {stats.selected}{stats.limit ? `/${stats.limit}` : ''}
+                      </span>
+                    </div>
+                    <div className="bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          isOverLimit ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
+                          completionPercentage === 100 ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                          'bg-gradient-to-r from-blue-400 to-blue-600'
+                        }`}
+                        style={{ width: `${Math.min(completionPercentage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Pricing Insight */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-            Value Analysis
-          </h4>
-          <div className={`p-3 rounded-lg border ${
-            pricingInsight.type === 'great' ? 'bg-green-50 border-green-200' :
-            pricingInsight.type === 'good' ? 'bg-emerald-50 border-emerald-200' :
-            pricingInsight.type === 'moderate' ? 'bg-blue-50 border-blue-200' :
-            'bg-purple-50 border-purple-200'
-          }`}>
-            <div className="flex items-center gap-2">
-              {pricingInsight.type === 'great' && <TrendingDown className="h-4 w-4 text-green-600" />}
-              {pricingInsight.type === 'good' && <CheckCircle className="h-4 w-4 text-emerald-600" />}
-              {pricingInsight.type === 'moderate' && <TrendingUp className="h-4 w-4 text-blue-600" />}
-              {pricingInsight.type === 'premium' && <DollarSign className="h-4 w-4 text-purple-600" />}
-              <span className={`text-sm font-medium ${
+      {/* Value Insight Card */}
+      <Card className={`border-2 ${
+        pricingInsight.type === 'great' ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300' :
+        pricingInsight.type === 'good' ? 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300' :
+        pricingInsight.type === 'moderate' ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300' :
+        'bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-300'
+      }`}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-full ${
+              pricingInsight.type === 'great' ? 'bg-green-500' :
+              pricingInsight.type === 'good' ? 'bg-emerald-500' :
+              pricingInsight.type === 'moderate' ? 'bg-blue-500' :
+              'bg-purple-500'
+            }`}>
+              {pricingInsight.type === 'great' && <Award className="h-5 w-5 text-white" />}
+              {pricingInsight.type === 'good' && <CheckCircle className="h-5 w-5 text-white" />}
+              {pricingInsight.type === 'moderate' && <BarChart3 className="h-5 w-5 text-white" />}
+              {pricingInsight.type === 'premium' && <Sparkles className="h-5 w-5 text-white" />}
+            </div>
+            <div className="flex-1">
+              <div className={`font-semibold ${
                 pricingInsight.type === 'great' ? 'text-green-800' :
                 pricingInsight.type === 'good' ? 'text-emerald-800' :
                 pricingInsight.type === 'moderate' ? 'text-blue-800' :
                 'text-purple-800'
               }`}>
                 {pricingInsight.message}
-              </span>
+              </div>
+              {upcharges > 0 && (
+                <div className="text-sm text-gray-600 mt-1">
+                  Premium additions: ${upcharges.toLocaleString()} total
+                </div>
+              )}
             </div>
-            {upcharges > 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Premium additions: ${upcharges.toLocaleString()} total
-              </p>
-            )}
           </div>
-        </div>
-
-        {/* Guest Count Impact */}
-        <div className="text-center p-3 bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg border">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Users className="h-4 w-4 text-slate-600" />
-            <span className="text-sm font-medium text-slate-700">Guest Impact</span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Each additional guest adds ${costPerPerson.toFixed(2)} to your total
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
