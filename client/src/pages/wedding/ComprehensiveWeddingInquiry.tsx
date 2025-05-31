@@ -67,6 +67,7 @@ export default function ComprehensiveWeddingInquiry() {
   const loadMenuThemes = async () => {
     try {
       const { menusByTheme } = await import('@/data/generated');
+      console.log('Loaded menusByTheme:', menusByTheme);
       const themes = Object.entries(menusByTheme || {}).map(([key, theme]: [string, any]) => ({
         id: key,
         name: theme.name,
@@ -77,6 +78,7 @@ export default function ComprehensiveWeddingInquiry() {
         itemsByCategory: theme.itemsByCategory || {},
         tierPackages: theme.tierPackages || {}
       }));
+      console.log('Processed themes:', themes);
       setAvailableThemes(themes);
     } catch (error) {
       console.error('Error loading menu themes:', error);
