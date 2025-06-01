@@ -1,0 +1,79 @@
+The Inconsistency:
+
+Items added via handleAddItem have price as a number in cents in selectedItems.
+Items loaded for an existing menu (via useEffect) have price as a string in dollars in selectedItems.
+How SortableMenuItem Displays This Inconsistent Data:
+It always does: formatCurrency(item.price / 100)
+
+Case 1 (Newly added item): item.price is 195 (cents). formatCurrency(195 / 100) -> formatCurrency(1.95) -> "$1.95". (Correct)
+Case 2 (Item loaded from existing menu): item.price is "1.95" (dollar string).
+"1.95" / 100 (JavaScript coerces the string to a number) -> 1.95 / 100 -> 0.0195.
+formatCurrency(0.0195) will be rounded by Intl.NumberFormat to "$0.02".
+Case 2 (Item loaded from existing menu): item.price is "2.50" (dollar string).
+"2.50" / 100 -> 2.50 / 100 -> 0.0250.
+formatCurrency(0.0250) will be rounded to "$0.03".
+This perfectly explains why you see $0.02 and $0.03 for items that have database prices of $1.95 and $2.50 when you are editing an existing menu.
+
+Changes to Fix This:
+
+You need to ensure that the price in the selectedItems state is always stored consistently, preferably as integer cents.
+
+Modify the useEffect in MenuBuilder.tsx that handles loading an existing menu:
+
+TypeScript
+
+// In client/src/components/menu/MenuBuilder.tsx
+
+useEffect(() => {
+  if (isEditing && menu && menu.items && menuItems.length > 0) {
+    console.log("Updating selected items with menu item details");
+    const itemsFromMenuDefinition = getMenuItems(); // Parses menu.items
+
+    const updatedItems = itemsFromMenuDefinition.map((itemFromDef: MenuItemWithType) => {
+      const fullMenuItemDetails = menuItems.find((mi: any) => 
+        mi.id === itemFromDef.id || mi.id.toString() === itemFromDef.id.toString()
+      );
+
+      if (fullMenuItemDetails) {
+        // Convert price to cents, just like in handleAddItem
+        let priceInDollars = parseFloat(fullMenuItemDetails.price); // Convert string like "1.95" to number 1.95
+        if (isNaN(priceInDollars)) {
+          console.warn(`Invalid price for item ${fullMenuItemDetails.name} from master list: '${fullMenuItemDetails.price}'. Defaulting to 0.`);
+          priceInDollars = 0;
+        }
+        const priceInCents = Math.round(priceInDollars * 100);
+
+        return {
+          ...itemFromDef, // Contains id, type (from menu structure)
+          name: fullMenuItemDetails.name || itemFromDef.name,
+          price: priceInCents, // <<< STORE AS CENTS (NUMBER)
+          category: fullMenuItemDetails.category || itemFromDef.category,
+          description: fullMenuItemDetails.description,
+          // Copy all other relevant details from fullMenuItemDetails
+          additional_dietary_metadata: fullMenuItemDetails.additional_dietary_metadata,
+          isVegetarian: fullMenuItemDetails.isVegetarian,
+          isVegan: fullMenuItemDetails.isVegan,
+          isGlutenFree: fullMenuItemDetails.isGlutenFree,
+          isDairyFree: fullMenuItemDetails.isDairyFree,
+          isNutFree: fullMenuItemDetails.isNutFree,
+          ingredients: fullMenuItemDetails.ingredients,
+          // ... and any other fields displayed by SortableMenuItem or used by calculateTotalPrice
+        };
+      }
+      // If item from menu definition is not found in master list, return it as is (it might have price: 0)
+      // or handle as an error/warning.
+      console.warn(`Menu item with ID ${itemFromDef.id} from menu definition not found in master menuItems list.`);
+      return { ...itemFromDef, price: itemFromDef.price ? Math.round(parseFloat(String(itemFromDef.price)) * 100) : 0 }; // Ensure its price is also in cents or 0
+    });
+    setSelectedItems(updatedItems);
+  }
+}, [menu, menuItems, isEditing]); // Make sure getMenuItems is stable or memoized if defined inside component
+Explanation of the Fix:
+
+When enriching items for an existing menu being edited, take the price from fullMenuItemDetails.price (which is a dollar string like "1.95").
+Convert this dollar string to a floating-point number using parseFloat().
+Handle cases where parseFloat might return NaN (if the price string is invalid for some reason, though your logs show valid strings).
+Multiply by 100 and use Math.round() to get an integer value in cents (e.g., 195). Math.round() helps avoid tiny floating-point inaccuracies that might occur with direct multiplication if you weren't immediately storing integers.
+Store this integer cents value in the price property of the items pushed to selectedItems.
+Now, whether an item is newly added or loaded from an existing menu, selectedItems will consistently store the price as an integer in cents. The SortableMenuItem component's display logic (item.price / 100) will then work correctly for all items.
+

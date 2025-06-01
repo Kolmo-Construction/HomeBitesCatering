@@ -325,40 +325,43 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   useEffect(() => {
     if (isEditing && menu && menu.items && menuItems.length > 0) {
       console.log("Updating selected items with menu item details");
-      const updatedItems = getMenuItems().map((item: MenuItemWithType) => {
-        // Try to find matching menu item to get additional details
-        // Handle both string and numeric IDs
-        const menuItem = menuItems.find((mi: any) => 
-          mi.id === item.id || mi.id.toString() === item.id.toString()
+      const itemsFromMenuDefinition = getMenuItems(); // Parses menu.items
+
+      const updatedItems = itemsFromMenuDefinition.map((itemFromDef: MenuItemWithType) => {
+        const fullMenuItemDetails = menuItems.find((mi: any) => 
+          mi.id === itemFromDef.id || mi.id.toString() === itemFromDef.id.toString()
         );
-        if (menuItem) {
+
+        if (fullMenuItemDetails) {
+          // Convert price to cents, just like in handleAddItem
+          let priceInDollars = parseFloat(fullMenuItemDetails.price); // Convert string like "1.95" to number 1.95
+          if (isNaN(priceInDollars)) {
+            console.warn(`Invalid price for item ${fullMenuItemDetails.name} from master list: '${fullMenuItemDetails.price}'. Defaulting to 0.`);
+            priceInDollars = 0;
+          }
+          const priceInCents = Math.round(priceInDollars * 100);
+
           return {
-            ...item,
-            name: menuItem.name || item.name,
-            price: menuItem.price || item.price,
-            category: menuItem.category || item.category,
-            description: menuItem.description,
-            origin: menuItem.origin,
-            additional_dietary_metadata: menuItem.additional_dietary_metadata,
-            calories: menuItem.calories,
-            protein: menuItem.protein,
-            carbs: menuItem.carbs,
-            fat: menuItem.fat,
-            fiber: menuItem.fiber,
-            sugar: menuItem.sugar,
-            sodium: menuItem.sodium,
-            isVegetarian: menuItem.isVegetarian,
-            isVegan: menuItem.isVegan,
-            isGlutenFree: menuItem.isGlutenFree,
-            isDairyFree: menuItem.isDairyFree,
-            isNutFree: menuItem.isNutFree,
-            allergens: menuItem.allergens,
-            spiceLevel: menuItem.spiceLevel,
-            prepTime: menuItem.prepTime,
-            servingSize: menuItem.servingSize
+            ...itemFromDef, // Contains id, type (from menu structure)
+            name: fullMenuItemDetails.name || itemFromDef.name,
+            price: priceInCents, // <<< STORE AS CENTS (NUMBER)
+            category: fullMenuItemDetails.category || itemFromDef.category,
+            description: fullMenuItemDetails.description,
+            // Copy all other relevant details from fullMenuItemDetails
+            additional_dietary_metadata: fullMenuItemDetails.additional_dietary_metadata,
+            isVegetarian: fullMenuItemDetails.isVegetarian,
+            isVegan: fullMenuItemDetails.isVegan,
+            isGlutenFree: fullMenuItemDetails.isGlutenFree,
+            isDairyFree: fullMenuItemDetails.isDairyFree,
+            isNutFree: fullMenuItemDetails.isNutFree,
+            ingredients: fullMenuItemDetails.ingredients,
+            // ... and any other fields displayed by SortableMenuItem or used by calculateTotalPrice
           };
         }
-        return item;
+        // If item from menu definition is not found in master list, return it as is (it might have price: 0)
+        // or handle as an error/warning.
+        console.warn(`Menu item with ID ${itemFromDef.id} from menu definition not found in master menuItems list.`);
+        return { ...itemFromDef, price: itemFromDef.price ? Math.round(parseFloat(String(itemFromDef.price)) * 100) : 0 }; // Ensure its price is also in cents or 0
       });
       setSelectedItems(updatedItems);
     }
