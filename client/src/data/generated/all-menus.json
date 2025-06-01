@@ -1,0 +1,770 @@
+[
+  {
+    "id": 21,
+    "name": "Taco Fiesta ",
+    "description": "",
+    "event_type": "other",
+    "theme_key": "theme_21",
+    "package_id": "package_21",
+    "structure": [
+      {
+        "id": "stuffed_poblano",
+        "type": "mains"
+      },
+      {
+        "id": "cilantro_lime_rice",
+        "type": "mains"
+      },
+      {
+        "id": "mexican_rice",
+        "type": "mains"
+      },
+      {
+        "id": "grilled_vegetables",
+        "type": "mains"
+      },
+      {
+        "id": "barbacoa",
+        "type": "mains"
+      },
+      {
+        "id": "pork_carnitas",
+        "type": "mains"
+      },
+      {
+        "id": "pork_belly",
+        "type": "mains"
+      },
+      {
+        "id": "flank_steak_fajitas",
+        "type": "mains"
+      },
+      {
+        "id": "ground_beef",
+        "type": "mains"
+      },
+      {
+        "id": "chorizo",
+        "type": "mains"
+      },
+      {
+        "id": "mexican_chicken",
+        "type": "mains"
+      },
+      {
+        "id": "chorizo_queso_dip",
+        "type": "mains"
+      },
+      {
+        "id": "queso_dip",
+        "type": "mains"
+      },
+      {
+        "id": "beef_birria",
+        "type": "mains"
+      },
+      {
+        "id": "cod",
+        "type": "mains"
+      },
+      {
+        "id": "shrimp",
+        "type": "mains"
+      },
+      {
+        "id": "tofu",
+        "type": "mains"
+      },
+      {
+        "id": "roasted_vegetables",
+        "type": "mains"
+      },
+      {
+        "id": "escabeche",
+        "type": "mains"
+      },
+      {
+        "id": "refried_beans",
+        "type": "mains"
+      },
+      {
+        "id": "jalapeno_cornbread",
+        "type": "mains"
+      },
+      {
+        "id": "elotes",
+        "type": "mains"
+      },
+      {
+        "id": "rice_and_beans",
+        "type": "mains"
+      },
+      {
+        "id": "mexican_slaw",
+        "type": "mains"
+      },
+      {
+        "id": "veg_empanadas",
+        "type": "mains"
+      },
+      {
+        "id": "pico_de_gallo",
+        "type": "mains"
+      },
+      {
+        "id": "fresh_mango_salsa",
+        "type": "mains"
+      },
+      {
+        "id": "pineapple_habanero",
+        "type": "mains"
+      },
+      {
+        "id": "cucumber_apple",
+        "type": "mains"
+      },
+      {
+        "id": "salsa_roja",
+        "type": "mains"
+      },
+      {
+        "id": "salsa_verde",
+        "type": "mains"
+      },
+      {
+        "id": "creamy_salsa_verde",
+        "type": "mains"
+      },
+      {
+        "id": "shredded_cheese",
+        "type": "mains"
+      },
+      {
+        "id": "diced_onions",
+        "type": "mains"
+      },
+      {
+        "id": "jalapenos",
+        "type": "mains"
+      },
+      {
+        "id": "sour_cream",
+        "type": "mains"
+      },
+      {
+        "id": "pickled_cabbage",
+        "type": "mains"
+      },
+      {
+        "id": "vegan_cheese",
+        "type": "mains"
+      },
+      {
+        "id": "lime_wedges",
+        "type": "mains"
+      },
+      {
+        "id": "sliced_radish",
+        "type": "mains"
+      },
+      {
+        "id": "diced_bell_peppers",
+        "type": "mains"
+      },
+      {
+        "id": "fire_roasted_peppers",
+        "type": "mains"
+      },
+      {
+        "id": "guacamole",
+        "type": "mains"
+      },
+      {
+        "id": "cilantro",
+        "type": "sides"
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "American BBQ",
+    "description": "",
+    "event_type": "other",
+    "theme_key": "theme_22",
+    "package_id": "package_22",
+    "structure": {
+      "categories": [
+        {
+          "description": "Salad / Side Dish selection",
+          "category_key": "salad_/_side_dish",
+          "display_title": "Salad / Side Dish",
+          "upcharge_info": {},
+          "selection_limit": 3,
+          "available_item_ids": [
+            "pasta_salad",
+            "garden_salad",
+            "crunchy_asian_salad"
+          ]
+        },
+        {
+          "description": "Protein Option / Vegan / Vegetarian selection",
+          "category_key": "protein_option_/_vegan_/_vegetarian",
+          "display_title": "Protein Option / Vegan / Vegetarian",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "tofu"
+          ]
+        },
+        {
+          "description": "Main Course - Beef / Carving Station selection",
+          "category_key": "main_course_-_beef_/_carving_station",
+          "display_title": "Main Course - Beef / Carving Station",
+          "upcharge_info": {
+            "prime_rib": 4
+          },
+          "selection_limit": 1,
+          "available_item_ids": [
+            "prime_rib"
+          ]
+        },
+        {
+          "description": "Main Course - Beef / BBQ selection",
+          "category_key": "main_course_-_beef_/_bbq",
+          "display_title": "Main Course - Beef / BBQ",
+          "upcharge_info": {
+            "beef_ribs": 3,
+            "smoked_brisket": 2
+          },
+          "selection_limit": 2,
+          "available_item_ids": [
+            "smoked_brisket",
+            "beef_ribs"
+          ]
+        },
+        {
+          "description": "Main Course - Lamb selection",
+          "category_key": "main_course_-_lamb",
+          "display_title": "Main Course - Lamb",
+          "upcharge_info": {
+            "lamb_chops": 3
+          },
+          "selection_limit": 2,
+          "available_item_ids": [
+            "lamb_chops",
+            "smoked_leg_lamb"
+          ]
+        },
+        {
+          "description": "Main Course - Beef selection",
+          "category_key": "main_course_-_beef",
+          "display_title": "Main Course - Beef",
+          "upcharge_info": {
+            "bacon_filet_mignon": 4,
+            "guinness_short_ribs": 2
+          },
+          "selection_limit": 3,
+          "available_item_ids": [
+            "guinness_short_ribs",
+            "bacon_filet_mignon",
+            "flank_steak_chimichurri"
+          ]
+        },
+        {
+          "description": "Main Course - Pork/Mixed Meat selection",
+          "category_key": "main_course_-_pork/mixed_meat",
+          "display_title": "Main Course - Pork/Mixed Meat",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "sausage_medley"
+          ]
+        },
+        {
+          "description": "Main Course - Beef / Event Station selection",
+          "category_key": "main_course_-_beef_/_event_station",
+          "display_title": "Main Course - Beef / Event Station",
+          "upcharge_info": {
+            "hamburger_bar": 1.5
+          },
+          "selection_limit": 1,
+          "available_item_ids": [
+            "hamburger_bar"
+          ]
+        },
+        {
+          "description": "Side Dish selection",
+          "category_key": "side_dish",
+          "display_title": "Side Dish",
+          "upcharge_info": {},
+          "selection_limit": 6,
+          "available_item_ids": [
+            "bacon_jalapeno_corn",
+            "coleslaw",
+            "german_potato",
+            "macaroni_salad",
+            "hawaiian_macaroni",
+            "fruit_salad"
+          ]
+        },
+        {
+          "description": "Main Course - Pork selection",
+          "category_key": "main_course_-_pork",
+          "display_title": "Main Course - Pork",
+          "upcharge_info": {},
+          "selection_limit": 3,
+          "available_item_ids": [
+            "pulled_pork",
+            "baby_back_ribs",
+            "pork_chop"
+          ]
+        },
+        {
+          "description": "Main Course - Pork / Appetizer selection",
+          "category_key": "main_course_-_pork_/_appetizer",
+          "display_title": "Main Course - Pork / Appetizer",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "smoked_pork_belly"
+          ]
+        },
+        {
+          "description": "Main Course - Poultry selection",
+          "category_key": "main_course_-_poultry",
+          "display_title": "Main Course - Poultry",
+          "upcharge_info": {
+            "bbq_guinness_chicken": 1
+          },
+          "selection_limit": 3,
+          "available_item_ids": [
+            "bbq_guinness_chicken",
+            "carolina_bbq_chicken",
+            "rotisserie_chicken"
+          ]
+        },
+        {
+          "description": "Main Course - Seafood / Appetizer selection",
+          "category_key": "main_course_-_seafood_/_appetizer",
+          "display_title": "Main Course - Seafood / Appetizer",
+          "upcharge_info": {
+            "bbq_prawns": 1
+          },
+          "selection_limit": 1,
+          "available_item_ids": [
+            "bbq_prawns"
+          ]
+        },
+        {
+          "description": "Main Course - Seafood selection",
+          "category_key": "main_course_-_seafood",
+          "display_title": "Main Course - Seafood",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "salmon_steak"
+          ]
+        },
+        {
+          "description": "Side Dish / Vegetarian Option selection",
+          "category_key": "side_dish_/_vegetarian_option",
+          "display_title": "Side Dish / Vegetarian Option",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "vegetable_kebabs"
+          ]
+        },
+        {
+          "description": "Vegetarian Main / Side Dish selection",
+          "category_key": "vegetarian_main_/_side_dish",
+          "display_title": "Vegetarian Main / Side Dish",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "cauliflower_steaks"
+          ]
+        },
+        {
+          "description": "Salad selection",
+          "category_key": "salad",
+          "display_title": "Salad",
+          "upcharge_info": {},
+          "selection_limit": 4,
+          "available_item_ids": [
+            "caesar",
+            "wedge_salad",
+            "german_cucumber",
+            "tossed_cobb"
+          ]
+        },
+        {
+          "description": "Condiment / Topping selection",
+          "category_key": "condiment_/_topping",
+          "display_title": "Condiment / Topping",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "kansas_city_bbq"
+          ]
+        }
+      ],
+      "package_price_per_person": 0
+    }
+  },
+  {
+    "id": 23,
+    "name": "A Taste of Greece",
+    "description": "",
+    "event_type": "other",
+    "theme_key": "theme_23",
+    "package_id": "package_23",
+    "structure": [
+      {
+        "id": "papoutsakia",
+        "type": "mains"
+      },
+      {
+        "id": "soutzoukakia",
+        "type": "mains"
+      },
+      {
+        "id": "kokinisto",
+        "type": "mains"
+      },
+      {
+        "id": "kleftiko",
+        "type": "mains"
+      },
+      {
+        "id": "pastitsio",
+        "type": "mains"
+      },
+      {
+        "id": "kotopoulo_lemonato",
+        "type": "mains"
+      },
+      {
+        "id": "paidakia",
+        "type": "mains"
+      },
+      {
+        "id": "kotsi_arni",
+        "type": "mains"
+      },
+      {
+        "id": "bifteki_gemisto",
+        "type": "mains"
+      },
+      {
+        "id": "psari_plaki",
+        "type": "mains"
+      },
+      {
+        "id": "solomou",
+        "type": "mains"
+      },
+      {
+        "id": "bakaliaros",
+        "type": "mains"
+      },
+      {
+        "id": "aginares",
+        "type": "mains"
+      },
+      {
+        "id": "gemista",
+        "type": "mains"
+      },
+      {
+        "id": "lemon_potatoes",
+        "type": "sides"
+      },
+      {
+        "id": "spanakopita",
+        "type": "sides"
+      },
+      {
+        "id": "kritharaki",
+        "type": "sides"
+      },
+      {
+        "id": "fasolakia",
+        "type": "sides"
+      },
+      {
+        "id": "gigandes_plaki",
+        "type": "sides"
+      },
+      {
+        "id": "tyrokroketes",
+        "type": "sides"
+      },
+      {
+        "id": "octapodi",
+        "type": "sides"
+      },
+      {
+        "id": "dolmades",
+        "type": "sides"
+      },
+      {
+        "id": "saganaki",
+        "type": "sides"
+      },
+      {
+        "id": "greek_rice_pilaf",
+        "type": "sides"
+      },
+      {
+        "id": "baked_vegetables",
+        "type": "sides"
+      },
+      {
+        "id": "horiatiki",
+        "type": "salads"
+      },
+      {
+        "id": "lahanosalata",
+        "type": "salads"
+      },
+      {
+        "id": "maroulosalata",
+        "type": "salads"
+      },
+      {
+        "id": "patatosalata",
+        "type": "salads"
+      },
+      {
+        "id": "dakos",
+        "type": "salads"
+      },
+      {
+        "id": "garden_salad",
+        "type": "salads"
+      },
+      {
+        "id": "tabouli",
+        "type": "salads"
+      },
+      {
+        "id": "tzatziki",
+        "type": "spreads"
+      },
+      {
+        "id": "hummus",
+        "type": "spreads"
+      },
+      {
+        "id": "melitzanosalata",
+        "type": "spreads"
+      },
+      {
+        "id": "spicy_feta",
+        "type": "spreads"
+      },
+      {
+        "id": "taramasalata",
+        "type": "spreads"
+      },
+      {
+        "id": "beet_hummus",
+        "type": "spreads"
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "PASCAL MATTA",
+    "description": "",
+    "event_type": "other",
+    "theme_key": "theme_25",
+    "package_id": "package_25",
+    "structure": {
+      "categories": [
+        {
+          "description": "Main Course - Poultry selection",
+          "category_key": "main_course_-_poultry",
+          "display_title": "Main Course - Poultry",
+          "upcharge_info": {},
+          "selection_limit": 1,
+          "available_item_ids": [
+            "cacciatore_w"
+          ]
+        }
+      ],
+      "package_price_per_person": 0
+    }
+  },
+  {
+    "id": 24,
+    "name": "Kebab party",
+    "description": "",
+    "event_type": "other",
+    "theme_key": "theme_24",
+    "package_id": "package_24",
+    "structure": [
+      {
+        "id": "pork_tenderloin",
+        "type": "mains"
+      },
+      {
+        "id": "saltimbocca_w",
+        "type": "mains"
+      },
+      {
+        "id": "beef_tenderloin",
+        "type": "mains"
+      },
+      {
+        "id": "beef_flank",
+        "type": "mains"
+      },
+      {
+        "id": "lamb",
+        "type": "mains"
+      },
+      {
+        "id": "swordfish",
+        "type": "mains"
+      },
+      {
+        "id": "shrimp",
+        "type": "mains"
+      },
+      {
+        "id": "bacon_wrapped_asparagus",
+        "type": "mains"
+      },
+      {
+        "id": "tofu",
+        "type": "mains"
+      },
+      {
+        "id": "mushrooms",
+        "type": "mains"
+      },
+      {
+        "id": "tomato_gnocchi",
+        "type": "mains"
+      },
+      {
+        "id": "mixed_vegetables",
+        "type": "mains"
+      },
+      {
+        "id": "falafel",
+        "type": "sides"
+      },
+      {
+        "id": "spanakopita",
+        "type": "sides"
+      },
+      {
+        "id": "dolmades",
+        "type": "sides"
+      },
+      {
+        "id": "yellow_rice_pilaf",
+        "type": "sides"
+      },
+      {
+        "id": "wild_rice_mushroom",
+        "type": "sides"
+      },
+      {
+        "id": "patatas_bravas",
+        "type": "sides"
+      },
+      {
+        "id": "potato_croquettes",
+        "type": "sides"
+      },
+      {
+        "id": "roasted_beets",
+        "type": "sides"
+      },
+      {
+        "id": "roasted_brussels",
+        "type": "sides"
+      },
+      {
+        "id": "moroccan_cauliflower",
+        "type": "sides"
+      },
+      {
+        "id": "roasted_carrots",
+        "type": "sides"
+      },
+      {
+        "id": "grilled_vegetables",
+        "type": "sides"
+      },
+      {
+        "id": "tabouli_salad",
+        "type": "salads"
+      },
+      {
+        "id": "fattoush",
+        "type": "salads"
+      },
+      {
+        "id": "cous_cous",
+        "type": "salads"
+      },
+      {
+        "id": "lebanese_potato",
+        "type": "salads"
+      },
+      {
+        "id": "greek_village",
+        "type": "salads"
+      },
+      {
+        "id": "tomato_cucumber",
+        "type": "salads"
+      },
+      {
+        "id": "caprese_pasta",
+        "type": "salads"
+      },
+      {
+        "id": "caesar",
+        "type": "salads"
+      },
+      {
+        "id": "garden_salad",
+        "type": "salads"
+      },
+      {
+        "id": "tzatziki",
+        "type": "spreads"
+      },
+      {
+        "id": "sp_hummus",
+        "type": "spreads"
+      },
+      {
+        "id": "baba_ghanoush",
+        "type": "spreads"
+      },
+      {
+        "id": "spicy_feta",
+        "type": "spreads"
+      },
+      {
+        "id": "taramasalata",
+        "type": "spreads"
+      },
+      {
+        "id": "muhammara",
+        "type": "spreads"
+      },
+      {
+        "id": "lebanese_garlic",
+        "type": "spreads"
+      }
+    ]
+  }
+]
