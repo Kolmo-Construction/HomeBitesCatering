@@ -1,0 +1,58 @@
+Step 1: Update Your Database Schema
+
+Modify shared/schema.ts:
+
+In the menus table definition, add a new boolean field, for example, displayOnCustomerForm. You can set a default value (e.g., false).
+You might also decide to simplify the type field if form_builder is no longer one of its primary uses, or just ensure new menus don't get assigned this type for visibility purposes.
+TypeScript
+
+// In extracted_files/shared/schema.ts
+export const menus = pgTable("menus", {
+  // ... existing fields like id, name, description ...
+  type: text("type").notNull(), // e.g., "standard", "custom", "seasonal"
+  // ...
+  isPubliclyVisible: boolean("is_publicly_visible").default(true),
+  displayOnCustomerForm: boolean("display_on_customer_form").default(false).notNull(), // <-- NEW FIELD
+  // ... createdAt, updatedAt ...
+});
+Create and Run a Database Migration:
+
+Use Drizzle Kit to generate a new migration file based on your schema change: npx drizzle-kit generate (or your specific command).
+Apply the migration to your database to add the new displayOnCustomerForm column.
+Step 2: Update Backend Logic
+
+Storage Layer (server/storage.ts):
+
+Update the InsertMenu type if you use it directly in your storage functions, or ensure your storage functions can handle the new displayOnCustomerForm field.
+Modify createMenu and updateMenu in DatabaseStorage to include displayOnCustomerForm when inserting or updating menu records.
+API Routes (server/routes.ts):
+
+Menu Creation/Update (POST /api/menus, PATCH /api/menus/:id):
+Update the insertMenuSchema (or the Zod schema used in these routes) to include displayOnCustomerForm so it can be received from the request body.
+The logic that structures the items field into MenuPackageStructure (currently in POST /api/menus if it detects a simple array for certain menu types) should now be triggered if menuData.displayOnCustomerForm is true. This ensures that menus flagged for customer forms get the correct detailed structure.
+Questionnaire Menu API (server/menuQuestionnaireRoutes.ts):
+
+In getWeddingMenuThemes, change the database query:
+Replace where(eq(menus.type, 'form_builder'))
+With where(eq(menus.displayOnCustomerForm, true)).
+Step 3: Update Frontend Menu Creation/Editing UI
+
+Menu Builder Form (client/src/components/menu/MenuBuilder.tsx):
+In the form within MenuBuilder.tsx, add a checkbox or a Switch component (from components/ui/switch.tsx) that corresponds to the new displayOnCustomerForm field.
+Label it clearly, for example, "Display this menu on customer selection forms?".
+Ensure the state of this checkbox is included when the menu form is submitted.
+Important: If this checkbox is checked, it's still crucial that the items data for the menu is structured as MenuPackageStructure. You might want to:
+Visually guide the admin to build this structure in the UI when the box is checked.
+Or, rely on the backend logic (updated in Step 2.2) to transform a simpler list of items into the MenuPackageStructure when displayOnCustomerForm is true. The former is more robust as it makes the expected structure explicit during creation.
+Step 4: Update Data Generation Script (if used for this purpose)
+
+Modify generateMenuData.js:
+Change how it selects menus for generating files like menuThemes.json.
+Replace where(eq(menus.type, 'form_builder'))
+With where(eq(menus.displayOnCustomerForm, true)).
+The script's existing logic for parsing the MenuPackageStructure from the items field of these menus should continue to work, as these flagged menus will still be expected to have that structure.
+Step 5: Data Migration for Existing Menus (One-Time Task)
+
+You'll need to run a script or manual SQL commands to update your existing menus in the database.
+For any menu that currently has type: 'form_builder' (or a similar theme key you were using for this purpose), set its new displayOnCustomerForm field to true.
+You can then decide if you want to change the type field for these menus to something more general like "custom" or "themed," as displayOnCustomerForm now handles the specific visibility/structural flag.
