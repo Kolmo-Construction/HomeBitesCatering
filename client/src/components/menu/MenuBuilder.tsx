@@ -43,6 +43,8 @@ const formSchema = insertMenuSchema.extend({
   description: z.string().optional(),
   type: z.string().min(1, "Menu type is required"),
   event_type: z.string().optional(),
+  theme_key: z.string().optional(),
+  package_id: z.string().optional(),
   items: z.array(z.object({
     id: z.number(),
     type: z.string(),
@@ -683,14 +685,46 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                 {form.watch("type") === "form_builder" ? (
                   <div className="space-y-6">
                     <h3 className="text-lg font-medium">Menu Package Builder</h3>
-                    <p className="text-sm text-gray-600">Build your custom menu package using the simplified structure.</p>
+                    <p className="text-sm text-gray-600">Configure your menu package with build-time identifiers for data generation.</p>
                     
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-800 mb-2">Simplified Structure</h4>
-                      <p className="text-sm text-blue-700">
-                        Your menu will use the name and description from the main fields above. 
-                        Simply select items below to build your package.
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Theme Key - Required for build system */}
+                      <FormField
+                        control={form.control}
+                        name="theme_key"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Theme Key</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., taste_of_greece"
+                                {...field}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">Build system identifier for menu lookup</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Package ID - Required for imports */}
+                      <FormField
+                        control={form.control}
+                        name="package_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Package ID</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., greece_deluxe_v1"
+                                {...field}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">Package identifier for import system</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                     
                     {/* Menu Items Selection for Form Builder */}
