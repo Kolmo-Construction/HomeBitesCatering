@@ -60,7 +60,13 @@ export default function MenuItems() {
   }
   
   if (mode === "new") {
-    return <MenuItemForm />;
+    const handleCancel = () => {
+      setMode("list");
+      setSelectedItemId(null);
+      window.history.pushState(null, '', '/menu-items');
+    };
+    
+    return <MenuItemForm onCancel={handleCancel} />;
   }
   
   if ((mode === "edit" || mode === "view") && isLoading) {
@@ -82,7 +88,13 @@ export default function MenuItems() {
       price: menuItem.price === null ? null : (typeof menuItem.price === 'number' ? menuItem.price : 0)
     };
     
-    return <MenuItemForm menuItem={formattedMenuItem} isEditing={true} />;
+    const handleCancel = () => {
+      setMode("list");
+      setSelectedItemId(null);
+      window.history.pushState(null, '', '/menu-items');
+    };
+    
+    return <MenuItemForm menuItem={formattedMenuItem} isEditing={true} onCancel={handleCancel} />;
   }
   
   if (mode === "view" && menuItem) {
