@@ -109,6 +109,18 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
     }
   };
 
+  // Reset form when menuItem prop changes (for editing mode)
+  useEffect(() => {
+    if (isEditing && menuItem) {
+      // Reset form with the loaded menu item data
+      form.reset({
+        ...menuItem,
+        price: menuItem.price ?? undefined,
+        upcharge: menuItem.upcharge ?? undefined,
+      });
+    }
+  }, [isEditing, menuItem, form]);
+
   // Load existing dietary metadata when editing
   useEffect(() => {
     if (isEditing && menuItem?.additional_dietary_metadata) {
