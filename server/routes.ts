@@ -707,7 +707,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Menu item not found' });
       }
       
-      res.status(200).json(menuItem);
+      // Debug: Log the price value and its type
+      console.log('Menu item price before sending:', menuItem.price, 'Type:', typeof menuItem.price);
+      
+      // Ensure price is properly converted to number if it exists
+      const responseItem = {
+        ...menuItem,
+        price: menuItem.price ? parseFloat(menuItem.price.toString()) : menuItem.price,
+        upcharge: menuItem.upcharge ? parseFloat(menuItem.upcharge.toString()) : menuItem.upcharge,
+      };
+      
+      console.log('Menu item price after conversion:', responseItem.price, 'Type:', typeof responseItem.price);
+      
+      res.status(200).json(responseItem);
     } catch (error) {
       console.error('Error getting menu item:', error);
       res.status(500).json({ message: 'Server error' });
