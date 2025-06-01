@@ -75,12 +75,16 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // Set up the form with default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: menuItem || {
+    defaultValues: menuItem ? {
+      ...menuItem,
+      price: menuItem.price ?? undefined, // Convert null to undefined for form handling
+      upcharge: menuItem.upcharge ?? undefined,
+    } : {
       name: "",
       description: "",
       category: "",
-      price: 0,
-      upcharge: 0,
+      price: undefined,
+      upcharge: undefined,
       ingredients: "",
       isVegetarian: false,
       isVegan: false,
