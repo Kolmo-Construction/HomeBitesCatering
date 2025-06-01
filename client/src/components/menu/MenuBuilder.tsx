@@ -304,6 +304,22 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   const { data: menuItems = [], isLoading: isLoadingMenuItems } = useQuery({
     queryKey: ["/api/menu-items"],
   }) as { data: any[], isLoading: boolean };
+
+  // Diagnostic logging for price issue investigation
+  useEffect(() => {
+    if (!isLoadingMenuItems && menuItems.length > 0) {
+      const pateItem = menuItems.find(item => item.id === 'ts_pate_veg');
+      if (pateItem) {
+        console.log('[MenuBuilder] Pate with pickled veg (from API list):', 
+                    { id: pateItem.id, name: pateItem.name, price: pateItem.price, type: typeof pateItem.price });
+      }
+      const creamCheeseItem = menuItems.find(item => item.name === 'Cream Cheese and Shrimp');
+      if (creamCheeseItem) {
+        console.log('[MenuBuilder] Cream Cheese and Shrimp (from API list):', 
+                    { id: creamCheeseItem.id, name: creamCheeseItem.name, price: creamCheeseItem.price, type: typeof creamCheeseItem.price });
+      }
+    }
+  }, [menuItems, isLoadingMenuItems]);
   
   // Update selected items with additional data from menu items when available
   useEffect(() => {
