@@ -42,9 +42,9 @@ const formSchema = insertMenuSchema.extend({
   name: z.string().min(1, "Menu name is required"),
   description: z.string().optional(),
   type: z.string().min(1, "Menu type is required"),
-  event_type: z.string().optional(),
   theme_key: z.string().optional(),
   package_id: z.string().optional(),
+  package_name: z.string().optional(),
   items: z.array(z.object({
     id: z.number(),
     type: z.string(),
@@ -634,33 +634,6 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                       );
                     }}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="event_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Event Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select event type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="wedding">Wedding</SelectItem>
-                            <SelectItem value="corporate">Corporate</SelectItem>
-                            <SelectItem value="birthday">Birthday</SelectItem>
-                            <SelectItem value="anniversary">Anniversary</SelectItem>
-                            <SelectItem value="graduation">Graduation</SelectItem>
-                            <SelectItem value="holiday">Holiday</SelectItem>
-                            <SelectItem value="general">General</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
                 
                 <FormField
@@ -684,11 +657,11 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                 {/* Form Builder UI - Show when type is "form_builder" */}
                 {form.watch("type") === "form_builder" ? (
                   <div className="space-y-6">
-                    <h3 className="text-lg font-medium">Menu Package Builder</h3>
-                    <p className="text-sm text-gray-600">Configure your menu package with build-time identifiers for data generation.</p>
+                    <h3 className="text-lg font-medium">Menu Package Structure Builder</h3>
+                    <p className="text-sm text-gray-600">Configure your menu package with complete JSONB structure according to MenuPackageStructure schema.</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Theme Key - Required for build system */}
+                      {/* Theme Key */}
                       <FormField
                         control={form.control}
                         name="theme_key"
@@ -697,17 +670,20 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                             <FormLabel>Theme Key</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="e.g., taste_of_greece"
+                                placeholder="e.g., lebanese_cuisine"
                                 {...field}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">Build system identifier for menu lookup</p>
+                            <p className="text-xs text-gray-500 mt-1">Unique theme identifier (e.g., "lebanese_cuisine")</p>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      {/* Package ID - Required for imports */}
+                      {/* Package ID */}
                       <FormField
                         control={form.control}
                         name="package_id"
@@ -716,15 +692,90 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                             <FormLabel>Package ID</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="e.g., greece_deluxe_v1"
+                                placeholder="e.g., lebanese_fiesta_deluxe_v1"
                                 {...field}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
                               />
                             </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">Package identifier for import system</p>
+                            <p className="text-xs text-gray-500 mt-1">Unique package identifier</p>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                      
+                      {/* Package Name */}
+                      <FormField
+                        control={form.control}
+                        name="package_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Package Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., Lebanese Fiesta Deluxe Package"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                }}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">Display name for the package</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Price Per Person */}
+                      <div>
+                        <FormLabel>Price Per Person ($)</FormLabel>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g., 65.00"
+                          defaultValue="0"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Base price per person</p>
+                      </div>
+                      
+                      {/* Min Guest Count */}
+                      <div>
+                        <FormLabel>Minimum Guest Count</FormLabel>
+                        <Input 
+                          type="number"
+                          placeholder="e.g., 25"
+                          defaultValue="1"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Minimum number of guests required</p>
+                      </div>
+                      
+                      {/* Customizable Toggle */}
+                      <div className="flex items-center space-x-3">
+                        <FormLabel>Customizable Package</FormLabel>
+                        <input 
+                          type="checkbox"
+                          defaultChecked={true}
+                          className="rounded"
+                        />
+                        <p className="text-xs text-gray-500">Allow clients to modify selections</p>
+                      </div>
+                    </div>
+                    
+                    {/* Package Description */}
+                    <div>
+                      <FormLabel>Package Description</FormLabel>
+                      <Textarea 
+                        rows={4}
+                        placeholder="Detailed description of your menu package including what's included, dietary options, service style, etc."
+                        defaultValue={`Custom menu: ${form.watch("name") || 'Untitled Package'}`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Rich description for client-facing displays</p>
+                    </div>
+                    
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-green-800 mb-2">Package Structure Preview</h4>
+                      <p className="text-sm text-green-700">Your form data will generate a complete MenuPackageStructure with organized categories and all the details above.</p>
                     </div>
                     
                     {/* Menu Items Selection for Form Builder */}
