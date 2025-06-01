@@ -469,7 +469,24 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           name: itemToAdd.name,
           price: priceValue,
           type: 'mains',
-          category: itemToAdd.category
+          category: itemToAdd.category,
+          // Preserve all dietary metadata and enriched information
+          description: itemToAdd.description,
+          additional_dietary_metadata: itemToAdd.additional_dietary_metadata,
+          isVegetarian: itemToAdd.isVegetarian,
+          isVegan: itemToAdd.isVegan,
+          isGlutenFree: itemToAdd.isGlutenFree,
+          isDairyFree: itemToAdd.isDairyFree,
+          isNutFree: itemToAdd.isNutFree,
+          ingredients: itemToAdd.ingredients,
+          // Include enriched dietary fields if they exist
+          dietaryFlags: itemToAdd.dietaryFlags,
+          allergenAlerts: itemToAdd.allergenAlerts,
+          nutritionalHighlights: itemToAdd.nutritionalHighlights,
+          preparationNotes: itemToAdd.preparationNotes,
+          suitableForDiets: itemToAdd.suitableForDiets,
+          customerGuidance: itemToAdd.customerGuidance,
+          availableLotSizes: itemToAdd.availableLotSizes,
         }
       ]);
       

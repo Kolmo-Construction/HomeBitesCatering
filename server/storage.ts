@@ -318,27 +318,7 @@ export class DatabaseStorage implements IStorage {
       console.log('Storage: Getting menu item with ID:', id);
       const result = await db.select().from(menuItems).where(eq(menuItems.id, id));
       console.log('Storage: Query result:', result.length > 0 ? 'Found' : 'Not found');
-      
-      if (result.length === 0) return undefined;
-      
-      const item = result[0];
-      const dietaryMetadata = item.additional_dietary_metadata as any || {};
-      
-      return {
-        ...item,
-        // Ensure price is properly converted to number if it exists
-        price: item.price ? parseFloat(item.price.toString()) : item.price,
-        upcharge: item.upcharge ? parseFloat(item.upcharge.toString()) : item.upcharge,
-        
-        // Add enriched dietary information for frontend compatibility
-        dietaryFlags: dietaryMetadata.dietary_flags_list || [],
-        allergenAlerts: dietaryMetadata.allergen_alert_list || [],
-        nutritionalHighlights: dietaryMetadata.nutritional_highlights || {},
-        preparationNotes: dietaryMetadata.key_preparation_notes || '',
-        suitableForDiets: dietaryMetadata.suitable_for_diet_preferences || [],
-        customerGuidance: dietaryMetadata.guidance_for_customer_short || '',
-        availableLotSizes: dietaryMetadata.available_lot_sizes || [],
-      } as MenuItem;
+      return result[0];
     } catch (error) {
       console.error('Storage: Error getting menu item:', error);
       return undefined;
@@ -347,23 +327,7 @@ export class DatabaseStorage implements IStorage {
 
   async createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem> {
     const [createdMenuItem] = await db.insert(menuItems).values(menuItem).returning();
-    
-    // Enrich the created item with dietary information
-    const dietaryMetadata = createdMenuItem.additional_dietary_metadata as any || {};
-    
-    return {
-      ...createdMenuItem,
-      price: createdMenuItem.price ? parseFloat(createdMenuItem.price.toString()) : createdMenuItem.price,
-      upcharge: createdMenuItem.upcharge ? parseFloat(createdMenuItem.upcharge.toString()) : createdMenuItem.upcharge,
-      
-      dietaryFlags: dietaryMetadata.dietary_flags_list || [],
-      allergenAlerts: dietaryMetadata.allergen_alert_list || [],
-      nutritionalHighlights: dietaryMetadata.nutritional_highlights || {},
-      preparationNotes: dietaryMetadata.key_preparation_notes || '',
-      suitableForDiets: dietaryMetadata.suitable_for_diet_preferences || [],
-      customerGuidance: dietaryMetadata.guidance_for_customer_short || '',
-      availableLotSizes: dietaryMetadata.available_lot_sizes || [],
-    } as MenuItem;
+    return createdMenuItem;
   }
 
   async updateMenuItem(id: string, menuItem: Partial<MenuItem>): Promise<MenuItem | undefined> {
@@ -372,25 +336,7 @@ export class DatabaseStorage implements IStorage {
       .set({ ...menuItem, updatedAt: new Date() })
       .where(eq(menuItems.id, id))
       .returning();
-    
-    if (!updatedMenuItem) return undefined;
-    
-    // Enrich the updated item with dietary information
-    const dietaryMetadata = updatedMenuItem.additional_dietary_metadata as any || {};
-    
-    return {
-      ...updatedMenuItem,
-      price: updatedMenuItem.price ? parseFloat(updatedMenuItem.price.toString()) : updatedMenuItem.price,
-      upcharge: updatedMenuItem.upcharge ? parseFloat(updatedMenuItem.upcharge.toString()) : updatedMenuItem.upcharge,
-      
-      dietaryFlags: dietaryMetadata.dietary_flags_list || [],
-      allergenAlerts: dietaryMetadata.allergen_alert_list || [],
-      nutritionalHighlights: dietaryMetadata.nutritional_highlights || {},
-      preparationNotes: dietaryMetadata.key_preparation_notes || '',
-      suitableForDiets: dietaryMetadata.suitable_for_diet_preferences || [],
-      customerGuidance: dietaryMetadata.guidance_for_customer_short || '',
-      availableLotSizes: dietaryMetadata.available_lot_sizes || [],
-    } as MenuItem;
+    return updatedMenuItem;
   }
 
   async deleteMenuItem(id: string): Promise<boolean> {
@@ -402,28 +348,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listMenuItems(): Promise<MenuItem[]> {
-    const items = await db.select().from(menuItems);
-    
-    // Enrich items with dietary information similar to questionnaire routes
-    return items.map(item => {
-      const dietaryMetadata = item.additional_dietary_metadata as any || {};
-      
-      return {
-        ...item,
-        // Ensure price is properly converted to number if it exists
-        price: item.price ? parseFloat(item.price.toString()) : item.price,
-        upcharge: item.upcharge ? parseFloat(item.upcharge.toString()) : item.upcharge,
-        
-        // Add enriched dietary information for frontend compatibility
-        dietaryFlags: dietaryMetadata.dietary_flags_list || [],
-        allergenAlerts: dietaryMetadata.allergen_alert_list || [],
-        nutritionalHighlights: dietaryMetadata.nutritional_highlights || {},
-        preparationNotes: dietaryMetadata.key_preparation_notes || '',
-        suitableForDiets: dietaryMetadata.suitable_for_diet_preferences || [],
-        customerGuidance: dietaryMetadata.guidance_for_customer_short || '',
-        availableLotSizes: dietaryMetadata.available_lot_sizes || [],
-      } as MenuItem;
-    });
+    return await db.select().from(menuItems);
   }
 
   // Menu methods
