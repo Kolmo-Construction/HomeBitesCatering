@@ -83,7 +83,7 @@ async function generateMenuData() {
     const weddingMenus = await db
       .select()
       .from(menus)
-      .where(eq(menus.type, 'form_builder'));
+      .where(eq(menus.displayOnCustomerForm, true));
 
     const menusByTheme = {};
     const organizedMenuData = {};

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
@@ -42,6 +43,7 @@ const formSchema = insertMenuSchema.extend({
   name: z.string().min(1, "Menu name is required"),
   description: z.string().optional(),
   type: z.string().min(1, "Menu type is required"),
+  displayOnCustomerForm: z.boolean().optional(),
   theme_key: z.string().optional(),
   package_id: z.string().optional(),
   package_name: z.string().optional(),
@@ -354,6 +356,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           name: menu.name || "",
           description: menu.description || "",
           type: menu.type || "standard",
+          displayOnCustomerForm: menu.displayOnCustomerForm || false,
           theme_key: menu.theme_key || `custom_${menu.name?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`,
           package_id: menu.package_id || `custom_package_${Date.now()}`,
           package_name: menu.package_name || "",
@@ -363,6 +366,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
           name: "",
           description: "",
           type: "standard",
+          displayOnCustomerForm: false,
           theme_key: "",
           package_id: "",
           package_name: "",
@@ -376,6 +380,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
       name: string;
       type: string;
       description?: string;
+      displayOnCustomerForm?: boolean;
       items: { id: number; type: string }[];
     }) => {
       if (isEditing && menu) {
@@ -670,9 +675,32 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="displayOnCustomerForm"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Display this menu on customer selection forms?
+                        </FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          When enabled, this menu will be available for customers to select in questionnaire forms and will use the structured package format.
+                        </div>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
                 
-                {/* Form Builder UI - Show when type is "form_builder" */}
-                {form.watch("type") === "form_builder" ? (
+                {/* Form Builder UI - Show when displayOnCustomerForm is true */}
+                {form.watch("displayOnCustomerForm") ? (
                   <div className="space-y-6">
                     <h3 className="text-lg font-medium">Menu Package Structure Builder</h3>
                     <p className="text-sm text-gray-600">Configure your menu package with complete JSONB structure according to MenuPackageStructure schema.</p>
