@@ -14,7 +14,7 @@ export const getWeddingMenuThemes = async (req: Request, res: Response) => {
     const weddingMenus = await db
       .select()
       .from(menus)
-      .where(eq(menus.type, 'form_builder'));
+      .where(eq(menus.displayOnCustomerForm, true));
 
     const formattedMenus = weddingMenus.map(menu => {
       let menuStructure;

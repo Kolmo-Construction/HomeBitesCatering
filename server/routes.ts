@@ -843,7 +843,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const menuData = insertMenuSchema.parse(req.body);
       
       // If items is just a simple array of {id, quantity}, convert to MenuPackageStructure
-      if (Array.isArray(menuData.items) && menuData.items.length > 0) {
+      // This happens if displayOnCustomerForm is true
+      if (Array.isArray(menuData.items) && menuData.items.length > 0 && menuData.displayOnCustomerForm) {
         const simpleItems = menuData.items as Array<{id: string, quantity: number}>;
         
         // Fetch menu item details to organize by category
@@ -915,6 +916,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updateData = req.body;
+      
+      // If items is just a simple array of {id, quantity}, convert to MenuPackageStructure
+      // This happens if displayOnCustomerForm is true
+      if (Array.isArray(updateData.items) && updateData.items.length > 0 && updateData.displayOnCustomerForm) {
+        const simpleItems = updateData.items as Array<{id: string, quantity: number}>;
+        
+        // Fetch menu item details to organize by category
+        const allMenuItems = await storage.listMenuItems();
+        const selectedItems = allMenuItems.filter(item => 
+          simpleItems.some(simpleItem => simpleItem.id === item.id)
+        );
+        
+        // Group items by category
+        const categoriesMap = new Map<string, any[]>();
+        selectedItems.forEach(item => {
+          const category = item.category || 'Uncategorized';
+          if (!categoriesMap.has(category)) {
+            categoriesMap.set(category, []);
+          }
+          categoriesMap.get(category)!.push(item);
+        });
+        
+        // Create MenuPackageStructure
+        const packageStructure = {
+          theme_key: `custom_${updateData.name?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`,
+          package_id: `custom_package_${Date.now()}`,
+          package_name: updateData.name || 'Custom Menu',
+          package_price_per_person: 0, // Will be calculated based on items
+          package_description: updateData.description || 'Custom menu package',
+          customizable: true,
+          categories: Array.from(categoriesMap.entries()).map(([categoryName, items]) => ({
+            category_key: categoryName.toLowerCase().replace(/\s+/g, '_'),
+            display_title: categoryName,
+            description: `${categoryName} selection`,
+            available_item_ids: items.map(item => item.id),
+            selection_limit: items.length, // Allow all items in the category
+            upcharge_info: items.reduce((acc, item) => {
+              if (item.upcharge && parseFloat(item.upcharge) > 0) {
+                acc[item.id] = parseFloat(item.upcharge);
+              }
+              return acc;
+            }, {} as Record<string, number>)
+          }))
+        };
+        
+        // Replace simple items array with rich package structure
+        updateData.items = packageStructure;
+      }
       
       const updatedMenu = await storage.updateMenu(menuId, updateData);
       

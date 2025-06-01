@@ -208,6 +208,7 @@ export const menus = pgTable("menus", {
   eventType: eventTypeEnum("event_type").default("other").notNull(), // wedding, corporate, birthday, etc.
   items: jsonb("items").notNull(), // array of menu item IDs with quantities
   isPubliclyVisible: boolean("is_publicly_visible").default(true),
+  displayOnCustomerForm: boolean("display_on_customer_form").default(false).notNull(), // NEW FIELD
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
