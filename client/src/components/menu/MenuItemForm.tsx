@@ -112,12 +112,17 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // Reset form when menuItem prop changes (for editing mode)
   useEffect(() => {
     if (isEditing && menuItem) {
+      console.log("Form reset - menuItem data:", menuItem);
+      console.log("Form reset - price value:", menuItem.price, typeof menuItem.price);
+      
       // Reset form with the loaded menu item data
       form.reset({
         ...menuItem,
         price: menuItem.price ?? undefined,
         upcharge: menuItem.upcharge ?? undefined,
       });
+      
+      console.log("Form values after reset:", form.getValues());
     }
   }, [isEditing, menuItem, form]);
 
