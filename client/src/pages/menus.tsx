@@ -128,20 +128,36 @@ export default function Menus() {
       },
     },
     {
-      accessorKey: "itemCount",
+      accessorKey: "items",
       header: "Items",
       cell: ({ row }) => {
-        let items;
-        try {
-          // Check if items is already an object or needs to be parsed
-          items = typeof row.original.items === 'string' 
-            ? JSON.parse(row.original.items) 
-            : row.original.items;
-        } catch (error) {
-          console.error("Error parsing menu items:", error);
-          return <span>Error loading items</span>;
+        const menuItemsData = row.original.items;
+        let count = 0;
+
+        if (menuItemsData) {
+          let parsedItems;
+          try {
+            parsedItems = typeof menuItemsData === 'string'
+              ? JSON.parse(menuItemsData)
+              : menuItemsData;
+
+            if (Array.isArray(parsedItems)) {
+              // Handles simple array format: [{id: "...", type: "..."}, ...]
+              count = parsedItems.length;
+            } else if (parsedItems && Array.isArray(parsedItems.categories)) {
+              // Handles MenuPackageStructure: sum of available_item_ids in all categories
+              parsedItems.categories.forEach((category: any) => {
+                if (Array.isArray(category.available_item_ids)) {
+                  count += category.available_item_ids.length;
+                }
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing menu items for count:", error, menuItemsData);
+            return <span>Error</span>;
+          }
         }
-        return <span>{items?.length || 0} items</span>;
+        return <span>{count} items</span>;
       },
     },
     {
