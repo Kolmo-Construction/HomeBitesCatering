@@ -11,7 +11,6 @@ import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
 import MenuItems from "@/pages/menu-items";
 import Menus from "@/pages/menus";
-import EventTypes from "@/pages/EventTypes";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import RawLeadsPage from "@/pages/rawLeadsPage";
@@ -164,7 +163,6 @@ function AppContent() {
           <Route path="/menus/new" component={Menus} />
           <Route path="/menus/:id" component={Menus} />
           <Route path="/menus/:id/edit" component={Menus} />
-          <Route path="/event-types" component={EventTypes} />
           <Route path="/calendar" component={Calendar} />
           <Route path="/settings" component={Settings} />
           <Route path="/raw-leads" component={RawLeadsPage} />

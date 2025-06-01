@@ -19,8 +19,7 @@ import {
   Code,
   ChevronDown,
   ChevronRight,
-  Calculator,
-  TagIcon
+  Calculator
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -35,7 +34,6 @@ export default function Sidebar() {
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Menu Items", href: "/menu-items", icon: Utensils },
     { name: "Menus", href: "/menus", icon: ClipboardList },
-    { name: "Event Types", href: "/event-types", icon: TagIcon },
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { 

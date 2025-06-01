@@ -202,7 +202,6 @@ async function generateMenuData() {
         id: menu.id,
         name: menu.name,
         description: menu.description,
-        eventType: menu.eventType || 'other',
         allItems: menuItems,
         itemsByCategory: itemsByCategory,
         totalItemCount: menuItems.length
@@ -236,21 +235,8 @@ async function generateMenuData() {
       };
     });
 
-    // Create event type categorization
-    console.log('🏷️ Generating event type categorization...');
-    const menusByEventType = {};
-    
-    for (const [themeKey, menuData] of Object.entries(organizedMenuData)) {
-      const eventType = menuData.eventType || 'other';
-      if (!menusByEventType[eventType]) {
-        menusByEventType[eventType] = [];
-      }
-      menusByEventType[eventType].push(menuData);
-    }
-
     // Write the organized menu data
     await fs.writeFile(path.join(OUTPUT_DIR, 'menusByTheme.json'), JSON.stringify(organizedMenuData, null, 2));
-    await fs.writeFile(path.join(OUTPUT_DIR, 'menusByEventType.json'), JSON.stringify(menusByEventType, null, 2));
     await fs.writeFile(path.join(OUTPUT_DIR, 'menuThemes.json'), JSON.stringify(formattedMenus, null, 2));
     await fs.writeFile(path.join(OUTPUT_DIR, 'themeToMenuMapping.json'), JSON.stringify(menusByTheme, null, 2));
     

@@ -118,12 +118,6 @@ export interface IStorage {
   // Form Submissions
   createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
   createFormSubmissionAnswer(answer: InsertFormSubmissionAnswer): Promise<FormSubmissionAnswer>;
-
-  // Event Types
-  listEventTypes(): Promise<Array<{id: string, name: string, description?: string, menuCount: number}>>;
-  createEventType(data: {name: string, description?: string}): Promise<{id: string, name: string, description?: string}>;
-  updateEventType(id: string, data: {name?: string, description?: string}): Promise<{id: string, name: string, description?: string} | null>;
-  deleteEventType(id: string): Promise<boolean>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -780,74 +774,6 @@ export class DatabaseStorage implements IStorage {
   async createFormSubmissionAnswer(answer: InsertFormSubmissionAnswer): Promise<FormSubmissionAnswer> {
     const [newAnswer] = await db.insert(formSubmissionAnswers).values(answer).returning();
     return newAnswer;
-  }
-
-  // Event Types
-  async listEventTypes(): Promise<Array<{id: string, name: string, description?: string, menuCount: number}>> {
-    try {
-      // Get all distinct event types from menus table with counts
-      const result = await db.execute(sql`
-        SELECT 
-          event_type as id,
-          event_type as name,
-          '' as description,
-          COUNT(*) as menu_count
-        FROM menus 
-        WHERE event_type IS NOT NULL 
-        GROUP BY event_type
-        ORDER BY event_type
-      `);
-      
-      return result.rows.map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        description: row.description || undefined,
-        menuCount: parseInt(row.menu_count)
-      }));
-    } catch (error) {
-      console.error('Error listing event types:', error);
-      return [];
-    }
-  }
-
-  async createEventType(data: {name: string, description?: string}): Promise<{id: string, name: string, description?: string}> {
-    // Since event types are enum values, we can't dynamically create them in the database
-    // This would require a schema migration. For now, we'll return a success response
-    // but note that the actual enum would need to be updated in the schema
-    return {
-      id: data.name.toLowerCase().replace(/\s+/g, '_'),
-      name: data.name,
-      description: data.description
-    };
-  }
-
-  async updateEventType(id: string, data: {name?: string, description?: string}): Promise<{id: string, name: string, description?: string} | null> {
-    // Similar limitation - enum values can't be updated without schema changes
-    return {
-      id: id,
-      name: data.name || id,
-      description: data.description
-    };
-  }
-
-  async deleteEventType(id: string): Promise<boolean> {
-    try {
-      // Check if any menus use this event type
-      const [menuCount] = await db.execute(sql`
-        SELECT COUNT(*) as count FROM menus WHERE event_type = ${id}
-      `);
-      
-      if (parseInt(menuCount.count) > 0) {
-        throw new Error('Cannot delete event type that is in use by menus');
-      }
-      
-      // Since it's an enum, we can't actually delete it without schema changes
-      // Return false to indicate it can't be deleted
-      return false;
-    } catch (error) {
-      console.error('Error deleting event type:', error);
-      return false;
-    }
   }
 }
 
