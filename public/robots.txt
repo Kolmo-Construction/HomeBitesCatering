@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /settings
+Disallow: /opportunities
+Disallow: /clients
+Disallow: /estimates
+Disallow: /menu-items
+Disallow: /menus
+Disallow: /calendar
+Disallow: /raw-leads
+
+Sitemap: https://www.kolmo.io/sitemap.xml

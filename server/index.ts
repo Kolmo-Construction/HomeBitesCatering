@@ -1,4 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
+import fs from "fs";
 import { registerRoutes } from "./routes";
 import { registerFormRoutes } from "./formRoutes";
 import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
@@ -76,6 +78,27 @@ app.use((req, res, next) => {
   app.post('/api/questionnaire/menu-items-by-ids', getMenuItemsByIds);
   app.get('/api/questionnaire/dietary-recommendations', getDietaryRecommendations);
 
+  // Serve robots.txt and sitemap.xml before other routes
+  app.get('/robots.txt', (req, res) => {
+    const robotsPath = path.resolve(import.meta.dirname, '..', 'public', 'robots.txt');
+    if (fs.existsSync(robotsPath)) {
+      res.type('text/plain');
+      res.sendFile(robotsPath);
+    } else {
+      res.status(404).send('Not found');
+    }
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    const sitemapPath = path.resolve(import.meta.dirname, '..', 'public', 'sitemap.xml');
+    if (fs.existsSync(sitemapPath)) {
+      res.type('application/xml');
+      res.sendFile(sitemapPath);
+    } else {
+      res.status(404).send('Not found');
+    }
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -105,7 +128,7 @@ app.use((req, res, next) => {
 
     if (process.env.GOOGLE_CLIENT_ID && process.env.SYNC_TARGET_EMAIL_ADDRESS) {
       // Initialize specialized services but don't start them
-      leadGenService = new LeadGenerationService(LEAD_GEN_INTERVAL_MS, AI_ENABLED);
+      leadGenService = new LeadGenerationService(AI_ENABLED);
       commSyncService = new CommunicationSyncService(COMM_SYNC_INTERVAL_MS, AI_ENABLED);
       
       // Services will NOT start automatically - must be started manually via toggle
