@@ -123,7 +123,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   const updateLeadMutation = useMutation({
     mutationFn: async (data: Partial<RawLead>) => {
       const response = await fetch(`/api/raw-leads/${leadId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -131,7 +131,8 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update raw lead');
+        const errorText = await response.text();
+        throw new Error(`Failed to update raw lead: ${errorText}`);
       }
 
       return response.json();
