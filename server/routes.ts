@@ -1564,8 +1564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aiClarityOfRequestScore: sampleWeddingInquiryEmail.aiClarityOfRequestScore,
         aiDecisionMakerLikelihood: sampleWeddingInquiryEmail.aiDecisionMakerLikelihood,
         aiKeyRequirements: sampleWeddingInquiryEmail.aiKeyRequirements,
-        aiPotentialRedFlags: sampleWeddingInquiryEmail.aiPotentialRedFlags,
-        aiCalendarConflictAssessment: sampleWeddingInquiryEmail.aiCalendarConflictAssessment
+        aiPotentialRedFlags: sampleWeddingInquiryEmail.aiPotentialRedFlags
       };
       
       const newLead = await storage.createRawLead(leadData);
@@ -1703,9 +1702,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Check calendar availability if event date is available
+      let calendarAvailability = null;
+      if (lead.extractedEventDate) {
+        try {
+          const { checkDateAvailability } = await import('./services/calendarService.js');
+          calendarAvailability = await checkDateAvailability(lead.extractedEventDate);
+        } catch (calendarError) {
+          console.log('Calendar check not available:', calendarError);
+        }
+      }
+      
       res.status(200).json({
         ...lead,
-        distanceInfo
+        distanceInfo,
+        calendarAvailability
       });
     } catch (error) {
       console.error('Error getting raw lead:', error);

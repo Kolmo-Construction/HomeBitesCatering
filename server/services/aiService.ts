@@ -311,9 +311,8 @@ export class AIService {
   /**
    * Analyzes an email or message to extract structured information and insights
    * @param message The email or message content to analyze
-   * @param calendarConflictContext Optional context about calendar conflicts for the potential event date
    */
-  async analyzeLeadMessage(message: string, calendarConflictContext?: string): Promise<{
+  async analyzeLeadMessage(message: string): Promise<{
     extractedProspectName?: string;
     extractedProspectEmail?: string;
     extractedProspectPhone?: string;
@@ -332,7 +331,6 @@ export class AIService {
     aiClarityOfRequestScore?: string;
     aiClarityReason?: string;
     aiBudgetReason?: string;
-    aiCalendarConflictAssessment?: string;
     aiPotentialRedFlags?: string[];
     aiOverallLeadQuality?: string;
     aiSuggestedNextStep?: string;
@@ -352,8 +350,6 @@ Your task is to meticulously extract all relevant information from vendor lead e
 The email provided might be from a vendor (e.g., Zola, WeddingWire) forwarding a prospect's inquiry.
 
 Priority: Extract the actual PROSPECT'S details (name, email, phone) from the email body/content, NOT the vendor's.
-
-Calendar Context: ${calendarConflictContext || "No specific calendar conflicts provided for the proposed date."} 
 
 Provide your output ONLY in the following JSON format. Fill fields with null if not found or not applicable.
 {
@@ -375,7 +371,6 @@ Provide your output ONLY in the following JSON format. Fill fields with null if 
   "aiClarityOfRequestScore": "one of '1' (vague) to '5' (very clear)",
   "aiClarityReason": "Brief 1-sentence explanation of WHY you assigned this clarity score",
   "aiBudgetReason": "Brief 1-sentence explanation of what budget signals you detected (or lack thereof)",
-  "aiCalendarConflictAssessment": "Brief assessment of calendar conflict based on provided context (e.g., 'No conflict', 'Potential conflict: Wedding on same day', 'Date flexible, check availability')",
   "aiPotentialRedFlags": ["Array of potential concerns or red flags (e.g., 'Very low budget for guest count', 'Unrealistic expectations', 'Vague inquiry')"],
   "aiOverallLeadQuality": "one of 'hot', 'warm', 'cold', 'nurture' (overall assessment)",
   "aiSuggestedNextStep": "Your concise recommendation for the BEST immediate next step for Home Bites Catering (e.g., 'Reply asking for guest count', 'Send standard wedding package info', 'Propose a consultation call', 'Politely decline due to date conflict, offer alternatives')",

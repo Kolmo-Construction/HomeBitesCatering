@@ -797,6 +797,48 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
             </p>
           </div>
 
+          {/* Calendar Availability Badge */}
+          {rawLead.extractedEventDate && (rawLead as any).calendarAvailability && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Calendar Availability
+                </h4>
+                {(rawLead as any).calendarAvailability.isAvailable ? (
+                  <Badge className="bg-green-100 text-green-700 border-green-300">
+                    ✓ Date Available
+                  </Badge>
+                ) : (
+                  <Badge className="bg-red-100 text-red-700 border-red-300">
+                    ⚠ Already Booked
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                📅 {new Date(rawLead.extractedEventDate).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+              {(rawLead as any).calendarAvailability.conflictingEvents?.length > 0 && (
+                <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                  <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-2">
+                    Conflicting Events:
+                  </p>
+                  <ul className="space-y-1">
+                    {(rawLead as any).calendarAvailability.conflictingEvents.map((event: any, idx: number) => (
+                      <li key={idx} className="text-xs text-red-700 dark:text-red-300">
+                        • {event.eventType} at {event.venue} ({event.guestCount} guests)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Distance & Service Area Information */}
           {rawLead.extractedVenue && (rawLead as any).distanceInfo && (
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

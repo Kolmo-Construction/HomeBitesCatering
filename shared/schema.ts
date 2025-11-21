@@ -463,7 +463,6 @@ export const rawLeads = pgTable("raw_leads", {
   aiSuggestedNextStep: text("ai_suggested_next_step"),
   aiSentiment: sentimentEnum("ai_sentiment"),
   aiConfidenceScore: doublePrecision("ai_confidence_score"),
-  aiCalendarConflictAssessment: text("ai_calendar_conflict_assessment"), // New field for calendar conflict assessment
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -475,8 +474,7 @@ export const insertRawLeadSchema = createInsertSchema(rawLeads, {
   
   // New AI fields as optional
   aiKeyRequirements: z.any().optional(),
-  aiPotentialRedFlags: z.any().optional(),
-  aiCalendarConflictAssessment: z.string().nullable().optional(), // Added new field for calendar conflicts
+  aiPotentialRedFlags: z.any().optional()
 }).omit({
   id: true,
   createdAt: true,
