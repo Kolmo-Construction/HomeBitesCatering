@@ -15,30 +15,29 @@
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 20 14.3% 4.1%;
+  --foreground: 0 0% 0%;
   --muted: 60 4.8% 95.9%;
   --muted-foreground: 25 5.3% 44.7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
+  --popover-foreground: 0 0% 0%;
   --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
+  --card-foreground: 0 0% 0%;
   --border: 20 5.9% 90%;
   --input: 20 5.9% 90%;
-  --primary: 25 95% 53%; /* Warm rust-orange - HOME BITES warmth */
+  --primary: 240 100% 50%; /* #0000EE - HOME BITES Blue */
   --primary-foreground: 0 0% 100%;
-  --secondary: 145 60% 45%; /* Fresh green - natural ingredients */
+  --secondary: 30 100% 50%; /* #E28C0A - HOME BITES Orange */
   --secondary-foreground: 0 0% 100%;
-  --accent: 45 93% 71%; /* Warm cream - inviting feel */
-  --accent-foreground: 20 14.3% 4.1%;
+  --accent: 30 100% 50%; /* #E28C0A - Orange accent */
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 25 95% 53%; /* matching primary rust-orange */
+  --ring: 240 100% 50%; /* matching primary blue */
   --radius: 0.5rem;
 
-  /* Home Bites brand colors */
-  --primary-rust: 25 95% 53%;
-  --secondary-green: 145 60% 45%;
-  --accent-cream: 45 93% 71%;
+  /* Home Bites brand colors from branding.json */
+  --primary-blue: 240 100% 50%; /* #0000EE */
+  --secondary-orange: 30 100% 50%; /* #E28C0A */
 }
 
 .dark {
@@ -52,15 +51,15 @@
   --card-foreground: 0 0% 98%;
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --primary: 25 95% 53%;
+  --primary: 240 100% 50%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 145 60% 45%;
+  --secondary: 30 100% 50%;
   --secondary-foreground: 0 0% 100%;
-  --accent: 45 93% 71%;
-  --accent-foreground: 20 14.3% 4.1%;
+  --accent: 30 100% 50%;
+  --accent-foreground: 0 0% 0%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 25 95% 53%;
+  --ring: 240 100% 50%;
 }
 
 @layer base {
@@ -83,12 +82,12 @@
 }
 
 .gradient-bg {
-  background: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(45, 93%, 71%) 100%);
+  background: linear-gradient(135deg, hsl(240, 100%, 50%) 0%, hsl(30, 100%, 50%) 100%);
 }
 
-/* Home Bites branding gradient */
+/* Home Bites branding gradient - Blue to Orange */
 .home-bites-gradient {
-  background: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(145, 60%, 45%) 100%);
+  background: linear-gradient(135deg, hsl(240, 100%, 50%) 0%, hsl(30, 100%, 50%) 100%);
 }
 
 /* Calendar styles */
