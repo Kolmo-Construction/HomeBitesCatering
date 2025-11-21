@@ -233,16 +233,19 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   };
 
   const handleSaveEdit = () => {
+    const guestCount = editForm.extractedGuestCount?.trim();
+    const parsedGuestCount = guestCount ? parseInt(guestCount, 10) : null;
+    
     updateLeadMutation.mutate({
-      extractedProspectName: editForm.extractedProspectName || null,
-      extractedProspectEmail: editForm.extractedProspectEmail || null,
-      extractedProspectPhone: editForm.extractedProspectPhone || null,
-      extractedEventType: editForm.extractedEventType || null,
-      extractedEventDate: editForm.extractedEventDate || null,
-      extractedEventTime: editForm.extractedEventTime || null,
-      extractedGuestCount: editForm.extractedGuestCount ? parseInt(editForm.extractedGuestCount) : null,
-      extractedVenue: editForm.extractedVenue || null,
-      eventSummary: editForm.eventSummary || null,
+      extractedProspectName: editForm.extractedProspectName?.trim() || null,
+      extractedProspectEmail: editForm.extractedProspectEmail?.trim() || null,
+      extractedProspectPhone: editForm.extractedProspectPhone?.trim() || null,
+      extractedEventType: editForm.extractedEventType?.trim() || null,
+      extractedEventDate: editForm.extractedEventDate?.trim() || null,
+      extractedEventTime: editForm.extractedEventTime?.trim() || null,
+      extractedGuestCount: (parsedGuestCount && !isNaN(parsedGuestCount)) ? parsedGuestCount : null,
+      extractedVenue: editForm.extractedVenue?.trim() || null,
+      eventSummary: editForm.eventSummary?.trim() || null,
     });
     setIsEditMode(false);
   };
