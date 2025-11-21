@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,23 +38,72 @@ const formSchema = insertRawLeadSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function RawLeadForm() {
+interface PrefilledData {
+  prospectName?: string;
+  prospectEmail?: string;
+  prospectPhone?: string;
+  eventType?: string;
+  eventDate?: string;
+  guestCount?: number;
+  venue?: string;
+  budget?: number;
+  keyRequirements?: string[];
+  potentialRedFlags?: string[];
+  suggestedNextStep?: string;
+}
+
+interface RawLeadFormProps {
+  prefilledData?: PrefilledData;
+}
+
+export default function RawLeadForm({ prefilledData }: RawLeadFormProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      source: 'manual',
+      source: prefilledData ? 'email' : 'manual',
       status: 'new',
-      extractedProspectName: '',
-      extractedProspectEmail: '',
-      extractedProspectPhone: '',
-      eventSummary: '',
+      extractedProspectName: prefilledData?.prospectName || '',
+      extractedProspectEmail: prefilledData?.prospectEmail || '',
+      extractedProspectPhone: prefilledData?.prospectPhone || '',
+      eventSummary: prefilledData?.eventType || '',
       notes: '',
       rawData: {},
     },
   });
+
+  useEffect(() => {
+    if (prefilledData) {
+      const notesContent = [
+        prefilledData.eventType && `Event Type: ${prefilledData.eventType}`,
+        prefilledData.eventDate && `Event Date: ${prefilledData.eventDate}`,
+        prefilledData.guestCount && `Guest Count: ${prefilledData.guestCount}`,
+        prefilledData.venue && `Venue: ${prefilledData.venue}`,
+        prefilledData.budget && `Budget: $${prefilledData.budget.toLocaleString()}`,
+        prefilledData.keyRequirements?.length && `\nKey Requirements:\n${prefilledData.keyRequirements.map(req => `• ${req}`).join('\n')}`,
+        prefilledData.potentialRedFlags?.length && `\nPotential Concerns:\n${prefilledData.potentialRedFlags.map(flag => `• ${flag}`).join('\n')}`,
+        prefilledData.suggestedNextStep && `\nSuggested Next Step: ${prefilledData.suggestedNextStep}`,
+      ].filter(Boolean).join('\n');
+
+      form.reset({
+        source: 'email',
+        status: 'new',
+        extractedProspectName: prefilledData.prospectName || '',
+        extractedProspectEmail: prefilledData.prospectEmail || '',
+        extractedProspectPhone: prefilledData.prospectPhone || '',
+        eventSummary: prefilledData.eventType || '',
+        notes: notesContent,
+        rawData: prefilledData,
+      });
+
+      toast({
+        title: 'Form Pre-filled',
+        description: 'Form has been populated with parsed email data',
+      });
+    }
+  }, [prefilledData, form, toast]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormValues) => {
