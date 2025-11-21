@@ -142,7 +142,7 @@ export default function RawLeadForm({ prefilledData }: RawLeadFormProps) {
     // Add the current date as receivedAt
     const submissionData = {
       ...data,
-      receivedAt: new Date().toISOString(),
+      receivedAt: new Date(),
     };
     mutation.mutate(submissionData);
   };
@@ -163,7 +163,7 @@ export default function RawLeadForm({ prefilledData }: RawLeadFormProps) {
                   <FormItem>
                     <FormLabel>Prospect Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input placeholder="John Doe" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -282,6 +282,7 @@ export default function RawLeadForm({ prefilledData }: RawLeadFormProps) {
                       placeholder="Additional details or notes about this lead..."
                       className="min-h-[120px]"
                       {...field}
+                      value={field.value || ''}
                     />
                   </FormControl>
                   <FormMessage />

@@ -176,7 +176,7 @@ export function EmailParserWidget({ onSelectLead }: EmailParserWidgetProps) {
               </div>
             </div>
 
-            {selectedLeadData.keyRequirements?.length > 0 && (
+            {selectedLeadData.keyRequirements && selectedLeadData.keyRequirements.length > 0 && (
               <div>
                 <label className="text-xs font-semibold text-neutral-600 flex items-center space-x-1 mb-2">
                   <CheckCircle2 className="h-3 w-3 text-green-600" />
@@ -190,7 +190,7 @@ export function EmailParserWidget({ onSelectLead }: EmailParserWidgetProps) {
               </div>
             )}
 
-            {selectedLeadData.potentialRedFlags?.length > 0 && (
+            {selectedLeadData.potentialRedFlags && selectedLeadData.potentialRedFlags.length > 0 && (
               <div>
                 <label className="text-xs font-semibold text-neutral-600 flex items-center space-x-1 mb-2">
                   <AlertCircle className="h-3 w-3 text-red-600" />
