@@ -1692,7 +1692,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Raw lead not found' });
       }
       
-      res.status(200).json(lead);
+      // Calculate distance if venue information is available
+      let distanceInfo = null;
+      if (lead.extractedVenue) {
+        try {
+          const { calculateDistanceToVenue } = await import('./services/distanceService.js');
+          distanceInfo = await calculateDistanceToVenue(lead.extractedVenue);
+        } catch (distanceError) {
+          console.log('Distance calculation not available:', distanceError);
+        }
+      }
+      
+      res.status(200).json({
+        ...lead,
+        distanceInfo
+      });
     } catch (error) {
       console.error('Error getting raw lead:', error);
       res.status(500).json({ message: 'Server error' });

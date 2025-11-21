@@ -797,13 +797,40 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
             </p>
           </div>
 
-          {/* In Service Area Badge */}
-          {rawLead.extractedVenue && (
-            <div className="flex items-center gap-2">
-              <Badge className="bg-green-100 text-green-700 border-green-300 px-3 py-1 text-sm">
-                ✓ In Service Area
-              </Badge>
-              <span className="text-xs text-gray-500">Based on venue location</span>
+          {/* Distance & Service Area Information */}
+          {rawLead.extractedVenue && (rawLead as any).distanceInfo && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Distance from Seattle
+                </h4>
+                {(rawLead as any).distanceInfo.isWithinServiceArea ? (
+                  <Badge className="bg-green-100 text-green-700 border-green-300">
+                    ✓ In Service Area
+                  </Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-300">
+                    ⚠ Outside Service Area
+                  </Badge>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Driving Distance</p>
+                  <p className="font-semibold text-lg">
+                    {(rawLead as any).distanceInfo.distanceMiles} miles
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Drive Time</p>
+                  <p className="font-semibold text-lg">
+                    {(rawLead as any).distanceInfo.durationMinutes} min
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                📍 To: {rawLead.extractedVenue}
+              </p>
             </div>
           )}
         </CardContent>
