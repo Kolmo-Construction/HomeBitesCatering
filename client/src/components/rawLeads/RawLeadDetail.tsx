@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { RawLead } from '@/../../shared/schema';
@@ -46,7 +47,10 @@ import {
   TargetIcon,
   ThermometerIcon,
   ZapIcon,
-  InfoIcon
+  InfoIcon,
+  EditIcon,
+  SaveIcon,
+  XIcon
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -72,6 +76,20 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   const [notes, setNotes] = React.useState<string>('');
   const [status, setStatus] = React.useState<string>('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState<boolean>(false);
+  const [isEditMode, setIsEditMode] = React.useState<boolean>(false);
+  
+  // Edit form fields
+  const [editForm, setEditForm] = React.useState({
+    extractedProspectName: '',
+    extractedProspectEmail: '',
+    extractedProspectPhone: '',
+    extractedEventType: '',
+    extractedEventDate: '',
+    extractedEventTime: '',
+    extractedGuestCount: '',
+    extractedVenue: '',
+    eventSummary: '',
+  });
 
   const { data: rawLead, isLoading, error } = useQuery<RawLead>({
     queryKey: [`/api/raw-leads/${leadId}`],
@@ -88,6 +106,17 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
     if (rawLead) {
       setNotes(rawLead.notes || '');
       setStatus(rawLead.status);
+      setEditForm({
+        extractedProspectName: rawLead.extractedProspectName || '',
+        extractedProspectEmail: rawLead.extractedProspectEmail || '',
+        extractedProspectPhone: rawLead.extractedProspectPhone || '',
+        extractedEventType: rawLead.extractedEventType || '',
+        extractedEventDate: rawLead.extractedEventDate || '',
+        extractedEventTime: rawLead.extractedEventTime || '',
+        extractedGuestCount: rawLead.extractedGuestCount?.toString() || '',
+        extractedVenue: rawLead.extractedVenue || '',
+        eventSummary: rawLead.eventSummary || '',
+      });
     }
   }, [rawLead]);
 
@@ -179,6 +208,50 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   const handleDeleteConfirm = () => {
     deleteLeadMutation.mutate();
     setIsDeleteDialogOpen(false);
+  };
+
+  const handleEditClick = () => {
+    setIsEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    // Reset form to original values
+    if (rawLead) {
+      setEditForm({
+        extractedProspectName: rawLead.extractedProspectName || '',
+        extractedProspectEmail: rawLead.extractedProspectEmail || '',
+        extractedProspectPhone: rawLead.extractedProspectPhone || '',
+        extractedEventType: rawLead.extractedEventType || '',
+        extractedEventDate: rawLead.extractedEventDate || '',
+        extractedEventTime: rawLead.extractedEventTime || '',
+        extractedGuestCount: rawLead.extractedGuestCount?.toString() || '',
+        extractedVenue: rawLead.extractedVenue || '',
+        eventSummary: rawLead.eventSummary || '',
+      });
+    }
+  };
+
+  const handleSaveEdit = () => {
+    updateLeadMutation.mutate({
+      extractedProspectName: editForm.extractedProspectName || null,
+      extractedProspectEmail: editForm.extractedProspectEmail || null,
+      extractedProspectPhone: editForm.extractedProspectPhone || null,
+      extractedEventType: editForm.extractedEventType || null,
+      extractedEventDate: editForm.extractedEventDate || null,
+      extractedEventTime: editForm.extractedEventTime || null,
+      extractedGuestCount: editForm.extractedGuestCount ? parseInt(editForm.extractedGuestCount) : null,
+      extractedVenue: editForm.extractedVenue || null,
+      eventSummary: editForm.eventSummary || null,
+    });
+    setIsEditMode(false);
+  };
+
+  const handleEditFormChange = (field: string, value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   // Helper functions
@@ -382,22 +455,43 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Select 
-                value={status} 
-                onValueChange={handleStatusChange}
-                disabled={!!rawLead.createdOpportunityId}
-              >
-                <SelectTrigger className="w-[160px]" data-testid="select-status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                  <SelectItem value="junk">Junk</SelectItem>
-                </SelectContent>
-              </Select>
+              {isEditMode ? (
+                <>
+                  <Button variant="outline" onClick={handleCancelEdit} size="sm" data-testid="button-cancel-edit">
+                    <XIcon className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveEdit} size="sm" data-testid="button-save-edit">
+                    <SaveIcon className="h-4 w-4 mr-1" />
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {!rawLead.createdOpportunityId && (
+                    <Button variant="outline" onClick={handleEditClick} size="sm" data-testid="button-edit">
+                      <EditIcon className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  )}
+                  <Select 
+                    value={status} 
+                    onValueChange={handleStatusChange}
+                    disabled={!!rawLead.createdOpportunityId}
+                  >
+                    <SelectTrigger className="w-[160px]" data-testid="select-status">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="under_review">Under Review</SelectItem>
+                      <SelectItem value="qualified">Qualified</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                      <SelectItem value="junk">Junk</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -416,8 +510,39 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
             <div className="flex items-start gap-3">
               <MailIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500 mb-1">Name</p>
+                {isEditMode ? (
+                  <Input
+                    value={editForm.extractedProspectName}
+                    onChange={(e) => handleEditFormChange('extractedProspectName', e.target.value)}
+                    placeholder="Client name"
+                    className="text-sm"
+                    data-testid="input-prospect-name"
+                  />
+                ) : (
+                  <p className="font-medium text-sm break-all">{rawLead.extractedProspectName || 'Not provided'}</p>
+                )}
+              </div>
+            </div>
+            
+            <Separator />
+
+            <div className="flex items-start gap-3">
+              <MailIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-gray-500 mb-1">Email</p>
-                <p className="font-medium text-sm break-all">{rawLead.extractedProspectEmail || 'Not provided'}</p>
+                {isEditMode ? (
+                  <Input
+                    type="email"
+                    value={editForm.extractedProspectEmail}
+                    onChange={(e) => handleEditFormChange('extractedProspectEmail', e.target.value)}
+                    placeholder="email@example.com"
+                    className="text-sm"
+                    data-testid="input-prospect-email"
+                  />
+                ) : (
+                  <p className="font-medium text-sm break-all">{rawLead.extractedProspectEmail || 'Not provided'}</p>
+                )}
               </div>
             </div>
             
@@ -425,22 +550,37 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
             
             <div className="flex items-start gap-3">
               <PhoneIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Phone</p>
-                <p className="font-medium text-sm">{rawLead.extractedProspectPhone || 'Not provided'}</p>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="flex items-start gap-3">
-              <MessageSquareIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-gray-500 mb-1">Source</p>
-                <p className="font-medium text-sm break-all">{getSourceEmail(rawLead)}</p>
-                <p className="text-xs text-gray-500 mt-1">via {getSourcePlatform(rawLead)}</p>
+                <p className="text-xs text-gray-500 mb-1">Phone</p>
+                {isEditMode ? (
+                  <Input
+                    type="tel"
+                    value={editForm.extractedProspectPhone}
+                    onChange={(e) => handleEditFormChange('extractedProspectPhone', e.target.value)}
+                    placeholder="(555) 123-4567"
+                    className="text-sm"
+                    data-testid="input-prospect-phone"
+                  />
+                ) : (
+                  <p className="font-medium text-sm">{rawLead.extractedProspectPhone || 'Not provided'}</p>
+                )}
               </div>
             </div>
+            
+            {!isEditMode && (
+              <>
+                <Separator />
+                
+                <div className="flex items-start gap-3">
+                  <MessageSquareIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Source</p>
+                    <p className="font-medium text-sm break-all">{getSourceEmail(rawLead)}</p>
+                    <p className="text-xs text-gray-500 mt-1">via {getSourcePlatform(rawLead)}</p>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -458,9 +598,19 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 <div className="p-2 bg-white dark:bg-gray-700 rounded-lg">
                   <CalendarIcon className="h-5 w-5 text-indigo-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Event Type</p>
-                  <p className="font-semibold">{rawLead.extractedEventType || 'Not specified'}</p>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Event Type</p>
+                  {isEditMode ? (
+                    <Input
+                      value={editForm.extractedEventType}
+                      onChange={(e) => handleEditFormChange('extractedEventType', e.target.value)}
+                      placeholder="Wedding, Corporate, etc."
+                      className="text-sm"
+                      data-testid="input-event-type"
+                    />
+                  ) : (
+                    <p className="font-semibold">{rawLead.extractedEventType || 'Not specified'}</p>
+                  )}
                 </div>
               </div>
 
@@ -468,11 +618,33 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 <div className="p-2 bg-white dark:bg-gray-700 rounded-lg">
                   <CalendarIcon className="h-5 w-5 text-green-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Event Date</p>
-                  <p className="font-semibold">{rawLead.extractedEventDate || 'Not specified'}</p>
-                  {rawLead.extractedEventTime && (
-                    <p className="text-xs text-gray-500">{rawLead.extractedEventTime}</p>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Event Date</p>
+                  {isEditMode ? (
+                    <div className="space-y-1">
+                      <Input
+                        type="date"
+                        value={editForm.extractedEventDate}
+                        onChange={(e) => handleEditFormChange('extractedEventDate', e.target.value)}
+                        className="text-sm"
+                        data-testid="input-event-date"
+                      />
+                      <Input
+                        type="time"
+                        value={editForm.extractedEventTime}
+                        onChange={(e) => handleEditFormChange('extractedEventTime', e.target.value)}
+                        placeholder="Time"
+                        className="text-sm"
+                        data-testid="input-event-time"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-semibold">{rawLead.extractedEventDate || 'Not specified'}</p>
+                      {rawLead.extractedEventTime && (
+                        <p className="text-xs text-gray-500">{rawLead.extractedEventTime}</p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -481,9 +653,20 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 <div className="p-2 bg-white dark:bg-gray-700 rounded-lg">
                   <UsersIcon className="h-5 w-5 text-purple-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Guest Count</p>
-                  <p className="font-semibold">{rawLead.extractedGuestCount ? `${rawLead.extractedGuestCount} guests` : 'Not specified'}</p>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Guest Count</p>
+                  {isEditMode ? (
+                    <Input
+                      type="number"
+                      value={editForm.extractedGuestCount}
+                      onChange={(e) => handleEditFormChange('extractedGuestCount', e.target.value)}
+                      placeholder="50"
+                      className="text-sm"
+                      data-testid="input-guest-count"
+                    />
+                  ) : (
+                    <p className="font-semibold">{rawLead.extractedGuestCount ? `${rawLead.extractedGuestCount} guests` : 'Not specified'}</p>
+                  )}
                 </div>
               </div>
 
@@ -492,17 +675,40 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                   <MapPinIcon className="h-5 w-5 text-red-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-500">Venue</p>
-                  <p className="font-semibold truncate">{rawLead.extractedVenue || 'Not specified'}</p>
+                  <p className="text-xs text-gray-500 mb-1">Venue</p>
+                  {isEditMode ? (
+                    <Input
+                      value={editForm.extractedVenue}
+                      onChange={(e) => handleEditFormChange('extractedVenue', e.target.value)}
+                      placeholder="Venue name or location"
+                      className="text-sm"
+                      data-testid="input-venue"
+                    />
+                  ) : (
+                    <p className="font-semibold truncate">{rawLead.extractedVenue || 'Not specified'}</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {rawLead.eventSummary && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-gray-700 dark:text-gray-300">{rawLead.eventSummary}</p>
-              </div>
-            )}
+            <div className="mt-4">
+              <p className="text-xs text-gray-500 mb-1">Event Summary</p>
+              {isEditMode ? (
+                <Textarea
+                  value={editForm.eventSummary}
+                  onChange={(e) => handleEditFormChange('eventSummary', e.target.value)}
+                  placeholder="Brief summary of the event..."
+                  className="min-h-[80px]"
+                  data-testid="input-event-summary"
+                />
+              ) : (
+                rawLead.eventSummary && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{rawLead.eventSummary}</p>
+                  </div>
+                )
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
