@@ -446,6 +446,185 @@ ${message}`;
       };
     }
   }
+
+  /**
+   * Extract structured lead data from email (Google Apps Script format)
+   * Returns data in the format: { parser_metadata, inquiry_data, analysis, summary_text }
+   */
+  async extractLeadDataFromEmail(emailData: {
+    subject: string;
+    from: string;
+    bodyText: string;
+    bodyHtml?: string;
+    receivedDate: Date;
+  }): Promise<any> {
+    try {
+      console.log(`AI Email Extraction: Processing email "${emailData.subject}" from ${emailData.from}`);
+
+      const prompt = `You are an expert at analyzing catering inquiry emails. Extract structured data from this email.
+
+Email Details:
+Subject: ${emailData.subject}
+From: ${emailData.from}
+Received: ${emailData.receivedDate.toISOString()}
+
+Email Body:
+${emailData.bodyText}
+
+Extract the following information and return it as JSON:
+
+{
+  "parser_metadata": {
+    "source_system": "string (e.g., 'WeddingWire', 'The Knot', 'Direct Email', etc. - try to detect from email content)",
+    "received_timestamp": "${emailData.receivedDate.toISOString()}",
+    "forwarded_by": "string or null (if this appears to be forwarded)",
+    "internal_sender_email": "${emailData.from}",
+    "extracted_by_model": "DeepSeek V3"
+  },
+  "inquiry_data": {
+    "client_name": "string (full name of person inquiring)",
+    "client_email": "string (email address)",
+    "client_phone": "string or null (phone number if mentioned)",
+    "event_type": "string (Wedding, Corporate Event, Birthday Party, etc.)",
+    "event_date": "YYYY-MM-DD format or null",
+    "event_time": "string or null (e.g., '6:00 PM')",
+    "guest_count_range": "string or null (e.g., '75-125')",
+    "guest_count_min": number or null,
+    "guest_count_max": number or null,
+    "estimated_budget": number or null (if mentioned)",
+    "service_requested": "string (what they're asking for)",
+    "service_location": "string or null (venue, city, or location)"
+  },
+  "analysis": {
+    "lead_quality": "hot | warm | cold (based on urgency, clarity, budget)",
+    "urgency_score": number (1-5, where 5 is most urgent)",
+    "clarity_score": number (1-5, where 5 is very clear request)",
+    "sentiment": "positive | neutral | negative | urgent",
+    "budget_indication": "high | medium | low | unknown",
+    "key_requirements": ["array of specific requirements mentioned"],
+    "potential_concerns": ["array of any red flags or concerns"],
+    "suggested_next_step": "string (what to do next with this lead)"
+  },
+  "summary_text": "string (2-3 sentence summary of the inquiry)"
+}
+
+Be thorough and accurate. If information is not present, use null. Infer the source system from email content, headers, or domain.`;
+
+      // Try DeepSeek first
+      try {
+        const response = await openRouter.chat.completions.create({
+          model: OPENROUTER_MODEL_ID,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 2000,
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        });
+
+        const resultText = response.choices[0]?.message?.content?.trim() || "{}";
+        const parsed = JSON.parse(resultText);
+        
+        console.log("AI Email Extraction: Successfully extracted data with DeepSeek");
+        return parsed;
+
+      } catch (deepseekError) {
+        console.error("DeepSeek Email Extraction Error:", deepseekError);
+        
+        // Fallback to Gemini
+        try {
+          console.log("AI Email Extraction: Falling back to Gemini...");
+          
+          const response = await openRouter.chat.completions.create({
+            model: GEMINI_MODEL_ID,
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 2000,
+            temperature: 0.2,
+            response_format: { type: "json_object" }
+          });
+
+          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
+          const parsed = JSON.parse(resultText);
+          
+          // Update model in metadata
+          if (parsed.parser_metadata) {
+            parsed.parser_metadata.extracted_by_model = "Gemini 2.0 Flash";
+          }
+          
+          console.log("AI Email Extraction: Successfully extracted data with Gemini");
+          return parsed;
+
+        } catch (geminiError) {
+          console.error("Gemini Email Extraction Error:", geminiError);
+          
+          // Final fallback to Claude
+          console.log("AI Email Extraction: Falling back to Claude...");
+          
+          const response = await openRouter.chat.completions.create({
+            model: CLAUDE_MODEL_ID,
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 2000,
+            temperature: 0.2,
+            response_format: { type: "json_object" }
+          });
+
+          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
+          const parsed = JSON.parse(resultText);
+          
+          // Update model in metadata
+          if (parsed.parser_metadata) {
+            parsed.parser_metadata.extracted_by_model = "Claude Haiku";
+          }
+          
+          console.log("AI Email Extraction: Successfully extracted data with Claude");
+          return parsed;
+        }
+      }
+
+    } catch (error) {
+      console.error("AI Email Extraction Error:", error);
+      
+      // Return minimal structure on complete failure
+      return {
+        parser_metadata: {
+          source_system: "Unknown",
+          received_timestamp: emailData.receivedDate.toISOString(),
+          internal_sender_email: emailData.from,
+          extracted_by_model: "Error",
+          error: error instanceof Error ? error.message : "Unknown error"
+        },
+        inquiry_data: {
+          client_name: "",
+          client_email: emailData.from,
+          event_type: "Unknown"
+        },
+        analysis: {
+          lead_quality: "cold",
+          urgency_score: 1,
+          clarity_score: 1,
+          sentiment: "neutral",
+          budget_indication: "unknown",
+          key_requirements: [],
+          potential_concerns: ["Failed to extract data"],
+          suggested_next_step: "Manual review required"
+        },
+        summary_text: `Email from ${emailData.from} with subject "${emailData.subject}" - extraction failed`
+      };
+    }
+  }
 }
 
 // Export a singleton instance

@@ -1911,6 +1911,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== GOOGLE APPS SCRIPT EMAIL INTAKE =====
+  
+  // Zod schema for GAS email payload validation
+  const gasEmailPayloadSchema = z.object({
+    gmailMessageId: z.string().min(1),
+    subject: z.string(),
+    from: z.string().email().or(z.string().min(1)),
+    to: z.string().optional(),
+    receivedDate: z.string().datetime(),
+    cleanedText: z.string().min(1),
+    rawHtml: z.string().optional()
+  });
+  
+  // Middleware to validate API key from Google Apps Script
+  const validateGASApiKey = (req: Request, res: Response, next: Function) => {
+    const apiKey = req.headers['x-api-key'];
+    const expectedKey = process.env.GAS_API_KEY;
+    
+    if (!expectedKey) {
+      console.error('GAS_API_KEY not configured in environment');
+      return res.status(503).json({ message: 'API key not configured on server' });
+    }
+    
+    if (!apiKey || apiKey !== expectedKey) {
+      console.warn('Invalid API key attempt for GAS endpoint');
+      return res.status(401).json({ message: 'Unauthorized: Invalid API key' });
+    }
+    
+    next();
+  };
+
+  // Receive email from Google Apps Script for processing
+  app.post('/api/gas-email-intake', validateGASApiKey, async (req: Request, res: Response) => {
+    try {
+      // Validate payload with Zod schema
+      const validationResult = gasEmailPayloadSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid payload',
+          errors: validationResult.error.errors
+        });
+      }
+
+      const {
+        gmailMessageId,
+        subject,
+        from,
+        to,
+        receivedDate,
+        cleanedText,
+        rawHtml
+      } = validationResult.data;
+
+      console.log(`GAS Email Intake: Processing email "${subject}" from ${from}`);
+
+      // Check if this email was already processed
+      const alreadyProcessed = await storage.isEmailProcessed(gmailMessageId, 'google_apps_script');
+      
+      if (alreadyProcessed) {
+        console.log(`Email ${gmailMessageId} already processed, skipping`);
+        return res.status(200).json({ 
+          message: 'Email already processed',
+          duplicate: true
+        });
+      }
+
+      // Use AI to extract structured data from the email
+      const aiService = req.app.get('aiService');
+      const extractedData = await aiService.extractLeadDataFromEmail({
+        subject,
+        from,
+        bodyText: cleanedText,
+        bodyHtml: rawHtml,
+        receivedDate: new Date(receivedDate)
+      });
+
+      // Create raw lead with structured data
+      const leadData: any = {
+        source: 'google_apps_script',
+        status: extractedData.status || 'new',
+        receivedAt: new Date(receivedDate),
+        extractedProspectName: extractedData.inquiry_data?.client_name || '',
+        extractedProspectEmail: extractedData.inquiry_data?.client_email || from,
+        extractedProspectPhone: extractedData.inquiry_data?.client_phone || null,
+        extractedEventType: extractedData.inquiry_data?.event_type || '',
+        extractedEventDate: extractedData.inquiry_data?.event_date || null,
+        extractedEventTime: extractedData.inquiry_data?.event_time || null,
+        extractedGuestCount: extractedData.inquiry_data?.guest_count_min || 
+                            extractedData.inquiry_data?.guest_count_max || 
+                            null,
+        extractedVenue: extractedData.inquiry_data?.service_location || null,
+        eventSummary: subject,
+        extractedMessageSummary: extractedData.summary_text || '',
+        
+        // AI Analysis fields
+        aiKeyRequirements: extractedData.analysis?.key_requirements || [],
+        aiPotentialRedFlags: extractedData.analysis?.potential_concerns || [],
+        aiBudgetValue: extractedData.inquiry_data?.estimated_budget || null,
+        aiBudgetIndication: extractedData.analysis?.budget_indication || null,
+        aiOverallLeadQuality: extractedData.analysis?.lead_quality || 'cold',
+        aiUrgencyScore: extractedData.analysis?.urgency_score?.toString() || null,
+        aiClarityOfRequestScore: extractedData.analysis?.clarity_score?.toString() || null,
+        aiSentiment: extractedData.analysis?.sentiment || 'neutral',
+        aiSuggestedNextStep: extractedData.analysis?.suggested_next_step || '',
+        
+        // Store complete metadata
+        rawData: {
+          gmailMessageId,
+          subject,
+          from,
+          to,
+          receivedDate,
+          parser_metadata: extractedData.parser_metadata || {
+            source_system: 'Direct Email',
+            extracted_by_model: 'AI Service',
+            received_timestamp: receivedDate
+          },
+          inquiry_data: extractedData.inquiry_data || {},
+          full_extraction: extractedData
+        },
+        
+        leadSourcePlatform: extractedData.parser_metadata?.source_system || 'email',
+        notes: `Processed via Google Apps Script\nSource: ${extractedData.parser_metadata?.source_system || 'Direct Email'}\nModel: ${extractedData.parser_metadata?.extracted_by_model || 'Unknown'}`
+      };
+
+      const createdLead = await storage.createRawLead(leadData);
+
+      // Mark email as processed
+      await storage.recordProcessedEmail({
+        messageId: gmailMessageId,
+        serviceName: 'google_apps_script',
+        processedAt: new Date(),
+        labelApplied: true
+      });
+
+      console.log(`GAS Email Intake: Created lead ID ${createdLead.id} for email "${subject}"`);
+
+      res.status(201).json({
+        success: true,
+        leadId: createdLead.id,
+        message: 'Email processed and lead created successfully',
+        extractedData: {
+          prospectName: leadData.extractedProspectName,
+          eventType: leadData.extractedEventType,
+          leadQuality: leadData.aiOverallLeadQuality
+        }
+      });
+
+    } catch (error) {
+      console.error('GAS Email Intake Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process email',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ===== Email Services Routes =====
   
   // === Lead Generation Service Routes ===
