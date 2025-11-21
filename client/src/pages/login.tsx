@@ -42,7 +42,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   return (
     <div className="min-h-screen flex bg-white">
       {/* Left Side - Services Showcase */}
-      <div className="hidden md:flex w-1/2 bg-[#0000EE] text-white p-12 flex-col justify-between">
+      <div className="hidden md:flex w-1/2 bg-[#8B7355] text-white p-12 flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-12">
             <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center">
@@ -112,10 +112,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Username</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0000EE] h-5 w-5" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] h-5 w-5" />
                   <input 
                     type="text" 
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#0000EE] transition-colors bg-white" 
+                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] transition-colors bg-white" 
                     placeholder="admin"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -128,10 +128,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0000EE] h-5 w-5" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] h-5 w-5" />
                   <input 
                     type="password" 
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#0000EE] transition-colors bg-white" 
+                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] transition-colors bg-white" 
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -143,7 +143,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               {/* Sign In Button */}
               <button 
                 type="submit"
-                className="w-full bg-[#0000EE] hover:bg-[#0000CC] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-7"
+                className="w-full bg-[#8B7355] hover:bg-[#6B5345] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-7"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -166,7 +166,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 href="https://www.homebites.net/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="ml-1 text-[#0000EE] font-semibold hover:text-[#E28C0A] transition-colors"
+                className="ml-1 text-[#8B7355] font-semibold hover:text-[#E28C0A] transition-colors"
               >
                 homebites.net
               </a>
