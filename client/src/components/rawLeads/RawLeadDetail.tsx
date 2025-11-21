@@ -717,6 +717,98 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
         </Card>
       </div>
 
+      {/* Lead Intelligence - Menu, Dietary & Service Requirements */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <InfoIcon className="h-5 w-5 text-blue-600" />
+            Lead Intelligence
+          </CardTitle>
+          <CardDescription>Extracted requirements and smart suggestions</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Menu & Dietary */}
+          {rawLead.aiKeyRequirements && Array.isArray(rawLead.aiKeyRequirements) && rawLead.aiKeyRequirements.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Menu & Dietary</h4>
+              <div className="flex flex-wrap gap-2">
+                {(rawLead.aiKeyRequirements as string[]).map((req, idx) => {
+                  // Check if this requirement is menu/dietary related
+                  const menuKeywords = ['menu', 'dietary', 'food', 'vegan', 'vegetarian', 'gluten', 'bbq', 'buffet', 'plated', 'family-style', 'appetizer', 'dessert', 'beverage'];
+                  const isMenuRelated = menuKeywords.some(keyword => req.toLowerCase().includes(keyword));
+                  
+                  if (isMenuRelated) {
+                    return (
+                      <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 px-3 py-1">
+                        🍽️ {req}
+                      </Badge>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Service & Logistics */}
+          {rawLead.aiKeyRequirements && Array.isArray(rawLead.aiKeyRequirements) && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Service & Logistics</h4>
+              <div className="flex flex-wrap gap-2">
+                {(rawLead.aiKeyRequirements as string[]).map((req, idx) => {
+                  // Check if this requirement is service/logistics related
+                  const serviceKeywords = ['service', 'delivery', 'setup', 'staff', 'rental', 'truck', 'venue', 'location', 'equipment'];
+                  const isServiceRelated = serviceKeywords.some(keyword => req.toLowerCase().includes(keyword));
+                  
+                  if (isServiceRelated) {
+                    return (
+                      <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 px-3 py-1">
+                        🚚 {req}
+                      </Badge>
+                    );
+                  }
+                  return null;
+                })}
+                
+                {/* Show venue from extracted data */}
+                {rawLead.extractedVenue && (
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 px-3 py-1">
+                    📍 Venue: {rawLead.extractedVenue}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Smart Suggestions */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h4 className="text-sm font-semibold flex items-center gap-2 text-blue-900 dark:text-blue-100 mb-2">
+              <ZapIcon className="h-4 w-4" />
+              Smart Suggestion
+            </h4>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              {rawLead.extractedEventType?.toLowerCase().includes('corporate') 
+                ? 'Corporate Event: Ask if they need a COI (Certificate of Insurance) and dietary restrictions form.'
+                : rawLead.extractedEventType?.toLowerCase().includes('wedding')
+                ? 'Wedding Event: Offer tasting session, discuss timeline coordination with venue, and confirm final guest count deadline.'
+                : rawLead.extractedEventType?.toLowerCase().includes('birthday') || rawLead.extractedEventType?.toLowerCase().includes('party')
+                ? 'Party Event: Suggest theme-based menu options, confirm allergy information, and offer dessert upgrade packages.'
+                : 'Follow up within 24-48 hours with menu options and pricing. Ask about dietary restrictions and service preferences.'}
+            </p>
+          </div>
+
+          {/* In Service Area Badge */}
+          {rawLead.extractedVenue && (
+            <div className="flex items-center gap-2">
+              <Badge className="bg-green-100 text-green-700 border-green-300 px-3 py-1 text-sm">
+                ✓ In Service Area
+              </Badge>
+              <span className="text-xs text-gray-500">Based on venue location</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Assessment Insights - WHY is this lead hot/warm/cold */}
       <Card className="border-l-4 border-l-indigo-500">
         <CardHeader>
