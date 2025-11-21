@@ -165,7 +165,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
 
   const handleStatusChange = (newStatus: string) => {
     setStatus(newStatus);
-    updateLeadMutation.mutate({ status: newStatus });
+    updateLeadMutation.mutate({ status: newStatus as any });
   };
 
   const handleConvertClick = () => {
@@ -182,7 +182,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   };
 
   // Helper functions
-  const getEventTypeIcon = (eventType?: string) => {
+  const getEventTypeIcon = (eventType?: string | null) => {
     if (!eventType) return <CalendarIcon className="h-5 w-5 text-gray-400" />;
     
     const lowerType = eventType.toLowerCase();
@@ -197,7 +197,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
     }
   };
 
-  const getLeadQualityColor = (quality?: string) => {
+  const getLeadQualityColor = (quality?: string | null) => {
     switch (quality) {
       case 'hot': return 'text-red-500';
       case 'warm': return 'text-orange-500';
@@ -206,7 +206,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
     }
   };
 
-  const getLeadQualityBgColor = (quality?: string) => {
+  const getLeadQualityBgColor = (quality?: string | null) => {
     switch (quality) {
       case 'hot': return 'bg-red-50 border-red-200';
       case 'warm': return 'bg-orange-50 border-orange-200';
@@ -215,7 +215,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
     }
   };
 
-  const getScoreProgress = (score?: string) => {
+  const getScoreProgress = (score?: string | null) => {
     if (!score) return 0;
     return parseInt(score) * 20; // Convert 1-5 to 0-100
   };
@@ -242,6 +242,82 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
       // Fallback
     }
     return lead.leadSourcePlatform || lead.source;
+  };
+
+  const getDetailedUrgencyExplanation = (score?: string | null): string => {
+    const scoreNum = parseInt(score || '0');
+    if (scoreNum >= 4) {
+      return 'Event is coming up soon or client explicitly mentioned urgency. Respond within 24 hours to secure this booking.';
+    } else if (scoreNum >= 3) {
+      return 'Moderate timeline - client is planning ahead but expects a timely response. Aim to respond within 48 hours.';
+    } else {
+      return 'Client is in early planning stages or no specific timeline mentioned. Follow up within 3-5 days with initial availability and pricing.';
+    }
+  };
+
+  const getDetailedClarityExplanation = (score?: string | null): string => {
+    const scoreNum = parseInt(score || '0');
+    if (scoreNum >= 4) {
+      return 'Client provided specific details about event type, date, guest count, and requirements. You have enough information to prepare a detailed quote.';
+    } else if (scoreNum >= 3) {
+      return 'Client provided basic event information but some key details are missing. Request additional information about preferences, dietary restrictions, or service style.';
+    } else {
+      return 'Request is vague or incomplete. Schedule a consultation call to understand their needs, event vision, and must-have services before quoting.';
+    }
+  };
+
+  const getDetailedBudgetExplanation = (indication?: string | null, value?: number | null): string => {
+    if (value) {
+      return `Client specified a budget of $${value.toLocaleString()}. Prepare menu options within this range and clearly show value for their investment.`;
+    } else if (indication === 'high') {
+      return 'Client indicated a premium budget or high-end expectations. Present your signature packages and highlight customization options.';
+    } else if (indication === 'medium') {
+      return 'Client has a moderate budget range in mind. Offer flexible package tiers showing different price points and what\'s included at each level.';
+    } else if (indication === 'low') {
+      return 'Budget-conscious client or mentioned looking for affordable options. Focus on value packages and clearly explain what makes your pricing competitive.';
+    } else {
+      return 'No budget mentioned yet. Include a range of package options (3-4 tiers) in your response so client can self-select their comfort zone.';
+    }
+  };
+
+  const generateSmartNextStep = (lead: RawLead): string => {
+    const urgency = parseInt(lead.aiUrgencyScore || '0');
+    const clarity = parseInt(lead.aiClarityOfRequestScore || '0');
+    const quality = lead.aiOverallLeadQuality;
+    const eventType = lead.extractedEventType?.toLowerCase() || '';
+    const hasPhone = !!lead.extractedProspectPhone;
+    const hasEmail = !!lead.extractedProspectEmail;
+
+    // Hot leads - immediate action required
+    if (quality === 'hot' || urgency >= 4) {
+      if (clarity >= 4 && hasPhone) {
+        return `🔥 PRIORITY: Call ${lead.extractedProspectName || 'client'} at ${lead.extractedProspectPhone} within 4 hours. Event details are clear - prepare a preliminary quote before calling. Mention you saw their inquiry and can discuss menu options immediately.`;
+      } else if (clarity >= 4) {
+        return `🔥 PRIORITY: Email detailed quote within 12 hours. Include 2-3 package options with pricing, sample menus for ${eventType || 'their event'}, and your availability for ${lead.extractedEventDate || 'their date'}. Follow up with a call within 24 hours if no response.`;
+      } else if (hasPhone) {
+        return `🔥 PRIORITY: Call ${lead.extractedProspectName || 'client'} within 12 hours to gather missing details. Prepare questions about: ${clarity < 3 ? 'event type, date, guest count, venue, ' : ''}dietary preferences, service style, and budget. Offer to send preliminary options after the call.`;
+      } else {
+        return `🔥 PRIORITY: Send personalized email within 8 hours asking key questions to clarify their needs. Include 2-3 photos of similar ${eventType || 'events'} you've catered. Request a 15-minute call to discuss their vision and provide accurate pricing.`;
+      }
+    }
+
+    // Warm leads - prompt response needed
+    if (quality === 'warm' || urgency >= 3) {
+      if (clarity >= 4) {
+        return `⚡ Send comprehensive proposal within 24 hours including: menu options for ${lead.extractedGuestCount || 'their guest count'}, transparent pricing breakdown, and available dates. Highlight your experience with ${eventType || 'similar events'}. Schedule a tasting if budget allows.`;
+      } else if (hasEmail) {
+        return `⚡ Email within 24 hours with a friendly questionnaire to gather: ${clarity < 3 ? 'event date, guest count, ' : ''}service preferences (buffet/plated/family-style), dietary needs, and desired atmosphere. Attach your portfolio PDF and offer a consultation call.`;
+      } else {
+        return `⚡ Respond within 24-48 hours through available contact method. Ask clarifying questions about their event vision and requirements. Share your availability calendar and suggest times for a phone consultation.`;
+      }
+    }
+
+    // Cold leads - nurture and educate
+    if (clarity >= 3) {
+      return `📧 Send welcome email within 48 hours introducing your catering services. Include: your menu showcase PDF, starting price ranges, typical packages for ${eventType || 'events'}, and testimonials. Invite them to schedule a no-obligation consultation when they're ready.`;
+    } else {
+      return `📧 Send informative response within 2-3 days with helpful resources: typical ${eventType || 'event'} planning timeline, catering checklist, sample menus, and starting prices. Offer to answer questions as they develop their plans. Add to newsletter list for gentle follow-up.`;
+    }
   };
 
   if (isLoading) {
@@ -431,61 +507,62 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
         </Card>
       </div>
 
-      {/* AI Insights - WHY is this lead hot/warm/cold */}
+      {/* Assessment Insights - WHY is this lead hot/warm/cold */}
       <Card className="border-l-4 border-l-indigo-500">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <LightbulbIcon className="h-5 w-5 text-yellow-500" />
-            AI Assessment & Insights
+            Assessment Insights
           </CardTitle>
           <CardDescription>Understanding why this lead was classified as {rawLead.aiOverallLeadQuality || 'unscored'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Scoring Breakdown */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <ZapIcon className="h-4 w-4 text-orange-500" />
-                  Urgency
+          {/* Scoring Breakdown with Detailed Explanations */}
+          <div className="space-y-4">
+            {/* Urgency Score */}
+            <div className="p-4 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold flex items-center gap-2">
+                  <ZapIcon className="h-5 w-5 text-orange-500" />
+                  Urgency Score
                 </span>
-                <span className="text-sm font-bold">{rawLead.aiUrgencyScore || 0}/5</span>
+                <span className="text-lg font-bold text-orange-600">{rawLead.aiUrgencyScore || 0}/5</span>
               </div>
-              <Progress value={getScoreProgress(rawLead.aiUrgencyScore)} className="h-2" />
-              <p className="text-xs text-gray-500 mt-1">
-                {parseInt(rawLead.aiUrgencyScore || '0') >= 4 ? 'High priority - needs quick response' : 
-                 parseInt(rawLead.aiUrgencyScore || '0') >= 3 ? 'Moderate urgency' : 
-                 'Not time-sensitive'}
+              <Progress value={getScoreProgress(rawLead.aiUrgencyScore)} className="h-2 mb-2" />
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {getDetailedUrgencyExplanation(rawLead.aiUrgencyScore)}
               </p>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <TargetIcon className="h-4 w-4 text-blue-500" />
-                  Clarity
+            {/* Clarity Score */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold flex items-center gap-2">
+                  <TargetIcon className="h-5 w-5 text-blue-500" />
+                  Request Clarity Score
                 </span>
-                <span className="text-sm font-bold">{rawLead.aiClarityOfRequestScore || 0}/5</span>
+                <span className="text-lg font-bold text-blue-600">{rawLead.aiClarityOfRequestScore || 0}/5</span>
               </div>
-              <Progress value={getScoreProgress(rawLead.aiClarityOfRequestScore)} className="h-2" />
-              <p className="text-xs text-gray-500 mt-1">
-                {parseInt(rawLead.aiClarityOfRequestScore || '0') >= 4 ? 'Very clear requirements' : 
-                 parseInt(rawLead.aiClarityOfRequestScore || '0') >= 3 ? 'Needs some clarification' : 
-                 'Vague request - requires follow-up'}
+              <Progress value={getScoreProgress(rawLead.aiClarityOfRequestScore)} className="h-2 mb-2" />
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {getDetailedClarityExplanation(rawLead.aiClarityOfRequestScore)}
               </p>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <DollarSignIcon className="h-4 w-4 text-green-500" />
-                  Budget
+            {/* Budget Indication */}
+            <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold flex items-center gap-2">
+                  <DollarSignIcon className="h-5 w-5 text-green-500" />
+                  Budget Indicator
                 </span>
-                <span className="text-sm font-bold capitalize">{rawLead.aiBudgetIndication || 'Unknown'}</span>
+                <span className="text-lg font-bold text-green-600 capitalize">
+                  {rawLead.aiBudgetValue ? `$${rawLead.aiBudgetValue.toLocaleString()}` : (rawLead.aiBudgetIndication || 'Unknown')}
+                </span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
                 <div 
-                  className={`h-full ${
+                  className={`h-full transition-all ${
                     rawLead.aiBudgetIndication === 'high' || rawLead.aiBudgetIndication === 'specific_amount' ? 'bg-green-500 w-full' :
                     rawLead.aiBudgetIndication === 'medium' ? 'bg-yellow-500 w-2/3' :
                     rawLead.aiBudgetIndication === 'low' ? 'bg-red-500 w-1/3' :
@@ -493,10 +570,8 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                   }`}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {rawLead.aiBudgetValue ? `$${rawLead.aiBudgetValue.toLocaleString()} mentioned` : 
-                 rawLead.aiBudgetIndication === 'not_mentioned' ? 'No budget discussed' :
-                 `${rawLead.aiBudgetIndication} budget indicated`}
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {getDetailedBudgetExplanation(rawLead.aiBudgetIndication, rawLead.aiBudgetValue)}
               </p>
             </div>
           </div>
@@ -511,7 +586,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 Key Requirements
               </h4>
               <ul className="space-y-2">
-                {rawLead.aiKeyRequirements.map((req, idx) => (
+                {(rawLead.aiKeyRequirements as string[]).map((req, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
                     <span className="text-green-600 mt-0.5">✓</span>
                     <span>{req}</span>
@@ -529,7 +604,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 Potential Concerns
               </h4>
               <ul className="space-y-2">
-                {rawLead.aiPotentialRedFlags.map((flag, idx) => (
+                {(rawLead.aiPotentialRedFlags as string[]).map((flag, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
                     <span className="text-amber-600 mt-0.5">⚠</span>
                     <span>{flag}</span>
@@ -539,16 +614,16 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
             </div>
           )}
 
-          {/* Suggested Next Step */}
-          {rawLead.aiSuggestedNextStep && (
-            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
-                <ArrowRightIcon className="h-4 w-4" />
-                Recommended Next Step
-              </h4>
-              <p className="text-sm text-indigo-800 dark:text-indigo-200">{rawLead.aiSuggestedNextStep}</p>
-            </div>
-          )}
+          {/* Smart Next Step Recommendation */}
+          <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg border-2 border-indigo-300 dark:border-indigo-700">
+            <h4 className="font-bold text-base mb-3 flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
+              <ArrowRightIcon className="h-5 w-5" />
+              Recommended Action Plan
+            </h4>
+            <p className="text-sm leading-relaxed text-indigo-900 dark:text-indigo-100">
+              {generateSmartNextStep(rawLead)}
+            </p>
+          </div>
 
           {/* Sentiment */}
           {rawLead.aiSentiment && (
