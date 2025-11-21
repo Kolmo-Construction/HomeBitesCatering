@@ -1801,6 +1801,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== EMAIL PARSING & FORM PRE-FILL =====
+  
+  // Get parsed emails for form pre-fill (latest unreviewed leads)
+  app.get('/api/email-parser/available-leads', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leads = await storage.listRawLeadsByStatus('new');
+      
+      const formattedLeads = leads.map(lead => ({
+        id: lead.id,
+        prospectName: lead.extractedProspectName || '',
+        prospectEmail: lead.extractedProspectEmail || '',
+        prospectPhone: lead.extractedProspectPhone || '',
+        eventType: lead.extractedEventType || '',
+        eventDate: lead.extractedEventDate || '',
+        eventTime: lead.extractedEventTime || '',
+        guestCount: lead.extractedGuestCount || 0,
+        venue: lead.extractedVenue || '',
+        summary: lead.extractedMessageSummary || lead.eventSummary || '',
+        requirements: lead.aiKeyRequirements || [],
+        redFlags: lead.aiPotentialRedFlags || [],
+        budget: lead.aiBudgetValue || null,
+        quality: lead.aiOverallLeadQuality || 'cold',
+        receivedAt: lead.receivedAt
+      }));
+      
+      res.status(200).json(formattedLeads);
+    } catch (error) {
+      console.error('Error getting available leads:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Get specific lead data formatted for form population
+  app.get('/api/email-parser/lead-form-data/:leadId', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = parseInt(req.params.leadId);
+      
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID' });
+      }
+      
+      const lead = await storage.getRawLead(leadId);
+      
+      if (!lead) {
+        return res.status(404).json({ message: 'Lead not found' });
+      }
+      
+      const formData = {
+        id: lead.id,
+        prospectName: lead.extractedProspectName || '',
+        prospectEmail: lead.extractedProspectEmail || '',
+        prospectPhone: lead.extractedProspectPhone || '',
+        eventType: lead.extractedEventType || '',
+        eventDate: lead.extractedEventDate || '',
+        eventTime: lead.extractedEventTime || '',
+        guestCount: lead.extractedGuestCount || 0,
+        venue: lead.extractedVenue || '',
+        messageSummary: lead.extractedMessageSummary || '',
+        keyRequirements: Array.isArray(lead.aiKeyRequirements) 
+          ? lead.aiKeyRequirements 
+          : (typeof lead.aiKeyRequirements === 'string' ? JSON.parse(lead.aiKeyRequirements) : []),
+        potentialRedFlags: Array.isArray(lead.aiPotentialRedFlags)
+          ? lead.aiPotentialRedFlags
+          : (typeof lead.aiPotentialRedFlags === 'string' ? JSON.parse(lead.aiPotentialRedFlags) : []),
+        budget: lead.aiBudgetValue || null,
+        quality: lead.aiOverallLeadQuality || 'cold',
+        urgency: lead.aiUrgencyScore || '',
+        clarity: lead.aiClarityOfRequestScore || '',
+        sentiment: lead.aiSentiment || 'neutral',
+        suggestedNextStep: lead.aiSuggestedNextStep || '',
+        calendarConflict: lead.aiCalendarConflictAssessment || '',
+        rawEmailData: lead.rawData
+      };
+      
+      res.status(200).json(formData);
+    } catch (error) {
+      console.error('Error getting lead form data:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Trigger manual email sync from interface@eathomebites.com
+  app.post('/api/email-parser/sync-now', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const vendorLeadIntakeService = req.app.get('vendorLeadIntakeService');
+      
+      if (!vendorLeadIntakeService) {
+        return res.status(503).json({ 
+          message: 'Vendor Lead Intake Service not initialized',
+          success: false
+        });
+      }
+      
+      await vendorLeadIntakeService.processGmailNotification();
+      
+      res.status(200).json({
+        message: 'Email sync completed successfully',
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error syncing emails:', error);
+      res.status(500).json({
+        message: 'Failed to sync emails',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        success: false
+      });
+    }
+  });
+
   // ===== Email Services Routes =====
   
   // === Lead Generation Service Routes ===
