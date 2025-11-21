@@ -20,15 +20,33 @@ interface ParsedLead {
   receivedAt: string;
 }
 
-export function EmailParserWidget() {
+interface LeadFormData {
+  prospectName: string;
+  prospectEmail: string;
+  prospectPhone: string;
+  eventType: string;
+  eventDate: string;
+  guestCount: number;
+  venue: string;
+  budget?: number;
+  keyRequirements?: string[];
+  potentialRedFlags?: string[];
+  suggestedNextStep?: string;
+}
+
+interface EmailParserWidgetProps {
+  onSelectLead?: (leadData: LeadFormData) => void;
+}
+
+export function EmailParserWidget({ onSelectLead }: EmailParserWidgetProps) {
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
 
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({
+  const { data: leads = [], isLoading: leadsLoading } = useQuery<ParsedLead[]>({
     queryKey: ['/api/email-parser/available-leads'],
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
-  const { data: selectedLeadData } = useQuery({
+  const { data: selectedLeadData } = useQuery<LeadFormData>({
     queryKey: ['/api/email-parser/lead-form-data', selectedLeadId],
     enabled: !!selectedLeadId
   });
@@ -201,6 +219,16 @@ export function EmailParserWidget() {
                 </label>
                 <p className="text-sm text-blue-900">{selectedLeadData.suggestedNextStep}</p>
               </div>
+            )}
+
+            {onSelectLead && (
+              <Button
+                onClick={() => onSelectLead(selectedLeadData)}
+                className="w-full bg-[#8B7355] hover:bg-[#6B5345]"
+                data-testid="button-use-lead"
+              >
+                Use This Lead to Fill Form
+              </Button>
             )}
           </CardContent>
         </Card>
