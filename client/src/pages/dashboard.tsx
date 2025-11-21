@@ -61,7 +61,7 @@ export default function Dashboard() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
           </div>
           <Link href="/opportunities/new">
-            <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+            <Button className="bg-gradient-to-r from-[#0000EE] to-[#E28C0A] hover:opacity-90">
               <span className="hidden md:inline">New Opportunity</span>
               <Filter className="md:hidden h-4 w-4" />
             </Button>
@@ -74,8 +74,8 @@ export default function Dashboard() {
         <StatCard 
           title="Active Opportunities" 
           value={activeOpportunities} 
-          icon={<Filter className="text-primary-purple h-5 w-5" />}
-          iconBgColor="bg-primary-purple" 
+          icon={<Filter className="text-[#0000EE] h-5 w-5" />}
+          iconBgColor="bg-[#0000EE]" 
           changePercent={12}
         />
         
@@ -92,10 +92,10 @@ export default function Dashboard() {
         <StatCard 
           title="Upcoming Events" 
           value={upcomingEvents} 
-          icon={<svg className="text-primary-blue h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          icon={<svg className="text-[#E28C0A] h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>}
-          iconBgColor="bg-primary-blue"
+          iconBgColor="bg-[#E28C0A]"
           changePercent={25}
         />
         
