@@ -23,6 +23,10 @@ externalPort = 80
 localPort = 45067
 externalPort = 3001
 
+[[ports]]
+localPort = 45993
+externalPort = 3002
+
 [workflows]
 runButton = "Start App on Port 3000"
 

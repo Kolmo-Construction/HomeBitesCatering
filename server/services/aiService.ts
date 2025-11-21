@@ -500,7 +500,7 @@ Extract the following information and return it as JSON:
     "urgency_score": number (1-5, where 5 is most urgent)",
     "clarity_score": number (1-5, where 5 is very clear request)",
     "sentiment": "positive | neutral | negative | urgent",
-    "budget_indication": "high | medium | low | unknown",
+    "budget_indication": "high | medium | low | not_mentioned | specific_amount",
     "key_requirements": ["array of specific requirements mentioned"],
     "potential_concerns": ["array of any red flags or concerns"],
     "suggested_next_step": "string (what to do next with this lead)"
@@ -616,12 +616,12 @@ Be thorough and accurate. If information is not present, use null. Infer the sou
           urgency_score: 1,
           clarity_score: 1,
           sentiment: "neutral",
-          budget_indication: "unknown",
+          budget_indication: "not_mentioned",
           key_requirements: [],
-          potential_concerns: ["Failed to extract data"],
+          potential_concerns: ["Failed to extract data - AI service unavailable"],
           suggested_next_step: "Manual review required"
         },
-        summary_text: `Email from ${emailData.from} with subject "${emailData.subject}" - extraction failed`
+        summary_text: `Email from ${emailData.from} with subject "${emailData.subject}" - AI extraction failed, manual review needed`
       };
     }
   }

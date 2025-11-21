@@ -27,6 +27,7 @@ import {
 import { LeadGenerationService } from './services/leadGenerationService';
 import { CommunicationSyncService } from './services/communicationSyncService';
 import { VendorLeadIntakeService } from './services/VendorLeadIntakeService';
+import { aiService } from './services/aiService';
 
 // Helper function to map lead quality to opportunity priority
 function mapLeadQualityToPriority(leadQuality?: string): 'high' | 'medium' | 'low' {
@@ -1979,7 +1980,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use AI to extract structured data from the email
-      const aiService = req.app.get('aiService');
       const extractedData = await aiService.extractLeadDataFromEmail({
         subject,
         from,
