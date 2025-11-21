@@ -42,7 +42,24 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { RawLead } from '@/../../shared/schema';
-import { EyeIcon, Trash2Icon, CheckIcon, XIcon } from 'lucide-react';
+import { 
+  EyeIcon, 
+  Trash2Icon, 
+  MailIcon,
+  PhoneIcon,
+  CalendarIcon,
+  UsersIcon,
+  MapPinIcon,
+  TrendingUpIcon,
+  AlertCircleIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  HeartIcon,
+  BriefcaseIcon,
+  CakeIcon,
+  SparklesIcon,
+  MessageSquareIcon
+} from 'lucide-react';
 
 interface RawLeadListProps {
   initialFilter?: string;
@@ -64,18 +81,16 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    // When initialFilter prop changes (e.g., from Tabs in RawLeadsPage)
     setStatusFilter(initialFilter === "all" || initialFilter === "" ? "" : initialFilter);
-    // Clear selections when changing tabs/filters
     setSelectedLeads([]);
   }, [initialFilter]);
 
   const { data: rawLeads, isLoading } = useQuery<RawLead[]>({
-    queryKey: ['/api/raw-leads', statusFilter], // statusFilter will be "" for "all"
+    queryKey: ['/api/raw-leads', statusFilter],
     queryFn: async ({ queryKey }) => {
       const currentStatusFilter = queryKey[1] as string;
       const params = new URLSearchParams();
-      if (currentStatusFilter) { // Only append if there's a filter
+      if (currentStatusFilter) {
         params.append('status', currentStatusFilter);
       }
       const response = await fetch(`/api/raw-leads?${params.toString()}`);
@@ -86,7 +101,6 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
     },
   });
   
-  // Delete a single lead
   const deleteLead = useMutation({
     mutationFn: async (leadId: number) => {
       const response = await fetch(`/api/raw-leads/${leadId}`, {
@@ -117,7 +131,6 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
     },
   });
   
-  // Delete multiple leads
   const bulkDeleteLeads = useMutation({
     mutationFn: async (leadIds: number[]) => {
       const response = await fetch('/api/raw-leads/bulk-delete', {
@@ -154,36 +167,12 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
     },
   });
   
-  // Handle selecting/deselecting a lead
-  const toggleSelectLead = (leadId: number, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent row click
-    
-    setSelectedLeads(prev => {
-      if (prev.includes(leadId)) {
-        return prev.filter(id => id !== leadId);
-      } else {
-        return [...prev, leadId];
-      }
-    });
-  };
-  
-  // Toggle select all leads
-  const toggleSelectAll = () => {
-    if (selectedLeads.length === filteredLeads.length) {
-      setSelectedLeads([]);
-    } else {
-      setSelectedLeads(filteredLeads.map(lead => lead.id));
-    }
-  };
-  
-  // Handle individual lead deletion
   const handleDeleteClick = (leadId: number, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent row click
+    event.stopPropagation();
     setLeadToDelete(leadId);
     setIsDeleteDialogOpen(true);
   };
   
-  // Handle confirm of individual deletion
   const handleDeleteConfirm = () => {
     if (leadToDelete) {
       deleteLead.mutate(leadToDelete);
@@ -191,14 +180,12 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
     setIsDeleteDialogOpen(false);
   };
   
-  // Handle bulk deletion
   const handleBulkDeleteClick = () => {
     if (selectedLeads.length > 0) {
       setIsBulkDeleteDialogOpen(true);
     }
   };
   
-  // Handle confirm of bulk deletion
   const handleBulkDeleteConfirm = () => {
     if (selectedLeads.length > 0) {
       bulkDeleteLeads.mutate(selectedLeads);
@@ -210,24 +197,114 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
     ? rawLeads.filter(
         (lead) =>
           searchTerm === '' ||
-          (lead.extractedName && lead.extractedName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (lead.extractedEmail && lead.extractedEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (lead.extractedProspectName && lead.extractedProspectName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (lead.extractedProspectEmail && lead.extractedProspectEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
           (lead.eventSummary && lead.eventSummary.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     : [];
 
+  const toggleSelectAll = () => {
+    if (selectedLeads.length === filteredLeads.length) {
+      setSelectedLeads([]);
+    } else {
+      setSelectedLeads(filteredLeads.map(lead => lead.id));
+    }
+  };
+
+  // Helper function to extract source email from rawData
+  const getSourceEmail = (lead: RawLead): string => {
+    try {
+      const rawData = lead.rawData as any;
+      if (rawData?.parser_metadata?.internal_sender_email) {
+        return rawData.parser_metadata.internal_sender_email;
+      }
+      if (rawData?.inquiry_data?.client_email) {
+        return rawData.inquiry_data.client_email;
+      }
+    } catch (e) {
+      // Fallback to extractedProspectEmail if available
+    }
+    return lead.extractedProspectEmail || lead.source;
+  };
+
+  // Helper function to get lead quality badge
+  const getLeadQualityBadge = (quality?: string) => {
+    if (!quality) return null;
+    
+    switch (quality) {
+      case 'hot':
+        return (
+          <Badge className="bg-red-500 hover:bg-red-600 text-white">
+            <TrendingUpIcon className="h-3 w-3 mr-1" />
+            Hot
+          </Badge>
+        );
+      case 'warm':
+        return (
+          <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
+            <TrendingUpIcon className="h-3 w-3 mr-1" />
+            Warm
+          </Badge>
+        );
+      case 'cold':
+        return (
+          <Badge className="bg-blue-400 hover:bg-blue-500 text-white">
+            Cold
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Helper function to get event type icon
+  const getEventTypeIcon = (eventType?: string) => {
+    if (!eventType) return <CalendarIcon className="h-4 w-4 text-gray-400" />;
+    
+    const lowerType = eventType.toLowerCase();
+    if (lowerType.includes('wedding')) {
+      return <HeartIcon className="h-4 w-4 text-pink-500" />;
+    } else if (lowerType.includes('corporate') || lowerType.includes('business')) {
+      return <BriefcaseIcon className="h-4 w-4 text-blue-600" />;
+    } else if (lowerType.includes('birthday') || lowerType.includes('party')) {
+      return <CakeIcon className="h-4 w-4 text-purple-500" />;
+    } else {
+      return <SparklesIcon className="h-4 w-4 text-indigo-500" />;
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'new':
-        return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">New</Badge>;
+        return (
+          <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 text-white">
+            <span className="inline-block w-2 h-2 bg-white rounded-full mr-1.5 animate-pulse" />
+            New
+          </Badge>
+        );
       case 'under_review':
-        return <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-black">Under Review</Badge>;
+        return (
+          <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-white">
+            <ClockIcon className="h-3 w-3 mr-1" />
+            Under Review
+          </Badge>
+        );
       case 'qualified':
-        return <Badge className="bg-green-500 hover:bg-green-600">Qualified</Badge>;
+        return (
+          <Badge className="bg-green-500 hover:bg-green-600 text-white">
+            <CheckCircleIcon className="h-3 w-3 mr-1" />
+            Qualified
+          </Badge>
+        );
       case 'archived':
         return <Badge variant="outline">Archived</Badge>;
       case 'junk':
-        return <Badge variant="destructive">Junk</Badge>;
+        return (
+          <Badge variant="destructive">
+            <AlertCircleIcon className="h-3 w-3 mr-1" />
+            Junk
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -243,16 +320,16 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
+              data-testid="input-search-leads"
             />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Filter:</span>
-            {/* The Select value is "all" when statusFilter is "", otherwise it's statusFilter */}
             <Select
               value={statusFilter === "" ? "all" : statusFilter}
               onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px]" data-testid="select-status-filter">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -269,14 +346,17 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
       </CardHeader>
       <CardContent>
         {selectedLeads.length > 0 && (
-          <div className="mb-4 flex items-center justify-between bg-blue-50 p-2 rounded-md">
+          <div className="mb-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
             <div className="flex items-center">
-              <span className="mr-2">{selectedLeads.length} lead(s) selected</span>
+              <span className="mr-2 font-medium text-blue-900 dark:text-blue-100">
+                {selectedLeads.length} lead(s) selected
+              </span>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => setSelectedLeads([])}
                 className="mr-2"
+                data-testid="button-cancel-selection"
               >
                 Cancel
               </Button>
@@ -286,7 +366,9 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
               size="sm" 
               onClick={handleBulkDeleteClick}
               disabled={selectedLeads.length === 0}
+              data-testid="button-delete-selected"
             >
+              <Trash2Icon className="h-3 w-3 mr-1" />
               Delete Selected
             </Button>
           </div>
@@ -296,19 +378,21 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center space-x-4">
-                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
             ))}
           </div>
         ) : filteredLeads.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">No leads found matching your criteria.</p>
+          <div className="text-center py-12">
+            <MessageSquareIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium mb-2">No leads found matching your criteria.</p>
             <Button
               variant="link"
               onClick={() => {
-                setStatusFilter(''); // This represents "all" for the API
+                setStatusFilter('');
                 setSearchTerm('');
               }}
+              data-testid="button-clear-filters"
             >
               Clear filters
             </Button>
@@ -317,27 +401,29 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
           <div className="rounded-md border">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-gray-50 dark:bg-gray-800">
                   <TableHead className="w-[50px]">
                     <Checkbox 
                       checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
                       onCheckedChange={toggleSelectAll}
                       aria-label="Select all leads"
+                      data-testid="checkbox-select-all"
                     />
                   </TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Name / Email</TableHead>
-                  <TableHead>Date Received</TableHead>
-                  <TableHead>Event Summary</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="font-semibold">Source</TableHead>
+                  <TableHead className="font-semibold">Name / Email</TableHead>
+                  <TableHead className="font-semibold">Date Received</TableHead>
+                  <TableHead className="font-semibold">Event Summary</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredLeads.map((lead) => (
                   <TableRow
                     key={lead.id}
-                    className={`hover:bg-gray-50 ${selectedLeads.includes(lead.id) ? 'bg-blue-50' : ''}`}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${selectedLeads.includes(lead.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    data-testid={`row-lead-${lead.id}`}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()} className="p-2">
                       <Checkbox 
@@ -351,31 +437,99 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
                         }}
                         aria-label={`Select lead ${lead.id}`}
                         onClick={(e) => e.stopPropagation()}
+                        data-testid={`checkbox-lead-${lead.id}`}
                       />
                     </TableCell>
                     <TableCell 
-                      className="font-medium"
                       onClick={() => navigate(`/raw-leads/${lead.id}`)}
+                      className="max-w-[200px]"
                     >
-                      {lead.source}
-                    </TableCell>
-                    <TableCell onClick={() => navigate(`/raw-leads/${lead.id}`)}>
-                      <div>
-                        <span className="font-medium">{lead.extractedName || 'Unnamed'}</span>
+                      <div className="flex items-center gap-2">
+                        <MailIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate" title={getSourceEmail(lead)}>
+                            {getSourceEmail(lead)}
+                          </div>
+                          {lead.leadSourcePlatform && (
+                            <div className="text-xs text-gray-500 truncate">
+                              via {lead.leadSourcePlatform}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {lead.extractedEmail && <div className="text-gray-500 text-sm">{lead.extractedEmail}</div>}
                     </TableCell>
                     <TableCell onClick={() => navigate(`/raw-leads/${lead.id}`)}>
-                      {format(new Date(lead.receivedAt), 'MMM d, yyyy')}
-                      <div className="text-gray-500 text-sm">
-                        {format(new Date(lead.receivedAt), 'h:mm a')}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">
+                              {lead.extractedProspectName || 'Name not extracted'}
+                            </span>
+                            {lead.aiOverallLeadQuality && getLeadQualityBadge(lead.aiOverallLeadQuality)}
+                          </div>
+                          {lead.extractedProspectEmail && (
+                            <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                              <MailIcon className="h-3 w-3" />
+                              <span className="truncate">{lead.extractedProspectEmail}</span>
+                            </div>
+                          )}
+                          {lead.extractedProspectPhone && (
+                            <div className="text-xs text-gray-500 flex items-center gap-1">
+                              <PhoneIcon className="h-3 w-3" />
+                              {lead.extractedProspectPhone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/raw-leads/${lead.id}`)}>
+                      <div className="flex items-center gap-1.5">
+                        <CalendarIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <div className="text-sm font-medium">
+                            {format(new Date(lead.receivedAt), 'MMM d, yyyy')}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {format(new Date(lead.receivedAt), 'h:mm a')}
+                          </div>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell 
-                      className="max-w-[200px] truncate"
                       onClick={() => navigate(`/raw-leads/${lead.id}`)}
+                      className="max-w-[300px]"
                     >
-                      {lead.eventSummary || 'No summary'}
+                      <div className="space-y-1">
+                        {lead.extractedEventType && (
+                          <div className="flex items-center gap-1.5">
+                            {getEventTypeIcon(lead.extractedEventType)}
+                            <span className="text-sm font-medium">{lead.extractedEventType}</span>
+                          </div>
+                        )}
+                        {lead.extractedEventDate && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                            <CalendarIcon className="h-3 w-3" />
+                            {lead.extractedEventDate}
+                          </div>
+                        )}
+                        {lead.extractedGuestCount && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                            <UsersIcon className="h-3 w-3" />
+                            {lead.extractedGuestCount} guests
+                          </div>
+                        )}
+                        {lead.extractedVenue && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                            <MapPinIcon className="h-3 w-3" />
+                            <span className="truncate">{lead.extractedVenue}</span>
+                          </div>
+                        )}
+                        {lead.eventSummary && !lead.extractedEventType && (
+                          <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                            {lead.eventSummary}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell onClick={() => navigate(`/raw-leads/${lead.id}`)}>
                       {getStatusBadge(lead.status)}
@@ -387,15 +541,18 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
                           size="icon"
                           onClick={() => navigate(`/raw-leads/${lead.id}`)}
                           aria-label="View lead details"
+                          className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          data-testid={`button-view-${lead.id}`}
                         >
-                          <EyeIcon className="h-4 w-4" />
+                          <EyeIcon className="h-4 w-4 text-blue-600" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={(e) => handleDeleteClick(lead.id, e)}
                           aria-label="Delete lead"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          data-testid={`button-delete-${lead.id}`}
                         >
                           <Trash2Icon className="h-4 w-4" />
                         </Button>
@@ -408,7 +565,6 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
           </div>
         )}
         
-        {/* Individual Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -418,15 +574,14 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-500 hover:bg-red-600">
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-500 hover:bg-red-600" data-testid="button-confirm-delete">
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
         
-        {/* Bulk Delete Confirmation Dialog */}
         <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -436,8 +591,8 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleBulkDeleteConfirm} className="bg-red-500 hover:bg-red-600">
+              <AlertDialogCancel data-testid="button-cancel-bulk-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleBulkDeleteConfirm} className="bg-red-500 hover:bg-red-600" data-testid="button-confirm-bulk-delete">
                 Delete {selectedLeads.length} leads
               </AlertDialogAction>
             </AlertDialogFooter>
