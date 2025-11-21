@@ -859,7 +859,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
               </div>
               <Progress value={getScoreProgress(rawLead.aiUrgencyScore)} className="h-2 mb-2" />
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                {getDetailedUrgencyExplanation(rawLead.aiUrgencyScore)}
+                {rawLead.aiUrgencyReason || getDetailedUrgencyExplanation(rawLead.aiUrgencyScore)}
               </p>
             </div>
 
@@ -874,7 +874,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
               </div>
               <Progress value={getScoreProgress(rawLead.aiClarityOfRequestScore)} className="h-2 mb-2" />
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                {getDetailedClarityExplanation(rawLead.aiClarityOfRequestScore)}
+                {rawLead.aiClarityReason || getDetailedClarityExplanation(rawLead.aiClarityOfRequestScore)}
               </p>
             </div>
 
@@ -900,7 +900,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 />
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                {getDetailedBudgetExplanation(rawLead.aiBudgetIndication, rawLead.aiBudgetValue)}
+                {rawLead.aiBudgetReason || getDetailedBudgetExplanation(rawLead.aiBudgetIndication, rawLead.aiBudgetValue)}
               </p>
             </div>
           </div>
@@ -915,7 +915,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 Key Requirements
               </h4>
               <ul className="space-y-2">
-                {(rawLead.aiKeyRequirements as string[]).map((req, idx) => (
+                {(rawLead.aiKeyRequirements as string[]).map((req: string, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
                     <span className="text-green-600 mt-0.5">✓</span>
                     <span>{req}</span>
@@ -933,7 +933,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 Potential Concerns
               </h4>
               <ul className="space-y-2">
-                {(rawLead.aiPotentialRedFlags as string[]).map((flag, idx) => (
+                {(rawLead.aiPotentialRedFlags as string[]).map((flag: string, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
                     <span className="text-amber-600 mt-0.5">⚠</span>
                     <span>{flag}</span>

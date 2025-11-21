@@ -450,9 +450,12 @@ export const rawLeads = pgTable("raw_leads", {
   
   // New fields for AI assessment and scoring
   aiUrgencyScore: leadScoreEnum("ai_urgency_score"),
+  aiUrgencyReason: text("ai_urgency_reason"), // AI's brief explanation for urgency score
   aiBudgetIndication: budgetIndicationEnum("ai_budget_indication"),
   aiBudgetValue: integer("ai_budget_value"),
+  aiBudgetReason: text("ai_budget_reason"), // AI's brief explanation for budget assessment
   aiClarityOfRequestScore: leadScoreEnum("ai_clarity_of_request_score"),
+  aiClarityReason: text("ai_clarity_reason"), // AI's brief explanation for clarity score
   aiDecisionMakerLikelihood: leadScoreEnum("ai_decision_maker_likelihood"),
   aiKeyRequirements: jsonb("ai_key_requirements"),
   aiPotentialRedFlags: jsonb("ai_potential_red_flags"),

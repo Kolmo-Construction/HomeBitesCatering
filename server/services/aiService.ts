@@ -328,7 +328,10 @@ export class AIService {
     extractedMessageSummary?: string;
     aiLeadTemperature?: string;
     aiUrgencyScore?: string;
+    aiUrgencyReason?: string;
     aiClarityOfRequestScore?: string;
+    aiClarityReason?: string;
+    aiBudgetReason?: string;
     aiCalendarConflictAssessment?: string;
     aiPotentialRedFlags?: string[];
     aiOverallLeadQuality?: string;
@@ -368,7 +371,10 @@ Provide your output ONLY in the following JSON format. Fill fields with null if 
   "extractedMessageSummary": "A 2-3 sentence summary of the PROSPECT'S core request or message.",
   "aiLeadTemperature": "one of 'hot', 'warm', 'cold' (based on urgency, specificity, budget, clarity)",
   "aiUrgencyScore": "one of '1' (low) to '5' (very urgent)",
+  "aiUrgencyReason": "Brief 1-sentence explanation of WHY you assigned this urgency score",
   "aiClarityOfRequestScore": "one of '1' (vague) to '5' (very clear)",
+  "aiClarityReason": "Brief 1-sentence explanation of WHY you assigned this clarity score",
+  "aiBudgetReason": "Brief 1-sentence explanation of what budget signals you detected (or lack thereof)",
   "aiCalendarConflictAssessment": "Brief assessment of calendar conflict based on provided context (e.g., 'No conflict', 'Potential conflict: Wedding on same day', 'Date flexible, check availability')",
   "aiPotentialRedFlags": ["Array of potential concerns or red flags (e.g., 'Very low budget for guest count', 'Unrealistic expectations', 'Vague inquiry')"],
   "aiOverallLeadQuality": "one of 'hot', 'warm', 'cold', 'nurture' (overall assessment)",

@@ -8,6 +8,13 @@
       "when": 1747546134392,
       "tag": "0000_jittery_anita_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763705152612,
+      "tag": "0001_brave_firedrake",
+      "breakpoints": true
     }
   ]
 }
