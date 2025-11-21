@@ -1,0 +1,320 @@
+/**
+ * Google Apps Script - Email Parser for Home Bites Catering
+ * * This script polls Gmail every 3 minutes, extracts unread emails from your
+ * catering inbox, and sends them to your Replit API for AI processing.
+ * * SETUP INSTRUCTIONS:
+ * 1. Go to https://script.google.com
+ * 2. Create a new project
+ * 3. Copy this entire file into the script editor
+ * 4. Replace YOUR_REPLIT_URL below with your actual Replit app URL
+ * 5. Replace YOUR_API_KEY with a secure API key (you'll set this in Replit)
+ * 6. Set up a time-driven trigger:
+ * - Click on the clock icon (Triggers)
+ * - Add Trigger: processIncomingEmails
+ * - Event source: Time-driven
+ * - Type: Minutes timer
+ * - Interval: Every 3 minutes
+ * 7. Run the script once manually to authorize Gmail access
+ */
+
+// ===== CONFIGURATION =====
+const CONFIG = {
+  // Your Replit app URL (e.g., "https://your-app.replit.app")
+  REPLIT_API_URL: "https://92ed9d8f-9dd8-44f4-aac7-8c91fe7c1778-00-14uj8qsv2ipx.riker.replit.dev",
+  
+  // API key for authentication (set this in your Replit secrets)
+  API_KEY: "hb_2025_secure_key_9876xyz",
+  
+  // Gmail search query to find catering inquiry emails
+  // Modify this to match how your inquiry emails arrive
+  GMAIL_SEARCH_QUERY: "is:unread in:inbox",
+  
+  // Label to mark processed emails (will be created automatically)
+  PROCESSED_LABEL_NAME: "Parsed by HomeBites",
+  
+  // Maximum emails to process per run (prevents quota issues)
+  MAX_EMAILS_PER_RUN: 10
+};
+
+/**
+ * Main function - processes incoming emails
+ * This is called by the time-driven trigger every 3 minutes
+ */
+function processIncomingEmails() {
+  try {
+    Logger.log("Starting email processing run at " + new Date());
+    
+    // Get or create the processed label
+    const processedLabel = getOrCreateLabel(CONFIG.PROCESSED_LABEL_NAME);
+    
+    // Search for unread emails
+    // NOTE: We only search for threads where at least one message is unread
+    const threads = GmailApp.search(CONFIG.GMAIL_SEARCH_QUERY, 0, CONFIG.MAX_EMAILS_PER_RUN);
+    
+    if (threads.length === 0) {
+      Logger.log("No new emails to process");
+      return;
+    }
+    
+    Logger.log(`Found ${threads.length} email thread(s) to process`);
+    
+    // Process each thread
+    let successCount = 0;
+    let errorCount = 0;
+    
+    threads.forEach((thread, index) => {
+      try {
+        const messages = thread.getMessages();
+        
+        // Process each message in the thread
+        messages.forEach(message => {
+          if (message.isUnread()) {
+            const result = processEmail(message);
+            
+            if (result.success) {
+              // Mark as processed
+              message.markRead();
+              // Only add label if it hasn't been added already (or if we want to ensure it's on the thread)
+              thread.addLabel(processedLabel); 
+              successCount++;
+              Logger.log(`✓ Processed: ${message.getSubject()} (Lead ID: ${result.leadId || 'N/A'})`);
+            } else {
+              errorCount++;
+              Logger.log(`✗ Failed: ${message.getSubject()} - ${result.error}`);
+            }
+          }
+        });
+        
+      } catch (error) {
+        errorCount++;
+        Logger.log(`Error processing thread ${index + 1}: ${error.message}`);
+      }
+    });
+    
+    Logger.log(`Processing complete. Success: ${successCount}, Errors: ${errorCount}`);
+    
+  } catch (error) {
+    Logger.log("Fatal error in processIncomingEmails: " + error.message);
+  }
+}
+
+/**
+ * Process a single email message
+ */
+function processEmail(message) {
+  try {
+    // Extract email metadata
+    const emailData = {
+      gmailMessageId: message.getId(),
+      subject: message.getSubject(),
+      from: message.getFrom(),
+      to: message.getTo(),
+      receivedDate: message.getDate().toISOString(),
+      body: {
+        plainText: message.getPlainBody(),
+        htmlBody: message.getBody()
+      }
+    };
+    
+    // Clean and prepare the email text
+    let cleanedText = cleanEmailText(emailData.body.plainText);
+    
+    // Safety check: If aggressive cleaning results in an empty string, 
+    // fall back to the original plain text body to satisfy the API's minimum character requirement.
+    if (!cleanedText.length) {
+      Logger.log(`Warning: Cleaned text for "${emailData.subject}" was empty. Falling back to raw plain text.`);
+      cleanedText = emailData.body.plainText;
+      
+      // Secondary safety check: ensure the fallback is also not empty. 
+      if (!cleanedText || !cleanedText.length) {
+          throw new Error("Email body (plain text) is completely empty and cannot be processed.");
+      }
+    }
+    
+    // Send to Replit API
+    const apiResponse = sendToReplitAPI(emailData, cleanedText);
+    
+    return {
+      success: true,
+      leadId: apiResponse.leadId
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Clean email text by removing headers, footers, and unnecessary content.
+ * This is now more robust to threaded, forwarded, and ambiguous emails.
+ */
+function cleanEmailText(plainText) {
+  if (!plainText) return "";
+  
+  let cleaned = plainText;
+  
+  // 1. Aggressive thread and quoted reply stripping
+  // Use a negative lookbehind to avoid stripping valid content that happens to start with '>'
+  // This is best done line-by-line using match/join or simpler multi-line regex.
+  
+  // Remove lines starting with '>' (quoted replies)
+  cleaned = cleaned.replace(/^>.*$/gm, '');
+
+  // Remove the standard "On [Date], [Sender] wrote:" header
+  cleaned = cleaned.replace(/^On.*wrote:$/gim, ''); 
+  cleaned = cleaned.replace(/^\s*\d{4}-\d{2}-\d{2}\s+[^<]+<[^>]+>\s*$/gim, ''); // e.g. "2024-11-20 Joe Smith <joe@example.com>"
+
+  // Remove common forwarded email headers and delimiters
+  cleaned = cleaned.replace(/^-+\s*Forwarded message\s*-+$/gim, '');
+  cleaned = cleaned.replace(/^-+\s*Original message\s*-+$/gim, '');
+  cleaned = cleaned.replace(/^-+\s*Original message\s*-+\s*From:.*$/gsmi, ''); // Aggressively removes block starting with "Original message"
+  
+  // Remove common headers (From, Sent, To, Subject, Cc, Bcc, etc.)
+  cleaned = cleaned.replace(/^(From|Sent|To|Subject|Cc|Bcc):.*$/gm, '');
+  
+  // 2. Signature and Footer Removal
+  // These are often the biggest source of noise. We look for common delimiters
+  // and discard everything that follows the first match.
+  
+  const signatureSeparators = [
+    /^-{2,}/, // Standard "-- " delimiter
+    /^_+\s*$/m, // Underscore line delimiter (_____ followed by optional whitespace)
+    /\*{3,}/, // Asterisk line delimiter (***)
+    /^\s*Sent from my iPhone/im, // Common mobile signature
+    /^\s*Sent from my Samsung/im,
+    /^\s*Sent from my [^>]+ app/im, // Generic app signature
+    /^\s*Best regards,?/im,
+    /^\s*Vielen Dank/im, // Example for non-English signatures
+    /^\s*Sincerely,?/im,
+    /^\s*Kind regards,?/im,
+  ];
+
+  let bestSplitIndex = -1;
+  let lines = cleaned.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Check if the current line or the immediately preceding line is a separator
+    const isSeparator = signatureSeparators.some(regex => regex.test(line.trim()));
+    
+    if (isSeparator) {
+      bestSplitIndex = i;
+      break;
+    }
+  }
+
+  // If a signature was found, truncate the body to the text above the separator
+  if (bestSplitIndex !== -1) {
+    cleaned = lines.slice(0, bestSplitIndex).join('\n');
+  }
+
+  // 3. Final General Cleanup
+  
+  // Remove excessive whitespace/newlines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  
+  // Normalize horizontal whitespace (tabs, multiple spaces) to a single space
+  cleaned = cleaned.replace(/[ \t]{2,}/g, ' ');
+  
+  // Trim all leading/trailing whitespace
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+}
+
+/**
+ * Send email data to Replit API for AI processing
+ */
+function sendToReplitAPI(emailData, cleanedText) {
+  const url = `${CONFIG.REPLIT_API_URL}/api/gas-email-intake`;
+  
+  const payload = {
+    gmailMessageId: emailData.gmailMessageId,
+    subject: emailData.subject,
+    from: emailData.from,
+    to: emailData.to,
+    receivedDate: emailData.receivedDate,
+    cleanedText: cleanedText,
+    rawHtml: emailData.body.htmlBody
+  };
+  
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    headers: {
+      "X-API-Key": CONFIG.API_KEY
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseBody = response.getContentText();
+    
+    if (responseCode === 200 || responseCode === 201) {
+      // API response should ideally contain a leadId
+      const result = JSON.parse(responseBody);
+      Logger.log(`API Success: Created lead ID ${result.leadId}`);
+      return result;
+    } else {
+      // Log the full response body for better debugging of API errors
+      throw new Error(`API returned ${responseCode}: ${responseBody}`);
+    }
+    
+  } catch (error) {
+    Logger.log(`API Error: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Get or create a Gmail label
+ */
+function getOrCreateLabel(labelName) {
+  let label = GmailApp.getUserLabelByName(labelName);
+  
+  if (!label) {
+    label = GmailApp.createLabel(labelName);
+    Logger.log(`Created new label: ${labelName}`);
+  }
+  
+  return label;
+}
+
+/**
+ * Test function - run this manually to test the script
+ */
+function testEmailProcessing() {
+  Logger.log("Running test...");
+  
+  // Search for one unread email
+  const threads = GmailApp.search("is:unread", 0, 1);
+  
+  if (threads.length === 0) {
+    Logger.log("No unread emails found for testing");
+    return;
+  }
+  
+  // Get the latest message in the thread (most common use case for parsing)
+  const message = threads[0].getMessages().pop(); 
+  
+  Logger.log(`Testing with email: ${message.getSubject()}`);
+  
+  const result = processEmail(message);
+  Logger.log(`Test result: ${JSON.stringify(result)}`);
+}
+
+/**
+ * Manual trigger function - processes all unread emails now
+ * Run this manually when you first set up the script
+ */
+function processAllUnreadNow() {
+  Logger.log("Manual processing of all unread emails...");
+  processIncomingEmails();
+}
