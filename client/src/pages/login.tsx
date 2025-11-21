@@ -42,7 +42,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   return (
     <div className="min-h-screen flex bg-white">
       {/* Left Side - Services Showcase */}
-      <div className="hidden lg:flex w-1/2 bg-[#0000EE] text-white p-12 flex-col justify-between">
+      <div className="hidden md:flex w-1/2 bg-[#0000EE] text-white p-12 flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-12">
             <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center">
@@ -81,10 +81,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 py-12 bg-gray-50">
+      <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 py-12 bg-gray-50">
         <div className="max-w-md mx-auto w-full">
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
+          <div className="md:hidden text-center mb-8">
             <div className="h-16 w-16 mx-auto mb-4 bg-white rounded-xl flex items-center justify-center shadow-lg">
               <img src={logoImage} alt="Home Bites Logo" className="h-14 w-14 object-contain" />
             </div>
@@ -156,15 +156,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 )}
               </button>
             </form>
-
-            {/* Demo Info */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Demo Credentials</p>
-              <div className="space-y-2 text-sm text-gray-700">
-                <p><span className="font-semibold text-gray-800">Username:</span> <code className="bg-white px-2 py-1 rounded font-mono text-[#0000EE] font-semibold">admin</code></p>
-                <p><span className="font-semibold text-gray-800">Password:</span> <code className="bg-white px-2 py-1 rounded font-mono text-[#0000EE] font-semibold">admin123</code></p>
-              </div>
-            </div>
           </div>
 
           {/* Footer */}
