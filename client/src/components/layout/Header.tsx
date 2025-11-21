@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import EmailSyncToggle from "@/components/emailSync/EmailSyncToggle";
+import logoImage from "@assets/image_1763692002348.png";
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -38,13 +39,13 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] text-white shadow-md">
+    <header className="bg-gradient-to-r from-[#0000EE] to-[#E28C0A] text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <img 
-            src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&h=50" 
+            src={logoImage}
             alt="Home Bites Logo" 
-            className="h-10 w-10 rounded-full"
+            className="h-10 w-10"
           />
           <h1 className="font-poppins font-semibold text-lg md:text-xl">Home Bites CMS</h1>
         </div>

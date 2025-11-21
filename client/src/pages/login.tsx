@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import logoImage from "@assets/image_1763692002348.png";
 
 interface LoginProps {
   onLoginSuccess?: (userData: any) => void;
@@ -37,8 +38,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-[#0000EE]/5 to-[#E28C0A]/5 py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="h-20 w-20 rounded-full mx-auto mb-2 bg-[#0000EE] flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">HB</span>
+          <div className="h-20 w-20 mx-auto mb-2">
+            <img src={logoImage} alt="Home Bites Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">
             Home Bites
