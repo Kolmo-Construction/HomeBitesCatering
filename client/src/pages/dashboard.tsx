@@ -61,7 +61,7 @@ export default function Dashboard() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
           </div>
           <Link href="/opportunities/new">
-            <Button className="bg-gradient-to-r from-[#0000EE] to-[#E28C0A] hover:opacity-90">
+            <Button className="bg-[#8B7355] hover:bg-[#6B5345]">
               <span className="hidden md:inline">New Opportunity</span>
               <Filter className="md:hidden h-4 w-4" />
             </Button>
@@ -74,8 +74,8 @@ export default function Dashboard() {
         <StatCard 
           title="Active Opportunities" 
           value={activeOpportunities} 
-          icon={<Filter className="text-[#0000EE] h-5 w-5" />}
-          iconBgColor="bg-[#0000EE]" 
+          icon={<Filter className="text-[#8B7355] h-5 w-5" />}
+          iconBgColor="bg-[#8B7355]" 
           changePercent={12}
         />
         

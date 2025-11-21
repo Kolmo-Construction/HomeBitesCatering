@@ -39,7 +39,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gradient-to-r from-[#0000EE] to-[#E28C0A] text-white shadow-md">
+    <header className="bg-[#8B7355] text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <img 
@@ -47,7 +47,7 @@ export default function Header() {
             alt="Home Bites Logo" 
             className="h-10 w-10"
           />
-          <h1 className="font-poppins font-semibold text-lg md:text-xl">Home Bites CMS</h1>
+          <h1 className="font-poppins font-semibold text-lg md:text-xl">Home Bites</h1>
         </div>
         <div className="flex items-center space-x-4">
           {/* Email Sync Toggle Switch - Temporarily disabled */}
