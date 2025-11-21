@@ -24,20 +24,21 @@
   --card-foreground: 20 14.3% 4.1%;
   --border: 20 5.9% 90%;
   --input: 20 5.9% 90%;
-  --primary: 270 60% 50%; /* #8A2BE2 purple */
+  --primary: 25 95% 53%; /* Warm rust-orange - HOME BITES warmth */
   --primary-foreground: 0 0% 100%;
-  --secondary: 225 60% 50%; /* #4169E1 blue */
+  --secondary: 145 60% 45%; /* Fresh green - natural ingredients */
   --secondary-foreground: 0 0% 100%;
-  --accent: 15 100% 70%; /* #FFA07A */
-  --accent-foreground: 0 0% 100%;
+  --accent: 45 93% 71%; /* Warm cream - inviting feel */
+  --accent-foreground: 20 14.3% 4.1%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 270 60% 50%; /* matching primary */
+  --ring: 25 95% 53%; /* matching primary rust-orange */
   --radius: 0.5rem;
 
-  /* Home Bites custom colors */
-  --primary-purple: 270 60% 50%;
-  --primary-blue: 225 60% 50%;
+  /* Home Bites brand colors */
+  --primary-rust: 25 95% 53%;
+  --secondary-green: 145 60% 45%;
+  --accent-cream: 45 93% 71%;
 }
 
 .dark {
@@ -51,15 +52,15 @@
   --card-foreground: 0 0% 98%;
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --primary: 270 60% 50%;
+  --primary: 25 95% 53%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 225 60% 50%;
+  --secondary: 145 60% 45%;
   --secondary-foreground: 0 0% 100%;
-  --accent: 15 100% 70%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 45 93% 71%;
+  --accent-foreground: 20 14.3% 4.1%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --ring: 270 60% 50%;
+  --ring: 25 95% 53%;
 }
 
 @layer base {
@@ -82,7 +83,12 @@
 }
 
 .gradient-bg {
-  background: linear-gradient(135deg, #8A2BE2 0%, #4169E1 100%);
+  background: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(45, 93%, 71%) 100%);
+}
+
+/* Home Bites branding gradient */
+.home-bites-gradient {
+  background: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(145, 60%, 45%) 100%);
 }
 
 /* Calendar styles */

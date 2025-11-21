@@ -1,0 +1,122 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Arial",
+      "role": "body"
+    },
+    {
+      "family": "Helvetica",
+      "role": "body"
+    },
+    {
+      "family": "Raleway",
+      "role": "heading"
+    },
+    {
+      "family": "Lato",
+      "role": "body"
+    },
+    {
+      "family": "Fraunces",
+      "role": "display"
+    }
+  ],
+  "colors": {
+    "primary": "#0000EE",
+    "accent": "#E28C0A",
+    "background": "#000000",
+    "textPrimary": "#000000",
+    "link": "#E28C0A"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Arial",
+      "heading": "Raleway"
+    },
+    "fontStacks": {
+      "heading": [
+        "Fraunces",
+        "serif"
+      ],
+      "body": [
+        "Arial",
+        "Helvetica",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Raleway",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "28px",
+      "h2": "28px",
+      "body": "14px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "0px"
+  },
+  "components": {
+    "input": {
+      "borderColor": "#CCCCCC",
+      "borderRadius": "0px"
+    },
+    "buttonPrimary": {
+      "background": "#E28C0A",
+      "textColor": "#000000",
+      "borderRadius": "50px",
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "#282626",
+      "textColor": "#000000",
+      "borderColor": "#FFFFFF",
+      "borderRadius": "0px",
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "File saved at: attached_assets/logo.png",
+    "favicon": "File saved at: attached_assets/favicon.png",
+    "ogImage": "File saved at: attached_assets/ogImage.png"
+  },
+  "__framework_hints": [
+    "Wix.com Website Builder",
+    "bootstrap"
+  ],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Logo #0 visually represents the brand name 'Home Bites' and is located in the header, making it the most likely candidate for the main brand logo.",
+    "confidence": 0.9
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 1,
+      "text": "Check Availability",
+      "reasoning": "Button #1 has a vibrant orange background (#E28C0A) which is a strong indicator for a primary CTA. It also has action-oriented text 'Check Availability', making it the main call-to-action."
+    },
+    "secondary": {
+      "index": 0,
+      "text": "contact us",
+      "reasoning": "Button #0 has a dark background (#282626) and is less prominent compared to the vibrant primary button. It serves as a secondary action with the text 'contact us', which is less urgent than the primary action."
+    },
+    "confidence": 0.95
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "young adults and families looking for catering services"
+  },
+  "designSystem": {
+    "framework": "bootstrap",
+    "componentLibrary": null
+  },
+  "confidence": {
+    "buttons": 0.95,
+    "colors": 0.9,
+    "overall": 0.925
+  }
+}
