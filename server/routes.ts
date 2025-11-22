@@ -186,6 +186,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const PgStore = pgSession(session);
   
   // Configure session middleware
+  // Replit uses HTTPS for all published apps, so we use secure cookies
+  // In development (with REPL_ID), we allow non-secure for localhost
+  const isProduction = !process.env.REPL_ID || process.env.NODE_ENV === 'production';
+  
   app.use(session({
     store: new PgStore({
       conString: process.env.DATABASE_URL,
@@ -196,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     resave: false,
     saveUninitialized: false,
     cookie: { 
-      secure: process.env.NODE_ENV === 'production',
+      secure: 'auto',
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
