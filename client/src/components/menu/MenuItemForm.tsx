@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -76,22 +76,6 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // State for recipe ingredients
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredientItem[]>([]);
   
-  // Handler for when recipe cost changes - automatically update price field
-  const handleRecipeCostChange = useCallback((cost: number) => {
-    console.log("MenuItemForm: Received cost update:", cost);
-    // Round to 2 decimal places to match the input field's step="0.01"
-    const roundedCost = Math.round(cost * 100) / 100;
-    console.log("MenuItemForm: Rounded cost:", roundedCost);
-    
-    // Only auto-update price if it's currently empty/null
-    const currentPrice = form.getValues("price");
-    console.log("MenuItemForm: Current price:", currentPrice);
-    if (currentPrice === undefined || currentPrice === null || currentPrice === 0) {
-      console.log("MenuItemForm: Updating price to:", roundedCost);
-      form.setValue("price", roundedCost);
-    }
-  }, [form]);
-  
   // Fetch recipe ingredients when editing a menu item
   const { data: recipeData } = useQuery({
     queryKey: [`/api/ingredients/menu-items/${menuItem?.id}/recipe`],
@@ -126,6 +110,22 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
       isNutFree: false,
     },
   });
+  
+  // Handler for when recipe cost changes - automatically update price field
+  const handleRecipeCostChange = (cost: number) => {
+    console.log("MenuItemForm: Received cost update:", cost);
+    // Round to 2 decimal places to match the input field's step="0.01"
+    const roundedCost = Math.round(cost * 100) / 100;
+    console.log("MenuItemForm: Rounded cost:", roundedCost);
+    
+    // Only auto-update price if it's currently empty/null
+    const currentPrice = form.getValues("price");
+    console.log("MenuItemForm: Current price:", currentPrice);
+    if (currentPrice === undefined || currentPrice === null || currentPrice === 0) {
+      console.log("MenuItemForm: Updating price to:", roundedCost);
+      form.setValue("price", roundedCost);
+    }
+  };
   
   // Function to process combined format
   const processCombinedFormat = (value: string) => {
