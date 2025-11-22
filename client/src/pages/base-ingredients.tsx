@@ -171,9 +171,9 @@ export default function BaseIngredientsPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      category: "",
+      category: undefined,
       purchasePrice: 0,
-      purchaseUnit: "",
+      purchaseUnit: undefined,
       purchaseQuantity: 1,
       supplier: "",
       notes: "",
@@ -225,9 +225,9 @@ export default function BaseIngredientsPage() {
             onClick={() => {
               form.reset({
                 name: "",
-                category: "",
+                category: undefined,
                 purchasePrice: 0,
-                purchaseUnit: "",
+                purchaseUnit: undefined,
                 purchaseQuantity: 1,
                 supplier: "",
                 notes: "",
@@ -420,7 +420,7 @@ export default function BaseIngredientsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-category">
                           <SelectValue placeholder="Select a category" />
@@ -495,7 +495,7 @@ export default function BaseIngredientsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Purchase Unit *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-unit">
                           <SelectValue placeholder="Select a unit" />
