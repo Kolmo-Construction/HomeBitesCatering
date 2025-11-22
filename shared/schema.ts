@@ -419,6 +419,7 @@ export const baseIngredients = pgTable("base_ingredients", {
   name: text("name").notNull(),
   category: text("category").notNull(), // meat, produce, dairy, spices, dry_goods, seafood, beverages, etc.
   purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).notNull(), // price as purchased
+  previousPurchasePrice: numeric("previous_purchase_price", { precision: 10, scale: 2 }), // previous price for tracking changes
   purchaseUnit: text("purchase_unit").notNull(), // pound, ounce, gallon, liter, each, dozen, case, etc.
   purchaseQuantity: numeric("purchase_quantity", { precision: 10, scale: 2 }).default("1").notNull(), // usually 1, but could be 10 for "10lb case"
   supplier: text("supplier"), // optional vendor/supplier name
@@ -434,6 +435,7 @@ export const insertBaseIngredientSchema = createInsertSchema(baseIngredients, {
   id: true,
   createdAt: true,
   updatedAt: true,
+  previousPurchasePrice: true,
 });
 
 export type BaseIngredient = typeof baseIngredients.$inferSelect;

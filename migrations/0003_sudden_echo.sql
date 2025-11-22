@@ -1,0 +1,1 @@
+ALTER TABLE "base_ingredients" ADD COLUMN "previous_purchase_price" numeric(10, 2);

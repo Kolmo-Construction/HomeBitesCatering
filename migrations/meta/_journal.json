@@ -22,6 +22,13 @@
       "when": 1763829191333,
       "tag": "0002_demonic_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1763841578035,
+      "tag": "0003_sudden_echo",
+      "breakpoints": true
     }
   ]
 }
