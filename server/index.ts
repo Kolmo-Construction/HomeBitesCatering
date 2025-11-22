@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { registerFormRoutes } from "./formRoutes";
 import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
 import formBuilderRoutes from "./formBuilderRoutes";
+import ingredientRoutes from "./ingredientRoutes";
 import { fixedCloneQuestion } from "./fixedCloneRoute";
 import { 
   getWeddingMenuThemes, 
@@ -66,6 +67,9 @@ app.use((req, res, next) => {
   
   // Register form builder API routes
   app.use('/api/form-builder', formBuilderRoutes);
+  
+  // Register ingredient management routes
+  app.use('/api/ingredients', ingredientRoutes);
   
   // Register the fixed clone question endpoint
   app.post('/api/form-builder/library-questions/:id/clone', fixedCloneQuestion);

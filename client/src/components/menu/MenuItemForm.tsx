@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertMenuItemSchema, type AdditionalDietaryMetadata, type NutritionalRange } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import RecipeBuilder, { type RecipeIngredientItem } from "@/components/menu/RecipeBuilder";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +72,22 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   const [preparationNotes, setPreparationNotes] = useState("");
   const [customerGuidance, setCustomerGuidance] = useState("");
   const [availableLotSizes, setAvailableLotSizes] = useState<number[]>([]);
+  
+  // State for recipe ingredients
+  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredientItem[]>([]);
+  
+  // Fetch recipe ingredients when editing a menu item
+  const { data: recipeData } = useQuery({
+    queryKey: [`/api/ingredients/menu-items/${menuItem?.id}/recipe`],
+    enabled: !!menuItem?.id && isEditing,
+  });
+  
+  // Update recipe ingredients state when data is loaded
+  useEffect(() => {
+    if (recipeData && typeof recipeData === 'object' && 'ingredients' in recipeData && Array.isArray(recipeData.ingredients)) {
+      setRecipeIngredients(recipeData.ingredients);
+    }
+  }, [recipeData]);
   
   // Set up the form with default values
   const form = useForm<FormValues>({
@@ -167,15 +184,36 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
           additionalDietaryMetadata : null
       };
       
+      let savedMenuItem;
       if (isEditing && menuItem?.id) {
         // Update existing menu item
         const res = await apiRequest("PATCH", `/api/menu-items/${menuItem.id}`, formattedValues);
-        return res.json();
+        savedMenuItem = await res.json();
       } else {
         // Create new menu item
         const res = await apiRequest("POST", "/api/menu-items", formattedValues);
-        return res.json();
+        savedMenuItem = await res.json();
       }
+      
+      // Update recipe ingredients using atomic transaction endpoint
+      if (savedMenuItem?.id) {
+        const menuItemId = savedMenuItem.id;
+        
+        // Use PUT endpoint for atomic DELETE+INSERT transaction
+        // This handles both adding new ingredients and removing old ones atomically
+        const recipePayload = recipeIngredients.map(ing => ({
+          baseIngredientId: ing.baseIngredientId,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          prepNotes: ing.prepNotes,
+        }));
+        
+        await apiRequest("PUT", `/api/ingredients/menu-items/${menuItemId}/recipe`, {
+          ingredients: recipePayload
+        });
+      }
+      
+      return savedMenuItem;
     },
     onSuccess: () => {
       // Invalidate menu items query to refetch data
@@ -779,6 +817,15 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Recipe Builder Section */}
+            <div className="pt-6">
+              <RecipeBuilder
+                menuItemId={menuItem?.id}
+                recipeIngredients={recipeIngredients}
+                onRecipeChange={setRecipeIngredients}
+              />
             </div>
 
             <CardFooter className="px-0 pb-0 pt-6 flex justify-end space-x-2">

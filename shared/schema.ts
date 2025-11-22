@@ -413,6 +413,55 @@ export type InsertContactIdentifier = z.infer<typeof insertContactIdentifierSche
 export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 
+// Base Ingredients - what you buy in bulk
+export const baseIngredients = pgTable("base_ingredients", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // meat, produce, dairy, spices, dry_goods, seafood, beverages, etc.
+  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).notNull(), // price as purchased
+  purchaseUnit: text("purchase_unit").notNull(), // pound, ounce, gallon, liter, each, dozen, case, etc.
+  purchaseQuantity: numeric("purchase_quantity", { precision: 10, scale: 2 }).default("1").notNull(), // usually 1, but could be 10 for "10lb case"
+  supplier: text("supplier"), // optional vendor/supplier name
+  notes: text("notes"), // optional storage notes, quality specs, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBaseIngredientSchema = createInsertSchema(baseIngredients, {
+  purchasePrice: z.coerce.number().nonnegative("Price must be non-negative"),
+  purchaseQuantity: z.coerce.number().positive("Quantity must be positive").default(1),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type BaseIngredient = typeof baseIngredients.$inferSelect;
+export type InsertBaseIngredient = z.infer<typeof insertBaseIngredientSchema>;
+
+// Recipe Ingredients - junction table linking menu items to base ingredients
+export const recipeIngredients = pgTable("recipe_ingredients", {
+  id: serial("id").primaryKey(),
+  menuItemId: text("menu_item_id").notNull().references(() => menuItems.id, { onDelete: 'cascade' }),
+  baseIngredientId: integer("base_ingredient_id").notNull().references(() => baseIngredients.id, { onDelete: 'restrict' }),
+  quantity: numeric("quantity", { precision: 10, scale: 4 }).notNull(), // e.g., 0.5, 0.2, 1
+  unit: text("unit").notNull(), // pound, ounce, cup, tablespoon, etc. - unit used in recipe
+  prepNotes: text("prep_notes"), // optional: "diced", "julienned", "minced", etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRecipeIngredientSchema = createInsertSchema(recipeIngredients, {
+  quantity: z.coerce.number().positive("Quantity must be positive"),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+export type InsertRecipeIngredient = z.infer<typeof insertRecipeIngredientSchema>;
+
 // Raw Leads module
 // Add new enum types for leads scoring and quality assessment
 export const leadScoreEnum = pgEnum("lead_score", ['1', '2', '3', '4', '5']);
