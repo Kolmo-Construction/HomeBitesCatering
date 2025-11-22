@@ -94,7 +94,7 @@ const COMMON_UNITS = [
 export default function BaseIngredientsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<BaseIngredient | null>(null);
   const [deletingIngredient, setDeletingIngredient] = useState<BaseIngredient | null>(null);
@@ -206,7 +206,7 @@ export default function BaseIngredientsPage() {
   // Filter ingredients
   const filteredIngredients = ingredients.filter((ingredient) => {
     const matchesSearch = ingredient.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !categoryFilter || ingredient.category === categoryFilter;
+    const matchesCategory = categoryFilter === "all" || ingredient.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -293,7 +293,7 @@ export default function BaseIngredientsPage() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {INGREDIENT_CATEGORIES.map((cat) => (
                     <SelectItem key={cat.value} value={cat.value}>
                       {cat.label}
