@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type BaseIngredient, insertBaseIngredientSchema } from "@shared/schema";
@@ -203,6 +203,28 @@ export default function BaseIngredientsPage() {
     }
   };
 
+  // Calculate total price change
+  const calculatePriceChange = (ingredient: BaseIngredient): number | null => {
+    if (!ingredient.previousPurchasePrice) return null;
+    const currentPrice = parseFloat(ingredient.purchasePrice);
+    const previousPrice = parseFloat(ingredient.previousPurchasePrice);
+    if (previousPrice === 0) return null;
+    return currentPrice - previousPrice;
+  };
+
+  const calculatePercentageChange = (ingredient: BaseIngredient): number | null => {
+    if (!ingredient.previousPurchasePrice) return null;
+    const currentPrice = parseFloat(ingredient.purchasePrice);
+    const previousPrice = parseFloat(ingredient.previousPurchasePrice);
+    if (previousPrice === 0) return null;
+    return ((currentPrice - previousPrice) / previousPrice) * 100;
+  };
+
+  const totalPriceChange = ingredients.reduce((sum, ingredient) => {
+    const change = calculatePriceChange(ingredient);
+    return change !== null ? sum + change : sum;
+  }, 0);
+
   // Filter ingredients
   const filteredIngredients = ingredients.filter((ingredient) => {
     const matchesSearch = ingredient.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -261,14 +283,21 @@ export default function BaseIngredientsPage() {
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Avg Cost Per Item</CardDescription>
-              <CardTitle className="text-3xl" data-testid="text-avg-cost">
-                {ingredients.length > 0
-                  ? formatCurrency(
-                      ingredients.reduce((sum, i) => sum + parseFloat(i.purchasePrice), 0) /
-                        ingredients.length
-                    )
-                  : "$0.00"}
+              <CardDescription>Total Price Change</CardDescription>
+              <CardTitle className="text-3xl flex items-center gap-2" data-testid="text-price-change">
+                {totalPriceChange === 0 ? (
+                  <span className="text-muted-foreground">$0.00</span>
+                ) : totalPriceChange > 0 ? (
+                  <>
+                    <TrendingUp className="h-6 w-6 text-red-500" />
+                    <span className="text-red-500">+{formatCurrency(totalPriceChange)}</span>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown className="h-6 w-6 text-green-500" />
+                    <span className="text-green-500">{formatCurrency(totalPriceChange)}</span>
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -322,54 +351,91 @@ export default function BaseIngredientsPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Purchase Price</TableHead>
+                      <TableHead>Price Change</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Supplier</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIngredients.map((ingredient) => (
-                      <TableRow key={ingredient.id} data-testid={`row-ingredient-${ingredient.id}`}>
-                        <TableCell className="font-medium">{ingredient.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {INGREDIENT_CATEGORIES.find((c) => c.value === ingredient.category)?.label ||
-                              ingredient.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(
-                            parseFloat(ingredient.purchasePrice) / parseFloat(ingredient.purchaseQuantity)
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {ingredient.purchaseQuantity} {ingredient.purchaseUnit}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {ingredient.supplier || "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(ingredient)}
-                              data-testid={`button-edit-${ingredient.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeletingIngredient(ingredient)}
-                              data-testid={`button-delete-${ingredient.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredIngredients.map((ingredient) => {
+                      const priceChange = calculatePriceChange(ingredient);
+                      const percentageChange = calculatePercentageChange(ingredient);
+                      
+                      return (
+                        <TableRow key={ingredient.id} data-testid={`row-ingredient-${ingredient.id}`}>
+                          <TableCell className="font-medium">{ingredient.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {INGREDIENT_CATEGORIES.find((c) => c.value === ingredient.category)?.label ||
+                                ingredient.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(
+                              parseFloat(ingredient.purchasePrice) / parseFloat(ingredient.purchaseQuantity)
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {priceChange === null ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : priceChange === 0 ? (
+                              <span className="text-muted-foreground">No change</span>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                {priceChange > 0 ? (
+                                  <>
+                                    <TrendingUp className="h-4 w-4 text-red-500" />
+                                    <span className="text-red-500 font-medium">
+                                      +{formatCurrency(priceChange)}
+                                    </span>
+                                    <span className="text-xs text-red-500">
+                                      ({percentageChange! > 0 ? '+' : ''}{percentageChange!.toFixed(1)}%)
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <TrendingDown className="h-4 w-4 text-green-500" />
+                                    <span className="text-green-500 font-medium">
+                                      {formatCurrency(priceChange)}
+                                    </span>
+                                    <span className="text-xs text-green-500">
+                                      ({percentageChange!.toFixed(1)}%)
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {ingredient.purchaseQuantity} {ingredient.purchaseUnit}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {ingredient.supplier || "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(ingredient)}
+                                data-testid={`button-edit-${ingredient.id}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletingIngredient(ingredient)}
+                                data-testid={`button-delete-${ingredient.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
