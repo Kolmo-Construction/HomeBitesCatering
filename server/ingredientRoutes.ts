@@ -81,6 +81,7 @@ router.post("/base-ingredients", async (req, res) => {
         ...parsed.data,
         purchasePrice: parsed.data.purchasePrice.toString(),
         purchaseQuantity: parsed.data.purchaseQuantity.toString(),
+        previousPurchasePrice: parsed.data.purchasePrice.toString(),
       })
       .returning();
     
@@ -109,20 +110,35 @@ router.put("/base-ingredients/:id", async (req, res) => {
       });
     }
     
-    const [updatedIngredient] = await db
-      .update(baseIngredients)
-      .set({ 
-        ...parsed.data,
-        purchasePrice: parsed.data.purchasePrice.toString(),
-        purchaseQuantity: parsed.data.purchaseQuantity.toString(),
-        updatedAt: new Date() 
-      })
-      .where(eq(baseIngredients.id, id))
-      .returning();
+    // Fetch existing ingredient to save its current price as previous price
+    const [existingIngredient] = await db
+      .select()
+      .from(baseIngredients)
+      .where(eq(baseIngredients.id, id));
     
-    if (!updatedIngredient) {
+    if (!existingIngredient) {
       return res.status(404).json({ message: "Ingredient not found" });
     }
+    
+    // Prepare update data with previous price
+    const updateData: any = {
+      ...parsed.data,
+      purchasePrice: parsed.data.purchasePrice.toString(),
+      purchaseQuantity: parsed.data.purchaseQuantity.toString(),
+      updatedAt: new Date()
+    };
+    
+    // Save old price as previous price if current price is not zero
+    const currentPrice = parseFloat(existingIngredient.purchasePrice);
+    if (currentPrice > 0) {
+      updateData.previousPurchasePrice = existingIngredient.purchasePrice;
+    }
+    
+    const [updatedIngredient] = await db
+      .update(baseIngredients)
+      .set(updateData)
+      .where(eq(baseIngredients.id, id))
+      .returning();
     
     return res.json(updatedIngredient);
   } catch (error) {
