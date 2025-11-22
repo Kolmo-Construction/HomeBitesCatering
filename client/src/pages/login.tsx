@@ -53,7 +53,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           
           <div className="mb-12">
             <h2 className="text-4xl font-bold mb-4">Professional Catering Management</h2>
-            <p className="text-lg text-white/80">Streamline your event catering business with our comprehensive management platform.</p>
+            <p className="text-lg text-white/80">Creating unforgettable moments, one event at a time. We're proud to serve Seattle's most cherished celebrations.</p>
           </div>
 
           <div className="space-y-4">
