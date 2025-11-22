@@ -45,6 +45,7 @@ interface RecipeBuilderProps {
   recipeIngredients: RecipeIngredientItem[];
   onRecipeChange: (ingredients: RecipeIngredientItem[]) => void;
   onCostChange?: (cost: number) => void;
+  currentPrice?: number | null;
 }
 
 const COMMON_UNITS = [
@@ -66,6 +67,7 @@ export default function RecipeBuilder({
   recipeIngredients,
   onRecipeChange,
   onCostChange,
+  currentPrice,
 }: RecipeBuilderProps) {
   const [selectedIngredientId, setSelectedIngredientId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<string>("1");
@@ -379,8 +381,33 @@ export default function RecipeBuilder({
                 <div className="text-2xl font-bold" data-testid="text-total-cost">
                   {formatCurrency(totalCost)}
                 </div>
+                
+                {/* Price Change Indicator */}
+                {currentPrice && currentPrice > 0 && (
+                  <div className="mt-2 pt-2 border-t border-primary/20">
+                    <div className="text-xs text-muted-foreground">Current Menu Price: {formatCurrency(currentPrice)}</div>
+                    {Math.abs(totalCost - currentPrice) > 0.01 && (
+                      <div className={`text-sm font-semibold mt-1 flex items-center gap-1 ${
+                        totalCost > currentPrice 
+                          ? 'text-red-600 dark:text-red-400' 
+                          : 'text-green-600 dark:text-green-400'
+                      }`}>
+                        {totalCost > currentPrice ? '↑' : '↓'}
+                        <span>
+                          {totalCost > currentPrice ? 'Increased' : 'Decreased'} by {formatCurrency(Math.abs(totalCost - currentPrice))}
+                        </span>
+                      </div>
+                    )}
+                    {Math.abs(totalCost - currentPrice) <= 0.01 && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        ✓ Cost matches price
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <div className="text-xs text-muted-foreground mt-1">
-                  Cost per portion • {recipeIngredients.length} ingredient
+                  {recipeIngredients.length} ingredient
                   {recipeIngredients.length !== 1 ? "s" : ""}
                 </div>
               </div>

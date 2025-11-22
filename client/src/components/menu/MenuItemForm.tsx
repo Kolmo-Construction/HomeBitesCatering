@@ -842,6 +842,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                 recipeIngredients={recipeIngredients}
                 onRecipeChange={setRecipeIngredients}
                 onCostChange={handleRecipeCostChange}
+                currentPrice={form.watch("price")}
               />
             </div>
 
