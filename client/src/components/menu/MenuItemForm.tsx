@@ -76,6 +76,15 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
   // State for recipe ingredients
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredientItem[]>([]);
   
+  // Handler for when recipe cost changes - automatically update price field
+  const handleRecipeCostChange = (cost: number) => {
+    // Only auto-update price if it's currently empty/null
+    const currentPrice = form.getValues("price");
+    if (currentPrice === undefined || currentPrice === null || currentPrice === 0) {
+      form.setValue("price", cost);
+    }
+  };
+  
   // Fetch recipe ingredients when editing a menu item
   const { data: recipeData } = useQuery({
     queryKey: [`/api/ingredients/menu-items/${menuItem?.id}/recipe`],
@@ -825,6 +834,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
                 menuItemId={menuItem?.id}
                 recipeIngredients={recipeIngredients}
                 onRecipeChange={setRecipeIngredients}
+                onCostChange={handleRecipeCostChange}
               />
             </div>
 

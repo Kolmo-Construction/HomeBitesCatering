@@ -44,6 +44,7 @@ interface RecipeBuilderProps {
   menuItemId?: string;
   recipeIngredients: RecipeIngredientItem[];
   onRecipeChange: (ingredients: RecipeIngredientItem[]) => void;
+  onCostChange?: (cost: number) => void;
 }
 
 const COMMON_UNITS = [
@@ -64,6 +65,7 @@ export default function RecipeBuilder({
   menuItemId,
   recipeIngredients,
   onRecipeChange,
+  onCostChange,
 }: RecipeBuilderProps) {
   const [selectedIngredientId, setSelectedIngredientId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<string>("1");
@@ -98,6 +100,13 @@ export default function RecipeBuilder({
 
   // Calculate total recipe cost
   const totalCost = recipeIngredients.reduce((sum, item) => sum + calculateCost(item), 0);
+  
+  // Notify parent component of cost changes
+  useEffect(() => {
+    if (onCostChange) {
+      onCostChange(totalCost);
+    }
+  }, [totalCost, onCostChange]);
 
   // Add ingredient to recipe
   const handleAddIngredient = () => {
