@@ -104,9 +104,11 @@ export default function RecipeBuilder({
   // Notify parent component of cost changes
   useEffect(() => {
     if (onCostChange) {
+      console.log("RecipeBuilder: Calculated total cost:", totalCost);
+      console.log("RecipeBuilder: Recipe ingredients:", recipeIngredients);
       onCostChange(totalCost);
     }
-  }, [totalCost, onCostChange]);
+  }, [totalCost]);
 
   // Add ingredient to recipe
   const handleAddIngredient = () => {
