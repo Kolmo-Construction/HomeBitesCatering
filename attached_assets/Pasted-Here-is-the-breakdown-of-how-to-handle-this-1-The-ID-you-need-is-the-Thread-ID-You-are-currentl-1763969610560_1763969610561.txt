@@ -1,0 +1,158 @@
+Here is the breakdown of how to handle this.
+
+1. The "ID" you need is the Thread ID
+You are currently capturing message.getId(). This is unique to every single email. To group them into a timeline, you need the Gmail Thread ID.
+
+Message ID: msg-123 (Specific email: "Re: Quote")
+
+Thread ID: thread-abc (The whole conversation context)
+
+When you send the threadId to your database, your app can simply query: "Show me all messages where thread_id = thread-abc."
+
+2. The Logic Change (Handle Replies vs. Leads)
+Currently, your script scores every email.
+
+Problem: A customer replies saying "Yes, that works."
+
+Result: Your script sees no keywords (catering, guests, food), scores it a 0, and ignores it.
+
+The Fix: Check if the email thread already has your "Parsed" label.
+
+If labeled: It is a reply to an existing lead. Auto-Pass (Skip scoring).
+
+If NOT labeled: It is a stranger. Run Scoring (Check for keywords).
+
+3. The Code Update
+Here is exactly how to modify your processIncomingEmails and processEmail functions in the file you uploaded.
+
+A. Update processIncomingEmails
+Replace your current loop with this logic. It checks for the label first.
+
+JavaScript
+
+    threads.forEach((thread) => {
+      // 1. Capture the Thread ID for your Timeline
+      const threadId = thread.getId();
+      
+      // 2. Check if we have already started a timeline for this thread
+      const isExistingConversation = thread.getLabels().some(label => 
+        label.getName() === CONFIG.PROCESSED_LABEL_NAME
+      );
+
+      const messages = thread.getMessages();
+      
+      messages.forEach(message => {
+        if (message.isUnread()) {
+          
+          let shouldProcess = false;
+          let processingType = "";
+
+          // --- LOGIC BRANCH ---
+          if (isExistingConversation) {
+            // CASE A: EXISTING THREAD (REPLY)
+            // We don't need to score it. If it's in a labeled thread, we want it.
+            shouldProcess = true;
+            processingType = "timeline_reply";
+            Logger.log(`» REPLY DETECTED in thread ${threadId}: "${message.getSubject()}"`);
+          } else {
+            // CASE B: NEW UNKNOWN SENDER
+            // Run your Intelligent Analysis
+            const analysis = analyzeEmail(message);
+            if (analysis.isLead) {
+              shouldProcess = true;
+              processingType = "new_lead";
+              Logger.log(`✓ NEW LEAD [Score: ${analysis.score}]: "${message.getSubject()}"`);
+            } else {
+              // Ignore Non-Lead
+              Logger.log(`✗ SKIPPED: "${message.getSubject()}"`);
+              message.markRead();
+              thread.addLabel(ignoredLabel);
+              ignoredCount++;
+            }
+          }
+
+          // --- EXECUTION ---
+          if (shouldProcess) {
+            // Pass threadId and type to the processor
+            const result = processEmail(message, threadId, processingType);
+            
+            if (result.success) {
+              message.markRead();
+              // Only need to add label if it wasn't there (New Leads)
+              if (!isExistingConversation) thread.addLabel(processedLabel); 
+              successCount++;
+            } else {
+              Logger.log(`! API Error: ${result.error}`);
+            }
+          }
+        }
+      });
+    });
+B. Update processEmail
+Update the payload to send the threadId and the type.
+
+JavaScript
+
+// Update arguments to accept threadId and type
+function processEmail(message, threadId, type) {
+  try {
+    const emailData = {
+      gmailMessageId: message.getId(),
+      gmailThreadId: threadId, // <--- CRITICAL FOR TIMELINE
+      type: type, // 'new_lead' or 'timeline_reply'
+      subject: message.getSubject(),
+      from: message.getFrom(),
+      to: message.getTo(),
+      receivedDate: message.getDate().toISOString(),
+      body: {
+        plainText: message.getPlainBody(),
+        htmlBody: message.getBody()
+      }
+    };
+    
+    // ... existing cleaning logic ...
+    
+    // Update your cleanEmailText call and API call as normal
+    let cleanedText = cleanEmailText(emailData.body.plainText);
+    const apiResponse = sendToReplitAPI(emailData, cleanedText);
+    
+    return { success: true, leadId: apiResponse.leadId };
+    
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+4. Database Implication (App Side)
+On your application side (Replit/Postgres), you should organize your tables like this to support the timeline view:
+
+Table: leads
+
+id (Primary Key)
+
+gmail_thread_id (Unique Constraint - this links the thread to the lead)
+
+customer_name
+
+status
+
+Table: messages (The Timeline)
+
+id
+
+lead_id (Foreign Key to leads)
+
+gmail_thread_id (Index this for fast lookups)
+
+body_text
+
+sent_at
+
+sender (Customer vs You)
+
+When a new email comes in with type: 'timeline_reply', your API will:
+
+Look up the Lead based on the gmailThreadId.
+
+Insert a new row into the messages table.
+
+(Optional) Update the leads table last_activity timestamp so the lead bumps to the top of your dashboard.
