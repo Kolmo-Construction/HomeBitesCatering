@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Opportunity } from "../../types/opportunity";
 import { formatDate, cn } from "@/lib/utils";
-import { EyeIcon, PenIcon, PlusIcon, FilterIcon } from "lucide-react";
+import { PenIcon, PlusIcon, FilterIcon } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -44,12 +44,16 @@ export default function OpportunityList() {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
-        <div>
-          <div className="font-medium text-neutral-900">
-            {row.original.firstName} {row.original.lastName}
-          </div>
-          <div className="text-xs text-neutral-500">{row.original.email}</div>
-        </div>
+        <Link href={`/opportunities/${row.original.id}`}>
+          <a className="hover:text-primary-purple transition cursor-pointer">
+            <div>
+              <div className="font-medium text-neutral-900">
+                {row.original.firstName} {row.original.lastName}
+              </div>
+              <div className="text-xs text-neutral-500">{row.original.email}</div>
+            </div>
+          </a>
+        </Link>
       ),
     },
     {
@@ -122,11 +126,6 @@ export default function OpportunityList() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
-          <Link href={`/opportunities/${row.original.id}`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
-              <EyeIcon className="h-4 w-4" />
-            </a>
-          </Link>
           <Link href={`/opportunities/${row.original.id}/edit`}>
             <a className="text-primary-purple hover:text-primary-blue transition">
               <PenIcon className="h-4 w-4" />
