@@ -337,6 +337,61 @@ export class VendorLeadIntakeService {
 
             console.log(`VendorLeadIntakeService: Processing lead email - Subject: "${subject}", From: ${fromEmail}`);
 
+            // Check if this thread already exists to avoid duplicates
+            const existingThread = await storage.getOpportunityEmailThread(gmailThreadId);
+            
+            if (existingThread && (existingThread.opportunityId || existingThread.rawLeadId)) {
+                // Thread already exists - just add a communication, don't create a new lead
+                console.log(`VendorLeadIntakeService: Email thread ${gmailThreadId} already exists for ${existingThread.opportunityId ? `Opportunity ${existingThread.opportunityId}` : `Raw Lead ${existingThread.rawLeadId}`}. Adding communication only.`);
+                
+                // Create a communication record for this follow-up email
+                const communicationData: InsertCommunication = {
+                    opportunityId: existingThread.opportunityId || null,
+                    clientId: null,
+                    userId: null,
+                    type: 'email',
+                    direction: 'incoming',
+                    timestamp: emailDate,
+                    source: 'gmail_sync',
+                    gmailThreadId: gmailThreadId,
+                    gmailMessageId: messageGmailId,
+                    subject: subject,
+                    fromAddress: fromEmail,
+                    toAddress: this.targetEmail,
+                    bodyRaw: bodyText,
+                    metaData: { 
+                        headers: Object.fromEntries(parsedMail.headers),
+                        isFollowUp: true
+                    }
+                };
+                
+                const comm = await storage.createCommunication(communicationData);
+                console.log(`Created follow-up communication ID ${comm.id} for existing thread ${gmailThreadId}`);
+                
+                // Handle GCP storage upload for this follow-up email
+                const { gcpStoragePath } = await this.handleEmailThreadAndStorage(
+                    gmailThreadId,
+                    messageGmailId,
+                    existingThread.opportunityId || undefined,
+                    existingThread.rawLeadId || undefined,
+                    parsedMail,
+                    emailDate,
+                    fromEmail
+                );
+                
+                // Record the email processing
+                await storage.recordProcessedEmail({
+                    messageId: uniqueMessageId,
+                    gmailId: messageGmailId,
+                    service: 'vendor_lead_intake',
+                    email: fromEmail,
+                    subject: subject,
+                    labelApplied: false
+                });
+                
+                return; // Exit early - don't create a new lead
+            }
+
             // Check if this sender already exists in our system
             const existingContact = await storage.findOpportunityOrClientByContactIdentifier(fromEmail, 'email');
             

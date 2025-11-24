@@ -578,9 +578,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(communications.opportunityId, opportunityId))
       .orderBy(desc(communications.timestamp));
     
-    // Enhance metadata to include hasFullEmailInStorage flag for frontend
+    // Rename metaData to metadata for frontend compatibility and add hasFullEmailInStorage flag
     return comms.map(comm => ({
       ...comm,
+      metaData: undefined, // Remove the DB field name
       metadata: {
         ...(comm.metaData as any || {}),
         hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)
