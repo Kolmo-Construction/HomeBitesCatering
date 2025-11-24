@@ -792,14 +792,28 @@ export default function OpportunityDetailPage() {
                               {comm.type === "sms" && <MessageSquare className="h-4 w-4 text-blue-500" />}
                               {comm.type === "meeting" && <Calendar className="h-4 w-4 text-purple-500" />}
                               
-                              <span className="font-medium text-sm capitalize">{comm.type}</span>
+                              <span className="font-medium text-sm capitalize">
+                                {comm.type === "call" ? "Phone Call" : comm.type}
+                              </span>
                               <Badge variant="outline" className="text-xs capitalize">
                                 {comm.direction}
                               </Badge>
                               
+                              {comm.durationMinutes && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {comm.durationMinutes} min
+                                </Badge>
+                              )}
+                              
                               {isGmailSynced && (
                                 <Badge className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200">
                                   Gmail
+                                </Badge>
+                              )}
+                              
+                              {comm.source === 'openphone' && (
+                                <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-200">
+                                  OpenPhone
                                 </Badge>
                               )}
                             </div>
@@ -827,6 +841,40 @@ export default function OpportunityDetailPage() {
                           
                           <p className="text-sm whitespace-pre-line">{comm.bodyRaw || comm.bodySummary || ''}</p>
                           
+                          {/* Call-specific actions */}
+                          {comm.type === "call" && (
+                            <div className="flex gap-2 mt-3">
+                              {comm.recordingUrl && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => window.open(comm.recordingUrl, '_blank')}
+                                  data-testid={`button-play-recording-${comm.id}`}
+                                >
+                                  <Phone className="h-3 w-3 mr-1" />
+                                  Play Recording
+                                </Button>
+                              )}
+                              
+                              {comm.bodyRaw && comm.metadata?.hasTranscript && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => {
+                                    alert(`Call Transcript:\n\n${comm.bodyRaw}`);
+                                  }}
+                                  data-testid={`button-view-transcript-${comm.id}`}
+                                >
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  View Transcript
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Email-specific actions */}
                           {hasFullEmail && (
                             <Button
                               variant="link"

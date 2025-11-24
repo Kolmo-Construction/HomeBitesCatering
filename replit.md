@@ -132,9 +132,12 @@ Sessions persist across requests via HTTP-only cookies. The `/api/auth/me` endpo
 **Key Third-Party Integrations:**
 The system is designed to integrate with external services through environment configuration:
 - **Google Apps Script (GAS):** Primary email intake method. External GAS monitors Gmail inbox and forwards cleaned email data to `/api/gas-email-intake` for processing.
+- **OpenPhone:** Phone call integration via webhooks (`/api/openphone-webhook`). Captures inbound/outbound calls with transcripts and recordings, matches callers by phone number, and creates communication records in the timeline.
 - **Google Cloud Storage (GCP):** Stores full email bodies and attachments for archival and retrieval via `gcpStorageService.ts`.
 - **Anthropic Claude AI:** Powers AI-driven lead analysis, extracting event details, sentiment, quality scores, and next-step recommendations from incoming emails.
 
 **Important Notes:**
 - Gmail sync services were removed from the codebase (November 2024) to simplify the architecture. Email intake now exclusively uses Google Apps Script webhook.
-- All email communications are tracked in the `communications` table with links to opportunities/raw leads via `gmailThreadId`.
+- All communications (emails and phone calls) are tracked in the `communications` table with links to opportunities/raw leads
+- Phone calls are matched by normalized phone number (E.164 format) via the `contact_identifiers` table
+- OpenPhone webhooks require `OPENPHONE_WEBHOOK_SECRET` or `OPENPHONE_API_KEY` environment variable for authentication

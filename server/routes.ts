@@ -24,6 +24,7 @@ import {
   insertRawLeadSchema,           // For raw leads management
 } from "@shared/schema";
 import { aiService } from './services/aiService';
+import { normalizePhoneNumber, isValidPhone } from './services/phoneService';
 
 // Helper function to map lead quality to opportunity priority
 function mapLeadQualityToPriority(leadQuality?: string): 'high' | 'medium' | 'low' {
@@ -2202,6 +2203,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'Failed to process email',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ===== OPENPHONE WEBHOOK INTEGRATION =====
+  
+  // Zod schema for OpenPhone webhook payload validation
+  const openPhoneCallSchema = z.object({
+    id: z.string(),
+    object: z.literal('call').optional(),
+    createdAt: z.string().datetime().optional(),
+    direction: z.enum(['inbound', 'outbound']),
+    from: z.string().min(1),
+    to: z.string().min(1),
+    status: z.string().optional(),
+    duration: z.number().optional(), // Duration in seconds
+    recordingUrl: z.string().url().optional(),
+    transcript: z.string().optional(),
+    completedAt: z.string().datetime().optional(),
+    userId: z.string().optional(),
+    phoneNumberId: z.string().optional()
+  });
+
+  const openPhoneWebhookSchema = z.object({
+    event: z.string(), // e.g., "call.completed", "call.recording.completed", "call.transcript.completed"
+    data: openPhoneCallSchema
+  });
+
+  // Middleware to validate OpenPhone webhook (basic API key validation)
+  const validateOpenPhoneWebhook = (req: Request, res: Response, next: Function) => {
+    const apiKey = req.headers['x-api-key'];
+    const expectedKey = process.env.OPENPHONE_WEBHOOK_SECRET || process.env.OPENPHONE_API_KEY;
+    
+    if (!expectedKey) {
+      console.warn('OpenPhone webhook secret not configured - accepting all requests (INSECURE)');
+      return next(); // Allow through but warn
+    }
+    
+    if (!apiKey || apiKey !== expectedKey) {
+      console.warn('Invalid API key attempt for OpenPhone webhook');
+      return res.status(401).json({ message: 'Unauthorized: Invalid API key' });
+    }
+    
+    next();
+  };
+
+  // Receive call events from OpenPhone
+  app.post('/api/openphone-webhook', validateOpenPhoneWebhook, async (req: Request, res: Response) => {
+    try {
+      console.log('OpenPhone Webhook: Received event', req.body.event);
+      
+      // Validate payload with Zod schema
+      const validationResult = openPhoneWebhookSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        console.error('OpenPhone Webhook: Invalid payload', validationResult.error);
+        return res.status(400).json({ 
+          message: 'Invalid payload',
+          errors: validationResult.error.errors
+        });
+      }
+
+      const { event, data: callData } = validationResult.data;
+      
+      // Only process completed calls (ignore in-progress events)
+      if (!event.includes('completed')) {
+        console.log(`OpenPhone Webhook: Ignoring non-completed event: ${event}`);
+        return res.status(200).json({ message: 'Event ignored (not completed)' });
+      }
+
+      console.log(`OpenPhone Webhook: Processing ${event} - Call ID ${callData.id}`);
+      
+      // Normalize phone numbers for matching
+      const fromPhone = normalizePhoneNumber(callData.from);
+      const toPhone = normalizePhoneNumber(callData.to);
+      
+      // Determine customer phone (inbound = from, outbound = to)
+      const customerPhone = callData.direction === 'inbound' ? fromPhone : toPhone;
+      
+      if (!isValidPhone(customerPhone)) {
+        console.warn(`OpenPhone Webhook: Invalid customer phone number: ${customerPhone}`);
+        return res.status(400).json({ message: 'Invalid phone number format' });
+      }
+      
+      // Try to find existing contact by phone number
+      const contactIdentifier = await storage.findContactIdentifierByPhone(customerPhone);
+      
+      let opportunityId: number | null = null;
+      let clientId: number | null = null;
+      let rawLeadId: number | null = null;
+      let isNewLead = false;
+      
+      if (contactIdentifier) {
+        // Found existing contact - link to their opportunity or client
+        opportunityId = contactIdentifier.opportunityId || null;
+        clientId = contactIdentifier.clientId || null;
+        console.log(`OpenPhone Webhook: Matched phone ${customerPhone} to ${opportunityId ? `Opportunity ${opportunityId}` : `Client ${clientId}`}`);
+      } else {
+        // No match found - create a raw lead for follow-up
+        console.log(`OpenPhone Webhook: No match for ${customerPhone}, creating raw lead`);
+        isNewLead = true;
+        
+        const rawLead = await storage.createRawLead({
+          source: 'openphone',
+          extractedProspectName: callData.direction === 'inbound' ? 'Unknown Caller' : 'Outbound Call',
+          extractedProspectPhone: customerPhone,
+          extractedProspectEmail: null,
+          eventSummary: `${callData.direction === 'inbound' ? 'Inbound' : 'Outbound'} call - ${callData.duration ? Math.floor(callData.duration / 60) + ' min' : 'Duration unknown'}`,
+          receivedAt: callData.completedAt ? new Date(callData.completedAt) : new Date(),
+          status: 'new',
+          rawData: callData
+        });
+        
+        rawLeadId = rawLead.id;
+        
+        // Create contact identifier for this phone number
+        await storage.createContactIdentifier({
+          opportunityId: null,
+          clientId: null,
+          type: 'phone',
+          value: customerPhone,
+          label: 'Primary Phone',
+          isPrimary: true
+        });
+        
+        console.log(`OpenPhone Webhook: Created raw lead ${rawLeadId} for ${customerPhone}`);
+      }
+      
+      // Create communication record for this call
+      const callTimestamp = callData.completedAt ? new Date(callData.completedAt) : new Date();
+      const durationMinutes = callData.duration ? Math.floor(callData.duration / 60) : null;
+      
+      const communicationData: InsertCommunication = {
+        opportunityId: opportunityId,
+        clientId: clientId,
+        userId: null,
+        type: 'call',
+        direction: callData.direction === 'inbound' ? 'incoming' : 'outgoing',
+        timestamp: callTimestamp,
+        source: 'openphone',
+        externalId: callData.id,
+        subject: `${callData.direction === 'inbound' ? 'Inbound' : 'Outbound'} Call - ${durationMinutes ? durationMinutes + ' min' : 'Unknown duration'}`,
+        fromAddress: fromPhone,
+        toAddress: toPhone,
+        bodyRaw: callData.transcript || null,
+        bodySummary: callData.transcript ? `Call transcript (${durationMinutes} min)` : durationMinutes ? `Call duration: ${durationMinutes} minutes` : 'Call completed',
+        durationMinutes: durationMinutes,
+        recordingUrl: callData.recordingUrl || null,
+        metaData: {
+          openphoneCallId: callData.id,
+          openphoneUserId: callData.userId,
+          openphonePhoneNumberId: callData.phoneNumberId,
+          callStatus: callData.status,
+          rawLeadId: rawLeadId, // Link to raw lead if created
+          hasTranscript: !!callData.transcript,
+          hasRecording: !!callData.recordingUrl
+        }
+      };
+      
+      const comm = await storage.createCommunication(communicationData);
+      console.log(`OpenPhone Webhook: Created communication ${comm.id} for call ${callData.id}`);
+      
+      res.status(200).json({
+        success: true,
+        communicationId: comm.id,
+        matched: !isNewLead,
+        opportunityId: opportunityId,
+        clientId: clientId,
+        rawLeadId: rawLeadId,
+        message: isNewLead ? 'Call logged and new lead created' : 'Call logged to existing contact'
+      });
+      
+    } catch (error) {
+      console.error('OpenPhone Webhook Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process call webhook',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }

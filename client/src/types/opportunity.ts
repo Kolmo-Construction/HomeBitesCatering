@@ -37,6 +37,20 @@ export interface Communication {
   content: string;
   subject?: string | null;
   date: string;
+  timestamp?: string; // Actual timestamp of the communication
+  source?: string; // Source of communication (e.g., 'openphone', 'google_apps_script', 'gmail_sync')
+  fromAddress?: string | null;
+  toAddress?: string | null;
+  bodyRaw?: string | null;
+  bodySummary?: string | null;
+  durationMinutes?: number | null; // For phone calls
+  recordingUrl?: string | null; // For phone call recordings
+  metadata?: {
+    hasFullEmailInStorage?: boolean;
+    hasTranscript?: boolean;
+    hasRecording?: boolean;
+    [key: string]: any;
+  };
   createdAt: string;
   createdBy?: number | null;
 }

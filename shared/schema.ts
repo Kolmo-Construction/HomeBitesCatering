@@ -381,6 +381,10 @@ export const communications = pgTable("communications", {
 export const insertCommunicationSchema = createInsertSchema(communications, {
   timestamp: z.coerce.date(), // Ensure timestamp is handled as Date
   metaData: z.any().optional(), // For JSONB
+  durationMinutes: z.number().nullable().optional(), // For phone calls
+  recordingUrl: z.string().url().nullable().optional(), // For call recordings
+  bodyRaw: z.string().nullable().optional(), // Make optional (not all communications have body)
+  bodySummary: z.string().nullable().optional(), // Make optional
 }).omit({
   id: true,
   createdAt: true,
