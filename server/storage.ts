@@ -98,6 +98,7 @@ export interface IStorage {
   getContactIdentifier(id: number): Promise<ContactIdentifier | undefined>;
   getContactIdentifiersForOpportunity(opportunityId: number): Promise<ContactIdentifier[]>;
   getContactIdentifiersForClient(clientId: number): Promise<ContactIdentifier[]>;
+  findContactIdentifierByPhone(phone: string): Promise<ContactIdentifier | undefined>;
   deleteContactIdentifier(id: number): Promise<boolean>;
 
   // Communications
@@ -551,6 +552,18 @@ export class DatabaseStorage implements IStorage {
 
   async getContactIdentifiersForClient(clientId: number): Promise<ContactIdentifier[]> {
     return await db.select().from(contactIdentifiers).where(eq(contactIdentifiers.clientId, clientId));
+  }
+
+  async findContactIdentifierByPhone(phone: string): Promise<ContactIdentifier | undefined> {
+    const [identifier] = await db
+      .select()
+      .from(contactIdentifiers)
+      .where(and(
+        eq(contactIdentifiers.type, 'phone'),
+        eq(contactIdentifiers.value, phone)
+      ))
+      .limit(1);
+    return identifier;
   }
 
   async deleteContactIdentifier(id: number): Promise<boolean> {
