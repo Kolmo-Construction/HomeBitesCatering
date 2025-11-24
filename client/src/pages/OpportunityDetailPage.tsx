@@ -475,32 +475,42 @@ export default function OpportunityDetailPage() {
                 <ul className="space-y-2">
                   {isLoadingContacts ? (
                     <li className="text-sm text-muted-foreground">Loading...</li>
-                  ) : getEmailContacts().length > 0 ? (
-                    getEmailContacts().map((email, index) => (
-                      <li key={index} className="flex items-center justify-between">
-                        <span className="text-sm">{email}</span>
-                        <div className="flex items-center">
-                          {email === primaryEmail && (
-                            <Badge variant="outline" className="mr-2 text-xs">
-                              Primary
-                            </Badge>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const contactId = contactIdentifiers.find(ci => ci.type === "email" && ci.value === email)?.id;
-                              if (contactId) deleteContactMutation.mutate(contactId);
-                            }}
-                            disabled={deleteContactMutation.isPending}
-                          >
-                            <X className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      </li>
-                    ))
                   ) : (
-                    <li className="text-sm text-muted-foreground">No additional email addresses</li>
+                    <>
+                      {/* Show primary email from opportunity */}
+                      {primaryEmail && (
+                        <li className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{primaryEmail}</span>
+                          <Badge className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200">
+                            Primary
+                          </Badge>
+                        </li>
+                      )}
+                      
+                      {/* Show additional emails from contactIdentifiers */}
+                      {getEmailContacts()
+                        .filter(email => email !== primaryEmail)
+                        .map((email, index) => (
+                          <li key={index} className="flex items-center justify-between">
+                            <span className="text-sm">{email}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const contactId = contactIdentifiers.find(ci => ci.type === "email" && ci.value === email)?.id;
+                                if (contactId) deleteContactMutation.mutate(contactId);
+                              }}
+                              disabled={deleteContactMutation.isPending}
+                            >
+                              <X className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </li>
+                        ))}
+                      
+                      {!primaryEmail && getEmailContacts().length === 0 && (
+                        <li className="text-sm text-muted-foreground">No email addresses</li>
+                      )}
+                    </>
                   )}
                 </ul>
               </CardContent>
@@ -518,32 +528,42 @@ export default function OpportunityDetailPage() {
                 <ul className="space-y-2">
                   {isLoadingContacts ? (
                     <li className="text-sm text-muted-foreground">Loading...</li>
-                  ) : getPhoneContacts().length > 0 ? (
-                    getPhoneContacts().map((phone, index) => (
-                      <li key={index} className="flex items-center justify-between">
-                        <span className="text-sm">{phone}</span>
-                        <div className="flex items-center">
-                          {phone === primaryPhone && (
-                            <Badge variant="outline" className="mr-2 text-xs">
-                              Primary
-                            </Badge>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const contactId = contactIdentifiers.find(ci => ci.type === "phone" && ci.value === phone)?.id;
-                              if (contactId) deleteContactMutation.mutate(contactId);
-                            }}
-                            disabled={deleteContactMutation.isPending}
-                          >
-                            <X className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      </li>
-                    ))
                   ) : (
-                    <li className="text-sm text-muted-foreground">No additional phone numbers</li>
+                    <>
+                      {/* Show primary phone from opportunity */}
+                      {primaryPhone && (
+                        <li className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{primaryPhone}</span>
+                          <Badge className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200">
+                            Primary
+                          </Badge>
+                        </li>
+                      )}
+                      
+                      {/* Show additional phones from contactIdentifiers */}
+                      {getPhoneContacts()
+                        .filter(phone => phone !== primaryPhone)
+                        .map((phone, index) => (
+                          <li key={index} className="flex items-center justify-between">
+                            <span className="text-sm">{phone}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const contactId = contactIdentifiers.find(ci => ci.type === "phone" && ci.value === phone)?.id;
+                                if (contactId) deleteContactMutation.mutate(contactId);
+                              }}
+                              disabled={deleteContactMutation.isPending}
+                            >
+                              <X className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </li>
+                        ))}
+                      
+                      {!primaryPhone && getPhoneContacts().length === 0 && (
+                        <li className="text-sm text-muted-foreground">No phone numbers</li>
+                      )}
+                    </>
                   )}
                 </ul>
               </CardContent>
