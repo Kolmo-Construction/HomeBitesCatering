@@ -197,7 +197,7 @@ export default function MenuItemForm({ menuItem, isEditing = false, onCancel }: 
         upcharge: values.upcharge !== undefined && values.upcharge !== null ? 
           values.upcharge : null,
         additional_dietary_metadata: Object.values(additionalDietaryMetadata).some(v => v !== undefined) ? 
-          additionalDietaryMetadata : null
+          additionalDietaryMetadata : undefined
       };
       
       let savedMenuItem;
