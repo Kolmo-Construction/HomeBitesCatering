@@ -49,6 +49,7 @@ export default function OpportunityDetailPage() {
   // Track dialog states
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [isAddCommunicationOpen, setIsAddCommunicationOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   
   // Set up forms with Zod validation
   const contactForm = useForm<z.infer<typeof contactIdentifierSchema>>({
@@ -208,6 +209,37 @@ export default function OpportunityDetailPage() {
       });
     },
   });
+
+  // Delete opportunity mutation
+  const deleteOpportunityMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/opportunities/${opportunityId}`, {
+        method: "DELETE",
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to delete opportunity");
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Opportunity Deleted",
+        description: "The lead has been deleted successfully.",
+      });
+      // Navigate back to opportunities list after deletion
+      navigate("/opportunities");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
   
   // Submit handlers for forms
   const onSubmitContact = (data: z.infer<typeof contactIdentifierSchema>) => {
@@ -263,6 +295,40 @@ export default function OpportunityDetailPage() {
             <Pencil className="h-4 w-4 mr-2" />
             Edit Opportunity
           </Button>
+          <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+            <DialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Lead</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete this lead? This action cannot be undone. All associated communications, contacts, and data will be removed.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    deleteOpportunityMutation.mutate();
+                    setIsDeleteConfirmOpen(false);
+                  }}
+                  disabled={deleteOpportunityMutation.isPending}
+                >
+                  {deleteOpportunityMutation.isPending ? "Deleting..." : "Delete Lead"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="default" onClick={() => navigate("/opportunities")}>
             Back to Opportunities
           </Button>
