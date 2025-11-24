@@ -184,6 +184,59 @@ router.delete("/base-ingredients/:id", async (req, res) => {
   }
 });
 
+// Batch import base ingredients
+router.post("/base-ingredients/batch-import", async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    
+    if (!Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ message: "Invalid ingredients data - expected array" });
+    }
+    
+    const validIngredients = [];
+    const errors = [];
+    
+    // Validate each ingredient
+    for (let i = 0; i < ingredients.length; i++) {
+      const parsed = insertBaseIngredientSchema.safeParse(ingredients[i]);
+      
+      if (parsed.success) {
+        validIngredients.push({
+          ...parsed.data,
+          purchasePrice: parsed.data.purchasePrice.toString(),
+          purchaseQuantity: parsed.data.purchaseQuantity.toString(),
+          previousPurchasePrice: parsed.data.purchasePrice.toString(),
+        });
+      } else {
+        errors.push({
+          row: i + 1,
+          data: ingredients[i],
+          errors: parsed.error.format()
+        });
+      }
+    }
+    
+    // Insert valid ingredients
+    let insertedIngredients = [];
+    if (validIngredients.length > 0) {
+      insertedIngredients = await db
+        .insert(baseIngredients)
+        .values(validIngredients)
+        .returning();
+    }
+    
+    return res.status(200).json({
+      success: true,
+      imported: insertedIngredients.length,
+      failed: errors.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error("Error batch importing base ingredients:", error);
+    return res.status(500).json({ message: "Failed to batch import base ingredients" });
+  }
+});
+
 // ============================================
 // RECIPE INGREDIENTS CRUD
 // ============================================
