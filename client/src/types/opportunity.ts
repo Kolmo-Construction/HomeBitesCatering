@@ -34,7 +34,6 @@ export interface Communication {
   direction: 'incoming' | 'outgoing' | 'internal';
   opportunityId?: number | null; // Renamed from leadId
   clientId?: number | null;
-  content: string;
   subject?: string | null;
   date: string;
   timestamp?: string; // Actual timestamp of the communication
@@ -45,7 +44,7 @@ export interface Communication {
   bodySummary?: string | null;
   durationMinutes?: number | null; // For phone calls
   recordingUrl?: string | null; // For phone call recordings
-  metadata?: {
+  metaData?: {
     hasFullEmailInStorage?: boolean;
     hasTranscript?: boolean;
     hasRecording?: boolean;

@@ -34,7 +34,7 @@ const communicationSchema = z.object({
   type: z.enum(["email", "call", "sms", "note", "meeting"]),
   direction: z.enum(["incoming", "outgoing", "internal"]),
   subject: z.string().optional(),
-  content: z.string().min(1, "Content is required"),
+  bodyRaw: z.string().min(1, "Content is required"),
   date: z.date(),
 });
 
@@ -67,7 +67,7 @@ export default function OpportunityDetailPage() {
       type: "note",
       direction: "internal",
       subject: "",
-      content: "",
+      bodyRaw: "",
       date: new Date(),
     },
   });
@@ -151,7 +151,6 @@ export default function OpportunityDetailPage() {
           opportunityId,
           timestamp: date.toISOString(),
           userId: user?.id,
-          bodyRaw: data.content, // Map content to bodyRaw
         }),
       });
       
@@ -726,7 +725,7 @@ export default function OpportunityDetailPage() {
                     
                     <FormField
                       control={communicationForm.control}
-                      name="content"
+                      name="bodyRaw"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Content</FormLabel>
@@ -779,7 +778,7 @@ export default function OpportunityDetailPage() {
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((comm) => {
                     const isGmailSynced = comm.source === 'gmail_sync';
-                    const hasFullEmail = comm.metadata?.hasFullEmailInStorage;
+                    const hasFullEmail = comm.metaData?.hasFullEmailInStorage;
                     
                     return (
                       <div key={comm.id} className="relative">
@@ -857,7 +856,7 @@ export default function OpportunityDetailPage() {
                                 </Button>
                               )}
                               
-                              {comm.bodyRaw && comm.metadata?.hasTranscript && (
+                              {comm.bodyRaw && comm.metaData?.hasTranscript && (
                                 <Button
                                   variant="outline"
                                   size="sm"
