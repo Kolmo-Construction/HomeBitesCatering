@@ -458,21 +458,20 @@ export default function BaseIngredientsPage() {
               Manage your ingredient inventory and purchase prices
             </p>
           </div>
-          <div className="flex gap-2 items-center relative">
-            <div className="relative">
-              <Button
-                variant="outline"
-                onClick={() => setIsImportDialogOpen(true)}
-                data-testid="button-import-ingredients"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Import from Excel
-              </Button>
-              {/* Animated attention grabber */}
-              <div className="absolute -right-48 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-                <div className="text-red-600 font-bold text-lg animate-pulse">
-                  ← Mike USE ME !!!!
-                </div>
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(true)}
+              data-testid="button-import-ingredients"
+              className="relative"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Import from Excel
+            </Button>
+            {/* Animated attention grabber */}
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <div className="text-red-600 font-bold text-lg animate-pulse">
+                ← Mike USE ME !!!!
               </div>
             </div>
             <Button
