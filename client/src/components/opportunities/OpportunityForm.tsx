@@ -638,8 +638,12 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="website">Website</SelectItem>
+                          <SelectItem value="weddingwire">WeddingWire</SelectItem>
+                          <SelectItem value="google">Google</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="seattle_food_truck">Seattle Food Truck</SelectItem>
                           <SelectItem value="referral">Referral</SelectItem>
-                          <SelectItem value="social_media">Social Media</SelectItem>
                           <SelectItem value="search">Search Engine</SelectItem>
                           <SelectItem value="event">Event</SelectItem>
                           <SelectItem value="direct">Direct Contact</SelectItem>
