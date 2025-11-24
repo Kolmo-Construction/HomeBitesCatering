@@ -23,10 +23,6 @@ import {
   opportunityPriorityEnum,       // For priority filtering
   insertRawLeadSchema,           // For raw leads management
 } from "@shared/schema";
-// GmailSyncService has been retired in favor of specialized services
-import { LeadGenerationService } from './services/leadGenerationService';
-import { CommunicationSyncService } from './services/communicationSyncService';
-import { VendorLeadIntakeService } from './services/VendorLeadIntakeService';
 import { aiService } from './services/aiService';
 
 // Helper function to map lead quality to opportunity priority
@@ -217,18 +213,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     return res.status(500).json({ error: 'Internal Server Error' });
   });
-
-  // Initialize email sync service, but don't start it yet
-  // It's started manually by the admin via the /api/admin/email-sync/start endpoint
-  // Email services are now initialized in server/index.ts and made available via req.app.get('serviceName')
-  
-  // Initialize and make lead generation service available to routes
-  const leadGenService = new LeadGenerationService();
-  app.set('leadGenService', leadGenService);
-  
-  // Initialize and make communication sync service available to routes
-  const commSyncService = new CommunicationSyncService();
-  app.set('commSyncService', commSyncService);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -2295,173 +2279,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Failed to process email',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-    }
-  });
-
-  // ===== Email Services Routes =====
-  
-  // === Lead Generation Service Routes ===
-  
-  // Start lead generation service
-  app.post('/api/admin/lead-gen/start', isAdmin, async (req: Request, res: Response) => {
-    try {
-      const leadGenService = req.app.get('leadGenService');
-      
-      if (!leadGenService) {
-        return res.status(503).json({ message: 'Lead Generation Service not initialized' });
-      }
-      
-      // Start the service
-      leadGenService.start();
-      
-      res.status(200).json({
-        message: 'Lead Generation service started successfully',
-        status: { isRunning: leadGenService.isRunning() }
-      });
-    } catch (error) {
-      console.error('Error starting lead generation service:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // Manually process lead emails
-  app.post('/api/admin/lead-gen/process', isAdmin, async (req: Request, res: Response) => {
-    try {
-      const leadGenService = req.app.get('leadGenService');
-      
-      if (!leadGenService) {
-        return res.status(503).json({ message: 'Lead Generation Service not initialized' });
-      }
-      
-      if (!leadGenService.isRunning()) {
-        return res.status(400).json({ 
-          message: 'Lead Generation Service is not running. Start the service first.',
-          success: false
-        });
-      }
-      
-      // Process emails on demand
-      await leadGenService.processLeadEmailsOnDemand();
-      
-      res.status(200).json({
-        message: 'Lead emails processed successfully',
-        success: true,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error processing lead emails:', error);
-      res.status(500).json({ 
-        message: 'Failed to process lead emails',
-        error: error.message,
-        success: false
-      });
-    }
-  });
-  
-  // Stop lead generation service
-  app.post('/api/admin/lead-gen/stop', isAdmin, async (req: Request, res: Response) => {
-    try {
-      const leadGenService = req.app.get('leadGenService');
-      
-      if (!leadGenService) {
-        return res.status(503).json({ message: 'Lead Generation Service not initialized' });
-      }
-      
-      // Stop the service
-      leadGenService.stop();
-      
-      res.status(200).json({
-        message: 'Lead Generation service stopped successfully',
-        status: { isRunning: leadGenService.isRunning() }
-      });
-    } catch (error) {
-      console.error('Error stopping lead generation service:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // Manually trigger Gmail OAuth
-  app.post('/api/admin/vendor-lead/manual-sync', isAdmin, async (req: Request, res: Response) => {
-    try {
-      // Trigger manual Gmail API check
-      await vendorLeadIntakeService.ensureWatchIsActive();
-      
-      res.status(200).json({
-        message: 'Manual Gmail check executed successfully',
-        success: true
-      });
-    } catch (error) {
-      console.error('Error executing manual Gmail check:', error);
-      res.status(500).json({ 
-        message: 'Server error', 
-        error: error.message,
-        success: false
-      });
-    }
-  });
-  
-  // Get vendor lead intake service status
-  app.get('/api/admin/vendor-lead/status', isAdmin, async (req: Request, res: Response) => {
-    try {
-      // Get basic status for vendor lead intake
-      const status = {
-        targetEmail: vendorLeadIntakeService.targetEmail,
-        isConfigured: !!vendorLeadIntakeService.targetEmail && !!process.env.GOOGLE_CLOUD_PROJECT_ID
-      };
-      
-      res.status(200).json({ status });
-    } catch (error) {
-      console.error('Error getting vendor lead intake status:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // ===== Communication Sync Service Routes =====
-  
-  // Start communication sync service
-  app.post('/api/admin/comm-sync/start', isAdmin, async (req: Request, res: Response) => {
-    try {
-      const { interval } = req.body;
-      
-      // Start the service with an optional custom interval
-      const result = communicationSyncService.startSyncService(interval);
-      
-      res.status(200).json({
-        message: 'Communication sync service started successfully',
-        status: result
-      });
-    } catch (error) {
-      console.error('Error starting communication sync service:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // Stop communication sync service
-  app.post('/api/admin/comm-sync/stop', isAdmin, async (req: Request, res: Response) => {
-    try {
-      // Stop the service
-      const result = communicationSyncService.stopSyncService();
-      
-      res.status(200).json({
-        message: 'Communication sync service stopped successfully',
-        status: result
-      });
-    } catch (error) {
-      console.error('Error stopping communication sync service:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // Get communication sync status
-  app.get('/api/admin/comm-sync/status', isAdmin, async (req: Request, res: Response) => {
-    try {
-      // Get service status
-      const status = communicationSyncService.getSyncStatus();
-      
-      res.status(200).json(status);
-    } catch (error) {
-      console.error('Error getting communication sync status:', error);
-      res.status(500).json({ message: 'Server error' });
     }
   });
 
