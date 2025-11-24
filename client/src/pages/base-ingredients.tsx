@@ -3,11 +3,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, Upload, FileSpreadsheet } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type BaseIngredient, insertBaseIngredientSchema } from "@shared/schema";
 import { formatCurrency } from "@shared/unitConversion";
+import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,80 @@ const COMMON_UNITS = [
   { value: "case", label: "Case" },
 ];
 
+// Mapping for Excel import - normalize various input formats to canonical values
+const CATEGORY_MAPPING: Record<string, string> = {
+  "meat": "meat",
+  "meat & poultry": "meat",
+  "meat and poultry": "meat",
+  "poultry": "meat",
+  "seafood": "seafood",
+  "fish": "seafood",
+  "produce": "produce",
+  "vegetables": "produce",
+  "fruits": "produce",
+  "fruit": "produce",
+  "vegetable": "produce",
+  "dairy": "dairy",
+  "dairy & eggs": "dairy",
+  "dairy and eggs": "dairy",
+  "eggs": "dairy",
+  "dry goods": "dry_goods",
+  "dry_goods": "dry_goods",
+  "dry goods & grains": "dry_goods",
+  "grains": "dry_goods",
+  "spices": "spices",
+  "spices & seasonings": "spices",
+  "spices and seasonings": "spices",
+  "seasonings": "spices",
+  "beverages": "beverages",
+  "drinks": "beverages",
+  "oils": "oils",
+  "oils & fats": "oils",
+  "oils and fats": "oils",
+  "fats": "oils",
+  "other": "other",
+};
+
+const UNIT_MAPPING: Record<string, string> = {
+  "pound": "pound",
+  "lb": "pound",
+  "lbs": "pound",
+  "pound (lb)": "pound",
+  "pounds": "pound",
+  "ounce": "ounce",
+  "oz": "ounce",
+  "ounce (oz)": "ounce",
+  "ounces": "ounce",
+  "kilogram": "kilogram",
+  "kg": "kilogram",
+  "kilogram (kg)": "kilogram",
+  "kilograms": "kilogram",
+  "gram": "gram",
+  "g": "gram",
+  "gram (g)": "gram",
+  "grams": "gram",
+  "gallon": "gallon",
+  "gal": "gallon",
+  "gallon (gal)": "gallon",
+  "gallons": "gallon",
+  "quart": "quart",
+  "qt": "quart",
+  "quart (qt)": "quart",
+  "quarts": "quart",
+  "liter": "liter",
+  "l": "liter",
+  "liter (l)": "liter",
+  "liters": "liter",
+  "cup": "cup",
+  "cups": "cup",
+  "each": "each",
+  "ea": "each",
+  "dozen": "dozen",
+  "doz": "dozen",
+  "case": "case",
+  "cases": "case",
+};
+
 export default function BaseIngredientsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,6 +173,9 @@ export default function BaseIngredientsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<BaseIngredient | null>(null);
   const [deletingIngredient, setDeletingIngredient] = useState<BaseIngredient | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
 
   // Fetch ingredients
   const { data: ingredients = [], isLoading } = useQuery<BaseIngredient[]>({
@@ -166,6 +244,35 @@ export default function BaseIngredientsPage() {
     },
   });
 
+  // Batch import mutation
+  const batchImportMutation = useMutation({
+    mutationFn: async (ingredients: any[]) => {
+      const res = await apiRequest("POST", "/api/ingredients/base-ingredients/batch-import", { ingredients });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients/base-ingredients"] });
+      const message = data.failed > 0 
+        ? `Imported ${data.imported} ingredients. ${data.failed} failed validation.`
+        : `Successfully imported ${data.imported} ingredients`;
+      toast({ 
+        title: "Import Complete", 
+        description: message,
+        variant: data.failed > 0 ? "default" : "default"
+      });
+      setIsImportDialogOpen(false);
+      setImportFile(null);
+      setImportPreview([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import ingredients",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Form setup
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -201,6 +308,110 @@ export default function BaseIngredientsPage() {
     } else {
       createMutation.mutate(data);
     }
+  };
+
+  // Handle file selection
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      parseExcelFile(file);
+    }
+  };
+
+  // Parse Excel file
+  const parseExcelFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Helper function to normalize category
+        const normalizeCategory = (category: string): string => {
+          const normalized = category.toLowerCase().trim();
+          return CATEGORY_MAPPING[normalized] || "other";
+        };
+        
+        // Helper function to normalize unit
+        const normalizeUnit = (unit: string): string => {
+          const normalized = unit.toLowerCase().trim();
+          return UNIT_MAPPING[normalized] || "each";
+        };
+        
+        // Helper function to sanitize numeric values (remove currency symbols, commas)
+        const sanitizeNumber = (value: any): number => {
+          if (typeof value === 'number') return value;
+          if (typeof value !== 'string') return 0;
+          // Remove currency symbols, commas, and whitespace, keep only digits, decimal, and minus
+          const cleaned = value.replace(/[$,\s€£¥]/g, '').trim();
+          const parsed = parseFloat(cleaned);
+          return isNaN(parsed) ? 0 : parsed;
+        };
+        
+        // Map Excel columns to ingredient fields
+        const mappedData = jsonData.map((row: any) => ({
+          name: row.Name || row.name || "",
+          category: normalizeCategory(row.Category || row.category || "other"),
+          purchasePrice: sanitizeNumber(row['Purchase Price'] || row.purchasePrice || row.price || 0),
+          purchaseUnit: normalizeUnit(row['Purchase Unit'] || row.purchaseUnit || row.unit || ""),
+          purchaseQuantity: sanitizeNumber(row['Purchase Quantity'] || row.purchaseQuantity || row.quantity || 1),
+          supplier: row.Supplier || row.supplier || "",
+          notes: row.Notes || row.notes || "",
+        }));
+        
+        setImportPreview(mappedData);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to parse Excel file. Please check the file format.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Validate imported data
+  const validateImportRow = (row: any): boolean => {
+    return !!(
+      row.name &&
+      row.name.trim() &&
+      row.category &&
+      row.purchasePrice > 0 &&
+      row.purchaseUnit &&
+      row.purchaseQuantity > 0
+    );
+  };
+
+  // Handle import submission
+  const handleImport = () => {
+    if (importPreview.length === 0) return;
+    
+    // Filter valid rows
+    const validRows = importPreview.filter(validateImportRow);
+    const invalidCount = importPreview.length - validRows.length;
+    
+    if (validRows.length === 0) {
+      toast({
+        title: "No Valid Rows",
+        description: "All rows failed validation. Please check that all required fields (Name, Category, Price > 0, Unit, Quantity > 0) are filled.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (invalidCount > 0) {
+      toast({
+        title: "Warning",
+        description: `${invalidCount} invalid row(s) will be skipped. Importing ${validRows.length} valid ingredient(s).`,
+      });
+    }
+    
+    batchImportMutation.mutate(validRows);
   };
 
   // Calculate total price change
@@ -243,24 +454,34 @@ export default function BaseIngredientsPage() {
               Manage your ingredient inventory and purchase prices
             </p>
           </div>
-          <Button
-            onClick={() => {
-              form.reset({
-                name: "",
-                category: undefined,
-                purchasePrice: 0,
-                purchaseUnit: undefined,
-                purchaseQuantity: 1,
-                supplier: "",
-                notes: "",
-              });
-              setIsAddDialogOpen(true);
-            }}
-            data-testid="button-add-ingredient"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Ingredient
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsImportDialogOpen(true)}
+              data-testid="button-import-ingredients"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Import from Excel
+            </Button>
+            <Button
+              onClick={() => {
+                form.reset({
+                  name: "",
+                  category: undefined,
+                  purchasePrice: 0,
+                  purchaseUnit: undefined,
+                  purchaseQuantity: 1,
+                  supplier: "",
+                  notes: "",
+                });
+                setIsAddDialogOpen(true);
+              }}
+              data-testid="button-add-ingredient"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Ingredient
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -673,6 +894,112 @@ export default function BaseIngredientsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Ingredients from Excel</DialogTitle>
+            <DialogDescription>
+              Upload an Excel file (.xlsx, .xls) with ingredient data. Expected columns: Name, Category, Purchase Price, Purchase Unit, Purchase Quantity, Supplier, Notes
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="file-upload">Excel File</Label>
+              <Input
+                id="file-upload"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+                className="mt-2"
+                data-testid="input-file-upload"
+              />
+            </div>
+
+            {importPreview.length > 0 && (
+              <div className="border rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold">Preview ({importPreview.length} ingredients)</h3>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="bg-green-50">
+                      {importPreview.filter(validateImportRow).length} valid
+                    </Badge>
+                    {importPreview.filter(row => !validateImportRow(row)).length > 0 && (
+                      <Badge variant="destructive">
+                        {importPreview.filter(row => !validateImportRow(row)).length} invalid
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="overflow-x-auto max-h-96">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Supplier</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importPreview.slice(0, 10).map((item, idx) => {
+                        const isValid = validateImportRow(item);
+                        return (
+                          <TableRow key={idx} className={!isValid ? "bg-red-50" : ""}>
+                            <TableCell>
+                              {isValid ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">✓</Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs">✗</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className={!item.name?.trim() ? "text-red-500" : ""}>{item.name || "(missing)"}</TableCell>
+                            <TableCell className={!item.category ? "text-red-500" : ""}>{item.category || "(missing)"}</TableCell>
+                            <TableCell className={item.purchasePrice <= 0 ? "text-red-500" : ""}>${item.purchasePrice}</TableCell>
+                            <TableCell className={!item.purchaseUnit ? "text-red-500" : ""}>{item.purchaseUnit || "(missing)"}</TableCell>
+                            <TableCell className={item.purchaseQuantity <= 0 ? "text-red-500" : ""}>{item.purchaseQuantity}</TableCell>
+                            <TableCell>{item.supplier}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  {importPreview.length > 10 && (
+                    <p className="text-sm text-muted-foreground mt-2 text-center">
+                      Showing first 10 of {importPreview.length} ingredients
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsImportDialogOpen(false);
+                setImportFile(null);
+                setImportPreview([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={importPreview.length === 0 || batchImportMutation.isPending}
+              data-testid="button-confirm-import"
+            >
+              {batchImportMutation.isPending ? "Importing..." : `Import ${importPreview.length} Ingredients`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
