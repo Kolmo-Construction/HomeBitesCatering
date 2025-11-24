@@ -496,7 +496,7 @@ export default function BaseIngredientsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Total Ingredients</CardDescription>
@@ -510,26 +510,6 @@ export default function BaseIngredientsPage() {
               <CardDescription>Categories</CardDescription>
               <CardTitle className="text-3xl" data-testid="text-total-categories">
                 {new Set(ingredients.map((i) => i.category)).size}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Price Change</CardDescription>
-              <CardTitle className="text-3xl flex items-center gap-2" data-testid="text-price-change">
-                {totalPriceChange === 0 ? (
-                  <span className="text-muted-foreground">$0.00</span>
-                ) : totalPriceChange > 0 ? (
-                  <>
-                    <TrendingUp className="h-6 w-6 text-red-500" />
-                    <span className="text-red-500">+{formatCurrency(totalPriceChange)}</span>
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown className="h-6 w-6 text-green-500" />
-                    <span className="text-green-500">{formatCurrency(totalPriceChange)}</span>
-                  </>
-                )}
               </CardTitle>
             </CardHeader>
           </Card>
