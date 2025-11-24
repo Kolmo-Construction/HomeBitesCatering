@@ -141,14 +141,16 @@ export default function OpportunityDetailPage() {
   // Add communication mutation
   const addCommunicationMutation = useMutation({
     mutationFn: async (data: z.infer<typeof communicationSchema>) => {
+      const { date, ...rest } = data;
       const res = await fetch("/api/communications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...data,
+          ...rest,
           opportunityId,
-          date: data.date.toISOString(),
-          createdBy: user?.id,
+          timestamp: date.toISOString(),
+          userId: user?.id,
+          bodyRaw: data.content, // Map content to bodyRaw
         }),
       });
       
@@ -736,9 +738,9 @@ export default function OpportunityDetailPage() {
                               )}
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {comm.date ? (() => {
+                              {comm.timestamp ? (() => {
                                 try {
-                                  const date = new Date(comm.date);
+                                  const date = new Date(comm.timestamp);
                                   return isNaN(date.getTime()) ? "Invalid date" : format(date, "PPP p");
                                 } catch (e) {
                                   return "Invalid date format";
@@ -757,7 +759,7 @@ export default function OpportunityDetailPage() {
                             </p>
                           )}
                           
-                          <p className="text-sm whitespace-pre-line">{comm.content}</p>
+                          <p className="text-sm whitespace-pre-line">{comm.bodyRaw || comm.bodySummary || ''}</p>
                           
                           {hasFullEmail && (
                             <Button
