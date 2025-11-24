@@ -913,13 +913,60 @@ export default function BaseIngredientsPage() {
           <DialogHeader>
             <DialogTitle>Import Ingredients from Excel</DialogTitle>
             <DialogDescription>
-              Upload an Excel file (.xlsx, .xls) with ingredient data. Expected columns: Name, Category, Purchase Price, Purchase Unit, Purchase Quantity, Supplier, Notes
+              Upload an Excel file (.xlsx, .xls) with ingredient data to quickly import multiple ingredients at once.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Documentation Section */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              <h4 className="font-semibold text-sm text-blue-900 flex items-center gap-2">
+                📋 How to Use the Excel Importer
+              </h4>
+              
+              <div className="text-sm space-y-2 text-blue-800">
+                <div>
+                  <strong>Required Columns:</strong>
+                  <ul className="list-disc list-inside ml-2 mt-1 space-y-1">
+                    <li><strong>Name</strong> - Ingredient name (e.g., "Chicken Breast")</li>
+                    <li><strong>Category</strong> - One of: Meat & Poultry, Seafood, Produce, Dairy & Eggs, Grains & Pasta, Baking & Dry Goods, Condiments & Sauces, Beverages, Frozen, Canned, Other</li>
+                    <li><strong>Purchase Price</strong> - Price per unit (e.g., "$5.99" or "5.99")</li>
+                    <li><strong>Purchase Unit</strong> - Unit of measure (e.g., "pound", "lb", "ounce", "oz", "kilogram", "liter", "each")</li>
+                    <li><strong>Purchase Quantity</strong> - Quantity per unit (e.g., "1", "2.5")</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <strong>Optional Columns:</strong>
+                  <ul className="list-disc list-inside ml-2 mt-1">
+                    <li><strong>Supplier</strong> - Supplier name</li>
+                    <li><strong>Notes</strong> - Additional notes</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white rounded p-2 border border-blue-200">
+                  <strong>✨ Formatting Tips:</strong>
+                  <ul className="list-disc list-inside ml-2 mt-1 space-y-1">
+                    <li>Currency symbols ($, €, £) are automatically removed from prices</li>
+                    <li>Commas in numbers (e.g., "1,299.00") are handled automatically</li>
+                    <li>Units accept various formats: "lb", "lbs", "Pound (lb)" all work</li>
+                    <li>Categories can use full labels like "Meat & Poultry"</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white rounded p-2 border border-blue-200">
+                  <strong>⚠️ Validation:</strong>
+                  <ul className="list-disc list-inside ml-2 mt-1">
+                    <li>Invalid rows will be highlighted in <span className="text-red-600 font-semibold">red</span> in the preview</li>
+                    <li>Missing or invalid fields show as <span className="text-red-600">"(missing)"</span></li>
+                    <li>Only valid rows will be imported (invalid rows are automatically skipped)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             <div>
-              <Label htmlFor="file-upload">Excel File</Label>
+              <Label htmlFor="file-upload">Select Excel File</Label>
               <Input
                 id="file-upload"
                 type="file"
