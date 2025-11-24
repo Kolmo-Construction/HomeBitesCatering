@@ -331,34 +331,36 @@ export default function BaseIngredientsPage() {
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
         // Helper function to normalize category
-        const normalizeCategory = (category: string): string => {
+        const normalizeCategory = (category: string): string | undefined => {
+          if (!category || !category.trim()) return undefined;
           const normalized = category.toLowerCase().trim();
-          return CATEGORY_MAPPING[normalized] || "other";
+          return CATEGORY_MAPPING[normalized] || undefined;
         };
         
         // Helper function to normalize unit
-        const normalizeUnit = (unit: string): string => {
+        const normalizeUnit = (unit: string): string | undefined => {
+          if (!unit || !unit.trim()) return undefined;
           const normalized = unit.toLowerCase().trim();
-          return UNIT_MAPPING[normalized] || "each";
+          return UNIT_MAPPING[normalized] || undefined;
         };
         
         // Helper function to sanitize numeric values (remove currency symbols, commas)
-        const sanitizeNumber = (value: any): number => {
-          if (typeof value === 'number') return value;
-          if (typeof value !== 'string') return 0;
+        const sanitizeNumber = (value: any): number | undefined => {
+          if (typeof value === 'number' && value > 0) return value;
+          if (typeof value !== 'string' || !value.trim()) return undefined;
           // Remove currency symbols, commas, and whitespace, keep only digits, decimal, and minus
           const cleaned = value.replace(/[$,\s€£¥]/g, '').trim();
           const parsed = parseFloat(cleaned);
-          return isNaN(parsed) ? 0 : parsed;
+          return (isNaN(parsed) || parsed <= 0) ? undefined : parsed;
         };
         
         // Map Excel columns to ingredient fields
         const mappedData = jsonData.map((row: any) => ({
           name: row.Name || row.name || "",
-          category: normalizeCategory(row.Category || row.category || "other"),
-          purchasePrice: sanitizeNumber(row['Purchase Price'] || row.purchasePrice || row.price || 0),
+          category: normalizeCategory(row.Category || row.category || ""),
+          purchasePrice: sanitizeNumber(row['Purchase Price'] || row.purchasePrice || row.price),
           purchaseUnit: normalizeUnit(row['Purchase Unit'] || row.purchaseUnit || row.unit || ""),
-          purchaseQuantity: sanitizeNumber(row['Purchase Quantity'] || row.purchaseQuantity || row.quantity || 1),
+          purchaseQuantity: sanitizeNumber(row['Purchase Quantity'] || row.purchaseQuantity || row.quantity),
           supplier: row.Supplier || row.supplier || "",
           notes: row.Notes || row.notes || "",
         }));
@@ -377,12 +379,14 @@ export default function BaseIngredientsPage() {
 
   // Validate imported data
   const validateImportRow = (row: any): boolean => {
-    return !!(
-      row.name &&
-      row.name.trim() &&
-      row.category &&
+    return (
+      !!row.name &&
+      !!row.name.trim() &&
+      !!row.category &&
+      typeof row.purchasePrice === 'number' &&
       row.purchasePrice > 0 &&
-      row.purchaseUnit &&
+      !!row.purchaseUnit &&
+      typeof row.purchaseQuantity === 'number' &&
       row.purchaseQuantity > 0
     );
   };
@@ -960,10 +964,14 @@ export default function BaseIngredientsPage() {
                             </TableCell>
                             <TableCell className={!item.name?.trim() ? "text-red-500" : ""}>{item.name || "(missing)"}</TableCell>
                             <TableCell className={!item.category ? "text-red-500" : ""}>{item.category || "(missing)"}</TableCell>
-                            <TableCell className={item.purchasePrice <= 0 ? "text-red-500" : ""}>${item.purchasePrice}</TableCell>
+                            <TableCell className={typeof item.purchasePrice !== 'number' || item.purchasePrice <= 0 ? "text-red-500" : ""}>
+                              {typeof item.purchasePrice === 'number' && item.purchasePrice > 0 ? `$${item.purchasePrice.toFixed(2)}` : "(missing)"}
+                            </TableCell>
                             <TableCell className={!item.purchaseUnit ? "text-red-500" : ""}>{item.purchaseUnit || "(missing)"}</TableCell>
-                            <TableCell className={item.purchaseQuantity <= 0 ? "text-red-500" : ""}>{item.purchaseQuantity}</TableCell>
-                            <TableCell>{item.supplier}</TableCell>
+                            <TableCell className={typeof item.purchaseQuantity !== 'number' || item.purchaseQuantity <= 0 ? "text-red-500" : ""}>
+                              {typeof item.purchaseQuantity === 'number' && item.purchaseQuantity > 0 ? item.purchaseQuantity : "(missing)"}
+                            </TableCell>
+                            <TableCell>{item.supplier || "-"}</TableCell>
                           </TableRow>
                         );
                       })}
