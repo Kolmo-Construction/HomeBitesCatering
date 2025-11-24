@@ -572,19 +572,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]> {
-    return await db
+    const comms = await db
       .select()
       .from(communications)
       .where(eq(communications.opportunityId, opportunityId))
       .orderBy(desc(communications.timestamp));
+    
+    // Enhance metadata to include hasFullEmailInStorage flag for frontend
+    return comms.map(comm => ({
+      ...comm,
+      metadata: {
+        ...(comm.metaData as any || {}),
+        hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)
+      }
+    }));
   }
 
   async getCommunicationsForClient(clientId: number): Promise<Communication[]> {
-    return await db
+    const comms = await db
       .select()
       .from(communications)
       .where(eq(communications.clientId, clientId))
       .orderBy(desc(communications.timestamp));
+    
+    // Enhance metadata to include hasFullEmailInStorage flag for frontend
+    return comms.map(comm => ({
+      ...comm,
+      metadata: {
+        ...(comm.metaData as any || {}),
+        hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)
+      }
+    }));
   }
 
   async createOpportunityEmailThread(data: InsertOpportunityEmailThread): Promise<OpportunityEmailThread> {

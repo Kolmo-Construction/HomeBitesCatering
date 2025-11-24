@@ -243,7 +243,7 @@ export class VendorLeadIntakeService {
         }
 
         // 2. Upload email to GCP Storage (if configured)
-        if (isGCPConfigured() && (opportunityId || rawLeadId)) {
+        if ((opportunityId || rawLeadId) && isGCPConfigured()) {
             try {
                 const emailData: EmailData = {
                     subject: parsedMail.subject || '(No Subject)',
@@ -270,6 +270,8 @@ export class VendorLeadIntakeService {
                 console.error('Failed to upload email to GCP Storage:', error);
                 // Continue without GCP storage - don't fail the entire process
             }
+        } else if ((opportunityId || rawLeadId) && !isGCPConfigured()) {
+            console.log('GCP Storage not configured. Skipping email upload to cloud storage.');
         }
 
         return { gcpStoragePath, threadRecord };

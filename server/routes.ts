@@ -1538,18 +1538,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Communication not found' });
       }
       
-      if (!communication.gcpStoragePath) {
-        return res.status(404).json({ message: 'No full email content available for this communication' });
+      // Check if this is a Gmail email with storage
+      if (!communication.gmailMessageId || !communication.gcpStoragePath) {
+        return res.status(404).json({ 
+          message: 'No full email content available. This communication is not a Gmail-synced email or does not have stored content.' 
+        });
       }
       
-      // Dynamically import GCP storage service
-      const { getEmailFromGCP } = await import('./services/gcpStorageService');
+      // Dynamically import GCP storage service and check if configured
+      const { getEmailFromGCP, isGCPConfigured } = await import('./services/gcpStorageService');
+      
+      if (!isGCPConfigured()) {
+        return res.status(503).json({ 
+          message: 'GCP Storage is not configured. Cannot retrieve full email content.' 
+        });
+      }
+      
       const fullEmailData = await getEmailFromGCP(communication.gcpStoragePath);
       
       res.status(200).json(fullEmailData);
     } catch (error) {
       console.error('Error getting full email content:', error);
-      res.status(500).json({ message: 'Failed to fetch full email content', error: error instanceof Error ? error.message : 'Unknown error' });
+      res.status(500).json({ 
+        message: 'Failed to fetch full email content', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   });
   

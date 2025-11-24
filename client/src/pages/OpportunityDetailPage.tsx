@@ -709,42 +709,84 @@ export default function OpportunityDetailPage() {
               <div className="relative border-l-2 border-muted-foreground/20 pl-6 space-y-6 ml-2">
                 {communications
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((comm) => (
-                    <div key={comm.id} className="relative">
-                      <div className="absolute -left-8 mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
-                      <div className="bg-card rounded-lg p-4 shadow-sm border">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            {comm.type === "email" && <Mail className="h-4 w-4 mr-1 text-primary" />}
-                            {comm.type === "call" && <Phone className="h-4 w-4 mr-1 text-green-500" />}
-                            {comm.type === "sms" && <MessageSquare className="h-4 w-4 mr-1 text-blue-500" />}
-                            {comm.type === "meeting" && <Calendar className="h-4 w-4 mr-1 text-purple-500" />}
-                            
-                            <span className="font-medium text-sm capitalize mr-2">{comm.type}</span>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {comm.direction}
-                            </Badge>
+                  .map((comm) => {
+                    const isGmailSynced = comm.source === 'gmail_sync';
+                    const hasFullEmail = comm.metadata?.hasFullEmailInStorage;
+                    
+                    return (
+                      <div key={comm.id} className="relative">
+                        <div className={`absolute -left-8 mt-1.5 h-4 w-4 rounded-full ${isGmailSynced ? 'bg-blue-500' : 'bg-primary'}`}></div>
+                        <div className="bg-card rounded-lg p-4 shadow-sm border">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {comm.type === "email" && <Mail className="h-4 w-4 text-primary" />}
+                              {comm.type === "call" && <Phone className="h-4 w-4 text-green-500" />}
+                              {comm.type === "sms" && <MessageSquare className="h-4 w-4 text-blue-500" />}
+                              {comm.type === "meeting" && <Calendar className="h-4 w-4 text-purple-500" />}
+                              
+                              <span className="font-medium text-sm capitalize">{comm.type}</span>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {comm.direction}
+                              </Badge>
+                              
+                              {isGmailSynced && (
+                                <Badge className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200">
+                                  Gmail
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {comm.date ? (() => {
+                                try {
+                                  const date = new Date(comm.date);
+                                  return isNaN(date.getTime()) ? "Invalid date" : format(date, "PPP p");
+                                } catch (e) {
+                                  return "Invalid date format";
+                                }
+                              })() : "Date unavailable"}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {comm.date ? (() => {
-                              try {
-                                const date = new Date(comm.date);
-                                return isNaN(date.getTime()) ? "Invalid date" : format(date, "PPP p");
-                              } catch (e) {
-                                return "Invalid date format";
-                              }
-                            })() : "Date unavailable"}
-                          </span>
+                          
+                          {comm.subject && (
+                            <h3 className="text-sm font-medium mb-1">{comm.subject}</h3>
+                          )}
+                          
+                          {comm.fromAddress && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              From: {comm.fromAddress}
+                            </p>
+                          )}
+                          
+                          <p className="text-sm whitespace-pre-line">{comm.content}</p>
+                          
+                          {hasFullEmail && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="mt-2 p-0 h-auto text-xs text-blue-600 hover:text-blue-700"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch(`/api/communications/${comm.id}/full-email`);
+                                  if (response.ok) {
+                                    const emailData = await response.json();
+                                    console.log('Full email data:', emailData);
+                                    // TODO: Open modal or expand to show full email
+                                    alert('Full email content fetched! Check console for details.');
+                                  } else {
+                                    console.error('Failed to fetch full email');
+                                  }
+                                } catch (error) {
+                                  console.error('Error fetching full email:', error);
+                                }
+                              }}
+                            >
+                              View Full Email →
+                            </Button>
+                          )}
                         </div>
-                        
-                        {comm.subject && (
-                          <h3 className="text-sm font-medium mb-1">{comm.subject}</h3>
-                        )}
-                        
-                        <p className="text-sm whitespace-pre-line">{comm.content}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             ) : (
               <div className="text-center py-8">
