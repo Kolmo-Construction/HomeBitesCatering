@@ -6,6 +6,8 @@ This is a comprehensive catering management and customer inquiry system designed
 
 The platform supports complex menu configurations with dietary preferences, pricing tiers, and package-based selections. It includes a multi-step inquiry form that adapts based on customer choices, comprehensive menu management with nutritional metadata, and a flexible form builder for creating custom questionnaires.
 
+**Email Intake:** The system receives customer inquiry emails via Google Apps Script (GAS), which sends email data to `/api/gas-email-intake`. Emails are automatically converted into raw leads with AI-powered analysis and communication tracking.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -54,6 +56,8 @@ RESTful endpoints organized by feature domain:
 - `/api/form-builder/*` - Dynamic questionnaire builder
 - `/api/opportunities/*` - Customer inquiry/lead management
 - `/api/questionnaires/*` - Public-facing questionnaire retrieval
+- `/api/gas-email-intake` - Google Apps Script email webhook for incoming customer emails
+- `/api/raw-leads/*` - Raw lead management (pre-opportunity conversion)
 
 **Data Layer (Storage Pattern):**
 The application uses a storage abstraction layer (`server/storage.ts`) that wraps Drizzle ORM operations. This provides a consistent interface for database operations and centralizes complex query logic. The storage layer handles relationships between entities (opportunities, clients, contact identifiers) and manages JSONB fields for flexible data structures.
@@ -126,4 +130,11 @@ Sessions persist across requests via HTTP-only cookies. The `/api/auth/me` endpo
 - drizzle-kit - Database migration management
 
 **Key Third-Party Integrations:**
-The system is designed to integrate with external services through environment configuration. The presence of menu import scripts and form builder suggests potential future integrations with external menu databases or third-party catering platforms.
+The system is designed to integrate with external services through environment configuration:
+- **Google Apps Script (GAS):** Primary email intake method. External GAS monitors Gmail inbox and forwards cleaned email data to `/api/gas-email-intake` for processing.
+- **Google Cloud Storage (GCP):** Stores full email bodies and attachments for archival and retrieval via `gcpStorageService.ts`.
+- **Anthropic Claude AI:** Powers AI-driven lead analysis, extracting event details, sentiment, quality scores, and next-step recommendations from incoming emails.
+
+**Important Notes:**
+- Gmail sync services were removed from the codebase (November 2024) to simplify the architecture. Email intake now exclusively uses Google Apps Script webhook.
+- All email communications are tracked in the `communications` table with links to opportunities/raw leads via `gmailThreadId`.
