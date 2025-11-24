@@ -363,6 +363,9 @@ export const communications = pgTable("communications", {
   timestamp: timestamp("timestamp").notNull().defaultNow(), // When the actual communication happened
   source: text("source"), // e.g., 'gmail_sync', 'twilio_sync', 'manual_entry', 'system_generated'
   externalId: text("external_id"), // Unique ID from the external system (e.g., email Message-ID, call SID)
+  gmailThreadId: text("gmail_thread_id"), // Gmail thread ID for grouping conversation
+  gmailMessageId: text("gmail_message_id"), // Gmail message ID (unique per email)
+  gcpStoragePath: text("gcp_storage_path"), // Reference to full email content in GCP Storage
   subject: text("subject"), // For emails or meeting titles
   fromAddress: text("from_address"), // For emails
   toAddress: text("to_address"), // For emails (could be an array, consider how to store if multiple)
@@ -379,6 +382,26 @@ export const insertCommunicationSchema = createInsertSchema(communications, {
   timestamp: z.coerce.date(), // Ensure timestamp is handled as Date
   metaData: z.any().optional(), // For JSONB
 }).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// --- Opportunity Email Threads Table ---
+// Maps Gmail threads to opportunities for email timeline tracking
+export const opportunityEmailThreads = pgTable("opportunity_email_threads", {
+  id: serial("id").primaryKey(),
+  gmailThreadId: text("gmail_thread_id").notNull().unique(), // Gmail thread ID (unique)
+  opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'cascade' }), // Link to opportunity (nullable for pre-conversion)
+  rawLeadId: integer("raw_lead_id").references(() => rawLeads.id, { onDelete: 'set null' }), // Link to raw lead (for pre-conversion tracking)
+  primaryEmailAddress: text("primary_email_address").notNull(), // Primary email address in this thread
+  participantEmails: text("participant_emails").array(), // Array of all participant emails for validation
+  isActive: boolean("is_active").default(true).notNull(), // Flag to handle thread hijacking
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertOpportunityEmailThreadSchema = createInsertSchema(opportunityEmailThreads).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -412,6 +435,9 @@ export type InsertContactIdentifier = z.infer<typeof insertContactIdentifierSche
 
 export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
+
+export type OpportunityEmailThread = typeof opportunityEmailThreads.$inferSelect;
+export type InsertOpportunityEmailThread = z.infer<typeof insertOpportunityEmailThreadSchema>;
 
 // Base Ingredients - what you buy in bulk
 export const baseIngredients = pgTable("base_ingredients", {

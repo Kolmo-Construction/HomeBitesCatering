@@ -12,11 +12,13 @@ import {
     budgetIndicationEnum,
     sentimentEnum,
     InsertGmailSyncState,
-    InsertCommunication
+    InsertCommunication,
+    InsertOpportunityEmailThread
 } from '@shared/schema';
 import { db } from '../db';
 import { gmailSyncState as gmailSyncStateTable } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { uploadEmailToGCP, EmailData, isGCPConfigured } from './gcpStorageService';
 
 const GMAIL_WATCH_LABEL_ID = 'INBOX'; // Or a more specific label if vendors use one consistently
 const VENDOR_LEAD_PROCESSED_LABEL_NAME = 'PROCESSED_BY_VENDOR_INTAKE'; // New label for this service
@@ -197,6 +199,82 @@ export class VendorLeadIntakeService {
         }
     }
 
+    private async handleEmailThreadAndStorage(
+        gmailThreadId: string,
+        gmailMessageId: string,
+        opportunityId: number | undefined,
+        rawLeadId: number | undefined,
+        parsedMail: ParsedMail,
+        emailDate: Date,
+        fromEmail: string
+    ): Promise<{ gcpStoragePath: string | null; threadRecord: any | null }> {
+        let gcpStoragePath: string | null = null;
+        let threadRecord: any = null;
+
+        // 1. Handle Gmail thread tracking
+        const existingThread = await storage.getOpportunityEmailThread(gmailThreadId);
+        
+        if (!existingThread && (opportunityId || rawLeadId)) {
+            // Create new thread mapping
+            const participantEmails = [
+                fromEmail,
+                this.targetEmail
+            ];
+
+            const threadData: InsertOpportunityEmailThread = {
+                gmailThreadId: gmailThreadId,
+                opportunityId: opportunityId || null,
+                rawLeadId: rawLeadId || null,
+                primaryEmailAddress: fromEmail,
+                participantEmails: participantEmails,
+                isActive: true
+            };
+
+            threadRecord = await storage.createOpportunityEmailThread(threadData);
+            console.log(`Created new email thread mapping: ${gmailThreadId} -> ${opportunityId ? `Opportunity ${opportunityId}` : `Raw Lead ${rawLeadId}`}`);
+        } else if (existingThread) {
+            threadRecord = existingThread;
+            
+            // If the thread was linked to a raw lead but now has an opportunity, update it
+            if (opportunityId && !existingThread.opportunityId) {
+                await storage.updateOpportunityEmailThread(gmailThreadId, { opportunityId });
+                console.log(`Updated email thread ${gmailThreadId} to link to Opportunity ${opportunityId}`);
+            }
+        }
+
+        // 2. Upload email to GCP Storage (if configured)
+        if (isGCPConfigured() && (opportunityId || rawLeadId)) {
+            try {
+                const emailData: EmailData = {
+                    subject: parsedMail.subject || '(No Subject)',
+                    from: fromEmail,
+                    to: this.targetEmail,
+                    receivedDate: emailDate.toISOString(),
+                    htmlBody: parsedMail.html || undefined,
+                    plainTextBody: parsedMail.text || undefined,
+                    headers: Object.fromEntries(parsedMail.headers),
+                    gmailThreadId: gmailThreadId,
+                    gmailMessageId: gmailMessageId,
+                    attachments: parsedMail.attachments?.map(att => ({
+                        filename: att.filename || 'unnamed',
+                        mimeType: att.contentType,
+                        size: att.size,
+                        contentId: att.cid
+                    }))
+                };
+
+                const targetId = opportunityId || rawLeadId || 0;
+                gcpStoragePath = await uploadEmailToGCP(targetId, gmailMessageId, emailData);
+                console.log(`Uploaded email to GCP Storage: ${gcpStoragePath}`);
+            } catch (error) {
+                console.error('Failed to upload email to GCP Storage:', error);
+                // Continue without GCP storage - don't fail the entire process
+            }
+        }
+
+        return { gcpStoragePath, threadRecord };
+    }
+
     private async processSingleVendorEmail(messageGmailId: string, internalDateMs: number): Promise<void> {
         const gmail = await this.initializeGmailClient();
         console.log(`VendorLeadIntakeService: Fetching full email for Gmail ID: ${messageGmailId}`);
@@ -207,6 +285,9 @@ export class VendorLeadIntakeService {
                 console.warn(`VendorLeadIntakeService: No raw data for message ${messageGmailId}.`);
                 return;
             }
+
+            // Extract Gmail thread ID for conversation tracking
+            const gmailThreadId = msg.data.threadId || `thread-${messageGmailId}`;
 
             const rawEmail = Buffer.from(msg.data.raw, 'base64').toString('utf-8');
             const parsedMail = await simpleParser(rawEmail);
@@ -358,22 +439,38 @@ export class VendorLeadIntakeService {
                         labelApplied: false
                     });
 
+                    // Handle Gmail thread tracking and GCP storage upload
+                    const { gcpStoragePath, threadRecord } = await this.handleEmailThreadAndStorage(
+                        gmailThreadId,
+                        messageGmailId,
+                        undefined, // No opportunity ID yet (this is a raw lead)
+                        newRawLead.id,
+                        parsedMail,
+                        emailDate,
+                        fromEmail
+                    );
+
                     // Log this initial email as a communication
                     const communicationData: InsertCommunication = {
                         rawLeadId: newRawLead.id,
                         type: 'email',
                         direction: 'incoming',
                         timestamp: emailDate,
-                        source: 'vendor_lead_intake',
+                        source: 'gmail_sync',
                         externalId: uniqueMessageId,
+                        gmailThreadId: gmailThreadId,
+                        gmailMessageId: messageGmailId,
+                        gcpStoragePath: gcpStoragePath || undefined,
                         subject: subject,
                         fromAddress: fromEmail,
                         toAddress: this.targetEmail,
-                        bodyRaw: bodyText,
+                        bodyRaw: bodyText.substring(0, 5000), // Store limited preview in DB
                         bodySummary: extractedData.extractedMessageSummary || subject.substring(0, 255),
                         metaData: { 
-                            gmailId: messageGmailId, 
-                            aiSentiment: extractedData.aiSentiment 
+                            gmailId: messageGmailId,
+                            gmailThreadId: gmailThreadId,
+                            aiSentiment: extractedData.aiSentiment,
+                            hasFullEmailInStorage: !!gcpStoragePath
                         }
                     };
                     await storage.createCommunication(communicationData);

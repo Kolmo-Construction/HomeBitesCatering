@@ -29,6 +29,13 @@
       "when": 1763841578035,
       "tag": "0003_sudden_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1763970716807,
+      "tag": "0004_cool_lockjaw",
+      "breakpoints": true
     }
   ]
 }

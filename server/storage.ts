@@ -3,6 +3,7 @@ import { Pool } from '@neondatabase/serverless';
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, gmailSyncState, processedEmails,
+  opportunityEmailThreads,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
@@ -14,7 +15,8 @@ import {
   type Communication, type InsertCommunication,
   type RawLead, type InsertRawLead,
   type GmailSyncState, type InsertGmailSyncState,
-  type ProcessedEmail, type InsertProcessedEmail
+  type ProcessedEmail, type InsertProcessedEmail,
+  type OpportunityEmailThread, type InsertOpportunityEmailThread
 } from "@shared/schema";
 import {
   formSubmissions, formSubmissionAnswers,
@@ -103,6 +105,13 @@ export interface IStorage {
   getCommunication(id: number): Promise<Communication | undefined>;
   getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
+  
+  // Opportunity Email Threads
+  createOpportunityEmailThread(data: InsertOpportunityEmailThread): Promise<OpportunityEmailThread>;
+  getOpportunityEmailThread(gmailThreadId: string): Promise<OpportunityEmailThread | undefined>;
+  getOpportunityEmailThreadsByOpportunity(opportunityId: number): Promise<OpportunityEmailThread[]>;
+  updateOpportunityEmailThread(gmailThreadId: string, data: Partial<OpportunityEmailThread>): Promise<OpportunityEmailThread | undefined>;
+  deleteOpportunityEmailThread(gmailThreadId: string): Promise<boolean>;
 
   // Raw Leads
   createRawLead(lead: InsertRawLead): Promise<RawLead>;
@@ -576,6 +585,46 @@ export class DatabaseStorage implements IStorage {
       .from(communications)
       .where(eq(communications.clientId, clientId))
       .orderBy(desc(communications.timestamp));
+  }
+
+  async createOpportunityEmailThread(data: InsertOpportunityEmailThread): Promise<OpportunityEmailThread> {
+    const [thread] = await db
+      .insert(opportunityEmailThreads)
+      .values(data)
+      .returning();
+    return thread;
+  }
+
+  async getOpportunityEmailThread(gmailThreadId: string): Promise<OpportunityEmailThread | undefined> {
+    const [thread] = await db
+      .select()
+      .from(opportunityEmailThreads)
+      .where(eq(opportunityEmailThreads.gmailThreadId, gmailThreadId));
+    return thread;
+  }
+
+  async getOpportunityEmailThreadsByOpportunity(opportunityId: number): Promise<OpportunityEmailThread[]> {
+    return await db
+      .select()
+      .from(opportunityEmailThreads)
+      .where(eq(opportunityEmailThreads.opportunityId, opportunityId))
+      .orderBy(desc(opportunityEmailThreads.createdAt));
+  }
+
+  async updateOpportunityEmailThread(gmailThreadId: string, data: Partial<OpportunityEmailThread>): Promise<OpportunityEmailThread | undefined> {
+    const [updated] = await db
+      .update(opportunityEmailThreads)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(opportunityEmailThreads.gmailThreadId, gmailThreadId))
+      .returning();
+    return updated;
+  }
+
+  async deleteOpportunityEmailThread(gmailThreadId: string): Promise<boolean> {
+    const result = await db
+      .delete(opportunityEmailThreads)
+      .where(eq(opportunityEmailThreads.gmailThreadId, gmailThreadId));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Raw Leads methods

@@ -1523,6 +1523,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get full email content from GCP Storage
+  app.get('/api/communications/:id/full-email', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const communicationId = parseInt(req.params.id);
+      
+      if (isNaN(communicationId)) {
+        return res.status(400).json({ message: 'Invalid communication ID' });
+      }
+      
+      const communication = await storage.getCommunication(communicationId);
+      
+      if (!communication) {
+        return res.status(404).json({ message: 'Communication not found' });
+      }
+      
+      if (!communication.gcpStoragePath) {
+        return res.status(404).json({ message: 'No full email content available for this communication' });
+      }
+      
+      // Dynamically import GCP storage service
+      const { getEmailFromGCP } = await import('./services/gcpStorageService');
+      const fullEmailData = await getEmailFromGCP(communication.gcpStoragePath);
+      
+      res.status(200).json(fullEmailData);
+    } catch (error) {
+      console.error('Error getting full email content:', error);
+      res.status(500).json({ message: 'Failed to fetch full email content', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+  
   // Search contacts
   app.get('/api/contacts/search', isAuthenticated, async (req: Request, res: Response) => {
     try {
