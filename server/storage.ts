@@ -105,6 +105,7 @@ export interface IStorage {
   getCommunication(id: number): Promise<Communication | undefined>;
   getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
+  getCommunicationsForRawLead(rawLeadId: number): Promise<Communication[]>;
   
   // Opportunity Email Threads
   createOpportunityEmailThread(data: InsertOpportunityEmailThread): Promise<OpportunityEmailThread>;
@@ -599,6 +600,44 @@ export class DatabaseStorage implements IStorage {
     // Enhance metadata to include hasFullEmailInStorage flag for frontend
     return comms.map(comm => ({
       ...comm,
+      metadata: {
+        ...(comm.metaData as any || {}),
+        hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)
+      }
+    }));
+  }
+
+  async getCommunicationsForRawLead(rawLeadId: number): Promise<Communication[]> {
+    // Get all thread IDs associated with this raw lead
+    const threads = await db
+      .select()
+      .from(opportunityEmailThreads)
+      .where(eq(opportunityEmailThreads.rawLeadId, rawLeadId));
+    
+    if (threads.length === 0) {
+      return [];
+    }
+    
+    // Filter out any null/empty thread IDs before querying
+    const threadIds = threads
+      .map(t => t.gmailThreadId)
+      .filter(id => id && id.trim().length > 0);
+    
+    if (threadIds.length === 0) {
+      return [];
+    }
+    
+    // Get all communications for those threads
+    const comms = await db
+      .select()
+      .from(communications)
+      .where(inArray(communications.gmailThreadId, threadIds))
+      .orderBy(desc(communications.timestamp));
+    
+    // Enhance metadata to include hasFullEmailInStorage flag for frontend
+    return comms.map(comm => ({
+      ...comm,
+      metaData: undefined, // Remove the DB field name
       metadata: {
         ...(comm.metaData as any || {}),
         hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)

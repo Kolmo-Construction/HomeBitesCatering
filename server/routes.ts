@@ -507,9 +507,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new opportunity
   app.post('/api/opportunities', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const opportunityData = insertOpportunitySchema.parse(req.body);
+      const { rawLeadId, ...opportunityData } = req.body;
+      const validatedData = insertOpportunitySchema.parse(opportunityData);
       
-      const newOpportunity = await storage.createOpportunity(opportunityData);
+      const newOpportunity = await storage.createOpportunity(validatedData);
+      
+      // If this opportunity was created from a raw lead, update thread mappings
+      if (rawLeadId) {
+        try {
+          // Find all threads associated with this raw lead
+          const rawLeadThreads = await db
+            .select()
+            .from(opportunityEmailThreads)
+            .where(eq(opportunityEmailThreads.rawLeadId, parseInt(rawLeadId)));
+          
+          // Guard against empty thread array to avoid empty IN() clause
+          if (rawLeadThreads.length > 0) {
+            // Filter out any null/empty thread IDs
+            const validThreads = rawLeadThreads.filter(t => t.gmailThreadId && t.gmailThreadId.trim().length > 0);
+            
+            if (validThreads.length > 0) {
+              // Update each thread to point to the new opportunity instead of the raw lead
+              for (const thread of validThreads) {
+                await storage.updateOpportunityEmailThread(thread.gmailThreadId, {
+                  opportunityId: newOpportunity.id,
+                  rawLeadId: null // Clear the raw lead reference
+                });
+                console.log(`Updated thread ${thread.gmailThreadId} from Raw Lead ${rawLeadId} to Opportunity ${newOpportunity.id}`);
+              }
+              
+              // Also update any communications that were linked to the raw lead via thread
+              await db
+                .update(communications)
+                .set({ opportunityId: newOpportunity.id })
+                .where(and(
+                  isNull(communications.opportunityId),
+                  inArray(
+                    communications.gmailThreadId,
+                    validThreads.map(t => t.gmailThreadId)
+                  )
+                ));
+              console.log(`Updated communications for raw lead ${rawLeadId} to link to opportunity ${newOpportunity.id}`);
+            } else {
+              console.log(`All threads for raw lead ${rawLeadId} have invalid thread IDs - skipping migration`);
+            }
+          } else {
+            console.log(`No email threads found for raw lead ${rawLeadId} - this may be a manually created lead`);
+          }
+        } catch (error) {
+          console.error('Error updating thread mappings for opportunity:', error);
+          // Don't fail the opportunity creation if thread update fails
+        }
+      }
       
       res.status(201).json(newOpportunity);
     } catch (error) {
@@ -1994,6 +2043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zod schema for GAS email payload validation
   const gasEmailPayloadSchema = z.object({
     gmailMessageId: z.string().min(1),
+    gmailThreadId: z.string().optional(), // For thread grouping and deduplication
     subject: z.string(),
     from: z.string().email().or(z.string().min(1)),
     to: z.string().optional(),
@@ -2035,6 +2085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const {
         gmailMessageId,
+        gmailThreadId,
         subject,
         from,
         to,
@@ -2056,20 +2107,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const emailDate = new Date(receivedDate);
+      
+      // Validate that gmailThreadId is provided (critical for proper thread grouping)
+      if (!gmailThreadId) {
+        console.warn(`GAS Email Intake: No gmailThreadId provided for message ${gmailMessageId}. Thread grouping may not work properly.`);
+      }
+      
+      const threadId = gmailThreadId || `fallback-${from}-${subject.substring(0, 50)}`; // Deterministic fallback
+      
+      // Check if this thread already exists (deduplication)
+      const existingThread = await storage.getOpportunityEmailThread(threadId);
+      
+      if (existingThread && (existingThread.opportunityId || existingThread.rawLeadId)) {
+        // Thread exists - create communication on existing lead/opportunity instead of new lead
+        console.log(`GAS Email Intake: Thread ${threadId} already exists for ${existingThread.opportunityId ? `Opportunity ${existingThread.opportunityId}` : `Raw Lead ${existingThread.rawLeadId}`}. Adding communication only.`);
+        
+        const communicationData: InsertCommunication = {
+          opportunityId: existingThread.opportunityId || null,
+          clientId: null,
+          userId: null,
+          type: 'email',
+          direction: 'incoming',
+          timestamp: emailDate,
+          source: 'google_apps_script',
+          gmailThreadId: threadId,
+          gmailMessageId: gmailMessageId,
+          subject: subject,
+          fromAddress: from,
+          toAddress: to || '',
+          bodyRaw: cleanedText,
+          metaData: { 
+            isFollowUp: true,
+            rawHtml: rawHtml,
+            rawLeadId: existingThread.rawLeadId || null  // Keep link to raw lead if not yet converted
+          }
+        };
+        
+        const comm = await storage.createCommunication(communicationData);
+        console.log(`GAS Email Intake: Created follow-up communication ID ${comm.id} for thread ${threadId}`);
+        
+        // Mark email as processed
+        await storage.recordProcessedEmail({
+          messageId: gmailMessageId,
+          gmailId: gmailMessageId,
+          serviceName: 'google_apps_script',
+          processedAt: new Date(),
+          labelApplied: true
+        });
+        
+        return res.status(200).json({
+          success: true,
+          communicationId: comm.id,
+          existingLeadId: existingThread.rawLeadId,
+          existingOpportunityId: existingThread.opportunityId,
+          message: 'Follow-up email added to existing conversation',
+          isFollowUp: true
+        });
+      }
+
+      // No existing thread - create new lead with communication
       // Use AI to extract structured data from the email
       const extractedData = await aiService.extractLeadDataFromEmail({
         subject,
         from,
         bodyText: cleanedText,
         bodyHtml: rawHtml,
-        receivedDate: new Date(receivedDate)
+        receivedDate: emailDate
       });
 
       // Create raw lead with structured data
       const leadData: any = {
         source: 'google_apps_script',
         status: extractedData.status || 'new',
-        receivedAt: new Date(receivedDate),
+        receivedAt: emailDate,
         extractedProspectName: extractedData.inquiry_data?.client_name || '',
         extractedProspectEmail: extractedData.inquiry_data?.client_email || from,
         extractedProspectPhone: extractedData.inquiry_data?.client_phone || null,
@@ -2097,6 +2208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store complete metadata
         rawData: {
           gmailMessageId,
+          gmailThreadId: threadId,
           subject,
           from,
           to,
@@ -2115,20 +2227,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const createdLead = await storage.createRawLead(leadData);
+      console.log(`GAS Email Intake: Created lead ID ${createdLead.id} for email "${subject}"`);
+
+      // Create thread mapping for this new lead
+      const threadData: InsertOpportunityEmailThread = {
+        gmailThreadId: threadId,
+        opportunityId: null,
+        rawLeadId: createdLead.id,
+        primaryEmailAddress: from,
+        participantEmails: [from, to || ''].filter(Boolean),
+        isActive: true
+      };
+      
+      await storage.createOpportunityEmailThread(threadData);
+      console.log(`GAS Email Intake: Created thread mapping ${threadId} -> Raw Lead ${createdLead.id}`);
+
+      // Create initial communication record for this email
+      const communicationData: InsertCommunication = {
+        opportunityId: null,
+        clientId: null,
+        userId: null,
+        type: 'email',
+        direction: 'incoming',
+        timestamp: emailDate,
+        source: 'google_apps_script',
+        gmailThreadId: threadId,
+        gmailMessageId: gmailMessageId,
+        subject: subject,
+        fromAddress: from,
+        toAddress: to || '',
+        bodyRaw: cleanedText,
+        metaData: { 
+          isInitialEmail: true,
+          rawHtml: rawHtml,
+          aiExtractedData: extractedData
+        }
+      };
+      
+      const comm = await storage.createCommunication(communicationData);
+      console.log(`GAS Email Intake: Created initial communication ID ${comm.id} for lead ${createdLead.id}`);
 
       // Mark email as processed
       await storage.recordProcessedEmail({
         messageId: gmailMessageId,
+        gmailId: gmailMessageId,
         serviceName: 'google_apps_script',
         processedAt: new Date(),
         labelApplied: true
       });
 
-      console.log(`GAS Email Intake: Created lead ID ${createdLead.id} for email "${subject}"`);
-
       res.status(201).json({
         success: true,
         leadId: createdLead.id,
+        communicationId: comm.id,
         message: 'Email processed and lead created successfully',
         extractedData: {
           prospectName: leadData.extractedProspectName,
