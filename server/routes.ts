@@ -131,53 +131,7 @@ function formatNotes(lead: any): string | null {
   return noteParts.length > 0 ? noteParts.join('\n\n') : null;
 }
 
-// Initialize the service instances
-const leadGenerationService = new LeadGenerationService();
-const communicationSyncService = new CommunicationSyncService();
-const vendorLeadIntakeService = new VendorLeadIntakeService();
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post('/api/gmail/vendor-lead-webhook', express.json({ type: '*/*' }), async (req: Request, res: Response) => {
-    try {
-      console.log('Received POST on /api/gmail/vendor-lead-webhook');
-      // Log raw body for debugging Pub/Sub messages if needed
-      // console.log('Raw body:', req.body.toString());
-
-      if (!req.body || !req.body.message || !req.body.message.data) {
-        console.warn('Webhook: Invalid Pub/Sub message format.');
-        return res.status(400).send('Bad Request: Invalid Pub/Sub message format');
-      }
-
-      const pubsubMessage = req.body.message;
-      const gmailNotification = JSON.parse(Buffer.from(pubsubMessage.data, 'base64').toString('utf-8'));
-      const { emailAddress, historyId } = gmailNotification;
-
-      if (!emailAddress || !historyId) {
-        console.warn('Webhook: Missing emailAddress or historyId in Gmail notification.');
-        return res.status(400).send('Bad Request: Missing emailAddress or historyId');
-      }
-
-      // Verify this notification is for the email address we care about
-      const targetEmail = process.env.SYNC_TARGET_EMAIL_ADDRESS || '';
-      if (emailAddress.toLowerCase() !== targetEmail.toLowerCase()) {
-        console.warn(`Webhook: Notification for untracked email address: ${emailAddress}. Target: ${targetEmail}`);
-        return res.status(204).send(); // Acknowledge to Pub/Sub to prevent retries
-      }
-
-      // Asynchronously process the notification to ensure a quick response to Pub/Sub
-      vendorLeadIntakeService.processGmailNotification(historyId).catch(processingError => {
-        console.error('Webhook: Async error processing Gmail notification:', processingError);
-        // Error is logged, Pub/Sub already acknowledged. Consider further error tracking.
-      });
-
-      res.status(204).send(); // ACK Pub/Sub immediately
-
-    } catch (error: any) {
-      console.error('Webhook: Error in webhook handler:', error);
-      // If parsing req.body fails or another synchronous error occurs before async processing
-      res.status(500).send('Internal Server Error');
-    }
-  });
   // Configure PostgreSQL session store
   const PgStore = pgSession(session);
   
@@ -1990,35 +1944,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting lead form data:', error);
       res.status(500).json({ message: 'Server error' });
-    }
-  });
-
-  // Trigger manual email sync from interface@eathomebites.com
-  app.post('/api/email-parser/sync-now', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const vendorLeadIntakeService = req.app.get('vendorLeadIntakeService');
-      
-      if (!vendorLeadIntakeService) {
-        return res.status(503).json({ 
-          message: 'Vendor Lead Intake Service not initialized',
-          success: false
-        });
-      }
-      
-      await vendorLeadIntakeService.processGmailNotification();
-      
-      res.status(200).json({
-        message: 'Email sync completed successfully',
-        success: true,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error syncing emails:', error);
-      res.status(500).json({
-        message: 'Failed to sync emails',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        success: false
-      });
     }
   });
 
