@@ -133,7 +133,7 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
   
   const bulkDeleteLeads = useMutation({
     mutationFn: async (leadIds: number[]) => {
-      const response = await fetch('/api/raw-leads/bulk-delete', {
+      const response = await fetch('/api/raw-leads/delete-many', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
