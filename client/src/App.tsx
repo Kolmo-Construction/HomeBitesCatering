@@ -12,6 +12,7 @@ import Estimates from "@/pages/estimates";
 import MenuItems from "@/pages/menu-items";
 import Menus from "@/pages/menus";
 import BaseIngredients from "@/pages/base-ingredients";
+import Recipes from "@/pages/recipes";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import RawLeadsPage from "@/pages/rawLeadsPage";
@@ -161,6 +162,7 @@ function AppContent() {
           <Route path="/menu-items/:id" component={MenuItems} />
           <Route path="/menu-items/:id/edit" component={MenuItems} />
           <Route path="/base-ingredients" component={BaseIngredients} />
+          <Route path="/recipes" component={Recipes} />
           <Route path="/menus" component={Menus} />
           <Route path="/menus/new" component={Menus} />
           <Route path="/menus/:id" component={Menus} />

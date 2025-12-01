@@ -20,7 +20,8 @@ import {
   ChevronDown,
   ChevronRight,
   Calculator,
-  ShoppingBasket
+  ShoppingBasket,
+  ChefHat
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -35,6 +36,7 @@ export default function Sidebar() {
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Menu Items", href: "/menu-items", icon: Utensils },
     { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket },
+    { name: "Recipes", href: "/recipes", icon: ChefHat },
     { name: "Menus", href: "/menus", icon: ClipboardList },
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },

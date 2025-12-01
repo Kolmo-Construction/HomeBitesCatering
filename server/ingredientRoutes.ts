@@ -1,6 +1,15 @@
 import { Router } from "express";
 import { db } from "./db";
-import { baseIngredients, recipeIngredients, insertBaseIngredientSchema, insertRecipeIngredientSchema } from "@shared/schema";
+import { 
+  baseIngredients, 
+  recipeIngredients, 
+  recipes,
+  recipeComponents,
+  insertBaseIngredientSchema, 
+  insertRecipeIngredientSchema,
+  insertRecipeSchema,
+  insertRecipeComponentSchema
+} from "@shared/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { calculateIngredientCost } from "@shared/unitConversion";
@@ -449,6 +458,456 @@ router.delete("/recipe-ingredients/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting recipe ingredient:", error);
     return res.status(500).json({ message: "Failed to delete recipe ingredient" });
+  }
+});
+
+// ============================================
+// STANDALONE RECIPES CRUD
+// ============================================
+
+// Helper function to safely calculate ingredient cost
+function safeCalculateIngredientCost(
+  purchasePrice: string,
+  purchaseQuantity: string,
+  purchaseUnit: string,
+  recipeQuantity: string,
+  recipeUnit: string
+): number {
+  const price = parseFloat(purchasePrice);
+  const purchaseQty = parseFloat(purchaseQuantity);
+  const recipeQty = parseFloat(recipeQuantity);
+  
+  if (isNaN(price) || isNaN(purchaseQty) || isNaN(recipeQty) || purchaseQty <= 0 || recipeQty <= 0) {
+    return 0;
+  }
+  
+  try {
+    return calculateIngredientCost(price, purchaseQty, purchaseUnit, recipeQty, recipeUnit);
+  } catch (error) {
+    console.warn(`Unit conversion failed from ${recipeUnit} to ${purchaseUnit}:`, error);
+    return 0;
+  }
+}
+
+// Get all recipes with their total cost
+router.get("/recipes", async (req, res) => {
+  try {
+    const { category, search } = req.query;
+    
+    // Build filter conditions with proper typing
+    const conditions: (ReturnType<typeof eq> | ReturnType<typeof sql>)[] = [];
+    
+    if (category && typeof category === 'string' && category !== 'all') {
+      conditions.push(eq(recipes.category, category));
+    }
+    
+    if (search && typeof search === 'string') {
+      conditions.push(sql`LOWER(${recipes.name}) LIKE LOWER(${'%' + search + '%'})`);
+    }
+    
+    // Get all recipes with combined filters
+    const allRecipes = conditions.length > 0
+      ? await db.select().from(recipes).where(and(...conditions)).orderBy(recipes.name)
+      : await db.select().from(recipes).orderBy(recipes.name);
+    
+    if (allRecipes.length === 0) {
+      return res.json([]);
+    }
+    
+    // Get all components for all recipes in a single query
+    const recipeIds = allRecipes.map(r => r.id);
+    const allComponents = await db
+      .select({
+        id: recipeComponents.id,
+        recipeId: recipeComponents.recipeId,
+        baseIngredientId: recipeComponents.baseIngredientId,
+        quantity: recipeComponents.quantity,
+        unit: recipeComponents.unit,
+        prepNotes: recipeComponents.prepNotes,
+        baseIngredient: baseIngredients,
+      })
+      .from(recipeComponents)
+      .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
+      .where(sql`${recipeComponents.recipeId} = ANY(${recipeIds})`);
+    
+    // Group components by recipe ID
+    const componentsByRecipeId = new Map<number, typeof allComponents>();
+    for (const comp of allComponents) {
+      if (!componentsByRecipeId.has(comp.recipeId)) {
+        componentsByRecipeId.set(comp.recipeId, []);
+      }
+      componentsByRecipeId.get(comp.recipeId)!.push(comp);
+    }
+    
+    // Calculate costs for each recipe
+    const recipesWithCosts = allRecipes.map((recipe) => {
+      const components = componentsByRecipeId.get(recipe.id) || [];
+      
+      // Calculate total cost with safe parsing
+      let totalCost = 0;
+      for (const comp of components) {
+        const cost = safeCalculateIngredientCost(
+          comp.baseIngredient.purchasePrice,
+          comp.baseIngredient.purchaseQuantity,
+          comp.baseIngredient.purchaseUnit,
+          comp.quantity,
+          comp.unit
+        );
+        totalCost += cost;
+      }
+      
+      // Calculate cost per serving
+      const yieldAmount = parseFloat(recipe.yield || "1") || 1;
+      const costPerServing = yieldAmount > 0 ? totalCost / yieldAmount : totalCost;
+      
+      return {
+        ...recipe,
+        totalCost,
+        costPerServing,
+        ingredientCount: components.length,
+      };
+    });
+    
+    return res.json(recipesWithCosts);
+  } catch (error) {
+    console.error("Error fetching recipes:", error);
+    return res.status(500).json({ message: "Failed to fetch recipes" });
+  }
+});
+
+// Get a single recipe with components and costs
+router.get("/recipes/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const [recipe] = await db
+      .select()
+      .from(recipes)
+      .where(eq(recipes.id, id));
+    
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    
+    // Get recipe components with base ingredient details
+    const components = await db
+      .select({
+        id: recipeComponents.id,
+        recipeId: recipeComponents.recipeId,
+        baseIngredientId: recipeComponents.baseIngredientId,
+        quantity: recipeComponents.quantity,
+        unit: recipeComponents.unit,
+        prepNotes: recipeComponents.prepNotes,
+        baseIngredient: baseIngredients,
+      })
+      .from(recipeComponents)
+      .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
+      .where(eq(recipeComponents.recipeId, id));
+    
+    // Calculate costs for each component using safe calculation
+    let totalCost = 0;
+    const componentsWithCosts = components.map((comp) => {
+      const cost = safeCalculateIngredientCost(
+        comp.baseIngredient.purchasePrice,
+        comp.baseIngredient.purchaseQuantity,
+        comp.baseIngredient.purchaseUnit,
+        comp.quantity,
+        comp.unit
+      );
+      totalCost += cost;
+      
+      return {
+        ...comp,
+        calculatedCost: cost,
+      };
+    });
+    
+    // Calculate cost per serving
+    const yieldAmount = parseFloat(recipe.yield || "1") || 1;
+    const costPerServing = yieldAmount > 0 ? totalCost / yieldAmount : totalCost;
+    
+    return res.json({
+      ...recipe,
+      components: componentsWithCosts,
+      totalCost,
+      costPerServing,
+    });
+  } catch (error) {
+    console.error("Error fetching recipe:", error);
+    return res.status(500).json({ message: "Failed to fetch recipe" });
+  }
+});
+
+// Create a new recipe
+router.post("/recipes", async (req, res) => {
+  try {
+    const { components, ...recipeData } = req.body;
+    
+    const parsed = insertRecipeSchema.safeParse(recipeData);
+    
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        message: "Invalid recipe data", 
+        errors: parsed.error.format() 
+      });
+    }
+    
+    // Use transaction to create recipe and components atomically
+    const result = await db.transaction(async (tx) => {
+      // Create the recipe
+      const [newRecipe] = await tx
+        .insert(recipes)
+        .values({
+          ...parsed.data,
+          yield: parsed.data.yield?.toString() || "1",
+        })
+        .returning();
+      
+      // Insert components if provided
+      if (Array.isArray(components) && components.length > 0) {
+        const validComponents = [];
+        for (const comp of components) {
+          const compParsed = insertRecipeComponentSchema.omit({ recipeId: true }).safeParse(comp);
+          if (compParsed.success) {
+            validComponents.push({
+              recipeId: newRecipe.id,
+              baseIngredientId: compParsed.data.baseIngredientId,
+              quantity: compParsed.data.quantity.toString(),
+              unit: compParsed.data.unit,
+              prepNotes: compParsed.data.prepNotes || null,
+            });
+          }
+        }
+        
+        if (validComponents.length > 0) {
+          await tx.insert(recipeComponents).values(validComponents);
+        }
+      }
+      
+      return newRecipe;
+    });
+    
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Error creating recipe:", error);
+    return res.status(500).json({ message: "Failed to create recipe" });
+  }
+});
+
+// Update a recipe
+router.put("/recipes/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const { components, ...recipeData } = req.body;
+    
+    const parsed = insertRecipeSchema.partial().safeParse(recipeData);
+    
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        message: "Invalid recipe data", 
+        errors: parsed.error.format() 
+      });
+    }
+    
+    // Use transaction to update recipe and components atomically
+    const result = await db.transaction(async (tx) => {
+      // Update recipe data
+      const updateData: any = { ...parsed.data, updatedAt: new Date() };
+      if (updateData.yield !== undefined) {
+        updateData.yield = updateData.yield.toString();
+      }
+      
+      const [updatedRecipe] = await tx
+        .update(recipes)
+        .set(updateData)
+        .where(eq(recipes.id, id))
+        .returning();
+      
+      if (!updatedRecipe) {
+        throw new Error("Recipe not found");
+      }
+      
+      // Update components if provided
+      if (Array.isArray(components)) {
+        // Delete existing components
+        await tx.delete(recipeComponents).where(eq(recipeComponents.recipeId, id));
+        
+        // Insert new components
+        if (components.length > 0) {
+          const validComponents = [];
+          for (const comp of components) {
+            const compParsed = insertRecipeComponentSchema.omit({ recipeId: true }).safeParse(comp);
+            if (compParsed.success) {
+              validComponents.push({
+                recipeId: id,
+                baseIngredientId: compParsed.data.baseIngredientId,
+                quantity: compParsed.data.quantity.toString(),
+                unit: compParsed.data.unit,
+                prepNotes: compParsed.data.prepNotes || null,
+              });
+            }
+          }
+          
+          if (validComponents.length > 0) {
+            await tx.insert(recipeComponents).values(validComponents);
+          }
+        }
+      }
+      
+      return updatedRecipe;
+    });
+    
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error updating recipe:", error);
+    if (error.message === "Recipe not found") {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    return res.status(500).json({ message: "Failed to update recipe" });
+  }
+});
+
+// Delete a recipe (components are deleted via cascade)
+router.delete("/recipes/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const [deletedRecipe] = await db
+      .delete(recipes)
+      .where(eq(recipes.id, id))
+      .returning();
+    
+    if (!deletedRecipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    
+    return res.json({ message: "Recipe deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting recipe:", error);
+    return res.status(500).json({ message: "Failed to delete recipe" });
+  }
+});
+
+// Get recipe components for a specific recipe
+router.get("/recipes/:recipeId/components", async (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.recipeId);
+    
+    if (isNaN(recipeId)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const components = await db
+      .select({
+        id: recipeComponents.id,
+        recipeId: recipeComponents.recipeId,
+        baseIngredientId: recipeComponents.baseIngredientId,
+        quantity: recipeComponents.quantity,
+        unit: recipeComponents.unit,
+        prepNotes: recipeComponents.prepNotes,
+        baseIngredient: baseIngredients,
+      })
+      .from(recipeComponents)
+      .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
+      .where(eq(recipeComponents.recipeId, recipeId));
+    
+    // Calculate costs using safe calculation
+    let totalCost = 0;
+    const componentsWithCosts = components.map((comp) => {
+      const cost = safeCalculateIngredientCost(
+        comp.baseIngredient.purchasePrice,
+        comp.baseIngredient.purchaseQuantity,
+        comp.baseIngredient.purchaseUnit,
+        comp.quantity,
+        comp.unit
+      );
+      totalCost += cost;
+      
+      return {
+        ...comp,
+        calculatedCost: cost,
+      };
+    });
+    
+    return res.json({
+      components: componentsWithCosts,
+      totalCost,
+    });
+  } catch (error) {
+    console.error("Error fetching recipe components:", error);
+    return res.status(500).json({ message: "Failed to fetch recipe components" });
+  }
+});
+
+// Update recipe components (batch sync)
+router.put("/recipes/:recipeId/components", async (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.recipeId);
+    const { components } = req.body;
+    
+    if (isNaN(recipeId)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    if (!Array.isArray(components)) {
+      return res.status(400).json({ message: "Components must be an array" });
+    }
+    
+    // Validate each component before processing
+    type ComponentWithoutRecipeId = Omit<InsertRecipeComponent, 'recipeId'>;
+    const validatedComponents: ComponentWithoutRecipeId[] = [];
+    for (const comp of components) {
+      const validation = insertRecipeComponentSchema.omit({ recipeId: true }).safeParse(comp);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid component data", 
+          errors: validation.error.format() 
+        });
+      }
+      validatedComponents.push(validation.data as ComponentWithoutRecipeId);
+    }
+    
+    // Use a transaction to ensure atomicity
+    const result = await db.transaction(async (tx) => {
+      // Delete all existing components for this recipe
+      await tx.delete(recipeComponents).where(eq(recipeComponents.recipeId, recipeId));
+      
+      // Insert all new components
+      if (validatedComponents.length > 0) {
+        const componentsToInsert = validatedComponents.map((comp) => ({
+          recipeId,
+          baseIngredientId: comp.baseIngredientId,
+          quantity: comp.quantity.toString(),
+          unit: comp.unit,
+          prepNotes: comp.prepNotes || null,
+        }));
+        
+        await tx.insert(recipeComponents).values(componentsToInsert);
+      }
+      
+      return { success: true, count: validatedComponents.length };
+    });
+    
+    return res.json({ 
+      message: "Recipe components updated successfully",
+      componentCount: result.count 
+    });
+  } catch (error) {
+    console.error("Error updating recipe components:", error);
+    return res.status(500).json({ message: "Failed to update recipe components" });
   }
 });
 

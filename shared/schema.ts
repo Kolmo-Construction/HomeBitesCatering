@@ -494,6 +494,53 @@ export const insertRecipeIngredientSchema = createInsertSchema(recipeIngredients
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type InsertRecipeIngredient = z.infer<typeof insertRecipeIngredientSchema>;
 
+// Standalone Recipes - grouping of ingredients with calculated costs
+export const recipes = pgTable("recipes", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"), // appetizer, entree, side, dessert, beverage, sauce, etc.
+  yield: numeric("yield", { precision: 10, scale: 2 }).default("1"), // How many portions/servings this recipe makes
+  yieldUnit: text("yield_unit").default("serving"), // serving, portion, batch, etc.
+  notes: text("notes"), // Preparation notes, tips, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRecipeSchema = createInsertSchema(recipes, {
+  yield: z.coerce.number().positive("Yield must be positive").default(1),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Recipe = typeof recipes.$inferSelect;
+export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
+
+// Recipe Components - junction table linking recipes to base ingredients
+export const recipeComponents = pgTable("recipe_components", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id").notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+  baseIngredientId: integer("base_ingredient_id").notNull().references(() => baseIngredients.id, { onDelete: 'restrict' }),
+  quantity: numeric("quantity", { precision: 10, scale: 4 }).notNull(), // e.g., 0.5, 0.2, 1
+  unit: text("unit").notNull(), // pound, ounce, cup, tablespoon, etc. - unit used in recipe
+  prepNotes: text("prep_notes"), // optional: "diced", "julienned", "minced", etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRecipeComponentSchema = createInsertSchema(recipeComponents, {
+  quantity: z.coerce.number().positive("Quantity must be positive"),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type RecipeComponent = typeof recipeComponents.$inferSelect;
+export type InsertRecipeComponent = z.infer<typeof insertRecipeComponentSchema>;
+
 // Raw Leads module
 // Add new enum types for leads scoring and quality assessment
 export const leadScoreEnum = pgEnum("lead_score", ['1', '2', '3', '4', '5']);
