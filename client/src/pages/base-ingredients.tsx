@@ -591,12 +591,12 @@ export default function BaseIngredientsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
+                      <TableHead>SKU</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Purchase Price</TableHead>
                       <TableHead>Price Change</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Supplier</TableHead>
-                      <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -608,6 +608,9 @@ export default function BaseIngredientsPage() {
                       return (
                         <TableRow key={ingredient.id} data-testid={`row-ingredient-${ingredient.id}`}>
                           <TableCell className="font-medium">{ingredient.name}</TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">
+                            {ingredient.sku || "—"}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">
                               {INGREDIENT_CATEGORIES.find((c) => c.value === ingredient.category)?.label ||
@@ -655,9 +658,6 @@ export default function BaseIngredientsPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {ingredient.supplier || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">
-                            {ingredient.sku || "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
