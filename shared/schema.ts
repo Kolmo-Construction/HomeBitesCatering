@@ -444,11 +444,14 @@ export type OpportunityEmailThread = typeof opportunityEmailThreads.$inferSelect
 export type InsertOpportunityEmailThread = z.infer<typeof insertOpportunityEmailThreadSchema>;
 
 // Base Ingredients - what you buy in bulk
+// NOTE: Database has a case-insensitive partial unique index on SKU:
+// CREATE UNIQUE INDEX base_ingredients_sku_ci_unique ON base_ingredients (LOWER(sku)) WHERE sku IS NOT NULL AND sku <> '';
+// This allows multiple NULL SKUs but prevents duplicate non-empty SKUs (case-insensitive)
 export const baseIngredients = pgTable("base_ingredients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   category: text("category").notNull(), // meat, produce, dairy, spices, dry_goods, seafood, beverages, etc.
-  sku: text("sku"), // supplier product code for price research and reordering
+  sku: text("sku"), // supplier product code for price research and reordering (unique when non-null, case-insensitive)
   purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).notNull(), // price as purchased
   previousPurchasePrice: numeric("previous_purchase_price", { precision: 10, scale: 2 }), // previous price for tracking changes
   purchaseUnit: text("purchase_unit").notNull(), // pound, ounce, gallon, liter, each, dozen, case, etc.

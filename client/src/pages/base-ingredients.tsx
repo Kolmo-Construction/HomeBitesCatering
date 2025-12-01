@@ -186,6 +186,10 @@ export default function BaseIngredientsPage() {
   const createMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const res = await apiRequest("POST", "/api/ingredients/base-ingredients", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw error;
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -195,11 +199,21 @@ export default function BaseIngredientsPage() {
       form.reset();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create ingredient",
-        variant: "destructive",
-      });
+      // Handle duplicate SKU error
+      if (error?.field === "sku") {
+        form.setError("sku", { message: error.message || "This SKU is already in use" });
+        toast({
+          title: "Duplicate SKU",
+          description: "An ingredient with this SKU already exists. Please use a different SKU.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create ingredient",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -207,6 +221,10 @@ export default function BaseIngredientsPage() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: FormValues }) => {
       const res = await apiRequest("PUT", `/api/ingredients/base-ingredients/${id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw error;
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -216,11 +234,21 @@ export default function BaseIngredientsPage() {
       form.reset();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update ingredient",
-        variant: "destructive",
-      });
+      // Handle duplicate SKU error
+      if (error?.field === "sku") {
+        form.setError("sku", { message: error.message || "This SKU is already in use" });
+        toast({
+          title: "Duplicate SKU",
+          description: "An ingredient with this SKU already exists. Please use a different SKU.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update ingredient",
+          variant: "destructive",
+        });
+      }
     },
   });
 

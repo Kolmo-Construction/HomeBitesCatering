@@ -72,6 +72,28 @@ router.get("/base-ingredients/:id", async (req, res) => {
   }
 });
 
+// Helper function to normalize SKU (trim, convert empty to null)
+function normalizeSku(sku: string | null | undefined): string | null {
+  if (!sku) return null;
+  const trimmed = sku.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+// Helper function to check for duplicate SKU
+async function checkDuplicateSku(sku: string | null, excludeId?: number): Promise<boolean> {
+  if (!sku) return false; // NULL SKUs are allowed
+  
+  const existing = await db
+    .select({ id: baseIngredients.id })
+    .from(baseIngredients)
+    .where(sql`LOWER(${baseIngredients.sku}) = LOWER(${sku})`)
+    .limit(1);
+  
+  if (existing.length === 0) return false;
+  if (excludeId && existing[0].id === excludeId) return false;
+  return true;
+}
+
 // Create a new base ingredient
 router.post("/base-ingredients", async (req, res) => {
   try {
@@ -84,10 +106,22 @@ router.post("/base-ingredients", async (req, res) => {
       });
     }
     
+    // Normalize SKU
+    const normalizedSku = normalizeSku(parsed.data.sku);
+    
+    // Check for duplicate SKU
+    if (normalizedSku && await checkDuplicateSku(normalizedSku)) {
+      return res.status(409).json({ 
+        message: "An ingredient with this SKU already exists",
+        field: "sku"
+      });
+    }
+    
     const [newIngredient] = await db
       .insert(baseIngredients)
       .values({
         ...parsed.data,
+        sku: normalizedSku,
         purchasePrice: parsed.data.purchasePrice.toString(),
         purchaseQuantity: parsed.data.purchaseQuantity.toString(),
         previousPurchasePrice: parsed.data.purchasePrice.toString(),
@@ -95,7 +129,14 @@ router.post("/base-ingredients", async (req, res) => {
       .returning();
     
     return res.status(201).json(newIngredient);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle unique constraint violation from database
+    if (error?.code === '23505' && error?.constraint?.includes('sku')) {
+      return res.status(409).json({ 
+        message: "An ingredient with this SKU already exists",
+        field: "sku"
+      });
+    }
     console.error("Error creating base ingredient:", error);
     return res.status(500).json({ message: "Failed to create base ingredient" });
   }
@@ -119,6 +160,17 @@ router.put("/base-ingredients/:id", async (req, res) => {
       });
     }
     
+    // Normalize SKU
+    const normalizedSku = normalizeSku(parsed.data.sku);
+    
+    // Check for duplicate SKU (excluding current ingredient)
+    if (normalizedSku && await checkDuplicateSku(normalizedSku, id)) {
+      return res.status(409).json({ 
+        message: "An ingredient with this SKU already exists",
+        field: "sku"
+      });
+    }
+    
     // Fetch existing ingredient to save its current price as previous price
     const [existingIngredient] = await db
       .select()
@@ -132,6 +184,7 @@ router.put("/base-ingredients/:id", async (req, res) => {
     // Prepare update data with previous price
     const updateData: any = {
       ...parsed.data,
+      sku: normalizedSku,
       purchasePrice: parsed.data.purchasePrice.toString(),
       purchaseQuantity: parsed.data.purchaseQuantity.toString(),
       updatedAt: new Date()
@@ -150,7 +203,14 @@ router.put("/base-ingredients/:id", async (req, res) => {
       .returning();
     
     return res.json(updatedIngredient);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle unique constraint violation from database
+    if (error?.code === '23505' && error?.constraint?.includes('sku')) {
+      return res.status(409).json({ 
+        message: "An ingredient with this SKU already exists",
+        field: "sku"
+      });
+    }
     console.error("Error updating base ingredient:", error);
     return res.status(500).json({ message: "Failed to update base ingredient" });
   }
@@ -202,16 +262,45 @@ router.post("/base-ingredients/batch-import", async (req, res) => {
       return res.status(400).json({ message: "Invalid ingredients data - expected array" });
     }
     
-    const validIngredients = [];
-    const errors = [];
+    const validIngredients: any[] = [];
+    const errors: any[] = [];
+    const seenSkus = new Set<string>(); // Track SKUs within this batch
     
     // Validate each ingredient
     for (let i = 0; i < ingredients.length; i++) {
       const parsed = insertBaseIngredientSchema.safeParse(ingredients[i]);
       
       if (parsed.success) {
+        // Normalize SKU
+        const normalizedSku = normalizeSku(parsed.data.sku);
+        
+        // Check for duplicate SKU within this batch
+        if (normalizedSku) {
+          const skuLower = normalizedSku.toLowerCase();
+          if (seenSkus.has(skuLower)) {
+            errors.push({
+              row: i + 1,
+              data: ingredients[i],
+              errors: { sku: "Duplicate SKU in import batch" }
+            });
+            continue;
+          }
+          seenSkus.add(skuLower);
+          
+          // Check for existing SKU in database
+          if (await checkDuplicateSku(normalizedSku)) {
+            errors.push({
+              row: i + 1,
+              data: ingredients[i],
+              errors: { sku: "SKU already exists in database" }
+            });
+            continue;
+          }
+        }
+        
         validIngredients.push({
           ...parsed.data,
+          sku: normalizedSku,
           purchasePrice: parsed.data.purchasePrice.toString(),
           purchaseQuantity: parsed.data.purchaseQuantity.toString(),
           previousPurchasePrice: parsed.data.purchasePrice.toString(),
@@ -226,7 +315,7 @@ router.post("/base-ingredients/batch-import", async (req, res) => {
     }
     
     // Insert valid ingredients
-    let insertedIngredients = [];
+    let insertedIngredients: any[] = [];
     if (validIngredients.length > 0) {
       insertedIngredients = await db
         .insert(baseIngredients)
@@ -240,7 +329,14 @@ router.post("/base-ingredients/batch-import", async (req, res) => {
       failed: errors.length,
       errors: errors.length > 0 ? errors : undefined
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Handle unique constraint violation from database
+    if (error?.code === '23505' && error?.constraint?.includes('sku')) {
+      return res.status(409).json({ 
+        message: "One or more SKUs already exist in the database",
+        field: "sku"
+      });
+    }
     console.error("Error batch importing base ingredients:", error);
     return res.status(500).json({ message: "Failed to batch import base ingredients" });
   }
