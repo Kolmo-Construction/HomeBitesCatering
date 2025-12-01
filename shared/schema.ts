@@ -448,6 +448,7 @@ export const baseIngredients = pgTable("base_ingredients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   category: text("category").notNull(), // meat, produce, dairy, spices, dry_goods, seafood, beverages, etc.
+  sku: text("sku"), // supplier product code for price research and reordering
   purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).notNull(), // price as purchased
   previousPurchasePrice: numeric("previous_purchase_price", { precision: 10, scale: 2 }), // previous price for tracking changes
   purchaseUnit: text("purchase_unit").notNull(), // pound, ounce, gallon, liter, each, dozen, case, etc.

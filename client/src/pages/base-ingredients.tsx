@@ -279,6 +279,7 @@ export default function BaseIngredientsPage() {
     defaultValues: {
       name: "",
       category: undefined,
+      sku: "",
       purchasePrice: 0,
       purchaseUnit: undefined,
       purchaseQuantity: 1,
@@ -293,6 +294,7 @@ export default function BaseIngredientsPage() {
     form.reset({
       name: ingredient.name,
       category: ingredient.category,
+      sku: ingredient.sku || "",
       purchasePrice: parseFloat(ingredient.purchasePrice),
       purchaseUnit: ingredient.purchaseUnit,
       purchaseQuantity: parseFloat(ingredient.purchaseQuantity),
@@ -566,6 +568,7 @@ export default function BaseIngredientsPage() {
                       <TableHead>Price Change</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Supplier</TableHead>
+                      <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -624,6 +627,9 @@ export default function BaseIngredientsPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {ingredient.supplier || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">
+                            {ingredient.sku || "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -792,24 +798,45 @@ export default function BaseIngredientsPage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="supplier"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Supplier (Optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g., Restaurant Depot" 
-                        {...field} 
-                        value={field.value || ""}
-                        data-testid="input-supplier" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="supplier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Supplier (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., Restaurant Depot" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-supplier" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU / Product Code (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., ABC-12345" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-sku" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
