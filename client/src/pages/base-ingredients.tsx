@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, Upload, FileSpreadsheet } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { type BaseIngredient, insertBaseIngredientSchema } from "@shared/schema";
+import { type BaseIngredient, insertBaseIngredientSchema, DIETARY_TAGS } from "@shared/schema";
 import { formatCurrency } from "@shared/unitConversion";
 import * as XLSX from "xlsx";
 
@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = insertBaseIngredientSchema.extend({
   name: z.string().min(1, "Name is required"),
@@ -313,6 +314,7 @@ export default function BaseIngredientsPage() {
       purchaseQuantity: 1,
       supplier: "",
       notes: "",
+      dietaryTags: [],
     },
   });
 
@@ -328,6 +330,7 @@ export default function BaseIngredientsPage() {
       purchaseQuantity: parseFloat(ingredient.purchaseQuantity),
       supplier: ingredient.supplier || "",
       notes: ingredient.notes || "",
+      dietaryTags: (ingredient.dietaryTags as string[]) || [],
     });
   };
 
@@ -515,6 +518,7 @@ export default function BaseIngredientsPage() {
                   purchaseQuantity: 1,
                   supplier: "",
                   notes: "",
+                  dietaryTags: [],
                 });
                 setIsAddDialogOpen(true);
               }}
@@ -598,6 +602,7 @@ export default function BaseIngredientsPage() {
                       <TableHead>Price Change</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Supplier</TableHead>
+                      <TableHead>Dietary</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -659,6 +664,27 @@ export default function BaseIngredientsPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {ingredient.supplier || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {(ingredient.dietaryTags as string[] | null)?.length ? (
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {(ingredient.dietaryTags as string[]).slice(0, 3).map((tag) => {
+                                  const tagInfo = DIETARY_TAGS.find((t) => t.value === tag);
+                                  return (
+                                    <Badge key={tag} variant="secondary" className="text-xs">
+                                      {tagInfo?.label || tag}
+                                    </Badge>
+                                  );
+                                })}
+                                {(ingredient.dietaryTags as string[]).length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{(ingredient.dietaryTags as string[]).length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -881,6 +907,45 @@ export default function BaseIngredientsPage() {
                         data-testid="input-notes"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dietaryTags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dietary Characteristics (Optional)</FormLabel>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                      {DIETARY_TAGS.map((tag) => {
+                        const isChecked = (field.value || []).includes(tag.value);
+                        return (
+                          <div key={tag.value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`dietary-${tag.value}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                const currentTags = field.value || [];
+                                if (checked) {
+                                  field.onChange([...currentTags, tag.value]);
+                                } else {
+                                  field.onChange(currentTags.filter((t: string) => t !== tag.value));
+                                }
+                              }}
+                              data-testid={`checkbox-dietary-${tag.value}`}
+                            />
+                            <label
+                              htmlFor={`dietary-${tag.value}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {tag.label}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
