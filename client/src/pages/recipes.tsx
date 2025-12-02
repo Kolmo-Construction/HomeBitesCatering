@@ -131,6 +131,8 @@ export default function RecipesPage() {
   const [recipeComponents, setRecipeComponents] = useState<RecipeComponentItem[]>([]);
   
   const [selectedIngredientId, setSelectedIngredientId] = useState<number | null>(null);
+  const [ingredientSearch, setIngredientSearch] = useState<string>("");
+  const [showIngredientDropdown, setShowIngredientDropdown] = useState<boolean>(false);
   const [ingredientQuantity, setIngredientQuantity] = useState<string>("1");
   const [ingredientUnit, setIngredientUnit] = useState<string>("pound");
   const [ingredientPrepNotes, setIngredientPrepNotes] = useState<string>("");
@@ -675,16 +677,24 @@ export default function RecipesPage() {
                 <div className="bg-muted/50 rounded-lg p-4 space-y-4">
                   <h4 className="font-medium text-sm">Add Ingredient</h4>
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-4">
+                    <div className="md:col-span-4 relative">
                       <Label>Ingredient</Label>
-                      <Select
-                        value={selectedIngredientId?.toString() || ""}
-                        onValueChange={(value) => setSelectedIngredientId(parseInt(value))}
-                      >
-                        <SelectTrigger data-testid="select-add-ingredient">
-                          <SelectValue placeholder="Select ingredient" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <div className="relative">
+                        <Input
+                          placeholder="Search ingredients..."
+                          value={ingredientSearch}
+                          onChange={(e) => {
+                            setIngredientSearch(e.target.value);
+                            setShowIngredientDropdown(true);
+                          }}
+                          onFocus={() => setShowIngredientDropdown(true)}
+                          data-testid="input-search-ingredient"
+                        />
+                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                      
+                      {showIngredientDropdown && (
+                        <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-input rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
                           {availableIngredients.length === 0 ? (
                             <div className="p-4 text-sm text-muted-foreground text-center">
                               {baseIngredients.length === 0
@@ -692,10 +702,29 @@ export default function RecipesPage() {
                                 : "All ingredients added"}
                             </div>
                           ) : (
-                            availableIngredients.map((ingredient) => (
-                              <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
-                                <div className="flex items-center gap-2">
-                                  <span>{ingredient.name}</span>
+                            availableIngredients
+                              .filter((ing) =>
+                                ing.name.toLowerCase().includes(ingredientSearch.toLowerCase()) ||
+                                ing.sku?.toLowerCase().includes(ingredientSearch.toLowerCase())
+                              )
+                              .map((ingredient) => (
+                                <button
+                                  key={ingredient.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedIngredientId(ingredient.id);
+                                    setIngredientSearch(ingredient.name);
+                                    setShowIngredientDropdown(false);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-accent flex items-center justify-between group"
+                                  data-testid={`button-ingredient-${ingredient.id}`}
+                                >
+                                  <div className="flex flex-col gap-1">
+                                    <span className="font-medium">{ingredient.name}</span>
+                                    {ingredient.sku && (
+                                      <span className="text-xs text-muted-foreground">SKU: {ingredient.sku}</span>
+                                    )}
+                                  </div>
                                   <Badge variant="outline" className="text-xs">
                                     {formatCurrency(
                                       parseFloat(ingredient.purchasePrice) /
@@ -703,12 +732,14 @@ export default function RecipesPage() {
                                     )}
                                     /{ingredient.purchaseUnit}
                                   </Badge>
-                                </div>
-                              </SelectItem>
-                            ))
+                                </button>
+                              ))
                           )}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      )}
+                      {selectedIngredientId && (
+                        <p className="text-xs text-green-600 mt-1">✓ Selected</p>
+                      )}
                     </div>
 
                     <div className="md:col-span-2">
