@@ -443,11 +443,15 @@ export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 export type OpportunityEmailThread = typeof opportunityEmailThreads.$inferSelect;
 export type InsertOpportunityEmailThread = z.infer<typeof insertOpportunityEmailThreadSchema>;
 
-// Dietary characteristic tags for ingredients
+// Dietary characteristic tags for ingredients - used on base ingredients
 export const DIETARY_TAGS = [
   { value: "gluten_free", label: "Gluten Free" },
   { value: "nut_free", label: "Nut Free" },
   { value: "dairy_free", label: "Dairy Free" },
+  { value: "egg_free", label: "Egg Free" },
+  { value: "soy_free", label: "Soy Free" },
+  { value: "shellfish_free", label: "Shellfish Free" },
+  { value: "sesame_free", label: "Sesame Free" },
   { value: "vegan", label: "Vegan" },
   { value: "vegetarian", label: "Vegetarian" },
   { value: "keto", label: "Keto Friendly" },
@@ -463,12 +467,41 @@ export const DIETARY_TAGS = [
 
 export type DietaryTag = typeof DIETARY_TAGS[number]["value"];
 
-// Recipe dietary flags computed from ingredients
-// "positive" = all ingredients must have this tag for the recipe to inherit it (e.g., vegan, gluten_free)
-// If ANY ingredient lacks a positive tag, the recipe does NOT have it
+// Allergen tags that auto-propagate to recipes (if ingredient lacks tag, recipe gets warning)
+// These are safety-critical and must be automatically computed
+export const ALLERGEN_TAGS = [
+  "gluten_free",
+  "nut_free", 
+  "dairy_free",
+  "egg_free",
+  "soy_free",
+  "shellfish_free",
+  "sesame_free",
+] as const;
+
+export type AllergenTag = typeof ALLERGEN_TAGS[number];
+
+// Lifestyle tags that require manual recipe certification (NOT auto-computed)
+// These depend on the whole recipe, not just individual ingredients
+export const LIFESTYLE_TAGS = [
+  { value: "vegan", label: "Vegan" },
+  { value: "vegetarian", label: "Vegetarian" },
+  { value: "keto", label: "Keto Friendly" },
+  { value: "paleo", label: "Paleo" },
+  { value: "low_carb", label: "Low Carb" },
+  { value: "low_sodium", label: "Low Sodium" },
+  { value: "sugar_free", label: "Sugar Free" },
+  { value: "organic", label: "Organic" },
+  { value: "kosher", label: "Kosher" },
+  { value: "halal", label: "Halal" },
+] as const;
+
+export type LifestyleTag = typeof LIFESTYLE_TAGS[number]["value"];
+
+// Recipe dietary flags - combines auto-computed allergen warnings with manual designations
 export interface RecipeDietaryFlags {
-  tags: string[];           // Tags the recipe has (all ingredients have these)
-  warnings: string[];       // Tags the recipe lacks (at least one ingredient is missing these)
+  allergenWarnings: string[];    // Auto-computed: allergens present (e.g., "Contains Gluten", "Contains Nuts")
+  manualDesignations: string[];  // User-set lifestyle certifications (e.g., "vegan", "keto")
 }
 
 // Base Ingredients - what you buy in bulk
@@ -551,7 +584,7 @@ export const recipes = pgTable("recipes", {
   notes: text("notes"), // Preparation notes, tips, etc.
   images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for final product
   preparationSteps: jsonb("preparation_steps").$type<PreparationStep[]>().default([]), // Step-by-step cooking instructions
-  dietaryFlags: jsonb("dietary_flags").$type<RecipeDietaryFlags>().default({ tags: [], warnings: [] }), // Computed dietary flags from ingredients
+  dietaryFlags: jsonb("dietary_flags").$type<RecipeDietaryFlags>().default({ allergenWarnings: [], manualDesignations: [] }), // Allergen warnings (auto) + manual certifications
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -561,9 +594,9 @@ export const insertRecipeSchema = createInsertSchema(recipes, {
   images: z.array(z.string()).optional().default([]),
   preparationSteps: z.array(preparationStepSchema).optional().default([]),
   dietaryFlags: z.object({
-    tags: z.array(z.string()),
-    warnings: z.array(z.string()),
-  }).optional().default({ tags: [], warnings: [] }),
+    allergenWarnings: z.array(z.string()),
+    manualDesignations: z.array(z.string()),
+  }).optional().default({ allergenWarnings: [], manualDesignations: [] }),
 }).omit({
   id: true,
   createdAt: true,
