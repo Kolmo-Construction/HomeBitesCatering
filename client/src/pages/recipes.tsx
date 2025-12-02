@@ -3,11 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { type Recipe, type BaseIngredient, insertRecipeSchema } from "@shared/schema";
+import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep } from "@shared/schema";
 import { formatCurrency, calculateIngredientCost } from "@shared/unitConversion";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +64,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RecipeWithCost extends Recipe {
   totalCost: number;
@@ -137,6 +146,17 @@ export default function RecipesPage() {
   const [ingredientUnit, setIngredientUnit] = useState<string>("pound");
   const [ingredientPrepNotes, setIngredientPrepNotes] = useState<string>("");
   const ingredientSearchRef = useRef<HTMLDivElement>(null);
+  
+  const [recipeImages, setRecipeImages] = useState<string[]>([]);
+  const [preparationSteps, setPreparationSteps] = useState<PreparationStep[]>([]);
+  const [viewingRecipe, setViewingRecipe] = useState<RecipeWithCost | null>(null);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [isPlayingSteps, setIsPlayingSteps] = useState(false);
+  
+  const [newStepTitle, setNewStepTitle] = useState("");
+  const [newStepInstruction, setNewStepInstruction] = useState("");
+  const [newStepDuration, setNewStepDuration] = useState("");
+  const [newStepTips, setNewStepTips] = useState("");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -231,6 +251,8 @@ export default function RecipesPage() {
     setIsDialogOpen(false);
     setEditingRecipe(null);
     setRecipeComponents([]);
+    setRecipeImages([]);
+    setPreparationSteps([]);
     form.reset({
       name: "",
       description: "",
@@ -243,6 +265,10 @@ export default function RecipesPage() {
     setIngredientQuantity("1");
     setIngredientUnit("pound");
     setIngredientPrepNotes("");
+    setNewStepTitle("");
+    setNewStepInstruction("");
+    setNewStepDuration("");
+    setNewStepTips("");
   };
 
   const handleOpenNewRecipe = () => {
@@ -260,6 +286,9 @@ export default function RecipesPage() {
       yieldUnit: recipe.yieldUnit || "serving",
       notes: recipe.notes || "",
     });
+    
+    setRecipeImages(recipe.images || []);
+    setPreparationSteps(recipe.preparationSteps || []);
 
     try {
       const res = await fetch(`/api/ingredients/recipes/${recipe.id}`);
@@ -275,6 +304,12 @@ export default function RecipesPage() {
           calculatedCost: comp.calculatedCost,
         })));
       }
+      if (fullRecipe.images) {
+        setRecipeImages(fullRecipe.images);
+      }
+      if (fullRecipe.preparationSteps) {
+        setPreparationSteps(fullRecipe.preparationSteps);
+      }
     } catch (error) {
       console.error("Failed to fetch recipe components:", error);
     }
@@ -285,6 +320,8 @@ export default function RecipesPage() {
   const onSubmit = (data: FormValues) => {
     const submitData = {
       ...data,
+      images: recipeImages,
+      preparationSteps: preparationSteps,
       components: recipeComponents.map((comp) => ({
         baseIngredientId: comp.baseIngredientId,
         quantity: comp.quantity,
@@ -299,6 +336,77 @@ export default function RecipesPage() {
       createMutation.mutate(submitData);
     }
   };
+  
+  const handleAddStep = () => {
+    if (!newStepTitle.trim() || !newStepInstruction.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both a step title and instruction",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newStep: PreparationStep = {
+      stepNumber: preparationSteps.length + 1,
+      title: newStepTitle.trim(),
+      instruction: newStepInstruction.trim(),
+      duration: newStepDuration ? parseInt(newStepDuration) : undefined,
+      tips: newStepTips.trim() || undefined,
+    };
+    
+    setPreparationSteps([...preparationSteps, newStep]);
+    setNewStepTitle("");
+    setNewStepInstruction("");
+    setNewStepDuration("");
+    setNewStepTips("");
+  };
+  
+  const handleRemoveStep = (index: number) => {
+    const updated = [...preparationSteps];
+    updated.splice(index, 1);
+    setPreparationSteps(updated.map((step, idx) => ({ ...step, stepNumber: idx + 1 })));
+  };
+  
+  const handleMoveStep = (index: number, direction: 'up' | 'down') => {
+    if ((direction === 'up' && index === 0) || 
+        (direction === 'down' && index === preparationSteps.length - 1)) {
+      return;
+    }
+    
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    const updated = [...preparationSteps];
+    const [removed] = updated.splice(index, 1);
+    updated.splice(newIndex, 0, removed);
+    setPreparationSteps(updated.map((step, idx) => ({ ...step, stepNumber: idx + 1 })));
+  };
+  
+  const handleRemoveImage = (imageUrl: string) => {
+    setRecipeImages(recipeImages.filter(img => img !== imageUrl));
+  };
+  
+  const handleViewRecipe = (recipe: RecipeWithCost) => {
+    setViewingRecipe(recipe);
+    setActiveStepIndex(0);
+    setIsPlayingSteps(false);
+  };
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isPlayingSteps && viewingRecipe && viewingRecipe.preparationSteps && viewingRecipe.preparationSteps.length > 0) {
+      const currentStep = viewingRecipe.preparationSteps[activeStepIndex];
+      const duration = (currentStep.duration || 5) * 1000;
+      
+      timer = setTimeout(() => {
+        if (activeStepIndex < viewingRecipe.preparationSteps!.length - 1) {
+          setActiveStepIndex(prev => prev + 1);
+        } else {
+          setIsPlayingSteps(false);
+        }
+      }, duration);
+    }
+    return () => clearTimeout(timer);
+  }, [isPlayingSteps, activeStepIndex, viewingRecipe]);
 
   const calculateComponentCost = (component: RecipeComponentItem): number => {
     const baseIngredient = component.baseIngredient || 
@@ -465,7 +573,7 @@ export default function RecipesPage() {
                       <TableHead>Recipe Name</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Yield</TableHead>
-                      <TableHead>Ingredients</TableHead>
+                      <TableHead>Details</TableHead>
                       <TableHead className="text-right">Total Cost</TableHead>
                       <TableHead className="text-right">Cost/Serving</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -474,7 +582,20 @@ export default function RecipesPage() {
                   <TableBody>
                     {filteredRecipes.map((recipe) => (
                       <TableRow key={recipe.id} data-testid={`row-recipe-${recipe.id}`}>
-                        <TableCell className="font-medium">{recipe.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {recipe.images && recipe.images.length > 0 && (
+                              <div className="w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                                <img 
+                                  src={recipe.images[0]} 
+                                  alt={recipe.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <span>{recipe.name}</span>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {recipe.category ? (
                             <Badge variant="outline">
@@ -488,7 +609,14 @@ export default function RecipesPage() {
                           {parseFloat(recipe.yield || "1")} {recipe.yieldUnit || "serving"}(s)
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{recipe.ingredientCount} ingredients</Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="secondary">{recipe.ingredientCount} ingredients</Badge>
+                            {recipe.preparationSteps && recipe.preparationSteps.length > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {recipe.preparationSteps.length} steps
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-medium text-green-600">
                           {formatCurrency(recipe.totalCost || 0)}
@@ -498,6 +626,25 @@ export default function RecipesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            {recipe.preparationSteps && recipe.preparationSteps.length > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleViewRecipe(recipe)}
+                                      data-testid={`button-view-${recipe.id}`}
+                                    >
+                                      <Play className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>View cooking steps</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -918,6 +1065,228 @@ export default function RecipesPage() {
                 )}
               </div>
 
+              <div className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Camera className="h-5 w-5" />
+                    Recipe Photos
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="inline-flex">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">
+                            Upload photos of the final dish to help chefs visualize the result.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </h3>
+                </div>
+
+                {recipeImages.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {recipeImages.map((imageUrl, index) => (
+                      <div key={index} className="relative group aspect-square rounded-lg overflow-hidden bg-muted">
+                        <img 
+                          src={imageUrl} 
+                          alt={`Recipe photo ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                          onClick={() => handleRemoveImage(imageUrl)}
+                          data-testid={`button-remove-image-${index}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="flex flex-col gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      Upload images of the finished recipe. Images should clearly show the plating and presentation.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter image URL..."
+                        id="image-url-input"
+                        data-testid="input-image-url"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          const input = document.getElementById('image-url-input') as HTMLInputElement;
+                          if (input && input.value.trim()) {
+                            setRecipeImages([...recipeImages, input.value.trim()]);
+                            input.value = '';
+                          }
+                        }}
+                        data-testid="button-add-image-url"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add URL
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <ListOrdered className="h-5 w-5" />
+                    Preparation Steps
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="inline-flex">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">
+                            Add step-by-step instructions that chefs can follow. These will be displayed as an animated slideshow.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </h3>
+                  <Badge variant="secondary">{preparationSteps.length} steps</Badge>
+                </div>
+
+                {preparationSteps.length > 0 && (
+                  <div className="space-y-3">
+                    {preparationSteps.map((step, index) => (
+                      <div 
+                        key={index} 
+                        className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg group"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleMoveStep(index, 'up')}
+                            disabled={index === 0}
+                            data-testid={`button-step-up-${index}`}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleMoveStep(index, 'down')}
+                            disabled={index === preparationSteps.length - 1}
+                            data-testid={`button-step-down-${index}`}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                          {step.stepNumber}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium">{step.title}</h4>
+                          <p className="text-sm text-muted-foreground mt-1">{step.instruction}</p>
+                          <div className="flex gap-2 mt-2">
+                            {step.duration && (
+                              <Badge variant="outline" className="text-xs">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {step.duration}s
+                              </Badge>
+                            )}
+                            {step.tips && (
+                              <Badge variant="outline" className="text-xs">
+                                <Lightbulb className="h-3 w-3 mr-1" />
+                                Tip included
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveStep(index)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          data-testid={`button-remove-step-${index}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+                  <h4 className="font-medium text-sm">Add New Step</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Step Title *</Label>
+                      <Input
+                        placeholder="e.g., Prepare the ingredients"
+                        value={newStepTitle}
+                        onChange={(e) => setNewStepTitle(e.target.value)}
+                        data-testid="input-step-title"
+                      />
+                    </div>
+                    <div>
+                      <Label>Display Duration (seconds)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 10"
+                        value={newStepDuration}
+                        onChange={(e) => setNewStepDuration(e.target.value)}
+                        data-testid="input-step-duration"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Instruction *</Label>
+                    <Textarea
+                      placeholder="Describe what the chef should do in this step..."
+                      value={newStepInstruction}
+                      onChange={(e) => setNewStepInstruction(e.target.value)}
+                      data-testid="input-step-instruction"
+                    />
+                  </div>
+                  <div>
+                    <Label>Tips (Optional)</Label>
+                    <Input
+                      placeholder="Any helpful tips for this step..."
+                      value={newStepTips}
+                      onChange={(e) => setNewStepTips(e.target.value)}
+                      data-testid="input-step-tips"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleAddStep}
+                    data-testid="button-add-step"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Step
+                  </Button>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
@@ -957,6 +1326,154 @@ export default function RecipesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!viewingRecipe} onOpenChange={(open) => !open && setViewingRecipe(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ChefHat className="h-5 w-5" />
+              {viewingRecipe?.name} - Preparation Guide
+            </DialogTitle>
+            <DialogDescription>
+              Follow these steps to prepare the dish. Use the controls to navigate or auto-play.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewingRecipe && viewingRecipe.preparationSteps && viewingRecipe.preparationSteps.length > 0 ? (
+            <div className="flex-1 flex flex-col gap-6 py-4 overflow-hidden">
+              <div className="flex items-center gap-2">
+                {viewingRecipe.images && viewingRecipe.images.length > 0 && (
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    <img 
+                      src={viewingRecipe.images[0]} 
+                      alt={viewingRecipe.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">
+                      Step {activeStepIndex + 1} of {viewingRecipe.preparationSteps.length}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveStepIndex(prev => Math.max(0, prev - 1))}
+                        disabled={activeStepIndex === 0}
+                        data-testid="button-prev-step"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant={isPlayingSteps ? "destructive" : "default"}
+                        size="sm"
+                        onClick={() => setIsPlayingSteps(!isPlayingSteps)}
+                        data-testid="button-toggle-play"
+                      >
+                        {isPlayingSteps ? (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Auto-Play
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveStepIndex(prev => Math.min(viewingRecipe.preparationSteps!.length - 1, prev + 1))}
+                        disabled={activeStepIndex === viewingRecipe.preparationSteps.length - 1}
+                        data-testid="button-next-step"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${((activeStepIndex + 1) / viewingRecipe.preparationSteps.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 p-8 min-h-[300px]">
+                  <div 
+                    key={activeStepIndex}
+                    className="animate-in fade-in slide-in-from-right-5 duration-500"
+                  >
+                    <div className="flex items-start gap-6">
+                      <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-3xl font-bold shadow-lg">
+                        {viewingRecipe.preparationSteps[activeStepIndex].stepNumber}
+                      </div>
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold mb-4">
+                          {viewingRecipe.preparationSteps[activeStepIndex].title}
+                        </h2>
+                        <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+                          {viewingRecipe.preparationSteps[activeStepIndex].instruction}
+                        </p>
+                        
+                        {viewingRecipe.preparationSteps[activeStepIndex].tips && (
+                          <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                            <Lightbulb className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-yellow-800 dark:text-yellow-200">Chef's Tip:</span>
+                              <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                                {viewingRecipe.preparationSteps[activeStepIndex].tips}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {viewingRecipe.preparationSteps[activeStepIndex].duration && (
+                          <div className="mt-4 flex items-center gap-2 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span>Display time: {viewingRecipe.preparationSteps[activeStepIndex].duration} seconds</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {viewingRecipe.preparationSteps.map((step, index) => (
+                  <Button
+                    key={index}
+                    variant={index === activeStepIndex ? "default" : "outline"}
+                    size="sm"
+                    className="flex-shrink-0"
+                    onClick={() => {
+                      setActiveStepIndex(index);
+                      setIsPlayingSteps(false);
+                    }}
+                    data-testid={`button-step-nav-${index}`}
+                  >
+                    {step.stepNumber}. {step.title.length > 15 ? step.title.substring(0, 15) + '...' : step.title}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="py-12 text-center text-muted-foreground">
+              <Utensils className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No preparation steps available for this recipe.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

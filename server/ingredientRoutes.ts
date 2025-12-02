@@ -8,11 +8,13 @@ import {
   insertBaseIngredientSchema, 
   insertRecipeIngredientSchema,
   insertRecipeSchema,
-  insertRecipeComponentSchema
+  insertRecipeComponentSchema,
+  InsertRecipeComponent
 } from "@shared/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { calculateIngredientCost } from "@shared/unitConversion";
+import { ObjectStorageService } from "./objectStorage";
 
 const router = Router();
 
@@ -1004,6 +1006,124 @@ router.put("/recipes/:recipeId/components", async (req, res) => {
   } catch (error) {
     console.error("Error updating recipe components:", error);
     return res.status(500).json({ message: "Failed to update recipe components" });
+  }
+});
+
+// ============================================
+// RECIPE IMAGE UPLOAD
+// ============================================
+
+// Get upload URL for recipe images
+router.post("/recipes/upload-url", async (req, res) => {
+  try {
+    const objectStorageService = new ObjectStorageService();
+    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    return res.json({ uploadURL });
+  } catch (error) {
+    console.error("Error getting upload URL:", error);
+    return res.status(500).json({ message: "Failed to get upload URL" });
+  }
+});
+
+// Update recipe images after upload
+router.post("/recipes/:id/images", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const { imageUrl } = req.body;
+    
+    if (!imageUrl) {
+      return res.status(400).json({ message: "Image URL is required" });
+    }
+    
+    // Get the current recipe
+    const [recipe] = await db
+      .select()
+      .from(recipes)
+      .where(eq(recipes.id, id));
+    
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    
+    // Normalize the image URL path
+    const objectStorageService = new ObjectStorageService();
+    const normalizedPath = objectStorageService.normalizeObjectEntityPath(imageUrl);
+    
+    // Add the image to the recipe's images array
+    const currentImages = recipe.images || [];
+    const updatedImages = [...currentImages, normalizedPath];
+    
+    // Update the recipe
+    const [updatedRecipe] = await db
+      .update(recipes)
+      .set({ 
+        images: updatedImages,
+        updatedAt: new Date() 
+      })
+      .where(eq(recipes.id, id))
+      .returning();
+    
+    return res.json({ 
+      message: "Image added successfully",
+      images: updatedRecipe.images
+    });
+  } catch (error) {
+    console.error("Error adding recipe image:", error);
+    return res.status(500).json({ message: "Failed to add recipe image" });
+  }
+});
+
+// Remove a recipe image
+router.delete("/recipes/:id/images", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const { imageUrl } = req.body;
+    
+    if (!imageUrl) {
+      return res.status(400).json({ message: "Image URL is required" });
+    }
+    
+    // Get the current recipe
+    const [recipe] = await db
+      .select()
+      .from(recipes)
+      .where(eq(recipes.id, id));
+    
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    
+    // Remove the image from the array
+    const currentImages = recipe.images || [];
+    const updatedImages = currentImages.filter(img => img !== imageUrl);
+    
+    // Update the recipe
+    const [updatedRecipe] = await db
+      .update(recipes)
+      .set({ 
+        images: updatedImages,
+        updatedAt: new Date() 
+      })
+      .where(eq(recipes.id, id))
+      .returning();
+    
+    return res.json({ 
+      message: "Image removed successfully",
+      images: updatedRecipe.images
+    });
+  } catch (error) {
+    console.error("Error removing recipe image:", error);
+    return res.status(500).json({ message: "Failed to remove recipe image" });
   }
 });
 

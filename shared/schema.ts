@@ -498,6 +498,18 @@ export const insertRecipeIngredientSchema = createInsertSchema(recipeIngredients
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type InsertRecipeIngredient = z.infer<typeof insertRecipeIngredientSchema>;
 
+// Preparation step schema for recipes
+export const preparationStepSchema = z.object({
+  stepNumber: z.number().int().positive(),
+  title: z.string().min(1, "Step title is required"),
+  instruction: z.string().min(1, "Instruction is required"),
+  duration: z.number().int().optional(), // Duration in minutes
+  tips: z.string().optional(),
+  imageUrl: z.string().optional(), // Optional image for this step
+});
+
+export type PreparationStep = z.infer<typeof preparationStepSchema>;
+
 // Standalone Recipes - grouping of ingredients with calculated costs
 export const recipes = pgTable("recipes", {
   id: serial("id").primaryKey(),
@@ -507,12 +519,16 @@ export const recipes = pgTable("recipes", {
   yield: numeric("yield", { precision: 10, scale: 2 }).default("1"), // How many portions/servings this recipe makes
   yieldUnit: text("yield_unit").default("serving"), // serving, portion, batch, etc.
   notes: text("notes"), // Preparation notes, tips, etc.
+  images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for final product
+  preparationSteps: jsonb("preparation_steps").$type<PreparationStep[]>().default([]), // Step-by-step cooking instructions
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertRecipeSchema = createInsertSchema(recipes, {
   yield: z.coerce.number().positive("Yield must be positive").default(1),
+  images: z.array(z.string()).optional().default([]),
+  preparationSteps: z.array(preparationStepSchema).optional().default([]),
 }).omit({
   id: true,
   createdAt: true,
