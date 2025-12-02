@@ -861,9 +861,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid menu ID' });
       }
       
-      const updateData = req.body;
+      console.log('Menu update request body:', JSON.stringify(req.body, null, 2));
       
-      const updatedMenu = await storage.updateMenu(menuId, updateData);
+      // Parse and validate the incoming menu data
+      const updateData = insertMenuSchema.partial().parse(req.body);
+      
+      // Serialize recipes array to JSON if present
+      const dataToStore: any = {
+        ...updateData,
+      };
+      
+      if (updateData.recipes) {
+        dataToStore.recipes = JSON.stringify(updateData.recipes);
+      }
+      
+      const updatedMenu = await storage.updateMenu(menuId, dataToStore);
       
       if (!updatedMenu) {
         return res.status(404).json({ message: 'Menu not found' });
@@ -877,7 +889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
       
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'Server error', error: String(error) });
     }
   });
   
