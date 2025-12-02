@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
+import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_CONTAINS_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
 import { formatCurrency, calculateIngredientCost } from "@shared/unitConversion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { motion, AnimatePresence } from "framer-motion";
@@ -652,7 +652,6 @@ export default function RecipesPage() {
                       <TableHead>Details</TableHead>
                       <TableHead>Dietary</TableHead>
                       <TableHead className="text-right">Total Cost</TableHead>
-                      <TableHead className="text-right">Cost/Serving</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -705,11 +704,6 @@ export default function RecipesPage() {
                               return <span className="text-muted-foreground text-sm">—</span>;
                             }
                             
-                            const formatAllergenWarning = (tag: string) => {
-                              const name = tag.replace('_free', '').replace('_', ' ');
-                              return `Contains ${name.charAt(0).toUpperCase() + name.slice(1)}`;
-                            };
-                            
                             return (
                               <div className="flex flex-wrap gap-1 max-w-[200px]">
                                 {manualDesignations.slice(0, 2).map((tag) => {
@@ -720,9 +714,9 @@ export default function RecipesPage() {
                                     </Badge>
                                   );
                                 })}
-                                {allergenWarnings.slice(0, 2).map((tag) => (
-                                  <Badge key={tag} variant="destructive" className="text-xs">
-                                    {formatAllergenWarning(tag)}
+                                {allergenWarnings.slice(0, 2).map((warning) => (
+                                  <Badge key={warning} variant="destructive" className="text-xs">
+                                    {warning}
                                   </Badge>
                                 ))}
                                 {(manualDesignations.length + allergenWarnings.length) > 4 && (
@@ -736,9 +730,6 @@ export default function RecipesPage() {
                         </TableCell>
                         <TableCell className="text-right font-medium text-green-600">
                           {formatCurrency(recipe.totalCost || 0)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(recipe.costPerServing || 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

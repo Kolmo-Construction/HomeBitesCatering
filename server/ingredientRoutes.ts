@@ -11,7 +11,7 @@ import {
   insertRecipeComponentSchema,
   InsertRecipeComponent,
   DIETARY_TAGS,
-  ALLERGEN_TAGS,
+  ALLERGEN_CONTAINS_TAGS,
   RecipeDietaryFlags
 } from "@shared/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
@@ -54,23 +54,22 @@ async function computeRecipeAllergenWarnings(recipeId: number, tx?: typeof db): 
     .from(baseIngredients)
     .where(inArray(baseIngredients.id, ingredientIds));
   
-  const allergenWarnings: string[] = [];
+  const allergenWarnings = new Set<string>();
   
-  // For each allergen tag, check if ANY ingredient is missing it
-  for (const allergenTag of ALLERGEN_TAGS) {
-    const anyIngredientMissingTag = ingredients.some(ing => {
-      const tags = (ing.dietaryTags as string[]) || [];
-      return !tags.includes(allergenTag);
-    });
-    
-    if (anyIngredientMissingTag) {
-      // At least one ingredient doesn't have this "free" tag,
-      // so recipe may contain this allergen
-      allergenWarnings.push(allergenTag);
+  // For each ingredient, check if it has any allergen CONTAINS tags
+  for (const ing of ingredients) {
+    const tags = (ing.dietaryTags as string[]) || [];
+    for (const tag of tags) {
+      // Check if this tag is an allergen contains tag
+      const allergenTag = ALLERGEN_CONTAINS_TAGS.find(a => a.value === tag);
+      if (allergenTag) {
+        // Add the warning label (e.g., "Contains Gluten")
+        allergenWarnings.add(allergenTag.warning);
+      }
     }
   }
   
-  return allergenWarnings;
+  return Array.from(allergenWarnings);
 }
 
 /**

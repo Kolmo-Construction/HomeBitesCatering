@@ -444,42 +444,40 @@ export type OpportunityEmailThread = typeof opportunityEmailThreads.$inferSelect
 export type InsertOpportunityEmailThread = z.infer<typeof insertOpportunityEmailThreadSchema>;
 
 // Dietary characteristic tags for ingredients - used on base ingredients
+// Includes both allergen CONTAINS tags (propagate to recipes) and general dietary info
 export const DIETARY_TAGS = [
-  { value: "gluten_free", label: "Gluten Free" },
-  { value: "nut_free", label: "Nut Free" },
-  { value: "dairy_free", label: "Dairy Free" },
-  { value: "egg_free", label: "Egg Free" },
-  { value: "soy_free", label: "Soy Free" },
-  { value: "shellfish_free", label: "Shellfish Free" },
-  { value: "sesame_free", label: "Sesame Free" },
-  { value: "vegan", label: "Vegan" },
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "keto", label: "Keto Friendly" },
-  { value: "paleo", label: "Paleo" },
-  { value: "low_carb", label: "Low Carb" },
-  { value: "low_sodium", label: "Low Sodium" },
-  { value: "sugar_free", label: "Sugar Free" },
-  { value: "organic", label: "Organic" },
-  { value: "non_gmo", label: "Non-GMO" },
-  { value: "kosher", label: "Kosher" },
-  { value: "halal", label: "Halal" },
+  // Allergen CONTAINS tags (auto-propagate warnings to recipes)
+  { value: "contains_gluten", label: "Contains Gluten", isAllergen: true },
+  { value: "contains_nuts", label: "Contains Nuts", isAllergen: true },
+  { value: "contains_dairy", label: "Contains Dairy", isAllergen: true },
+  { value: "contains_egg", label: "Contains Egg", isAllergen: true },
+  { value: "contains_soy", label: "Contains Soy", isAllergen: true },
+  { value: "contains_shellfish", label: "Contains Shellfish", isAllergen: true },
+  { value: "contains_sesame", label: "Contains Sesame", isAllergen: true },
+  // General dietary tags (informational, do not auto-propagate)
+  { value: "vegan", label: "Vegan", isAllergen: false },
+  { value: "vegetarian", label: "Vegetarian", isAllergen: false },
+  { value: "organic", label: "Organic", isAllergen: false },
+  { value: "non_gmo", label: "Non-GMO", isAllergen: false },
+  { value: "kosher", label: "Kosher", isAllergen: false },
+  { value: "halal", label: "Halal", isAllergen: false },
 ] as const;
 
 export type DietaryTag = typeof DIETARY_TAGS[number]["value"];
 
-// Allergen tags that auto-propagate to recipes (if ingredient lacks tag, recipe gets warning)
-// These are safety-critical and must be automatically computed
-export const ALLERGEN_TAGS = [
-  "gluten_free",
-  "nut_free", 
-  "dairy_free",
-  "egg_free",
-  "soy_free",
-  "shellfish_free",
-  "sesame_free",
+// Allergen CONTAINS tags - used on base ingredients to indicate allergen presence
+// These auto-propagate to recipes: if ANY ingredient contains an allergen, recipe gets a warning
+export const ALLERGEN_CONTAINS_TAGS = [
+  { value: "contains_gluten", label: "Contains Gluten", warning: "Contains Gluten" },
+  { value: "contains_nuts", label: "Contains Nuts", warning: "Contains Nuts" },
+  { value: "contains_dairy", label: "Contains Dairy", warning: "Contains Dairy" },
+  { value: "contains_egg", label: "Contains Egg", warning: "Contains Egg" },
+  { value: "contains_soy", label: "Contains Soy", warning: "Contains Soy" },
+  { value: "contains_shellfish", label: "Contains Shellfish", warning: "Contains Shellfish" },
+  { value: "contains_sesame", label: "Contains Sesame", warning: "Contains Sesame" },
 ] as const;
 
-export type AllergenTag = typeof ALLERGEN_TAGS[number];
+export type AllergenContainsTag = typeof ALLERGEN_CONTAINS_TAGS[number]["value"];
 
 // Lifestyle tags that require manual recipe certification (NOT auto-computed)
 // These depend on the whole recipe, not just individual ingredients
