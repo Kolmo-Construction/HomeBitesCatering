@@ -9,7 +9,9 @@ import {
   insertRecipeIngredientSchema,
   insertRecipeSchema,
   insertRecipeComponentSchema,
-  InsertRecipeComponent
+  InsertRecipeComponent,
+  DIETARY_TAGS,
+  RecipeDietaryFlags
 } from "@shared/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -17,6 +19,102 @@ import { calculateIngredientCost } from "@shared/unitConversion";
 import { ObjectStorageService } from "./objectStorage";
 
 const router = Router();
+
+// ============================================
+// DIETARY FLAGS AGGREGATION HELPER
+// ============================================
+
+/**
+ * Compute dietary flags for a recipe based on its ingredient components.
+ * For a recipe to have a dietary tag (e.g., "gluten_free"), ALL ingredients must have that tag.
+ * If ANY ingredient is missing a tag, it becomes a "warning" for the recipe.
+ */
+async function computeRecipeDietaryFlags(recipeId: number, tx?: typeof db): Promise<RecipeDietaryFlags> {
+  const database = tx || db;
+  
+  // Get all ingredient IDs for this recipe
+  const components = await database
+    .select({ baseIngredientId: recipeComponents.baseIngredientId })
+    .from(recipeComponents)
+    .where(eq(recipeComponents.recipeId, recipeId));
+  
+  if (components.length === 0) {
+    // No ingredients = no dietary info
+    return { tags: [], warnings: [] };
+  }
+  
+  // Get dietary tags for all ingredients
+  const ingredientIds = components.map(c => c.baseIngredientId);
+  const ingredients = await database
+    .select({ 
+      id: baseIngredients.id, 
+      dietaryTags: baseIngredients.dietaryTags 
+    })
+    .from(baseIngredients)
+    .where(inArray(baseIngredients.id, ingredientIds));
+  
+  // Get all possible dietary tag values
+  const allPossibleTags = DIETARY_TAGS.map(t => t.value);
+  
+  // For each tag, check if ALL ingredients have it
+  const recipeTags: string[] = [];
+  const recipeWarnings: string[] = [];
+  
+  for (const tagValue of allPossibleTags) {
+    const allIngredientsHaveTag = ingredients.every(ing => {
+      const tags = (ing.dietaryTags as string[]) || [];
+      return tags.includes(tagValue);
+    });
+    
+    const anyIngredientHasTag = ingredients.some(ing => {
+      const tags = (ing.dietaryTags as string[]) || [];
+      return tags.includes(tagValue);
+    });
+    
+    if (allIngredientsHaveTag) {
+      // All ingredients have this tag, so recipe has it
+      recipeTags.push(tagValue);
+    } else if (anyIngredientHasTag) {
+      // Some ingredients have it but not all - this is a warning
+      // (e.g., recipe is NOT fully gluten-free because one ingredient isn't)
+      recipeWarnings.push(tagValue);
+    }
+    // If no ingredients have the tag, we don't add it anywhere
+  }
+  
+  return { tags: recipeTags, warnings: recipeWarnings };
+}
+
+/**
+ * Update the dietary flags for a specific recipe
+ */
+async function updateRecipeDietaryFlags(recipeId: number, tx?: typeof db): Promise<RecipeDietaryFlags> {
+  const database = tx || db;
+  const flags = await computeRecipeDietaryFlags(recipeId, tx);
+  
+  await database
+    .update(recipes)
+    .set({ dietaryFlags: flags })
+    .where(eq(recipes.id, recipeId));
+  
+  return flags;
+}
+
+/**
+ * Update dietary flags for all recipes that use a specific ingredient
+ */
+async function updateRecipesForIngredient(ingredientId: number): Promise<void> {
+  // Find all recipes that use this ingredient
+  const affectedRecipes = await db
+    .select({ recipeId: recipeComponents.recipeId })
+    .from(recipeComponents)
+    .where(eq(recipeComponents.baseIngredientId, ingredientId));
+  
+  // Update dietary flags for each affected recipe
+  for (const recipe of affectedRecipes) {
+    await updateRecipeDietaryFlags(recipe.recipeId);
+  }
+}
 
 // ============================================
 // BASE INGREDIENTS CRUD
@@ -203,6 +301,15 @@ router.put("/base-ingredients/:id", async (req, res) => {
       .set(updateData)
       .where(eq(baseIngredients.id, id))
       .returning();
+    
+    // If dietary tags changed, update all recipes that use this ingredient
+    const oldTags = (existingIngredient.dietaryTags as string[]) || [];
+    const newTags = (parsed.data.dietaryTags as string[]) || [];
+    const tagsChanged = JSON.stringify(oldTags.sort()) !== JSON.stringify(newTags.sort());
+    
+    if (tagsChanged) {
+      await updateRecipesForIngredient(id);
+    }
     
     return res.json(updatedIngredient);
   } catch (error: any) {
@@ -789,6 +896,11 @@ router.post("/recipes", async (req, res) => {
       return newRecipe;
     });
     
+    // Compute and update dietary flags after transaction completes
+    if (Array.isArray(components) && components.length > 0) {
+      await updateRecipeDietaryFlags(result.id);
+    }
+    
     return res.status(201).json(result);
   } catch (error) {
     console.error("Error creating recipe:", error);
@@ -863,6 +975,11 @@ router.put("/recipes/:id", async (req, res) => {
       
       return updatedRecipe;
     });
+    
+    // Recompute dietary flags after components update
+    if (Array.isArray(components)) {
+      await updateRecipeDietaryFlags(id);
+    }
     
     return res.json(result);
   } catch (error: any) {
