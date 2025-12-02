@@ -388,6 +388,7 @@ export default function BaseIngredientsPage() {
         const mappedData = jsonData.map((row: any) => ({
           name: row.Name || row.name || "",
           category: normalizeCategory(row.Category || row.category || ""),
+          sku: row.SKU || row.sku || row['Product Code'] || row.productCode || "",
           purchasePrice: sanitizeNumber(row['Purchase Price'] || row.purchasePrice || row.price),
           purchaseUnit: normalizeUnit(row['Purchase Unit'] || row.purchaseUnit || row.unit || ""),
           purchaseQuantity: sanitizeNumber(row['Purchase Quantity'] || row.purchaseQuantity || row.quantity),
