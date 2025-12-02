@@ -9,7 +9,6 @@ import Dashboard from "@/pages/dashboard"; // Assuming this path is correct
 import Opportunities from "@/pages/opportunities";
 import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
-import MenuItems from "@/pages/menu-items";
 import Menus from "@/pages/menus";
 import BaseIngredients from "@/pages/base-ingredients";
 import Recipes from "@/pages/recipes";
@@ -157,10 +156,6 @@ function AppContent() {
           <Route path="/estimates/new" component={Estimates} />
           <Route path="/estimates/:id/view" component={Estimates} />
           <Route path="/estimates/:id/edit" component={Estimates} />
-          <Route path="/menu-items" component={MenuItems} />
-          <Route path="/menu-items/new" component={MenuItems} />
-          <Route path="/menu-items/:id" component={MenuItems} />
-          <Route path="/menu-items/:id/edit" component={MenuItems} />
           <Route path="/base-ingredients" component={BaseIngredients} />
           <Route path="/recipes" component={Recipes} />
           <Route path="/menus" component={Menus} />
