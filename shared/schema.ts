@@ -443,6 +443,26 @@ export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 export type OpportunityEmailThread = typeof opportunityEmailThreads.$inferSelect;
 export type InsertOpportunityEmailThread = z.infer<typeof insertOpportunityEmailThreadSchema>;
 
+// Dietary characteristic tags for ingredients
+export const DIETARY_TAGS = [
+  { value: "gluten_free", label: "Gluten Free" },
+  { value: "nut_free", label: "Nut Free" },
+  { value: "dairy_free", label: "Dairy Free" },
+  { value: "vegan", label: "Vegan" },
+  { value: "vegetarian", label: "Vegetarian" },
+  { value: "keto", label: "Keto Friendly" },
+  { value: "paleo", label: "Paleo" },
+  { value: "low_carb", label: "Low Carb" },
+  { value: "low_sodium", label: "Low Sodium" },
+  { value: "sugar_free", label: "Sugar Free" },
+  { value: "organic", label: "Organic" },
+  { value: "non_gmo", label: "Non-GMO" },
+  { value: "kosher", label: "Kosher" },
+  { value: "halal", label: "Halal" },
+] as const;
+
+export type DietaryTag = typeof DIETARY_TAGS[number]["value"];
+
 // Base Ingredients - what you buy in bulk
 // NOTE: Database has a case-insensitive partial unique index on SKU:
 // CREATE UNIQUE INDEX base_ingredients_sku_ci_unique ON base_ingredients (LOWER(sku)) WHERE sku IS NOT NULL AND sku <> '';
@@ -458,6 +478,7 @@ export const baseIngredients = pgTable("base_ingredients", {
   purchaseQuantity: numeric("purchase_quantity", { precision: 10, scale: 2 }).default("1").notNull(), // usually 1, but could be 10 for "10lb case"
   supplier: text("supplier"), // optional vendor/supplier name
   notes: text("notes"), // optional storage notes, quality specs, etc.
+  dietaryTags: jsonb("dietary_tags").$type<string[]>().default([]), // dietary characteristics: gluten_free, nut_free, keto, etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -465,6 +486,7 @@ export const baseIngredients = pgTable("base_ingredients", {
 export const insertBaseIngredientSchema = createInsertSchema(baseIngredients, {
   purchasePrice: z.coerce.number().nonnegative("Price must be non-negative"),
   purchaseQuantity: z.coerce.number().positive("Quantity must be positive").default(1),
+  dietaryTags: z.array(z.string()).optional().default([]),
 }).omit({
   id: true,
   createdAt: true,
