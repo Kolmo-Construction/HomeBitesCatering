@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, type RecipeDietaryFlags } from "@shared/schema";
+import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
 import { formatCurrency, calculateIngredientCost } from "@shared/unitConversion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { motion, AnimatePresence } from "framer-motion";
@@ -150,6 +150,7 @@ export default function RecipesPage() {
   
   const [recipeImages, setRecipeImages] = useState<string[]>([]);
   const [preparationSteps, setPreparationSteps] = useState<PreparationStep[]>([]);
+  const [manualDesignations, setManualDesignations] = useState<string[]>([]);
   const [viewingRecipe, setViewingRecipe] = useState<RecipeWithCost | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [isPlayingSteps, setIsPlayingSteps] = useState(false);
@@ -254,6 +255,7 @@ export default function RecipesPage() {
     setRecipeComponents([]);
     setRecipeImages([]);
     setPreparationSteps([]);
+    setManualDesignations([]);
     form.reset({
       name: "",
       description: "",
@@ -290,6 +292,8 @@ export default function RecipesPage() {
     
     setRecipeImages(recipe.images || []);
     setPreparationSteps(recipe.preparationSteps || []);
+    const flags = recipe.dietaryFlags as RecipeDietaryFlags | null;
+    setManualDesignations(flags?.manualDesignations || []);
 
     try {
       const res = await fetch(`/api/ingredients/recipes/${recipe.id}`);
@@ -323,6 +327,10 @@ export default function RecipesPage() {
       ...data,
       images: recipeImages,
       preparationSteps: preparationSteps,
+      dietaryFlags: {
+        allergenWarnings: [], // Will be computed by server
+        manualDesignations: manualDesignations,
+      },
       components: recipeComponents.map((comp) => ({
         baseIngredientId: comp.baseIngredientId,
         quantity: comp.quantity,
@@ -690,30 +698,36 @@ export default function RecipesPage() {
                         <TableCell>
                           {(() => {
                             const flags = recipe.dietaryFlags as RecipeDietaryFlags | null;
-                            if (!flags || (flags.tags.length === 0 && flags.warnings.length === 0)) {
+                            const allergenWarnings = flags?.allergenWarnings || [];
+                            const manualDesignations = flags?.manualDesignations || [];
+                            
+                            if (allergenWarnings.length === 0 && manualDesignations.length === 0) {
                               return <span className="text-muted-foreground text-sm">—</span>;
                             }
+                            
+                            const formatAllergenWarning = (tag: string) => {
+                              const name = tag.replace('_free', '').replace('_', ' ');
+                              return `Contains ${name.charAt(0).toUpperCase() + name.slice(1)}`;
+                            };
+                            
                             return (
-                              <div className="flex flex-wrap gap-1 max-w-[180px]">
-                                {flags.tags.slice(0, 2).map((tag) => {
-                                  const tagInfo = DIETARY_TAGS.find((t) => t.value === tag);
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {manualDesignations.slice(0, 2).map((tag) => {
+                                  const tagInfo = LIFESTYLE_TAGS.find((t) => t.value === tag);
                                   return (
                                     <Badge key={tag} variant="default" className="text-xs bg-green-600">
                                       {tagInfo?.label || tag}
                                     </Badge>
                                   );
                                 })}
-                                {flags.warnings.slice(0, 2).map((tag) => {
-                                  const tagInfo = DIETARY_TAGS.find((t) => t.value === tag);
-                                  return (
-                                    <Badge key={tag} variant="destructive" className="text-xs">
-                                      Not {tagInfo?.label || tag}
-                                    </Badge>
-                                  );
-                                })}
-                                {(flags.tags.length + flags.warnings.length) > 4 && (
+                                {allergenWarnings.slice(0, 2).map((tag) => (
+                                  <Badge key={tag} variant="destructive" className="text-xs">
+                                    {formatAllergenWarning(tag)}
+                                  </Badge>
+                                ))}
+                                {(manualDesignations.length + allergenWarnings.length) > 4 && (
                                   <Badge variant="outline" className="text-xs">
-                                    +{flags.tags.length + flags.warnings.length - 4}
+                                    +{manualDesignations.length + allergenWarnings.length - 4}
                                   </Badge>
                                 )}
                               </div>
@@ -914,6 +928,52 @@ export default function RecipesPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  Dietary Certifications
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="inline-flex">
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">
+                          Manually certify this recipe for specific dietary requirements. Allergen warnings are auto-computed from ingredients.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Select dietary certifications that apply to this entire recipe:
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {LIFESTYLE_TAGS.map((tag) => (
+                    <label
+                      key={tag.value}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={manualDesignations.includes(tag.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setManualDesignations([...manualDesignations, tag.value]);
+                          } else {
+                            setManualDesignations(manualDesignations.filter(t => t !== tag.value));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                        data-testid={`checkbox-dietary-${tag.value}`}
+                      />
+                      <span className="text-sm">{tag.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               <div className="border rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
