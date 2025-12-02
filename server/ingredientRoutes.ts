@@ -11,6 +11,7 @@ import {
   insertRecipeComponentSchema,
   InsertRecipeComponent,
   DIETARY_TAGS,
+  ALLERGEN_TAGS,
   RecipeDietaryFlags
 } from "@shared/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
@@ -25,11 +26,12 @@ const router = Router();
 // ============================================
 
 /**
- * Compute dietary flags for a recipe based on its ingredient components.
- * For a recipe to have a dietary tag (e.g., "gluten_free"), ALL ingredients must have that tag.
- * If ANY ingredient is missing a tag, it becomes a "warning" for the recipe.
+ * Compute allergen warnings for a recipe based on its ingredient components.
+ * Only ALLERGEN_TAGS are auto-computed (gluten, nuts, dairy, etc.).
+ * If ANY ingredient lacks an allergen-free tag, the recipe gets a warning.
+ * Lifestyle tags (keto, vegan, etc.) require manual designation.
  */
-async function computeRecipeDietaryFlags(recipeId: number, tx?: typeof db): Promise<RecipeDietaryFlags> {
+async function computeRecipeAllergenWarnings(recipeId: number, tx?: typeof db): Promise<string[]> {
   const database = tx || db;
   
   // Get all ingredient IDs for this recipe
@@ -39,8 +41,7 @@ async function computeRecipeDietaryFlags(recipeId: number, tx?: typeof db): Prom
     .where(eq(recipeComponents.recipeId, recipeId));
   
   if (components.length === 0) {
-    // No ingredients = no dietary info
-    return { tags: [], warnings: [] };
+    return []; // No ingredients = no allergen warnings
   }
   
   // Get dietary tags for all ingredients
@@ -53,51 +54,52 @@ async function computeRecipeDietaryFlags(recipeId: number, tx?: typeof db): Prom
     .from(baseIngredients)
     .where(inArray(baseIngredients.id, ingredientIds));
   
-  // Get all possible dietary tag values
-  const allPossibleTags = DIETARY_TAGS.map(t => t.value);
+  const allergenWarnings: string[] = [];
   
-  // For each tag, check if ALL ingredients have it
-  const recipeTags: string[] = [];
-  const recipeWarnings: string[] = [];
-  
-  for (const tagValue of allPossibleTags) {
-    const allIngredientsHaveTag = ingredients.every(ing => {
+  // For each allergen tag, check if ANY ingredient is missing it
+  for (const allergenTag of ALLERGEN_TAGS) {
+    const anyIngredientMissingTag = ingredients.some(ing => {
       const tags = (ing.dietaryTags as string[]) || [];
-      return tags.includes(tagValue);
+      return !tags.includes(allergenTag);
     });
     
-    const anyIngredientHasTag = ingredients.some(ing => {
-      const tags = (ing.dietaryTags as string[]) || [];
-      return tags.includes(tagValue);
-    });
-    
-    if (allIngredientsHaveTag) {
-      // All ingredients have this tag, so recipe has it
-      recipeTags.push(tagValue);
-    } else if (anyIngredientHasTag) {
-      // Some ingredients have it but not all - this is a warning
-      // (e.g., recipe is NOT fully gluten-free because one ingredient isn't)
-      recipeWarnings.push(tagValue);
+    if (anyIngredientMissingTag) {
+      // At least one ingredient doesn't have this "free" tag,
+      // so recipe may contain this allergen
+      allergenWarnings.push(allergenTag);
     }
-    // If no ingredients have the tag, we don't add it anywhere
   }
   
-  return { tags: recipeTags, warnings: recipeWarnings };
+  return allergenWarnings;
 }
 
 /**
- * Update the dietary flags for a specific recipe
+ * Update the dietary flags for a specific recipe.
+ * Preserves manual designations while updating allergen warnings.
  */
 async function updateRecipeDietaryFlags(recipeId: number, tx?: typeof db): Promise<RecipeDietaryFlags> {
   const database = tx || db;
-  const flags = await computeRecipeDietaryFlags(recipeId, tx);
+  
+  // Get current recipe to preserve manual designations
+  const [currentRecipe] = await database
+    .select({ dietaryFlags: recipes.dietaryFlags })
+    .from(recipes)
+    .where(eq(recipes.id, recipeId));
+  
+  const existingFlags = (currentRecipe?.dietaryFlags as RecipeDietaryFlags) || { allergenWarnings: [], manualDesignations: [] };
+  const allergenWarnings = await computeRecipeAllergenWarnings(recipeId, tx);
+  
+  const updatedFlags: RecipeDietaryFlags = {
+    allergenWarnings,
+    manualDesignations: existingFlags.manualDesignations || []
+  };
   
   await database
     .update(recipes)
-    .set({ dietaryFlags: flags })
+    .set({ dietaryFlags: updatedFlags })
     .where(eq(recipes.id, recipeId));
   
-  return flags;
+  return updatedFlags;
 }
 
 /**
@@ -1013,6 +1015,51 @@ router.delete("/recipes/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting recipe:", error);
     return res.status(500).json({ message: "Failed to delete recipe" });
+  }
+});
+
+// Update manual dietary designations for a recipe
+router.patch("/recipes/:id/dietary", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+    
+    const { manualDesignations } = req.body;
+    
+    if (!Array.isArray(manualDesignations)) {
+      return res.status(400).json({ message: "manualDesignations must be an array" });
+    }
+    
+    // Get current recipe
+    const [currentRecipe] = await db
+      .select({ dietaryFlags: recipes.dietaryFlags })
+      .from(recipes)
+      .where(eq(recipes.id, id));
+    
+    if (!currentRecipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+    
+    const existingFlags = (currentRecipe.dietaryFlags as RecipeDietaryFlags) || { allergenWarnings: [], manualDesignations: [] };
+    
+    const updatedFlags: RecipeDietaryFlags = {
+      allergenWarnings: existingFlags.allergenWarnings || [],
+      manualDesignations
+    };
+    
+    const [updatedRecipe] = await db
+      .update(recipes)
+      .set({ dietaryFlags: updatedFlags, updatedAt: new Date() })
+      .where(eq(recipes.id, id))
+      .returning();
+    
+    return res.json(updatedRecipe);
+  } catch (error) {
+    console.error("Error updating recipe dietary designations:", error);
+    return res.status(500).json({ message: "Failed to update dietary designations" });
   }
 });
 
