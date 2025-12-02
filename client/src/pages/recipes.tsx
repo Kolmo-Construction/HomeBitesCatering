@@ -10,6 +10,7 @@ import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSc
 import { formatCurrency, calculateIngredientCost } from "@shared/unitConversion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { motion, AnimatePresence } from "framer-motion";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -476,7 +477,32 @@ export default function RecipesPage() {
   });
 
   const totalRecipes = recipes.length;
-  const totalIngredientCost = recipes.reduce((sum, r) => sum + (r.totalCost || 0), 0);
+  
+  const generateCostDistribution = () => {
+    if (recipes.length === 0) return [];
+    
+    const costs = recipes.map(r => r.totalCost || 0).sort((a, b) => a - b);
+    const min = costs[0];
+    const max = costs[costs.length - 1];
+    const range = max - min || 1;
+    const binCount = Math.min(8, Math.max(3, Math.ceil(Math.sqrt(recipes.length))));
+    const binSize = range / binCount;
+    
+    const distribution: any[] = [];
+    for (let i = 0; i < binCount; i++) {
+      const binMin = min + (i * binSize);
+      const binMax = binMin + binSize;
+      const count = costs.filter(c => c >= binMin && c <= binMax).length;
+      distribution.push({
+        range: `$${Math.round(binMin)}-$${Math.round(binMax)}`,
+        count: count,
+        percentage: (count / recipes.length) * 100,
+      });
+    }
+    return distribution;
+  };
+  
+  const costDistribution = generateCostDistribution();
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl" data-testid="page-recipes">
