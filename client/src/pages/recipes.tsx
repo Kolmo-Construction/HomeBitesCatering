@@ -10,7 +10,7 @@ import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSc
 import { formatCurrency, calculateIngredientCost } from "@shared/unitConversion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -542,12 +542,28 @@ export default function RecipesPage() {
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Total Ingredient Cost</CardDescription>
-              <CardTitle className="text-3xl flex items-center gap-2" data-testid="text-total-cost">
-                <DollarSign className="h-6 w-6 text-green-600" />
-                {formatCurrency(totalIngredientCost)}
-              </CardTitle>
+              <CardDescription>Cost Distribution</CardDescription>
             </CardHeader>
+            <CardContent>
+              {costDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={costDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="range" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
+                    <YAxis />
+                    <RechartsTooltip 
+                      formatter={(value: any) => `${value} recipes`}
+                      labelFormatter={(label: any) => `Price Range: ${label}`}
+                    />
+                    <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <p>No recipes yet</p>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
 
