@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -136,6 +136,19 @@ export default function RecipesPage() {
   const [ingredientQuantity, setIngredientQuantity] = useState<string>("1");
   const [ingredientUnit, setIngredientUnit] = useState<string>("pound");
   const [ingredientPrepNotes, setIngredientPrepNotes] = useState<string>("");
+  const ingredientSearchRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ingredientSearchRef.current && !ingredientSearchRef.current.contains(event.target as Node)) {
+        setShowIngredientDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const { data: recipes = [], isLoading } = useQuery<RecipeWithCost[]>({
     queryKey: ["/api/ingredients/recipes", { category: categoryFilter, search: searchQuery }],
@@ -677,7 +690,7 @@ export default function RecipesPage() {
                 <div className="bg-muted/50 rounded-lg p-4 space-y-4">
                   <h4 className="font-medium text-sm">Add Ingredient</h4>
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-4 relative">
+                    <div className="md:col-span-4 relative" ref={ingredientSearchRef}>
                       <Label>Ingredient</Label>
                       <div className="relative">
                         <Input
