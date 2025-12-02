@@ -10,7 +10,7 @@ import {
   insertRecipeSchema,
   insertRecipeComponentSchema
 } from "@shared/schema";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { calculateIngredientCost } from "@shared/unitConversion";
 
@@ -624,7 +624,7 @@ router.get("/recipes", async (req, res) => {
       })
       .from(recipeComponents)
       .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
-      .where(sql`${recipeComponents.recipeId} = ANY(${recipeIds})`);
+      .where(inArray(recipeComponents.recipeId, recipeIds));
     
     // Group components by recipe ID
     const componentsByRecipeId = new Map<number, typeof allComponents>();
