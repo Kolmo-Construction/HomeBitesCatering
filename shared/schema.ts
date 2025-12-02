@@ -463,6 +463,14 @@ export const DIETARY_TAGS = [
 
 export type DietaryTag = typeof DIETARY_TAGS[number]["value"];
 
+// Recipe dietary flags computed from ingredients
+// "positive" = all ingredients must have this tag for the recipe to inherit it (e.g., vegan, gluten_free)
+// If ANY ingredient lacks a positive tag, the recipe does NOT have it
+export interface RecipeDietaryFlags {
+  tags: string[];           // Tags the recipe has (all ingredients have these)
+  warnings: string[];       // Tags the recipe lacks (at least one ingredient is missing these)
+}
+
 // Base Ingredients - what you buy in bulk
 // NOTE: Database has a case-insensitive partial unique index on SKU:
 // CREATE UNIQUE INDEX base_ingredients_sku_ci_unique ON base_ingredients (LOWER(sku)) WHERE sku IS NOT NULL AND sku <> '';
@@ -543,6 +551,7 @@ export const recipes = pgTable("recipes", {
   notes: text("notes"), // Preparation notes, tips, etc.
   images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for final product
   preparationSteps: jsonb("preparation_steps").$type<PreparationStep[]>().default([]), // Step-by-step cooking instructions
+  dietaryFlags: jsonb("dietary_flags").$type<RecipeDietaryFlags>().default({ tags: [], warnings: [] }), // Computed dietary flags from ingredients
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -551,6 +560,10 @@ export const insertRecipeSchema = createInsertSchema(recipes, {
   yield: z.coerce.number().positive("Yield must be positive").default(1),
   images: z.array(z.string()).optional().default([]),
   preparationSteps: z.array(preparationStepSchema).optional().default([]),
+  dietaryFlags: z.object({
+    tags: z.array(z.string()),
+    warnings: z.array(z.string()),
+  }).optional().default({ tags: [], warnings: [] }),
 }).omit({
   id: true,
   createdAt: true,
