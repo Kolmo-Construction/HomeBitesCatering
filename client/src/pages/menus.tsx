@@ -73,9 +73,9 @@ export default function Menus() {
   // Debug selected menu data
   console.log("Selected menu data:", selectedMenu);
   
-  // Fetch menu items for reference
-  const { data: menuItems = [] } = useQuery({
-    queryKey: ["/api/menu-items"],
+  // Fetch recipes for reference
+  const { data: recipes = [] } = useQuery({
+    queryKey: ["/api/ingredients/recipes"],
   });
   
   // Delete mutation
@@ -128,36 +128,27 @@ export default function Menus() {
       },
     },
     {
-      accessorKey: "items",
-      header: "Items",
+      accessorKey: "recipes",
+      header: "Recipes",
       cell: ({ row }) => {
-        const menuItemsData = row.original.items;
+        const recipesData = (row.original as any).recipes;
         let count = 0;
 
-        if (menuItemsData) {
-          let parsedItems;
+        if (recipesData) {
           try {
-            parsedItems = typeof menuItemsData === 'string'
-              ? JSON.parse(menuItemsData)
-              : menuItemsData;
+            const parsedRecipes = typeof recipesData === 'string'
+              ? JSON.parse(recipesData)
+              : recipesData;
 
-            if (Array.isArray(parsedItems)) {
-              // Handles simple array format: [{id: "...", type: "..."}, ...]
-              count = parsedItems.length;
-            } else if (parsedItems && Array.isArray(parsedItems.categories)) {
-              // Handles MenuPackageStructure: sum of available_item_ids in all categories
-              parsedItems.categories.forEach((category: any) => {
-                if (Array.isArray(category.available_item_ids)) {
-                  count += category.available_item_ids.length;
-                }
-              });
+            if (Array.isArray(parsedRecipes)) {
+              count = parsedRecipes.length;
             }
           } catch (error) {
-            console.error("Error parsing menu items for count:", error, menuItemsData);
+            console.error("Error parsing menu recipes for count:", error);
             return <span>Error</span>;
           }
         }
-        return <span>{count} items</span>;
+        return <span>{count} recipes</span>;
       },
     },
     {

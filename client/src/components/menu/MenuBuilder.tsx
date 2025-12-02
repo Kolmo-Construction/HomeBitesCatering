@@ -20,37 +20,34 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { GripVertical, X, Plus, Save, Trash2 } from "lucide-react";
+import { GripVertical, X, Plus, Save, Trash2, Search, ChefHat } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { insertMenuSchema } from "@shared/schema";
+import { insertMenuSchema, type Recipe, type MenuRecipeItem, LIFESTYLE_TAGS, ALLERGEN_CONTAINS_TAGS } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import MenuItemSelector from "./MenuItemSelector";
 
-// Define the menu item with type
-interface MenuItemWithType {
+interface RecipeForMenu {
   id: number;
   name: string;
-  price: number;
-  type: string;
-  category: string;
+  category: string | null;
+  description: string | null;
+  totalCost?: number;
+  dietaryFlags?: {
+    allergenWarnings: string[];
+    manualDesignations: string[];
+  };
 }
 
-// Schema for the form
-const formSchema = insertMenuSchema.extend({
+const formSchema = z.object({
   name: z.string().min(1, "Menu name is required"),
   description: z.string().optional(),
   type: z.string().min(1, "Menu type is required"),
+  eventType: z.string().default("other"),
   displayOnCustomerForm: z.boolean().optional(),
-  theme_key: z.string().optional(),
-  package_id: z.string().optional(),
-  package_name: z.string().optional(),
-  items: z.array(z.object({
-    id: z.number(),
-    type: z.string(),
-  })).optional(),
+  isPubliclyVisible: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,167 +57,104 @@ interface MenuBuilderProps {
   isEditing?: boolean;
 }
 
-// Format category display name (for custom categories)
-const getCategoryDisplayName = (categoryKey: string): string => {
-  const categoryLabels: Record<string, string> = {
-    appetizer: "Appetizers",
-    entree: "Main Courses",
-    side: "Sides",
-    dessert: "Desserts",
-    beverage: "Beverages"
-  };
-  
-  if (categoryLabels[categoryKey]) {
-    return categoryLabels[categoryKey];
-  }
-  
-  // For custom categories, capitalize first letter of each word
-  return categoryKey
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+const RECIPE_CATEGORIES = [
+  { value: "appetizer", label: "Appetizers" },
+  { value: "entree", label: "Main Courses" },
+  { value: "side", label: "Sides" },
+  { value: "dessert", label: "Desserts" },
+  { value: "beverage", label: "Beverages" },
+  { value: "sauce", label: "Sauces" },
+  { value: "salad", label: "Salads" },
+];
+
+const getCategoryLabel = (category: string | null): string => {
+  if (!category) return "Uncategorized";
+  const found = RECIPE_CATEGORIES.find(c => c.value === category);
+  return found?.label || category.charAt(0).toUpperCase() + category.slice(1);
 };
 
-// Sortable item component
-function SortableMenuItem({ 
-  item, 
-  onTypeChange, 
+function SortableRecipeItem({ 
+  recipe, 
+  menuRecipe,
+  onCategoryChange, 
   onRemove
 }: { 
-  item: MenuItemWithType; 
-  onTypeChange: (id: string | number, type: string) => void;
-  onRemove: (id: string | number) => void;
+  recipe: RecipeForMenu;
+  menuRecipe: MenuRecipeItem;
+  onCategoryChange: (recipeId: number, category: string) => void;
+  onRemove: (recipeId: number) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id });
   
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
+  const allergenWarnings = recipe.dietaryFlags?.allergenWarnings || [];
+  const manualDesignations = recipe.dietaryFlags?.manualDesignations || [];
+
   return (
     <div 
       ref={setNodeRef} 
       style={style}
       className="flex items-center gap-2 bg-white p-3 border rounded-md mb-2"
+      data-testid={`sortable-recipe-${recipe.id}`}
     >
       <div {...attributes} {...listeners} className="cursor-grab">
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
       <div className="flex-1">
-        <div className="font-medium">{item.name}</div>
-        <div className="text-sm text-gray-500 mb-1">
-          {formatCurrency(item.price / 100)} • {getCategoryDisplayName(item.category)}
+        <div className="font-medium flex items-center gap-2">
+          <ChefHat className="h-4 w-4 text-orange-500" />
+          {recipe.name}
         </div>
-        
-        {/* Enhanced metadata display */}
-        <div className="text-xs text-gray-600 space-y-1">
-          {(item as any).description && (
-            <div className="italic">{(item as any).description}</div>
+        <div className="text-sm text-gray-500">
+          {getCategoryLabel(recipe.category)}
+          {recipe.totalCost !== undefined && (
+            <span className="ml-2 text-green-600">
+              Cost: {formatCurrency(recipe.totalCost)}
+            </span>
           )}
-          
-          <div className="flex flex-wrap gap-2">
-            {(item as any).origin && (
-              <Badge variant="outline" className="text-xs">
-                Origin: {(item as any).origin}
-              </Badge>
-            )}
-            
-            {/* Debug: log the actual structure */}
-            {console.log('Item nutritional data:', (item as any).additional_dietary_metadata)}
-            
-            {/* Try multiple possible data structures */}
-            {(item as any).additional_dietary_metadata?.nutritional_info?.calories_range_kcal && (
-              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800">
-                {(item as any).additional_dietary_metadata.nutritional_info.calories_range_kcal}
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_info?.protein_g_range && (
-              <Badge variant="outline" className="text-xs bg-green-50 text-green-800">
-                {(item as any).additional_dietary_metadata.nutritional_info.protein_g_range} protein
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_info?.carbs_g_range && (
-              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-800">
-                {(item as any).additional_dietary_metadata.nutritional_info.carbs_g_range} carbs
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_info?.fat_g_range && (
-              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-800">
-                {(item as any).additional_dietary_metadata.nutritional_info.fat_g_range} fat
-              </Badge>
-            )}
-            
-            {(item as any).additional_dietary_metadata?.nutritional_info?.fiber_g_range && (
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-800">
-                {(item as any).additional_dietary_metadata.nutritional_info.fiber_g_range} fiber
-              </Badge>
-            )}
-            
-            {/* Fallback: try nutritional_highlights structure */}
-            {(item as any).additional_dietary_metadata?.nutritional_highlights?.calories && (
-              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800">
-                {(item as any).additional_dietary_metadata.nutritional_highlights.calories.min}-{(item as any).additional_dietary_metadata.nutritional_highlights.calories.max} cal
-              </Badge>
-            )}
+        </div>
+        {recipe.description && (
+          <div className="text-xs text-gray-400 mt-1 line-clamp-1">
+            {recipe.description}
           </div>
-          
-          {/* Dietary flags */}
-          <div className="flex flex-wrap gap-1">
-            {(item as any).isVegetarian && (
-              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                Vegetarian
+        )}
+        <div className="flex flex-wrap gap-1 mt-1">
+          {manualDesignations.slice(0, 2).map((tag) => {
+            const tagInfo = LIFESTYLE_TAGS.find((t) => t.value === tag);
+            return (
+              <Badge key={tag} variant="default" className="text-xs bg-green-600">
+                {tagInfo?.label || tag}
               </Badge>
-            )}
-            {(item as any).isVegan && (
-              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                Vegan
-              </Badge>
-            )}
-            {(item as any).isGlutenFree && (
-              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                Gluten-Free
-              </Badge>
-            )}
-            {(item as any).isDairyFree && (
-              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
-                Dairy-Free
-              </Badge>
-            )}
-            {(item as any).isNutFree && (
-              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
-                Nut-Free
-              </Badge>
-            )}
-          </div>
-          
-          {/* Allergens warning */}
-          {(item as any).additional_dietary_metadata?.allergen_alert_list && (item as any).additional_dietary_metadata.allergen_alert_list.length > 0 && (
-            <div className="text-xs text-red-600">
-              ⚠️ Contains: {(item as any).additional_dietary_metadata.allergen_alert_list.join(', ')}
-            </div>
-          )}
+            );
+          })}
+          {allergenWarnings.slice(0, 2).map((warning) => (
+            <Badge key={warning} variant="destructive" className="text-xs">
+              {warning}
+            </Badge>
+          ))}
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Select value={item.type} onValueChange={(value) => onTypeChange(item.id, value)}>
-          <SelectTrigger className="w-24">
+        <Select 
+          value={menuRecipe.category || recipe.category || "entree"} 
+          onValueChange={(value) => onCategoryChange(recipe.id, value)}
+        >
+          <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="mains">Mains</SelectItem>
-            <SelectItem value="sides">Sides</SelectItem>
-            <SelectItem value="salads">Salads</SelectItem>
-            <SelectItem value="sauces">Sauces</SelectItem>
-            <SelectItem value="salsas">Salsas</SelectItem>
-            <SelectItem value="spreads">Spreads</SelectItem>
-            <SelectItem value="condiments">Condiments</SelectItem>
+            {RECIPE_CATEGORIES.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)}>
+        <Button variant="ghost" size="icon" onClick={() => onRemove(recipe.id)} data-testid={`button-remove-recipe-${recipe.id}`}>
           <Trash2 className="h-4 w-4 text-red-500" />
         </Button>
       </div>
@@ -233,759 +167,412 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // For debugging
-  console.log("Menu data in MenuBuilder:", menu);
-  
-  // Parse menu items from JSON if needed
-  const getMenuItems = () => {
-    if (!menu || !menu.items) return [];
-    
+  const getMenuRecipes = (): MenuRecipeItem[] => {
+    if (!menu || !menu.recipes) return [];
     try {
-      // Parse items if it's a string, otherwise use as is
-      const itemsData = typeof menu.items === 'string' 
-        ? JSON.parse(menu.items) 
-        : menu.items;
-        
-      console.log("Parsed menu items:", itemsData);
-      
-      // Handle the new theme-based structure with categories
-      if (itemsData.categories && Array.isArray(itemsData.categories)) {
-        const allItemIds: string[] = [];
-        
-        // Extract all item IDs from all categories
-        itemsData.categories.forEach((category: any) => {
-          if (category.available_item_ids && Array.isArray(category.available_item_ids)) {
-            allItemIds.push(...category.available_item_ids);
-          }
-        });
-        
-        // Convert to MenuItemWithType format
-        // We'll set type to 'mains' as default since the theme structure doesn't store types
-        const parsedItems = allItemIds.map((itemId: string) => ({
-          id: itemId,
-          name: itemId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert ID to display name
-          price: 0, // Will be populated when menu items are loaded
-          type: 'mains',
-          category: 'standard'
-        }));
-        
-        console.log("Parsed menu items from categories:", parsedItems);
-        return parsedItems;
-      }
-      
-      // Handle legacy array format
-      if (Array.isArray(itemsData)) {
-        // We need to look up additional data from the menuItems list
-        return itemsData.map((item: any) => ({
-          id: item.id,
-          name: item.name || `Item #${item.id}`, // Fallback name
-          price: item.price || 0,
-          type: item.type || 'mains',
-          category: item.category || 'standard'
-        }));
-      }
-      
-      return [];
+      const recipesData = typeof menu.recipes === 'string' 
+        ? JSON.parse(menu.recipes) 
+        : menu.recipes;
+      return Array.isArray(recipesData) ? recipesData : [];
     } catch (error) {
-      console.error("Error parsing menu items:", error);
+      console.error("Error parsing menu recipes:", error);
       return [];
     }
   };
 
-  // State for selected items
-  const [selectedItems, setSelectedItems] = useState<MenuItemWithType[]>(getMenuItems());
+  const [selectedRecipes, setSelectedRecipes] = useState<MenuRecipeItem[]>(getMenuRecipes());
+  const [recipeSearch, setRecipeSearch] = useState("");
+  const [showRecipeDropdown, setShowRecipeDropdown] = useState(false);
   
-  // Debug log to see what selectedItems contains
-  useEffect(() => {
-    console.log("Selected items state updated:", selectedItems);
-  }, [selectedItems]);
-  
-  // Get all menu items
-  const { data: menuItems = [], isLoading: isLoadingMenuItems } = useQuery({
-    queryKey: ["/api/menu-items"],
-  }) as { data: any[], isLoading: boolean };
+  const { data: recipes = [], isLoading: isLoadingRecipes } = useQuery({
+    queryKey: ["/api/ingredients/recipes"],
+  }) as { data: RecipeForMenu[], isLoading: boolean };
 
-  // Diagnostic logging for price issue investigation
-  useEffect(() => {
-    if (!isLoadingMenuItems && menuItems.length > 0) {
-      const pateItem = menuItems.find(item => item.id === 'ts_pate_veg');
-      if (pateItem) {
-        console.log('[MenuBuilder] Pate with pickled veg (from API list):', 
-                    { id: pateItem.id, name: pateItem.name, price: pateItem.price, type: typeof pateItem.price });
-      }
-      const creamCheeseItem = menuItems.find(item => item.name === 'Cream Cheese and Shrimp');
-      if (creamCheeseItem) {
-        console.log('[MenuBuilder] Cream Cheese and Shrimp (from API list):', 
-                    { id: creamCheeseItem.id, name: creamCheeseItem.name, price: creamCheeseItem.price, type: typeof creamCheeseItem.price });
-      }
-    }
-  }, [menuItems, isLoadingMenuItems]);
-  
-  // Update selected items with additional data from menu items when available
-  useEffect(() => {
-    if (isEditing && menu && menu.items && menuItems.length > 0) {
-      console.log("Updating selected items with menu item details");
-      const itemsFromMenuDefinition = getMenuItems(); // Parses menu.items
-
-      const updatedItems = itemsFromMenuDefinition.map((itemFromDef: MenuItemWithType) => {
-        const fullMenuItemDetails = menuItems.find((mi: any) => 
-          mi.id === itemFromDef.id || mi.id.toString() === itemFromDef.id.toString()
-        );
-
-        if (fullMenuItemDetails) {
-          // Convert price to cents, just like in handleAddItem
-          let priceInDollars = parseFloat(fullMenuItemDetails.price); // Convert string like "1.95" to number 1.95
-          if (isNaN(priceInDollars)) {
-            console.warn(`Invalid price for item ${fullMenuItemDetails.name} from master list: '${fullMenuItemDetails.price}'. Defaulting to 0.`);
-            priceInDollars = 0;
-          }
-          const priceInCents = Math.round(priceInDollars * 100);
-
-          return {
-            ...itemFromDef, // Contains id, type (from menu structure)
-            name: fullMenuItemDetails.name || itemFromDef.name,
-            price: priceInCents, // <<< STORE AS CENTS (NUMBER)
-            category: fullMenuItemDetails.category || itemFromDef.category,
-            description: fullMenuItemDetails.description,
-            // Copy all other relevant details from fullMenuItemDetails
-            additional_dietary_metadata: fullMenuItemDetails.additional_dietary_metadata,
-            isVegetarian: fullMenuItemDetails.isVegetarian,
-            isVegan: fullMenuItemDetails.isVegan,
-            isGlutenFree: fullMenuItemDetails.isGlutenFree,
-            isDairyFree: fullMenuItemDetails.isDairyFree,
-            isNutFree: fullMenuItemDetails.isNutFree,
-            ingredients: fullMenuItemDetails.ingredients,
-            // ... and any other fields displayed by SortableMenuItem or used by calculateTotalPrice
-          };
-        }
-        // If item from menu definition is not found in master list, return it as is (it might have price: 0)
-        // or handle as an error/warning.
-        console.warn(`Menu item with ID ${itemFromDef.id} from menu definition not found in master menuItems list.`);
-        return { ...itemFromDef, price: itemFromDef.price ? Math.round(parseFloat(String(itemFromDef.price)) * 100) : 0 }; // Ensure its price is also in cents or 0
-      });
-      setSelectedItems(updatedItems);
-    }
-  }, [menu, menuItems, isEditing]);
-  
-  // Set up form with appropriate default values
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: menu 
-      ? {
-          name: menu.name || "",
-          description: menu.description || "",
-          type: menu.type || "standard",
-          displayOnCustomerForm: menu.displayOnCustomerForm || false,
-          theme_key: menu.theme_key || `custom_${menu.name?.toLowerCase().replace(/\s+/g, '_') || 'menu'}`,
-          package_id: menu.package_id || `custom_package_${Date.now()}`,
-          package_name: menu.package_name || "",
-          // items are handled separately in the selectedItems state
-        }
-      : {
-          name: "",
-          description: "",
-          type: "standard",
-          displayOnCustomerForm: false,
-          theme_key: "",
-          package_id: "",
-          package_name: "",
-          items: [],
-        },
-  });
-  
-  // Mutation for creating/updating menu
-  const mutation = useMutation({
-    mutationFn: async (values: {
-      name: string;
-      type: string;
-      description?: string;
-      displayOnCustomerForm?: boolean;
-      items: { id: number; type: string }[];
-    }) => {
-      if (isEditing && menu) {
-        const res = await apiRequest("PATCH", `/api/menus/${menu.id}`, values);
-        return res.json();
-      } else {
-        const res = await apiRequest("POST", "/api/menus", values);
-        return res.json();
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
-      toast({
-        title: isEditing ? "Menu updated" : "Menu created",
-        description: isEditing 
-          ? "The menu has been updated successfully." 
-          : "The new menu has been created successfully."
-      });
-      navigate("/menus");
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to ${isEditing ? "update" : "create"} menu: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  });
-  
-  // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-  
-  // Handle drag end
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: menu?.name || "",
+      description: menu?.description || "",
+      type: menu?.type || "standard",
+      eventType: menu?.eventType || "other",
+      displayOnCustomerForm: menu?.displayOnCustomerForm || false,
+      isPubliclyVisible: menu?.isPubliclyVisible ?? true,
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/menus", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
+      toast({
+        title: "Menu created",
+        description: "The menu has been created successfully.",
+      });
+      navigate("/menus");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create menu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("PATCH", `/api/menus/${menu.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/menus", menu.id] });
+      toast({
+        title: "Menu updated",
+        description: "The menu has been updated successfully.",
+      });
+      navigate("/menus");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update menu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: FormValues) => {
+    const menuData = {
+      ...data,
+      recipes: selectedRecipes,
+    };
+
+    if (isEditing) {
+      updateMutation.mutate(menuData);
+    } else {
+      createMutation.mutate(menuData);
+    }
+  };
+
+  const handleAddRecipe = (recipe: RecipeForMenu) => {
+    if (selectedRecipes.some(r => r.recipeId === recipe.id)) {
+      toast({
+        title: "Recipe already added",
+        description: "This recipe is already in the menu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedRecipes([
+      ...selectedRecipes,
+      {
+        recipeId: recipe.id,
+        category: recipe.category || undefined,
+      },
+    ]);
+    setRecipeSearch("");
+    setShowRecipeDropdown(false);
+  };
+
+  const handleRemoveRecipe = (recipeId: number) => {
+    setSelectedRecipes(selectedRecipes.filter(r => r.recipeId !== recipeId));
+  };
+
+  const handleCategoryChange = (recipeId: number, category: string) => {
+    setSelectedRecipes(selectedRecipes.map(r => 
+      r.recipeId === recipeId ? { ...r, category } : r
+    ));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (active.id !== over?.id) {
-      setSelectedItems((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over?.id);
-        
+    if (over && active.id !== over.id) {
+      setSelectedRecipes((items) => {
+        const oldIndex = items.findIndex(item => item.recipeId === active.id);
+        const newIndex = items.findIndex(item => item.recipeId === over.id);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
   };
-  
-  // Handle type change
-  const handleTypeChange = (id: string | number, type: string) => {
-    setSelectedItems(items => 
-      items.map(item => 
-        item.id.toString() === id.toString() ? { ...item, type: type } : item
-      )
-    );
-  };
-  
-  // Handle remove item
-  const handleRemoveItem = (id: string | number) => {
-    setSelectedItems(items => items.filter(item => item.id.toString() !== id.toString()));
-  };
-  
-  // Handle add item
-  const handleAddItem = (id: string) => {
-    console.log('Adding item with ID:', id, 'Type:', typeof id);
-    console.log('Available menu items:', menuItems.map(item => ({ id: item.id, name: item.name })));
-    
-    const itemExists = selectedItems.some(item => item.id.toString() === id);
-    
-    if (itemExists) {
-      toast({
-        title: "Item already added",
-        description: "This item is already in the menu. You can adjust the quantity instead.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const itemToAdd = menuItems.find((item: any) => item.id === id);
-    console.log('Found item to add:', itemToAdd);
-    
-    if (itemToAdd) {
-      const priceValue = itemToAdd.price ? Number(itemToAdd.price) * 100 : 0; // Convert to cents
-      setSelectedItems([
-        ...selectedItems,
-        {
-          id: itemToAdd.id,
-          name: itemToAdd.name,
-          price: priceValue,
-          type: 'mains',
-          category: itemToAdd.category,
-          // Preserve all dietary metadata and enriched information
-          description: itemToAdd.description,
-          additional_dietary_metadata: itemToAdd.additional_dietary_metadata,
-          isVegetarian: itemToAdd.isVegetarian,
-          isVegan: itemToAdd.isVegan,
-          isGlutenFree: itemToAdd.isGlutenFree,
-          isDairyFree: itemToAdd.isDairyFree,
-          isNutFree: itemToAdd.isNutFree,
-          ingredients: itemToAdd.ingredients,
-          // Include enriched dietary fields if they exist
-          dietaryFlags: itemToAdd.dietaryFlags,
-          allergenAlerts: itemToAdd.allergenAlerts,
-          nutritionalHighlights: itemToAdd.nutritionalHighlights,
-          preparationNotes: itemToAdd.preparationNotes,
-          suitableForDiets: itemToAdd.suitableForDiets,
-          customerGuidance: itemToAdd.customerGuidance,
-          availableLotSizes: itemToAdd.availableLotSizes,
-        }
-      ]);
-      
-      toast({
-        title: "Item added",
-        description: `${itemToAdd.name} has been added to the menu.`,
-      });
-    } else {
-      console.error('Item not found with ID:', id);
-      toast({
-        title: "Error",
-        description: "Could not find the selected menu item.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Calculate total menu price per person
-  const calculateTotalPrice = () => {
-    return selectedItems.reduce((total, item) => {
-      return total + item.price;
-    }, 0);
-  };
-  
-  // Handle form submission
-  const onSubmit = (values: FormValues) => {
-    if (selectedItems.length === 0) {
-      toast({
-        title: "No items selected",
-        description: "Please add at least one item to the menu.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Format data for submission with proper types for Drizzle
-    const formData = {
-      ...values,
-      // Map to the required format for the API
-      items: selectedItems.map(item => ({
-        id: item.id,
-        type: item.type
-      }))
-    };
 
-    console.log("Submitting menu data:", formData);
-    mutation.mutate(formData);
-  };
-  
-  // We no longer need this - MenuItemSelector handles grouping internally
-  // Kept for reference
-  /*
-  const groupedMenuItems = menuItems.reduce((acc: any, item: any) => {
-    const category = item.category;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(item);
-    return acc;
-  }, {});
-  */
-  
-  // Use the getCategoryDisplayName function defined above
-  
+  const availableRecipes = recipes.filter(recipe => 
+    !selectedRecipes.some(r => r.recipeId === recipe.id) &&
+    recipe.name.toLowerCase().includes(recipeSearch.toLowerCase())
+  );
+
+  const selectedRecipeDetails = selectedRecipes.map(menuRecipe => ({
+    menuRecipe,
+    recipe: recipes.find(r => r.id === menuRecipe.recipeId),
+  })).filter(item => item.recipe) as { menuRecipe: MenuRecipeItem; recipe: RecipeForMenu }[];
+
+  const totalCost = selectedRecipeDetails.reduce((sum, { recipe }) => 
+    sum + (recipe.totalCost || 0), 0
+  );
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{isEditing ? "Edit Menu" : "Create New Menu"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Menu Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Menu name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => {
-                      const [isCustomMenuType, setIsCustomMenuType] = useState(false);
-                      const [customMenuType, setCustomMenuType] = useState("");
-                      
-                      // Set custom menu type mode if the value doesn't match predefined ones
-                      useEffect(() => {
-                        if (field.value && !["standard", "custom", "seasonal", "form_builder"].includes(field.value)) {
-                          setIsCustomMenuType(true);
-                          setCustomMenuType(field.value);
-                        }
-                      }, [field.value]);
-                      
-                      return (
-                        <FormItem>
-                          <FormLabel>Menu Type</FormLabel>
-                          {!isCustomMenuType ? (
-                            <>
-                              <Select 
-                                onValueChange={(value) => {
-                                  if (value === "add_custom") {
-                                    setIsCustomMenuType(true);
-                                    setCustomMenuType("");
-                                  } else {
-                                    field.onChange(value);
-                                  }
-                                }} 
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select menu type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="standard">Standard</SelectItem>
-                                  <SelectItem value="custom">Custom</SelectItem>
-                                  <SelectItem value="seasonal">Seasonal</SelectItem>
-                                  <SelectItem value="form_builder">Form Builder</SelectItem>
-                                  <SelectItem value="add_custom">Add New Menu Type...</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </>
-                          ) : (
-                            <div className="space-y-2">
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter custom menu type" 
-                                  value={customMenuType}
-                                  onChange={(e) => {
-                                    setCustomMenuType(e.target.value);
-                                    field.onChange(e.target.value);
-                                  }}
-                                />
-                              </FormControl>
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setIsCustomMenuType(false);
-                                  field.onChange("");
-                                }}
-                              >
-                                Back to Preset Menu Types
-                              </Button>
-                            </div>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Menu description"
-                          rows={3}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="displayOnCustomerForm"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Display this menu on customer selection forms?
-                        </FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          When enabled, this menu will be available for customers to select in questionnaire forms and will use the structured package format.
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Form Builder UI - Show when displayOnCustomerForm is true */}
-                {form.watch("displayOnCustomerForm") ? (
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-medium">Menu Package Structure Builder</h3>
-                    <p className="text-sm text-gray-600">Configure your menu package with complete JSONB structure according to MenuPackageStructure schema.</p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Theme Key */}
-                      <FormField
-                        control={form.control}
-                        name="theme_key"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Theme Key</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="e.g., lebanese_cuisine"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                }}
-                              />
-                            </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">Unique theme identifier (e.g., "lebanese_cuisine")</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {/* Package ID */}
-                      <FormField
-                        control={form.control}
-                        name="package_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Package ID</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="e.g., lebanese_fiesta_deluxe_v1"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                }}
-                              />
-                            </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">Unique package identifier</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {/* Package Name */}
-                      <FormField
-                        control={form.control}
-                        name="package_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Package Name</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="e.g., Lebanese Fiesta Deluxe Package"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                }}
-                              />
-                            </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">Display name for the package</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {/* Price Per Person */}
-                      <div>
-                        <FormLabel>Price Per Person ($)</FormLabel>
-                        <Input 
-                          type="number"
-                          step="0.01"
-                          placeholder="e.g., 65.00"
-                          defaultValue="0"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Base price per person</p>
-                      </div>
-                      
-                      {/* Min Guest Count */}
-                      <div>
-                        <FormLabel>Minimum Guest Count</FormLabel>
-                        <Input 
-                          type="number"
-                          placeholder="e.g., 25"
-                          defaultValue="1"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Minimum number of guests required</p>
-                      </div>
-                      
-                      {/* Customizable Toggle */}
-                      <div className="flex items-center space-x-3">
-                        <FormLabel>Customizable Package</FormLabel>
-                        <input 
-                          type="checkbox"
-                          defaultChecked={true}
-                          className="rounded"
-                        />
-                        <p className="text-xs text-gray-500">Allow clients to modify selections</p>
-                      </div>
-                    </div>
-                    
-                    {/* Package Description */}
-                    <div>
-                      <FormLabel>Package Description</FormLabel>
-                      <Textarea 
-                        rows={4}
-                        placeholder="Detailed description of your menu package including what's included, dietary options, service style, etc."
-                        defaultValue={`Custom menu: ${form.watch("name") || 'Untitled Package'}`}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Rich description for client-facing displays</p>
-                    </div>
-                    
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-green-800 mb-2">Package Structure Preview</h4>
-                      <p className="text-sm text-green-700">Your form data will generate a complete MenuPackageStructure with organized categories and all the details above.</p>
-                    </div>
-                    
-                    {/* Menu Items Selection for Form Builder */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Menu Items Selection</h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Select items to include in your package. They will be automatically organized by category.
-                      </p>
-                      
-                      {selectedItems.length === 0 ? (
-                        <div className="border border-dashed rounded-md p-6 text-center">
-                          <p className="text-gray-500">
-                            No items added yet. Use the panel on the right to add items.
-                          </p>
-                        </div>
-                      ) : (
-                        <DndContext 
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={handleDragEnd}
-                        >
-                          <SortableContext
-                            items={selectedItems.map(item => item.id)}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {selectedItems.map(item => (
-                              <SortableMenuItem
-                                key={item.id}
-                                item={item}
-                                onTypeChange={handleTypeChange}
-                                onRemove={handleRemoveItem}
-                              />
-                            ))}
-                          </SortableContext>
-                        </DndContext>
-                      )}
-                      
-                      <div className="mt-4 text-right text-lg">
-                        <span className="font-medium">Total per person:</span>{" "}
-                        <span className="font-bold">{formatCurrency(calculateTotalPrice() / 100)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // Standard Menu Items UI - Show for other types
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Menu Items</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Drag and drop to reorder items. Adjust quantities as needed.
-                  </p>
-                  
-                  {selectedItems.length === 0 ? (
-                    <div className="border border-dashed rounded-md p-6 text-center">
-                      <p className="text-gray-500">
-                        No items added yet. Use the panel on the right to add items.
-                      </p>
-                    </div>
-                  ) : (
-                    <DndContext 
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={selectedItems.map(item => item.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {selectedItems.map(item => (
-                          <SortableMenuItem
-                            key={item.id}
-                            item={item}
-                            onTypeChange={handleTypeChange}
-                            onRemove={handleRemoveItem}
-                          />
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                  
-                  <div className="mt-4 text-right text-lg">
-                    <span className="font-medium">Total per person:</span>{" "}
-                    <span className="font-bold">{formatCurrency(calculateTotalPrice() / 100)}</span>
-                  </div>
-                </div>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ChefHat className="h-6 w-6" />
+          {isEditing ? "Edit Menu" : "Create New Menu"}
+        </CardTitle>
+      </CardHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Menu Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter menu name" {...field} data-testid="input-menu-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
+
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Menu Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-menu-type">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                        <SelectItem value="seasonal">Seasonal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Describe this menu..." 
+                      {...field} 
+                      value={field.value || ""}
+                      data-testid="input-menu-description"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="eventType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-event-type">
+                        <SelectValue placeholder="Select event type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="wedding">Wedding</SelectItem>
+                      <SelectItem value="corporate">Corporate</SelectItem>
+                      <SelectItem value="birthday">Birthday</SelectItem>
+                      <SelectItem value="anniversary">Anniversary</SelectItem>
+                      <SelectItem value="graduation">Graduation</SelectItem>
+                      <SelectItem value="holiday_party">Holiday Party</SelectItem>
+                      <SelectItem value="fundraiser">Fundraiser</SelectItem>
+                      <SelectItem value="conference">Conference</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex items-center gap-6">
+              <FormField
+                control={form.control}
+                name="displayOnCustomerForm"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-display-on-form"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Show on customer inquiry form</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isPubliclyVisible"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-publicly-visible"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Publicly visible</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <ChefHat className="h-5 w-5" />
+                Menu Recipes
+                <Badge variant="secondary" className="ml-2">
+                  {selectedRecipes.length} recipes
+                </Badge>
+                {totalCost > 0 && (
+                  <Badge variant="outline" className="ml-2 text-green-600">
+                    Total Cost: {formatCurrency(totalCost)}
+                  </Badge>
+                )}
+              </h3>
+
+              <div className="relative mb-4">
+                <div className="relative">
+                  <Input
+                    placeholder="Search recipes to add..."
+                    value={recipeSearch}
+                    onChange={(e) => {
+                      setRecipeSearch(e.target.value);
+                      setShowRecipeDropdown(true);
+                    }}
+                    onFocus={() => setShowRecipeDropdown(true)}
+                    data-testid="input-search-recipe"
+                  />
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
                 
-                <CardFooter className="px-0 pt-4 flex justify-end space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/menus")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
-                    disabled={mutation.isPending}
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    {mutation.isPending ? "Saving..." : "Save Menu"}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Available Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoadingMenuItems ? (
-              <div className="text-center py-4">Loading items...</div>
-            ) : (
-              <div className="max-h-[700px] overflow-y-auto pr-2">
-                {/* Use the new MenuItemSelector component with search and filtering */}
-                <MenuItemSelector 
-                  menuItems={menuItems.map(item => ({
-                    ...item,
-                    isVegetarian: item.isVegetarian || false,
-                    isVegan: item.isVegan || false,
-                    isGlutenFree: item.isGlutenFree || false,
-                    isDairyFree: item.isDairyFree || false,
-                    isNutFree: item.isNutFree || false,
-                    description: item.description || '',
-                  }))}
-                  selectedItems={selectedItems.map(item => ({
-                    ...item,
-                    description: '',
-                    isVegetarian: false,
-                    isVegan: false, 
-                    isGlutenFree: false,
-                    isDairyFree: false,
-                    isNutFree: false
-                  }))}
-                  onAddItem={handleAddItem}
-                />
+                {showRecipeDropdown && (
+                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-input rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                    {isLoadingRecipes ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        Loading recipes...
+                      </div>
+                    ) : availableRecipes.length === 0 ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        {recipes.length === 0 
+                          ? "No recipes available. Create recipes first."
+                          : "All recipes added or no matches"}
+                      </div>
+                    ) : (
+                      availableRecipes.slice(0, 10).map((recipe) => (
+                        <div
+                          key={recipe.id}
+                          className="p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                          onClick={() => handleAddRecipe(recipe)}
+                          data-testid={`dropdown-recipe-${recipe.id}`}
+                        >
+                          <div className="font-medium flex items-center gap-2">
+                            <ChefHat className="h-4 w-4 text-orange-500" />
+                            {recipe.name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {getCategoryLabel(recipe.category)}
+                            {recipe.totalCost !== undefined && (
+                              <span className="ml-2 text-green-600">
+                                {formatCurrency(recipe.totalCost)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+
+              {selectedRecipeDetails.length > 0 ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={selectedRecipeDetails.map(({ recipe }) => recipe.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {selectedRecipeDetails.map(({ menuRecipe, recipe }) => (
+                      <SortableRecipeItem
+                        key={recipe.id}
+                        recipe={recipe}
+                        menuRecipe={menuRecipe}
+                        onCategoryChange={handleCategoryChange}
+                        onRemove={handleRemoveRecipe}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <ChefHat className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No recipes added yet</p>
+                  <p className="text-sm">Search and add recipes above to build your menu</p>
+                </div>
+              )}
+            </div>
           </CardContent>
-        </Card>
-      </div>
-    </div>
+
+          <CardFooter className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/menus")}
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={createMutation.isPending || updateMutation.isPending}
+              data-testid="button-save-menu"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isEditing ? "Update Menu" : "Create Menu"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
   );
 }

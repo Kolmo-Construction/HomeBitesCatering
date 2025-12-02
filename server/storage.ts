@@ -392,40 +392,7 @@ export class DatabaseStorage implements IStorage {
 
   async listMenus(): Promise<DrizzleMenu[]> {
     const allMenus = await db.select().from(menus);
-    
-    // Now for each menu, try to get the menu items
-    const menusWithItems = await Promise.all(allMenus.map(async (menu) => {
-      try {
-        if (menu.items && Array.isArray(menu.items)) {
-          // Assuming items is an array of { id: number, quantity?: number }
-          const itemIds = menu.items.map((item: any) => item.id).filter(Boolean);
-          
-          if (itemIds.length > 0) {
-            const items = await db
-              .select()
-              .from(menuItems)
-              .where(inArray(menuItems.id, itemIds));
-            
-            // For logging/debugging purposes
-            for (const itemId of itemIds) {
-              const found = items.some(item => item.id === itemId);
-              if (!found) {
-                console.log(`Menu item with ID ${itemId} not found during listMenus for menu ${menu.id}`);
-              }
-            }
-            
-            // We're not modifying the menu object, just logging missing items
-          }
-        }
-        
-        return menu;
-      } catch (error) {
-        console.error(`Error processing menu ${menu.id} items:`, error);
-        return menu; // Return the original menu if there's an error
-      }
-    }));
-    
-    return menusWithItems;
+    return allMenus;
   }
 
   // Client methods

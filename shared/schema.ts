@@ -199,29 +199,36 @@ export const insertMenuItemSchema = createInsertSchema(menuItems, {
   updatedAt: true
 });
 
-// Menus (collection of menu items)
+// Menu Recipe Item - represents a recipe in a menu with optional category override
+export interface MenuRecipeItem {
+  recipeId: number;
+  category?: string; // Optional category override (appetizer, entree, side, dessert, etc.)
+  servings?: number; // Optional servings multiplier
+}
+
+// Menus (collection of recipes)
 export const menus = pgTable("menus", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   type: text("type").notNull(), // standard, custom, seasonal
   eventType: eventTypeEnum("event_type").default("other").notNull(), // wedding, corporate, birthday, etc.
-  items: jsonb("items").notNull(), // array of menu item IDs with quantities
+  recipes: jsonb("recipes").$type<MenuRecipeItem[]>().default([]).notNull(), // array of recipe references
   isPubliclyVisible: boolean("is_publicly_visible").default(true),
-  displayOnCustomerForm: boolean("display_on_customer_form").default(false).notNull(), // NEW FIELD
+  displayOnCustomerForm: boolean("display_on_customer_form").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Schema for simple menu items array (id and quantity)
-const simpleMenuItemsSchema = z.array(z.object({
-  id: z.union([z.string(), z.number()]), // Support both string and number IDs
-  quantity: z.number().default(1), // Default quantity to 1 for form_builder menus
-  type: z.string().optional() // Allow type field for categorization
+// Schema for menu recipes array
+const menuRecipesSchema = z.array(z.object({
+  recipeId: z.number(),
+  category: z.string().optional(),
+  servings: z.number().optional(),
 }));
 
 export const insertMenuSchema = createInsertSchema(menus, {
-  items: simpleMenuItemsSchema,
+  recipes: menuRecipesSchema,
 }).omit({
   id: true,
   createdAt: true,
