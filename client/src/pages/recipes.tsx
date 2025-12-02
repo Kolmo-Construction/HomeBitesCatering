@@ -478,31 +478,23 @@ export default function RecipesPage() {
 
   const totalRecipes = recipes.length;
   
-  const generateCostDistribution = () => {
-    if (recipes.length === 0) return [];
+  const getCostStats = () => {
+    if (recipes.length === 0) return null;
     
     const costs = recipes.map(r => r.totalCost || 0).sort((a, b) => a - b);
     const min = costs[0];
     const max = costs[costs.length - 1];
-    const range = max - min || 1;
-    const binCount = Math.min(8, Math.max(3, Math.ceil(Math.sqrt(recipes.length))));
-    const binSize = range / binCount;
+    const median = costs.length % 2 === 0 
+      ? (costs[costs.length / 2 - 1] + costs[costs.length / 2]) / 2 
+      : costs[Math.floor(costs.length / 2)];
+    const average = costs.reduce((a, b) => a + b, 0) / costs.length;
+    const q1 = costs[Math.floor(costs.length / 4)];
+    const q3 = costs[Math.floor(costs.length * 3 / 4)];
     
-    const distribution: any[] = [];
-    for (let i = 0; i < binCount; i++) {
-      const binMin = min + (i * binSize);
-      const binMax = binMin + binSize;
-      const count = costs.filter(c => c >= binMin && c <= binMax).length;
-      distribution.push({
-        range: `$${Math.round(binMin)}-$${Math.round(binMax)}`,
-        count: count,
-        percentage: (count / recipes.length) * 100,
-      });
-    }
-    return distribution;
+    return { min, max, median, average, q1, q3 };
   };
   
-  const costDistribution = generateCostDistribution();
+  const costStats = getCostStats();
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl" data-testid="page-recipes">
@@ -545,21 +537,55 @@ export default function RecipesPage() {
               <CardDescription>Cost Distribution</CardDescription>
             </CardHeader>
             <CardContent>
-              {costDistribution.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={costDistribution}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="range" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
-                    <YAxis />
-                    <RechartsTooltip 
-                      formatter={(value: any) => `${value} recipes`}
-                      labelFormatter={(label: any) => `Price Range: ${label}`}
-                    />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              {costStats ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Lowest</p>
+                      <p className="font-semibold text-lg">{formatCurrency(costStats.min)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Highest</p>
+                      <p className="font-semibold text-lg">{formatCurrency(costStats.max)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Median</p>
+                      <p className="font-semibold">{formatCurrency(costStats.median)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Average</p>
+                      <p className="font-semibold">{formatCurrency(costStats.average)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <p className="text-xs text-muted-foreground mb-2">Distribution Range</p>
+                    <div className="flex h-8 rounded-md overflow-hidden gap-1 bg-muted">
+                      <div 
+                        className="bg-red-400 hover:bg-red-500 transition-colors"
+                        style={{ width: '25%' }}
+                        title={`0-25%: ${formatCurrency(costStats.min)} - ${formatCurrency(costStats.q1)}`}
+                      />
+                      <div 
+                        className="bg-orange-400 hover:bg-orange-500 transition-colors"
+                        style={{ width: '25%' }}
+                        title={`25-50%: ${formatCurrency(costStats.q1)} - ${formatCurrency(costStats.median)}`}
+                      />
+                      <div 
+                        className="bg-yellow-400 hover:bg-yellow-500 transition-colors"
+                        style={{ width: '25%' }}
+                        title={`50-75%: ${formatCurrency(costStats.median)} - ${formatCurrency(costStats.q3)}`}
+                      />
+                      <div 
+                        className="bg-green-400 hover:bg-green-500 transition-colors"
+                        style={{ width: '25%' }}
+                        title={`75-100%: ${formatCurrency(costStats.q3)} - ${formatCurrency(costStats.max)}`}
+                      />
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                <div className="text-center text-muted-foreground text-sm">
                   <p>No recipes yet</p>
                 </div>
               )}
