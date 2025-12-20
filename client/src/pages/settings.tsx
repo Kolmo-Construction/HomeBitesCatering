@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -33,6 +33,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   CheckCircle2, 
   UserCog, 
@@ -41,7 +43,10 @@ import {
   Users, 
   LayoutGrid,
   Database,
-  Download
+  Download,
+  Palette,
+  Sun,
+  Moon
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -69,11 +74,79 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+// Theme preset colors
+const themePresets = [
+  { name: "Home Bites", primary: "28 33% 52%", accent: "30 100% 50%", description: "Rose taupe and orange" },
+  { name: "Ocean Blue", primary: "210 70% 50%", accent: "190 80% 45%", description: "Professional blue tones" },
+  { name: "Forest Green", primary: "150 40% 40%", accent: "80 60% 45%", description: "Natural earth tones" },
+  { name: "Sunset", primary: "350 65% 55%", accent: "25 90% 55%", description: "Warm coral and gold" },
+  { name: "Lavender", primary: "270 50% 60%", accent: "280 60% 70%", description: "Soft purple tones" },
+  { name: "Slate", primary: "220 15% 45%", accent: "200 20% 55%", description: "Modern neutral gray" },
+];
+
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Theme state
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark';
+    }
+    return false;
+  });
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('themePreset') || 'Home Bites';
+    }
+    return 'Home Bites';
+  });
+
+  // Apply theme changes
+  const applyTheme = (themeName: string, dark: boolean) => {
+    const preset = themePresets.find(t => t.name === themeName) || themePresets[0];
+    const root = document.documentElement;
+    
+    // Apply dark mode
+    if (dark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    
+    // Apply color theme
+    root.style.setProperty('--primary', preset.primary);
+    root.style.setProperty('--ring', preset.primary);
+    root.style.setProperty('--accent', preset.accent);
+    root.style.setProperty('--secondary', preset.accent);
+    
+    // Save to localStorage
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+    localStorage.setItem('themePreset', themeName);
+  };
+
+  // Handle theme toggle
+  const handleDarkModeToggle = (enabled: boolean) => {
+    setIsDarkMode(enabled);
+    applyTheme(selectedTheme, enabled);
+  };
+
+  // Handle theme preset change
+  const handleThemeChange = (themeName: string) => {
+    setSelectedTheme(themeName);
+    applyTheme(themeName, isDarkMode);
+    toast({
+      title: "Theme updated",
+      description: `Applied ${themeName} theme`,
+    });
+  };
+
+  // Apply saved theme on mount
+  useEffect(() => {
+    applyTheme(selectedTheme, isDarkMode);
+  }, []);
   
   // Get user data
   const { data: userData, isLoading } = useQuery({
@@ -275,6 +348,10 @@ export default function Settings() {
           <TabsTrigger value="company" className="flex items-center">
             <Building className="mr-2 h-4 w-4" />
             Company
+          </TabsTrigger>
+          <TabsTrigger value="theme" className="flex items-center">
+            <Palette className="mr-2 h-4 w-4" />
+            Theme
           </TabsTrigger>
           {user?.role === "admin" && (
             <TabsTrigger value="users" className="flex items-center">
@@ -531,6 +608,94 @@ export default function Settings() {
                 <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
                   Save Company Information
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="theme" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>
+                Customize the look and feel of your application.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="dark-mode" className="text-base font-medium">Dark Mode</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Switch between light and dark themes
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sun className="h-4 w-4 text-muted-foreground" />
+                  <Switch
+                    id="dark-mode"
+                    checked={isDarkMode}
+                    onCheckedChange={handleDarkModeToggle}
+                    data-testid="switch-dark-mode"
+                  />
+                  <Moon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-base font-medium mb-1">Color Theme</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Choose a color palette for the application
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {themePresets.map((preset) => (
+                    <button
+                      key={preset.name}
+                      onClick={() => handleThemeChange(preset.name)}
+                      className={`relative p-4 rounded-lg border-2 transition-all text-left ${
+                        selectedTheme === preset.name
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      data-testid={`theme-preset-${preset.name.toLowerCase().replace(/\s/g, '-')}`}
+                    >
+                      <div className="flex gap-2 mb-3">
+                        <div
+                          className="w-8 h-8 rounded-full"
+                          style={{ backgroundColor: `hsl(${preset.primary})` }}
+                        />
+                        <div
+                          className="w-8 h-8 rounded-full"
+                          style={{ backgroundColor: `hsl(${preset.accent})` }}
+                        />
+                      </div>
+                      <div className="font-medium text-sm">{preset.name}</div>
+                      <div className="text-xs text-muted-foreground">{preset.description}</div>
+                      {selectedTheme === preset.name && (
+                        <div className="absolute top-2 right-2">
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium mb-2">Preview</h4>
+                <div className="flex gap-2 flex-wrap">
+                  <Button size="sm">Primary Button</Button>
+                  <Button size="sm" variant="secondary">Secondary</Button>
+                  <Button size="sm" variant="outline">Outline</Button>
+                  <Badge>Badge</Badge>
+                  <Badge variant="secondary">Secondary Badge</Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
