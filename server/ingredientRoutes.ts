@@ -848,6 +848,35 @@ router.get("/recipes/:id", async (req, res) => {
   }
 });
 
+// Generate a recipe draft using AI (does NOT save — returns preview for review)
+// POST /api/ingredients/recipes/ai-draft
+// Body: { itemName, category, menuTheme?, menuThemeName?, yieldAmount? }
+router.post("/recipes/ai-draft", async (req, res) => {
+  try {
+    const { itemName, category, menuTheme, menuThemeName, yieldAmount } = req.body;
+
+    if (!itemName || typeof itemName !== "string") {
+      return res.status(400).json({ message: "itemName is required" });
+    }
+
+    const { generateRecipeDraft } = await import("./services/recipeAiService");
+    const draft = await generateRecipeDraft({
+      itemName,
+      category: category || "entree",
+      menuTheme,
+      menuThemeName,
+      yieldAmount: yieldAmount ? parseInt(yieldAmount) : undefined,
+    });
+
+    return res.json(draft);
+  } catch (error: any) {
+    console.error("Error generating AI recipe draft:", error);
+    return res.status(500).json({
+      message: error?.message || "Failed to generate recipe draft",
+    });
+  }
+});
+
 // Create a new recipe
 router.post("/recipes", async (req, res) => {
   try {

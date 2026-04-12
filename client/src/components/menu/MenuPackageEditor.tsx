@@ -36,7 +36,9 @@ import {
   Loader2,
   TrendingUp,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
+import AIRecipeDraftDialog from "./AIRecipeDraftDialog";
 
 interface MenuPackageTier {
   tierKey: string;
@@ -129,6 +131,13 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
   const [categoryItems, setCategoryItems] = useState<Record<string, MenuCategoryItem[]>>({});
   const [activeTab, setActiveTab] = useState<"packages" | "items">("packages");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  // AI recipe draft state
+  const [aiDraftFor, setAiDraftFor] = useState<{
+    itemIndex: number;
+    itemName: string;
+    category: string;
+  } | null>(null);
 
   // Load data when menu is fetched
   useEffect(() => {
@@ -601,6 +610,24 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
                                       Linked
                                     </Badge>
                                   )}
+                                  {!item.recipeId && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        setAiDraftFor({
+                                          itemIndex: idx,
+                                          itemName: item.name,
+                                          category: selectedCategory,
+                                        })
+                                      }
+                                      className="h-8 px-2 text-xs bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200"
+                                      title="Generate recipe with AI"
+                                    >
+                                      <Sparkles className="h-3.5 w-3.5 mr-1" />
+                                      Generate
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -644,6 +671,29 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* AI Recipe Draft Dialog — generates a recipe with AI and links it back to the menu item */}
+      {aiDraftFor && (
+        <AIRecipeDraftDialog
+          open={!!aiDraftFor}
+          onOpenChange={(open) => !open && setAiDraftFor(null)}
+          itemName={aiDraftFor.itemName}
+          category={aiDraftFor.category}
+          menuTheme={themeKey || undefined}
+          menuThemeName={menu?.name}
+          onRecipeCreated={(recipeId) => {
+            // Auto-link the newly created recipe to the menu item
+            if (aiDraftFor) {
+              updateItem(aiDraftFor.category, aiDraftFor.itemIndex, { recipeId });
+            }
+            setAiDraftFor(null);
+            toast({
+              title: "Recipe linked",
+              description: "The AI-drafted recipe is now linked to this menu item. Don't forget to save the menu.",
+            });
+          }}
+        />
+      )}
     </Dialog>
   );
 }
