@@ -22,7 +22,8 @@ import {
   Calculator,
   ShoppingBasket,
   ChefHat,
-  UserCog
+  UserCog,
+  MessageSquareQuote
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -39,6 +40,7 @@ export default function Sidebar() {
     { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket },
     { name: "Recipes", href: "/recipes", icon: ChefHat },
     { name: "Menus", href: "/menus", icon: ClipboardList },
+    { name: "Quote Requests", href: "/quote-requests", icon: MessageSquareQuote },
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: Calendar },
     { 

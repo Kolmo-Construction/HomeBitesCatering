@@ -43,6 +43,9 @@ import DietaryDemo from "@/pages/DietaryDemo";
 // Import the public quote request form
 import RequestQuote from "@/pages/RequestQuote";
 
+// Import the admin Quote Requests inbox
+import QuoteRequests from "@/pages/QuoteRequests";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -179,6 +182,7 @@ function AppContent() {
           <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
           <Route path="/admin/form-builder/forms" component={FormManager} />
           <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
+          <Route path="/quote-requests" component={QuoteRequests} />
           <Route path="/calculator-test" component={CalculatorTest} />
           <Route path="/dietary-demo" component={DietaryDemo} />
 

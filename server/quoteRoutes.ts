@@ -9,6 +9,7 @@ import {
   insertQuoteRequestSchema,
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike } from "drizzle-orm";
+import { analyzeQuoteRequest } from "./services/quoteAiService";
 
 const router = Router();
 
@@ -210,10 +211,42 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
       } as any)
       .returning();
 
+    // Fire-and-forget: run AI analysis in background
+    analyzeQuoteRequest(request)
+      .then(async (analysis) => {
+        await db
+          .update(quoteRequests)
+          .set({ aiAnalysis: analysis as any, updatedAt: new Date() })
+          .where(eq(quoteRequests.id, request.id));
+        console.log(`AI analysis completed for quote #${request.id}`);
+      })
+      .catch((err) => console.error(`AI analysis failed for quote #${request.id}:`, err));
+
     return res.status(201).json(request);
   } catch (error) {
     console.error("Error creating quote request:", error);
     return res.status(500).json({ message: "Failed to submit quote request" });
+  }
+});
+
+// Re-run AI analysis on a quote request (admin)
+router.post("/quote-requests/:id/analyze", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
+    if (!request) return res.status(404).json({ message: "Quote request not found" });
+
+    const analysis = await analyzeQuoteRequest(request);
+    const [updated] = await db
+      .update(quoteRequests)
+      .set({ aiAnalysis: analysis as any, updatedAt: new Date() })
+      .where(eq(quoteRequests.id, id))
+      .returning();
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("Error analyzing quote request:", error);
+    return res.status(500).json({ message: "Failed to analyze quote request" });
   }
 });
 
@@ -242,17 +275,31 @@ router.patch("/quote-requests/:id", async (req: Request, res: Response) => {
   }
 });
 
-// Convert quote request to opportunity
+// Convert quote request → Client + Opportunity + Estimate (full pipeline)
 router.post("/quote-requests/:id/convert", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
     if (!request) return res.status(404).json({ message: "Quote request not found" });
+    if (request.status === "converted") return res.status(400).json({ message: "Already converted" });
 
-    // Import opportunities table dynamically to avoid circular deps
-    const { opportunities } = await import("@shared/schema");
+    const { opportunities, clients, estimates } = await import("@shared/schema");
 
-    // Create opportunity from quote request data
+    // 1. Create client
+    const billingAddr = request.billingAddress as any;
+    const [client] = await db.insert(clients).values({
+      firstName: request.firstName,
+      lastName: request.lastName,
+      email: request.email,
+      phone: request.phone || undefined,
+      company: request.companyName || undefined,
+      address: billingAddr?.street || undefined,
+      city: billingAddr?.city || undefined,
+      state: billingAddr?.state || undefined,
+      zip: billingAddr?.zip || undefined,
+    }).returning();
+
+    // 2. Create opportunity
     const [opportunity] = await db.insert(opportunities).values({
       firstName: request.firstName,
       lastName: request.lastName,
@@ -270,24 +317,165 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       status: "qualified",
       opportunitySource: request.source || "website",
       priority: "medium",
+      clientId: client.id,
     }).returning();
 
-    // Link quote request to opportunity
+    // 3. Build estimate line items from structured quote data
+    const lineItems: Array<{ id: string; name: string; quantity: number; price: number }> = [];
+    let itemCounter = 1;
+
+    // Per-person food cost from menu tier
+    if (request.menuTheme && request.menuTier && request.guestCount) {
+      const tierPrices: Record<string, Record<string, number>> = {
+        taco_fiesta: { bronze: 2800, silver: 3400, gold: 4000, diamond: 4600 },
+        bbq: { bronze: 3200, silver: 3800, gold: 4600, diamond: 5400 },
+        greece: { bronze: 3200, silver: 3800, gold: 4600, diamond: 5900 },
+        kebab: { bronze: 3500, silver: 3900, gold: 4900, diamond: 6300 },
+        italy: { bronze: 3200, silver: 3800, gold: 4600, diamond: 5800 },
+        vegan: { bronze: 3400, silver: 4000, gold: 4600, diamond: 5400 },
+      };
+      const pricePerPerson = tierPrices[request.menuTheme]?.[request.menuTier] || 0;
+      if (pricePerPerson > 0) {
+        lineItems.push({
+          id: `item_${itemCounter++}`,
+          name: `${formatThemeName(request.menuTheme)} - ${capitalize(request.menuTier)} Package (${request.guestCount} guests)`,
+          quantity: request.guestCount,
+          price: pricePerPerson, // cents
+        });
+      }
+    }
+
+    // Appetizers
+    const appetizers = (request.appetizers as any)?.selections || [];
+    for (const app of appetizers) {
+      lineItems.push({
+        id: `item_${itemCounter++}`,
+        name: `Appetizer: ${app.itemName}`,
+        quantity: app.quantity || 1,
+        price: Math.round((app.pricePerPiece || 0) * 100),
+      });
+    }
+
+    // Desserts
+    const desserts = (request.desserts as any[]) || [];
+    for (const d of desserts) {
+      lineItems.push({
+        id: `item_${itemCounter++}`,
+        name: `Dessert: ${d.itemName}`,
+        quantity: d.quantity || 1,
+        price: Math.round((d.pricePerPiece || 0) * 100),
+      });
+    }
+
+    // Equipment
+    const equipmentItems = (request.equipment as any)?.items || [];
+    for (const e of equipmentItems) {
+      lineItems.push({
+        id: `item_${itemCounter++}`,
+        name: `Rental: ${e.item}`,
+        quantity: e.quantity || 1,
+        price: Math.round((e.pricePerUnit || 0) * 100),
+      });
+    }
+
+    // Calculate totals
+    const subtotalCents = lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const serviceFeeRate = request.serviceStyle === 'full_service' ? 0.20 : 0.15;
+    const serviceFeeCents = Math.round(subtotalCents * serviceFeeRate);
+    const taxRate = 0.101; // Default WA tax rate
+    const taxCents = Math.round((subtotalCents + serviceFeeCents) * taxRate);
+    const totalCents = subtotalCents + serviceFeeCents + taxCents;
+
+    // Apply discount
+    const discountPct = request.discountPercent ? parseFloat(request.discountPercent) / 100 : 0;
+    const discountCents = Math.round(totalCents * discountPct);
+    const finalTotalCents = totalCents - discountCents;
+
+    // Add service fee as a line item
+    if (serviceFeeCents > 0) {
+      lineItems.push({
+        id: `item_${itemCounter++}`,
+        name: `Service Fee (${Math.round(serviceFeeRate * 100)}%)`,
+        quantity: 1,
+        price: serviceFeeCents,
+      });
+    }
+
+    // Add discount as negative line item
+    if (discountCents > 0) {
+      lineItems.push({
+        id: `item_${itemCounter++}`,
+        name: `Discount (${request.discountPercent}%)`,
+        quantity: 1,
+        price: -discountCents,
+      });
+    }
+
+    // 4. Create the estimate
+    const venueAddr = request.venueAddress as any;
+    const [estimate] = await db.insert(estimates).values({
+      clientId: client.id,
+      eventType: request.eventType,
+      eventDate: request.eventDate,
+      guestCount: request.guestCount,
+      venue: request.venueName || undefined,
+      venueAddress: venueAddr?.street || undefined,
+      venueCity: venueAddr?.city || undefined,
+      venueZip: venueAddr?.zip || undefined,
+      items: JSON.stringify(lineItems),
+      subtotal: subtotalCents + serviceFeeCents - discountCents,
+      tax: taxCents,
+      total: finalTotalCents,
+      status: "draft",
+      notes: [
+        request.specialRequests,
+        request.menuTheme ? `Menu: ${formatThemeName(request.menuTheme)} - ${capitalize(request.menuTier || '')}` : null,
+        request.serviceType ? `Service type: ${request.serviceType}` : null,
+        request.serviceStyle ? `Service style: ${request.serviceStyle}` : null,
+        (request.dietary as any)?.restrictions?.length ? `Dietary: ${(request.dietary as any).restrictions.join(', ')}` : null,
+        (request.dietary as any)?.allergies?.length ? `Allergies: ${(request.dietary as any).allergies.join(', ')}` : null,
+      ].filter(Boolean).join("\n"),
+    }).returning();
+
+    // 5. Update quote request with all links
     await db
       .update(quoteRequests)
       .set({
         status: "converted",
         opportunityId: opportunity.id,
+        estimateId: estimate.id,
         convertedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(quoteRequests.id, id));
 
-    return res.json({ opportunity, message: "Quote request converted to opportunity" });
+    return res.json({
+      client,
+      opportunity,
+      estimate,
+      message: "Quote request converted: client, opportunity, and estimate created",
+    });
   } catch (error) {
     console.error("Error converting quote request:", error);
     return res.status(500).json({ message: "Failed to convert quote request" });
   }
 });
+
+function formatThemeName(theme: string): string {
+  const names: Record<string, string> = {
+    taco_fiesta: "Taco Fiesta",
+    bbq: "American BBQ",
+    greece: "Taste of Greece",
+    kebab: "Kebab Party",
+    italy: "Taste of Italy",
+    vegan: "Vegan Menu",
+    custom: "Custom Menu",
+  };
+  return names[theme] || theme;
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default router;
