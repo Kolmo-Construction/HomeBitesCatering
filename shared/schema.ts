@@ -207,14 +207,41 @@ export interface MenuRecipeItem {
   servings?: number; // Optional servings multiplier
 }
 
-// Menus (collection of recipes)
+// Menu package (tier) — used in menus.packages JSONB
+export interface MenuPackageTier {
+  tierKey: string;                    // "bronze" | "silver" | "gold" | "diamond" | custom
+  tierName: string;                   // "Bronze Package"
+  pricePerPersonCents: number;        // e.g., 2800 = $28.00/person
+  description?: string;
+  displayOrder: number;
+  minGuestCount?: number;             // e.g., Bronze requires 50+
+  selectionLimits: Record<string, number>; // { protein: 3, side: 2, salsa: 3, condiment: 5 }
+  included?: string[];                // e.g., ["Chips & Salsa Appetizer"] for Diamond extras
+}
+
+// Category item — appears in menus.categoryItems JSONB
+export interface MenuCategoryItem {
+  id: string;                         // stable slug, e.g., "barbacoa"
+  name: string;
+  description?: string;
+  upchargeCents?: number;             // per-person upcharge when selected
+  recipeId?: number;                  // optional link to recipes table
+  dietaryTags?: string[];             // vegan, vegetarian, gluten_free, contains_nuts, etc.
+  notAvailableForStyles?: string[];   // e.g., ["plated"] for items that can't be plated
+}
+
+// Menus (collection of recipes and packages)
 export const menus = pgTable("menus", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   type: text("type").notNull(), // standard, custom, seasonal
   eventType: eventTypeEnum("event_type").default("other").notNull(), // wedding, corporate, birthday, etc.
+  themeKey: text("theme_key"),        // slug for the quote form to reference, e.g., "taco_fiesta"
   recipes: jsonb("recipes").$type<MenuRecipeItem[]>().default([]).notNull(), // array of recipe references
+  packages: jsonb("packages").$type<MenuPackageTier[]>().default([]), // tier definitions (bronze/silver/gold/diamond)
+  categoryItems: jsonb("category_items").$type<Record<string, MenuCategoryItem[]>>().default({}), // items grouped by category
+  displayOrder: integer("display_order").default(0), // for ordering on the quote form
   isPubliclyVisible: boolean("is_publicly_visible").default(true),
   displayOnCustomerForm: boolean("display_on_customer_form").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

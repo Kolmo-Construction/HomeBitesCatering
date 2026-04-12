@@ -8,6 +8,7 @@ import BadgeStatus from "@/components/ui/badge-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCanViewFinancials } from "@/hooks/usePermissions";
+import homebitesLogo from "@assets/homebites-logo.avif";
 import { 
   CheckIcon, 
   XIcon, 
@@ -262,10 +263,10 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
           <div className="flex flex-col sm:flex-row justify-between items-start">
             <div className="mb-4 sm:mb-0">
               <div className="mb-2">
-                <img 
-                  src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100" 
-                  alt="Home Bites Logo" 
-                  className="h-12 w-12 rounded-full print:filter print:grayscale"
+                <img
+                  src={homebitesLogo}
+                  alt="Home Bites Catering"
+                  className="h-16 w-auto print:h-14"
                 />
               </div>
               <CardTitle className="text-2xl print:text-xl">Estimate #{estimate.id}</CardTitle>

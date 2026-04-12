@@ -18,6 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+import homebitesLogo from "@assets/homebites-logo.avif";
+
 import {
   Check,
   ChevronLeft,
@@ -96,29 +98,35 @@ const BUFFET_STYLES = [
   { value: "full_service", label: "Full Service" },
 ] as const;
 
-// --- Menu Themes ---
-const MENU_THEMES = [
-  { value: "taco_fiesta", label: "Taco Fiesta" },
-  { value: "american_bbq", label: "American BBQ" },
-  { value: "taste_of_greece", label: "Taste of Greece" },
-  { value: "kebab_party", label: "Kebab Party" },
-  { value: "taste_of_italy", label: "Taste of Italy" },
-  { value: "vegan", label: "Vegan" },
-  { value: "custom", label: "Custom" },
-] as const;
+// --- Public Menu types (matches API response from /api/quotes/menus/public) ---
+interface PublicMenuTier {
+  tierKey: string;
+  tierName: string;
+  pricePerPersonCents: number;
+  description?: string;
+  displayOrder: number;
+  minGuestCount?: number;
+  selectionLimits: Record<string, number>;
+  included?: string[];
+}
 
-// --- Package Tiers ---
-const TIER_LABELS = ["Bronze", "Silver", "Gold", "Diamond"] as const;
-type TierLabel = (typeof TIER_LABELS)[number];
+interface PublicMenuCategoryItem {
+  id: string;
+  name: string;
+  description?: string;
+  upchargeCents?: number;
+  dietaryTags?: string[];
+}
 
-const PACKAGE_PRICES: Record<string, Record<TierLabel, number>> = {
-  taco_fiesta: { Bronze: 28, Silver: 34, Gold: 40, Diamond: 46 },
-  american_bbq: { Bronze: 32, Silver: 38, Gold: 46, Diamond: 54 },
-  taste_of_greece: { Bronze: 32, Silver: 38, Gold: 46, Diamond: 59 },
-  kebab_party: { Bronze: 35, Silver: 39, Gold: 49, Diamond: 63 },
-  taste_of_italy: { Bronze: 32, Silver: 38, Gold: 46, Diamond: 58 },
-  vegan: { Bronze: 34, Silver: 40, Gold: 46, Diamond: 54 },
-};
+interface PublicMenu {
+  id: number;
+  name: string;
+  description?: string | null;
+  themeKey: string | null;
+  displayOrder: number | null;
+  packages: PublicMenuTier[] | null;
+  categoryItems: Record<string, PublicMenuCategoryItem[]> | null;
+}
 
 // --- Appetizer Data ---
 interface AppetizerItem {
@@ -405,8 +413,9 @@ interface FormState {
   mainMealEndTime: string;
 
   // Step 4
-  menuTheme: string;
-  packageTier: string;
+  menuTheme: string;       // themeKey from database (e.g., "taco_fiesta")
+  packageTier: string;     // tierKey from database (e.g., "bronze")
+  menuItemSelections: Record<string, string[]>; // category -> array of item ids
   customMenuNotes: string;
 
   // Step 5
@@ -486,6 +495,7 @@ const initialFormState: FormState = {
 
   menuTheme: "",
   packageTier: "",
+  menuItemSelections: {},
   customMenuNotes: "",
 
   addAppetizers: false,
@@ -543,6 +553,23 @@ export default function RequestQuote() {
   const { data: venues = [] } = useQuery<Venue[]>({
     queryKey: ["/api/quotes/venues"],
   });
+
+  // ---------- Public menus query (drives Step 4 dynamically) ----------
+  const { data: publicMenus = [] } = useQuery<PublicMenu[]>({
+    queryKey: ["/api/quotes/menus/public"],
+  });
+
+  // Find the currently selected menu object from the query data
+  const selectedMenu = useMemo(
+    () => publicMenus.find((m) => m.themeKey === form.menuTheme) || null,
+    [publicMenus, form.menuTheme],
+  );
+  const selectedTier = useMemo(
+    () =>
+      selectedMenu?.packages?.find((p) => p.tierKey === form.packageTier) ||
+      null,
+    [selectedMenu, form.packageTier],
+  );
 
   // ---------- Form updater ----------
   const update = useCallback(
@@ -688,15 +715,21 @@ export default function RequestQuote() {
     let beverageEstimate = 0;
     let equipmentTotal = 0;
 
-    // Per-person food cost
-    if (
-      form.menuTheme &&
-      form.menuTheme !== "custom" &&
-      form.packageTier &&
-      PACKAGE_PRICES[form.menuTheme]
-    ) {
-      perPersonFood =
-        PACKAGE_PRICES[form.menuTheme][form.packageTier as TierLabel] || 0;
+    // Per-person food cost — from the selected tier in the database
+    if (selectedTier) {
+      perPersonFood = selectedTier.pricePerPersonCents / 100;
+      // Add upcharges for any selected items
+      if (selectedMenu?.categoryItems) {
+        for (const [category, ids] of Object.entries(form.menuItemSelections)) {
+          const items = selectedMenu.categoryItems[category] || [];
+          for (const id of ids) {
+            const item = items.find((i) => i.id === id);
+            if (item?.upchargeCents) {
+              perPersonFood += item.upchargeCents / 100;
+            }
+          }
+        }
+      }
     }
 
     const foodSubtotal = perPersonFood * guestCount;
@@ -833,11 +866,14 @@ export default function RequestQuote() {
           if (form.menuTheme !== "custom" && !form.packageTier)
             errors.push("Please select a package tier.");
           if (
-            form.packageTier === "Bronze" &&
+            selectedTier &&
+            selectedTier.minGuestCount &&
             guestCount > 0 &&
-            guestCount < 50
+            guestCount < selectedTier.minGuestCount
           )
-            errors.push("Bronze tier requires at least 50 guests.");
+            errors.push(
+              `${selectedTier.tierName} tier requires at least ${selectedTier.minGuestCount} guests.`,
+            );
           break;
         // Steps 5-7 are optional selections
         default:
@@ -868,9 +904,36 @@ export default function RequestQuote() {
   // ---------- Submit mutation ----------
   const submitMutation = useMutation({
     mutationFn: async () => {
+      // Build menuSelections array from the selected items + menu data
+      const menuSelections: Array<{
+        itemId?: string;
+        name: string;
+        category: string;
+        upcharge?: number;
+      }> = [];
+      if (selectedMenu?.categoryItems) {
+        for (const [category, ids] of Object.entries(form.menuItemSelections)) {
+          const items = selectedMenu.categoryItems[category] || [];
+          for (const id of ids) {
+            const item = items.find((i) => i.id === id);
+            if (item) {
+              menuSelections.push({
+                itemId: item.id,
+                name: item.name,
+                category,
+                upcharge: (item.upchargeCents || 0) / 100,
+              });
+            }
+          }
+        }
+      }
+
       const payload = {
         ...form,
         guestCount: guestCount,
+        // Map form fields to API schema field names
+        menuTier: form.packageTier || undefined,
+        menuSelections,
         drinkingGuestCount:
           typeof form.drinkingGuestCount === "number"
             ? form.drinkingGuestCount
@@ -1645,23 +1708,53 @@ export default function RequestQuote() {
     </div>
   );
 
+  // ---------- Menu item selection helpers ----------
+  const toggleMenuItem = useCallback(
+    (category: string, itemId: string, limit: number) => {
+      setForm((prev) => {
+        const current = prev.menuItemSelections[category] || [];
+        const isSelected = current.includes(itemId);
+        let next: string[];
+        if (isSelected) {
+          next = current.filter((id) => id !== itemId);
+        } else if (current.length < limit) {
+          next = [...current, itemId];
+        } else {
+          // Limit reached — show a toast
+          toast({
+            title: "Selection limit reached",
+            description: `This tier allows up to ${limit} ${category}${limit === 1 ? "" : "s"}.`,
+            variant: "destructive",
+          });
+          return prev;
+        }
+        return {
+          ...prev,
+          menuItemSelections: { ...prev.menuItemSelections, [category]: next },
+        };
+      });
+    },
+    [toast],
+  );
+
+  // Tier visual palette keyed by known tier slugs — falls back to primary color for custom tiers
+  const TIER_COLORS: Record<string, { gradient: string; border: string }> = {
+    bronze: { gradient: "from-amber-700 to-amber-900", border: "border-amber-400" },
+    silver: { gradient: "from-gray-400 to-gray-600", border: "border-gray-400" },
+    gold: { gradient: "from-yellow-400 to-yellow-600", border: "border-yellow-400" },
+    diamond: { gradient: "from-blue-300 to-blue-500", border: "border-blue-400" },
+  };
+
   const renderStep4 = () => {
-    const currentPrices =
-      form.menuTheme && form.menuTheme !== "custom"
-        ? PACKAGE_PRICES[form.menuTheme]
-        : null;
-    const tierColors: Record<TierLabel, string> = {
-      Bronze: "from-amber-700 to-amber-900",
-      Silver: "from-gray-400 to-gray-600",
-      Gold: "from-yellow-400 to-yellow-600",
-      Diamond: "from-blue-300 to-blue-500",
-    };
-    const tierBorderColors: Record<TierLabel, string> = {
-      Bronze: "border-amber-400",
-      Silver: "border-gray-400",
-      Gold: "border-yellow-400",
-      Diamond: "border-blue-400",
-    };
+    // Build theme cards from the dynamic menu data, plus a "Custom" option
+    const themeOptions = publicMenus
+      .filter((m) => m.themeKey) // only include menus with a theme key
+      .map((m) => ({
+        value: m.themeKey!,
+        label: m.name,
+        icon: ChefHat,
+      }));
+    themeOptions.push({ value: "custom", label: "Custom", icon: ChefHat });
 
     return (
       <div className="space-y-8">
@@ -1670,75 +1763,195 @@ export default function RequestQuote() {
           <Label className="text-base font-semibold">
             Menu Theme <span className="text-red-500">*</span>
           </Label>
-          {renderCardSelector(
-            MENU_THEMES.map((m) => ({ ...m, icon: ChefHat })),
-            form.menuTheme,
-            (v) => {
-              update("menuTheme", v);
-              update("packageTier", ""); // reset tier on theme change
-            },
-            "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+          {publicMenus.length === 0 ? (
+            <p className="text-sm text-gray-500">Loading menu options…</p>
+          ) : (
+            renderCardSelector(
+              themeOptions,
+              form.menuTheme,
+              (v) => {
+                update("menuTheme", v);
+                update("packageTier", "");
+                update("menuItemSelections", {});
+              },
+              "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+            )
+          )}
+          {selectedMenu?.description && (
+            <p className="text-sm text-gray-600 mt-2 italic">
+              {selectedMenu.description}
+            </p>
           )}
         </div>
 
         {/* Package tier */}
-        {form.menuTheme && form.menuTheme !== "custom" && currentPrices && (
+        {selectedMenu && selectedMenu.packages && selectedMenu.packages.length > 0 && (
           <div className="space-y-3">
             <Label className="text-base font-semibold">
               Package Tier <span className="text-red-500">*</span>
             </Label>
-            {guestCount > 0 && guestCount < 50 && (
-              <p className="text-sm text-amber-600 font-medium">
-                Note: Bronze tier requires a minimum of 50 guests.
-              </p>
-            )}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {TIER_LABELS.map((tier) => {
-                const price = currentPrices[tier];
-                const disabled =
-                  tier === "Bronze" && guestCount > 0 && guestCount < 50;
-                const isActive = form.packageTier === tier;
-                return (
-                  <button
-                    key={tier}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => update("packageTier", tier)}
-                    className={cn(
-                      "relative rounded-xl border-2 p-5 text-center transition-all",
-                      disabled
-                        ? "opacity-40 cursor-not-allowed border-gray-200"
-                        : isActive
-                          ? `${tierBorderColors[tier]} shadow-lg ring-2 ring-primary/20`
-                          : "border-gray-200 hover:shadow-md hover:border-gray-300",
-                    )}
-                  >
-                    {isActive && (
-                      <div className="absolute top-2 right-2">
-                        <Check className="h-4 w-4 text-primary" />
-                      </div>
-                    )}
-                    <div
+              {[...selectedMenu.packages]
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map((tier) => {
+                  const price = tier.pricePerPersonCents / 100;
+                  const disabled =
+                    tier.minGuestCount &&
+                    guestCount > 0 &&
+                    guestCount < tier.minGuestCount;
+                  const isActive = form.packageTier === tier.tierKey;
+                  const colors = TIER_COLORS[tier.tierKey] || {
+                    gradient: "from-purple-500 to-purple-700",
+                    border: "border-purple-400",
+                  };
+                  return (
+                    <button
+                      key={tier.tierKey}
+                      type="button"
+                      disabled={!!disabled}
+                      onClick={() => {
+                        update("packageTier", tier.tierKey);
+                        update("menuItemSelections", {});
+                      }}
                       className={cn(
-                        "text-xs font-bold uppercase tracking-wider mb-2 bg-gradient-to-r bg-clip-text text-transparent",
-                        tierColors[tier],
+                        "relative rounded-xl border-2 p-5 text-left transition-all",
+                        disabled
+                          ? "opacity-40 cursor-not-allowed border-gray-200"
+                          : isActive
+                            ? `${colors.border} shadow-lg ring-2 ring-primary/20`
+                            : "border-gray-200 hover:shadow-md hover:border-gray-300",
                       )}
                     >
-                      {tier}
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">
-                      {fmt(price)}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">per person</div>
-                    {disabled && (
-                      <div className="text-xs text-red-500 mt-2">
-                        Min 50 guests
+                      {isActive && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "text-xs font-bold uppercase tracking-wider mb-2 bg-gradient-to-r bg-clip-text text-transparent",
+                          colors.gradient,
+                        )}
+                      >
+                        {tier.tierName}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
+                      <div className="text-2xl font-bold text-gray-900">
+                        {fmt(price)}
+                        <span className="text-xs font-normal text-gray-500 ml-1">
+                          / person
+                        </span>
+                      </div>
+                      {tier.description && (
+                        <div className="text-xs text-gray-600 mt-2 leading-snug">
+                          {tier.description}
+                        </div>
+                      )}
+                      {disabled && (
+                        <div className="text-xs text-red-500 mt-2 font-medium">
+                          Min {tier.minGuestCount} guests
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
+          </div>
+        )}
+
+        {/* Item selection per category */}
+        {selectedTier && selectedMenu?.categoryItems && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">
+                Select Your Items
+              </Label>
+              {selectedTier.included && selectedTier.included.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  Includes: {selectedTier.included.join(", ")}
+                </Badge>
+              )}
+            </div>
+            {Object.entries(selectedTier.selectionLimits).map(
+              ([category, limit]) => {
+                const items = selectedMenu.categoryItems![category] || [];
+                const selected = form.menuItemSelections[category] || [];
+                if (items.length === 0) return null;
+                return (
+                  <div
+                    key={category}
+                    className="rounded-xl border bg-white p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold capitalize">
+                        {category === "salsa"
+                          ? "Salsas"
+                          : category === "condiment"
+                            ? "Condiments"
+                            : category === "spread"
+                              ? "Spreads"
+                              : category === "sauce"
+                                ? "Sauces"
+                                : category === "pasta"
+                                  ? "Pasta"
+                                  : `${category.charAt(0).toUpperCase()}${category.slice(1)}s`}
+                      </h4>
+                      <span
+                        className={cn(
+                          "text-xs font-medium px-2 py-1 rounded-full",
+                          selected.length === limit
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600",
+                        )}
+                      >
+                        {selected.length} / {limit} selected
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {items.map((item) => {
+                        const isSelected = selected.includes(item.id);
+                        const upcharge = (item.upchargeCents || 0) / 100;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() =>
+                              toggleMenuItem(category, item.id, limit)
+                            }
+                            className={cn(
+                              "flex items-center justify-between gap-2 rounded-lg border p-2.5 text-left text-sm transition-all",
+                              isSelected
+                                ? "border-primary bg-primary/5 shadow-sm"
+                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className={cn(
+                                  "h-4 w-4 rounded border flex items-center justify-center flex-shrink-0",
+                                  isSelected
+                                    ? "bg-primary border-primary"
+                                    : "border-gray-300",
+                                )}
+                              >
+                                {isSelected && (
+                                  <Check className="h-3 w-3 text-white" />
+                                )}
+                              </div>
+                              <span className="truncate">{item.name}</span>
+                            </div>
+                            {upcharge > 0 && (
+                              <span className="text-xs text-amber-600 font-medium flex-shrink-0">
+                                +${upcharge.toFixed(2)}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              },
+            )}
           </div>
         )}
 
@@ -2448,15 +2661,35 @@ export default function RequestQuote() {
             )}
             <p>
               <span className="text-gray-500">Menu Theme:</span>{" "}
-              {MENU_THEMES.find((m) => m.value === form.menuTheme)?.label ||
-                form.menuTheme ||
-                "Not selected"}
+              {selectedMenu?.name || form.menuTheme || "Not selected"}
             </p>
-            {form.packageTier && (
+            {selectedTier && (
               <p>
                 <span className="text-gray-500">Package:</span>{" "}
-                {form.packageTier} ({fmt(pricing.perPersonFood)}/person)
+                {selectedTier.tierName} ({fmt(pricing.perPersonFood)}/person)
               </p>
+            )}
+            {selectedTier && selectedMenu?.categoryItems && (
+              <div className="mt-2 space-y-1">
+                {Object.entries(form.menuItemSelections).map(
+                  ([category, ids]) => {
+                    if (ids.length === 0) return null;
+                    const items = selectedMenu.categoryItems![category] || [];
+                    const names = ids
+                      .map((id) => items.find((i) => i.id === id)?.name)
+                      .filter(Boolean);
+                    if (names.length === 0) return null;
+                    return (
+                      <p key={category} className="text-xs">
+                        <span className="text-gray-500 capitalize">
+                          {category}s:
+                        </span>{" "}
+                        {names.join(", ")}
+                      </p>
+                    );
+                  },
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -2835,7 +3068,12 @@ export default function RequestQuote() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50">
       {/* Header */}
       <div className="bg-white border-b shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-center">
+        <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center text-center">
+          <img
+            src={homebitesLogo}
+            alt="Home Bites Catering"
+            className="h-20 sm:h-24 w-auto mb-4"
+          />
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Request a Quote
           </h1>

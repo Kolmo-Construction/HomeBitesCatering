@@ -4,14 +4,49 @@ import {
   venues,
   promoCodes,
   quoteRequests,
+  menus,
   insertVenueSchema,
   insertPromoCodeSchema,
   insertQuoteRequestSchema,
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike } from "drizzle-orm";
 import { analyzeQuoteRequest } from "./services/quoteAiService";
+import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
+import { calculateMenuMargin } from "./utils/menuMargin";
 
 const router = Router();
+
+// ============================================
+// PUBLIC MENUS (for quote form)
+// ============================================
+
+// Returns all menus marked displayOnCustomerForm = true, with packages + category items
+router.get("/menus/public", async (_req: Request, res: Response) => {
+  try {
+    const publicMenus = await db
+      .select()
+      .from(menus)
+      .where(eq(menus.displayOnCustomerForm, true))
+      .orderBy(menus.displayOrder, menus.name);
+    return res.json(publicMenus);
+  } catch (error) {
+    console.error("Error fetching public menus:", error);
+    return res.status(500).json({ message: "Failed to fetch public menus" });
+  }
+});
+
+// Get margin analysis for a menu (admin — shows food cost percentages per tier)
+router.get("/menus/:id/margin", async (req: Request, res: Response) => {
+  try {
+    const menuId = parseInt(req.params.id);
+    if (isNaN(menuId)) return res.status(400).json({ message: "Invalid menu ID" });
+    const analysis = await calculateMenuMargin(menuId);
+    return res.json(analysis);
+  } catch (error) {
+    console.error("Error calculating menu margin:", error);
+    return res.status(500).json({ message: "Failed to calculate menu margin" });
+  }
+});
 
 // ============================================
 // VENUES
@@ -199,6 +234,12 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
         .where(eq(promoCodes.id, parsed.data.promoCodeId));
     }
 
+    // Calculate pricing server-side (refresh menu cache first to use current DB prices)
+    if (parsed.data.menuTheme) {
+      await refreshMenuPricingCache(parsed.data.menuTheme);
+    }
+    const pricing = calculateQuotePricing(parsed.data);
+
     const [request] = await db
       .insert(quoteRequests)
       .values({
@@ -208,6 +249,11 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
         billingAddress: parsed.data.billingAddress as any,
         status: "submitted",
         submittedAt: new Date(),
+        estimatedPerPersonCents: pricing.perPersonCents,
+        estimatedSubtotalCents: pricing.subtotalCents,
+        estimatedServiceFeeCents: pricing.serviceFeeCents,
+        estimatedTaxCents: pricing.taxCents,
+        estimatedTotalCents: pricing.totalCents,
       } as any)
       .returning();
 
@@ -226,6 +272,37 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error creating quote request:", error);
     return res.status(500).json({ message: "Failed to submit quote request" });
+  }
+});
+
+// Re-calculate pricing for an existing quote request (admin)
+router.post("/quote-requests/:id/recalculate-pricing", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
+    if (!request) return res.status(404).json({ message: "Quote request not found" });
+
+    if (request.menuTheme) {
+      await refreshMenuPricingCache(request.menuTheme);
+    }
+    const pricing = calculateQuotePricing(request);
+    const [updated] = await db
+      .update(quoteRequests)
+      .set({
+        estimatedPerPersonCents: pricing.perPersonCents,
+        estimatedSubtotalCents: pricing.subtotalCents,
+        estimatedServiceFeeCents: pricing.serviceFeeCents,
+        estimatedTaxCents: pricing.taxCents,
+        estimatedTotalCents: pricing.totalCents,
+        updatedAt: new Date(),
+      })
+      .where(eq(quoteRequests.id, id))
+      .returning();
+
+    return res.json({ ...updated, pricingBreakdown: pricing });
+  } catch (error) {
+    console.error("Error recalculating pricing:", error);
+    return res.status(500).json({ message: "Failed to recalculate pricing" });
   }
 });
 

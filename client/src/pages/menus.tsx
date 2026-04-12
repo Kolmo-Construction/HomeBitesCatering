@@ -5,7 +5,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import { Menu } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, EyeIcon, PenIcon, TrashIcon, ArrowLeft } from "lucide-react";
+import { PlusIcon, EyeIcon, PenIcon, TrashIcon, ArrowLeft, Settings2, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import MenuPackageEditor from "@/components/menu/MenuPackageEditor";
 import MenuDetailView from "@/components/menu/MenuDetailView";
 import { 
   AlertDialog,
@@ -30,6 +32,7 @@ export default function Menus() {
   const [mode, setMode] = useState<"list" | "new" | "edit" | "view">("list");
   const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  const [packageEditorMenuId, setPackageEditorMenuId] = useState<number | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -105,6 +108,21 @@ export default function Menus() {
       deleteMutation.mutate(menuToDelete.id);
     }
   };
+
+  // Toggle customer-form visibility
+  const toggleCustomerFormMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: number; value: boolean }) => {
+      await apiRequest("PATCH", `/api/menus/${id}`, { displayOnCustomerForm: value });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menus"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes/menus/public"] });
+      toast({ title: "Updated", description: "Customer form visibility updated." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
   
   // Menu list table columns
   const columns: ColumnDef<Menu>[] = [
@@ -152,6 +170,38 @@ export default function Menus() {
       },
     },
     {
+      id: "packages",
+      header: "Tiers",
+      cell: ({ row }) => {
+        const packages = (row.original as any).packages;
+        const count = Array.isArray(packages) ? packages.length : 0;
+        return count > 0 ? (
+          <Badge variant="secondary">{count} tier{count !== 1 ? "s" : ""}</Badge>
+        ) : (
+          <span className="text-xs text-gray-400">None</span>
+        );
+      },
+    },
+    {
+      id: "displayOnCustomerForm",
+      header: "On Quote Form",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={!!(row.original as any).displayOnCustomerForm}
+            onCheckedChange={(checked) =>
+              toggleCustomerFormMutation.mutate({ id: row.original.id, value: checked })
+            }
+          />
+          {(row.original as any).displayOnCustomerForm ? (
+            <Eye className="h-3.5 w-3.5 text-green-600" />
+          ) : (
+            <EyeOff className="h-3.5 w-3.5 text-gray-400" />
+          )}
+        </div>
+      ),
+    },
+    {
       accessorKey: "updated",
       header: "Last Updated",
       cell: ({ row }) => <span>{formatDate(new Date(row.original.updatedAt))}</span>,
@@ -161,6 +211,13 @@ export default function Menus() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
+          <button
+            className="text-primary-purple hover:text-primary-blue transition"
+            title="Manage quote form packages"
+            onClick={() => setPackageEditorMenuId(row.original.id)}
+          >
+            <Settings2 className="h-4 w-4" />
+          </button>
           <Link to={`/menus/${row.original.id}`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
@@ -171,7 +228,7 @@ export default function Menus() {
               <PenIcon className="h-4 w-4" />
             </div>
           </Link>
-          <button 
+          <button
             className="text-red-500 hover:text-red-700 transition"
             onClick={() => setMenuToDelete(row.original)}
           >
@@ -204,6 +261,13 @@ export default function Menus() {
           emptyMessage="No menus found. Create your first menu to get started."
         />
         
+        {packageEditorMenuId && (
+          <MenuPackageEditor
+            menuId={packageEditorMenuId}
+            onClose={() => setPackageEditorMenuId(null)}
+          />
+        )}
+
         {menuToDelete && (
           <AlertDialog open={!!menuToDelete} onOpenChange={(open) => !open && setMenuToDelete(null)}>
             <AlertDialogContent>
