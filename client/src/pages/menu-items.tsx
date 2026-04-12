@@ -6,9 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
+import { useCanViewFinancials } from "@/hooks/usePermissions";
 
 export default function MenuItems() {
   const [location] = useLocation();
+  const canViewFinancials = useCanViewFinancials();
   const [mode, setMode] = useState<"list" | "new" | "edit" | "view">("list");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
@@ -111,11 +113,13 @@ export default function MenuItems() {
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Category</h3>
                   <p>{getCategoryLabel(menuItem.category)}</p>
                 </div>
-                
-                <div className="mb-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Price Per Person</h3>
-                  <p className="text-xl font-semibold">{menuItem.price ? formatCurrency(menuItem.price) : 'Price not set'}</p>
-                </div>
+
+                {canViewFinancials && (
+                  <div className="mb-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Price Per Person</h3>
+                    <p className="text-xl font-semibold">{menuItem.price ? formatCurrency(menuItem.price) : 'Price not set'}</p>
+                  </div>
+                )}
                 
                 {menuItem.description && (
                   <div className="mb-4">

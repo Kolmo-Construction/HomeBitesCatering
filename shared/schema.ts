@@ -122,7 +122,7 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone"),
-  role: text("role").default("staff").notNull(), // admin, staff, kitchen, client
+  role: text("role").default("user").notNull(), // admin, user (read-only), client
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -151,6 +151,7 @@ export const opportunities = pgTable("opportunities", {
   priority: opportunityPriorityEnum("priority").default('medium'), // NEW FIELD for prioritizing opportunities
   assignedTo: integer("assigned_to").references(() => users.id),
   clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
+  createdBy: integer("created_by").references(() => users.id),
   // Fields for future extensions
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -684,7 +685,8 @@ export const rawLeads = pgTable("raw_leads", {
   aiSuggestedNextStep: text("ai_suggested_next_step"),
   aiSentiment: sentimentEnum("ai_sentiment"),
   aiConfidenceScore: doublePrecision("ai_confidence_score"),
-  
+  createdBy: integer("created_by").references(() => users.id),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -704,6 +706,303 @@ export const insertRawLeadSchema = createInsertSchema(rawLeads, {
 
 export type RawLead = typeof rawLeads.$inferSelect;
 export type InsertRawLead = z.infer<typeof insertRawLeadSchema>;
+
+// ============================================
+// QUOTE REQUEST SYSTEM
+// ============================================
+
+// --- Venues ---
+export const venues = pgTable("venues", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zip: text("zip"),
+  contactName: text("contact_name"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  hasKitchen: boolean("has_kitchen"),
+  hasElectricity: boolean("has_electricity").default(true),
+  hasWater: boolean("has_water").default(true),
+  capacity: integer("capacity"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertVenueSchema = createInsertSchema(venues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Venue = typeof venues.$inferSelect;
+export type InsertVenue = z.infer<typeof insertVenueSchema>;
+
+// --- Promo Codes ---
+export const promoCodes = pgTable("promo_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).notNull(),
+  description: text("description"),
+  maxUses: integer("max_uses"),
+  currentUses: integer("current_uses").default(0).notNull(),
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPromoCodeSchema = createInsertSchema(promoCodes, {
+  discountPercent: z.coerce.number().min(0).max(100),
+}).omit({
+  id: true,
+  createdAt: true,
+  currentUses: true,
+});
+
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type InsertPromoCode = z.infer<typeof insertPromoCodeSchema>;
+
+// --- Quote Request Status Enum ---
+export const quoteRequestStatusEnum = pgEnum("quote_request_status", [
+  "draft",        // Customer started but hasn't submitted
+  "submitted",    // Customer submitted the form
+  "reviewing",    // Staff is reviewing
+  "quoted",       // Estimate has been generated
+  "converted",    // Converted to opportunity/booking
+  "expired",      // Quote expired without action
+  "archived",     // Manually archived
+]);
+
+// --- Quote Request Service Type Enum ---
+export const serviceTypeEnum = pgEnum("service_type", [
+  "buffet",
+  "plated",
+  "family_style",
+  "cocktail_party",
+  "breakfast_brunch",
+  "sandwich",
+  "food_truck",
+  "kids_party",
+]);
+
+// --- Quote Request Service Style Enum ---
+export const serviceStyleEnum = pgEnum("service_style", [
+  "drop_off",
+  "standard",
+  "full_service_no_setup",
+  "full_service",
+]);
+
+// --- Structured JSONB types for quote_requests ---
+
+export interface QuoteAddress {
+  street?: string;
+  street2?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
+export interface QuoteMenuSelection {
+  itemId?: string;       // reference to menu_items.id if available
+  name: string;
+  category: string;      // protein, side, salad, salsa, condiment, sauce, spread, pasta
+  upcharge?: number;     // per-person upcharge if applicable
+}
+
+export interface QuoteAppetizer {
+  category: string;      // tea_sandwiches, shooters, skewers, canapes, vol_au_vents, simple_fare, charcuterie, spreads
+  itemName: string;
+  pricePerPiece: number;
+  quantity: number;       // lot size selected
+  subtotal: number;
+}
+
+export interface QuoteDessert {
+  itemName: string;
+  pricePerPiece: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface QuoteBeverages {
+  hasNonAlcoholic: boolean;
+  nonAlcoholicSelections?: string[];
+  mocktails?: string[];
+  hasAlcoholic: boolean;
+  bartendingType?: "dry_hire" | "wet_hire";
+  drinkingGuestCount?: number;
+  bartendingDurationHours?: number;
+  alcoholSelections?: string[];
+  liquorQuality?: "well" | "mid_shelf" | "top_shelf";
+  additionalCocktails?: number;
+  glassware?: boolean;
+  barEquipment?: string[];
+  tableWaterService?: boolean;
+  coffeeTeaService?: boolean;
+  servingWareType?: string;
+  notes?: string;
+}
+
+export interface QuoteEquipmentItem {
+  item: string;
+  category: string;     // linens, serving_ware, furniture
+  pricePerUnit: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface QuoteDietary {
+  restrictions?: string[];     // vegan, vegetarian, gluten_free, paleo, halal, kosher
+  allergies?: string[];        // dairy, eggs, soy, peanuts, fish, shellfish, wheat, tree_nuts, sesame
+  specialNotes?: string;
+}
+
+// AI enrichment fields — populated asynchronously after submission
+export interface QuoteAiAnalysis {
+  eventComplexityScore?: number;       // 1-10 how complex this event is to execute
+  estimatedPrepHours?: number;         // AI-estimated prep time
+  recommendedStaffCount?: number;      // AI-suggested staffing level
+  suggestedUpsells?: Array<{ item: string; reason: string; estimatedValue: number }>;
+  suggestedAlternatives?: Array<{ original: string; suggestion: string; reason: string }>;
+  pricingConfidence?: number;          // 0-1 confidence in the auto-calculated price
+  marginEstimate?: number;             // estimated margin percentage
+  similarPastEvents?: number[];        // IDs of similar past quote_requests for reference
+  autoGeneratedNotes?: string;         // AI summary for the sales team
+  analyzedAt?: string;                 // ISO timestamp of when AI analysis ran
+}
+
+// --- Quote Requests ---
+export const quoteRequests = pgTable("quote_requests", {
+  id: serial("id").primaryKey(),
+
+  // Status & Workflow
+  status: quoteRequestStatusEnum("status").default("draft").notNull(),
+
+  // Source & Attribution
+  source: text("source"),                        // website, wedding_wire, the_knot, zola, google, referral, etc.
+  referralDetail: text("referral_detail"),        // free text: "recommended by Sarah", "found on Instagram", etc.
+  promoCodeId: integer("promo_code_id").references(() => promoCodes.id),
+  discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }),
+  decisionTimeline: text("decision_timeline"),    // 7_to_10_days, 10_to_20_days, 20_to_30_days, 30_to_60_days
+
+  // Contact Info
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  partnerFirstName: text("partner_first_name"),
+  partnerLastName: text("partner_last_name"),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  companyName: text("company_name"),
+  billingAddress: jsonb("billing_address").$type<QuoteAddress>(),
+
+  // Event Details — proper columns for AI queryability
+  eventType: text("event_type").notNull(),        // wedding, corporate, birthday, engagement, cocktail_party, other
+  eventDate: timestamp("event_date"),
+  eventStartTime: text("event_start_time"),
+  eventEndTime: text("event_end_time"),
+  guestCount: integer("guest_count").notNull(),
+
+  // Venue
+  venueId: integer("venue_id").references(() => venues.id),
+  venueName: text("venue_name"),
+  venueAddress: jsonb("venue_address").$type<QuoteAddress>(),
+  venueHasKitchen: boolean("venue_has_kitchen"),
+  venueContactName: text("venue_contact_name"),
+  venueContactPhone: text("venue_contact_phone"),
+
+  // Ceremony (weddings)
+  hasCeremony: boolean("has_ceremony").default(false),
+  ceremonySameSpace: boolean("ceremony_same_space"),
+  ceremonyStartTime: text("ceremony_start_time"),
+  ceremonyEndTime: text("ceremony_end_time"),
+
+  // Service Configuration — proper columns for filtering/analysis
+  serviceType: serviceTypeEnum("service_type"),
+  serviceStyle: serviceStyleEnum("service_style"),
+
+  // Meal Timing
+  hasCocktailHour: boolean("has_cocktail_hour").default(false),
+  cocktailStartTime: text("cocktail_start_time"),
+  cocktailEndTime: text("cocktail_end_time"),
+  hasMainMeal: boolean("has_main_meal").default(true),
+  mainMealStartTime: text("main_meal_start_time"),
+  mainMealEndTime: text("main_meal_end_time"),
+
+  // Menu Selections — theme/tier as columns, detailed items in JSONB
+  menuTheme: text("menu_theme"),                  // taco_fiesta, bbq, greece, kebab, italy, vegan, custom
+  menuTier: text("menu_tier"),                    // bronze, silver, gold, diamond
+  menuSelections: jsonb("menu_selections").$type<QuoteMenuSelection[]>().default([]),
+
+  // Appetizers, Desserts, Beverages, Equipment — complex nested structures in JSONB
+  appetizers: jsonb("appetizers").$type<{ serviceStyle?: string; selections: QuoteAppetizer[] }>(),
+  desserts: jsonb("desserts").$type<QuoteDessert[]>(),
+  beverages: jsonb("beverages").$type<QuoteBeverages>(),
+  equipment: jsonb("equipment").$type<{ items: QuoteEquipmentItem[]; otherNotes?: string }>(),
+
+  // Dietary
+  dietary: jsonb("dietary").$type<QuoteDietary>(),
+
+  // Pricing (auto-calculated, stored in cents)
+  estimatedPerPersonCents: integer("estimated_per_person_cents"),
+  estimatedSubtotalCents: integer("estimated_subtotal_cents"),
+  estimatedServiceFeeCents: integer("estimated_service_fee_cents"),
+  estimatedTaxCents: integer("estimated_tax_cents"),
+  estimatedTotalCents: integer("estimated_total_cents"),
+
+  // Referral needs
+  referralNeeds: jsonb("referral_needs").$type<string[]>(),  // cakes, event_planner, florist, dj, photographer, videographer
+
+  // Notes
+  specialRequests: text("special_requests"),
+  internalNotes: text("internal_notes"),
+
+  // AI Analysis — populated asynchronously after submission
+  aiAnalysis: jsonb("ai_analysis").$type<QuoteAiAnalysis>(),
+
+  // Links to other entities (set when converted)
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
+  estimateId: integer("estimate_id").references(() => estimates.id),
+
+  // Timestamps
+  submittedAt: timestamp("submitted_at"),
+  convertedAt: timestamp("converted_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertQuoteRequestSchema = createInsertSchema(quoteRequests, {
+  eventDate: z.coerce.date().nullable().optional(),
+  guestCount: z.coerce.number().int().positive(),
+  discountPercent: z.coerce.number().min(0).max(100).optional(),
+  menuSelections: z.array(z.object({
+    itemId: z.string().optional(),
+    name: z.string(),
+    category: z.string(),
+    upcharge: z.number().optional(),
+  })).optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  submittedAt: true,
+  convertedAt: true,
+  opportunityId: true,
+  estimateId: true,
+  aiAnalysis: true,
+  estimatedPerPersonCents: true,
+  estimatedSubtotalCents: true,
+  estimatedServiceFeeCents: true,
+  estimatedTaxCents: true,
+  estimatedTotalCents: true,
+});
+
+export type QuoteRequest = typeof quoteRequests.$inferSelect;
+export type InsertQuoteRequest = z.infer<typeof insertQuoteRequestSchema>;
 
 // Define the relationships between tables
 export const userRelations = relations(users, ({ many }) => ({
@@ -1105,4 +1404,16 @@ export const formSubmissionsRelations = relations(formSubmissions, ({ one, many 
 export const formSubmissionAnswersRelations = relations(formSubmissionAnswers, ({ one }) => ({
   submission: one(formSubmissions, { fields: [formSubmissionAnswers.formSubmissionId], references: [formSubmissions.id] }),
   formPageQuestion: one(formPageQuestions, { fields: [formSubmissionAnswers.formPageQuestionId], references: [formPageQuestions.id] }),
+}));
+
+// Quote Request System Relations
+export const quoteRequestRelations = relations(quoteRequests, ({ one }) => ({
+  venue: one(venues, { fields: [quoteRequests.venueId], references: [venues.id] }),
+  promoCode: one(promoCodes, { fields: [quoteRequests.promoCodeId], references: [promoCodes.id] }),
+  opportunity: one(opportunities, { fields: [quoteRequests.opportunityId], references: [opportunities.id] }),
+  estimate: one(estimates, { fields: [quoteRequests.estimateId], references: [estimates.id] }),
+}));
+
+export const venueRelations = relations(venues, ({ many }) => ({
+  quoteRequests: many(quoteRequests),
 }));

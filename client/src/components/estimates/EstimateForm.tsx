@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertEstimateSchema, type Estimate as EstimateType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useCanViewFinancials } from "@/hooks/usePermissions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +76,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const canViewFinancials = useCanViewFinancials();
 
   const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
@@ -637,14 +639,15 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   <SelectItem value="none">No Menu (Custom Items Only)</SelectItem>
                   {menus.map((menu: any) => (
                     <SelectItem key={menu.id} value={menu.id.toString()}>
-                      {menu.name} - {formatCurrency(
-                        (Array.isArray(menu.items) 
+                      {menu.name}
+                      {canViewFinancials && ` - ${formatCurrency(
+                        (Array.isArray(menu.items)
                           ? menu.items.reduce((acc: number, item: any) => {
                               const menuItem = item.menuItem || item;
                               return acc + (Number(menuItem?.price) || 0);
                             }, 0)
                           : 0) / 100 // Assuming price is in cents
-                      )}
+                      )}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -658,23 +661,26 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                       const actualItem = itemDetail.menuItem || itemDetail;
                       return (
                         <li key={index} className="text-sm">
-                          {itemDetail.quantity || 1}x {actualItem.name || 'Menu Item'} - {formatCurrency((Number(actualItem.price) || 0) / 100)}
+                          {itemDetail.quantity || 1}x {actualItem.name || 'Menu Item'}
+                          {canViewFinancials && ` - ${formatCurrency((Number(actualItem.price) || 0) / 100)}`}
                         </li>
                       );
                     })}
                   </ul>
-                   <div className="mt-2 text-sm font-medium">
+                  {canViewFinancials && (
+                    <div className="mt-2 text-sm font-medium">
                       Per Person: {formatCurrency(
-                      (Array.isArray(selectedMenu.items) 
-                        ? selectedMenu.items.reduce((acc: number, itemDetail: any) => {
-                            const actualItem = itemDetail.menuItem || itemDetail;
-                            const price = Number(actualItem?.price) || 0;
-                            const quantity = Number(itemDetail.quantity) || 1;
-                            return acc + (price * quantity);
-                          }, 0)
-                        : 0) / 100
-                    )}
-                  </div>
+                        (Array.isArray(selectedMenu.items)
+                          ? selectedMenu.items.reduce((acc: number, itemDetail: any) => {
+                              const actualItem = itemDetail.menuItem || itemDetail;
+                              const price = Number(actualItem?.price) || 0;
+                              const quantity = Number(itemDetail.quantity) || 1;
+                              return acc + (price * quantity);
+                            }, 0)
+                          : 0) / 100
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -709,18 +715,20 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                         onChange={(e) => handleCustomItemChange(item.id, "quantity", parseInt(e.target.value, 10) || 1)}
                         className="w-20"
                       />
-                      <div className="relative w-32">
-                        <DollarSignIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={item.price / 100} // Display in dollars
-                          step="0.01"
-                          min={0}
-                          onChange={(e) => handleCustomItemChange(item.id, "price", e.target.value)} // handleCustomItemChange will convert to cents
-                          className="pl-7" // Make space for dollar sign
-                        />
-                      </div>
+                      {canViewFinancials && (
+                        <div className="relative w-32">
+                          <DollarSignIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={item.price / 100} // Display in dollars
+                            step="0.01"
+                            min={0}
+                            onChange={(e) => handleCustomItemChange(item.id, "price", e.target.value)} // handleCustomItemChange will convert to cents
+                            className="pl-7" // Make space for dollar sign
+                          />
+                        </div>
+                      )}
                       <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveCustomItem(item.id)}>
                         <Trash2Icon className="h-4 w-4 text-red-500" />
                       </Button>
@@ -731,20 +739,26 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
             </div>
 
             {/* Financial Summary */}
-            <div className="bg-gray-50 p-4 rounded-md">
-              <div className="flex justify-between mb-2">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(subtotal / 100)}</span>
+            {canViewFinancials ? (
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="flex justify-between mb-2">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(subtotal / 100)}</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span>Tax:</span>
+                  <span>{formatCurrency(tax / 100)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Total:</span>
+                  <span>{formatCurrency(total / 100)}</span>
+                </div>
               </div>
-              <div className="flex justify-between mb-2">
-                <span>Tax:</span>
-                <span>{formatCurrency(tax / 100)}</span>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-md text-center text-gray-500">
+                <p>Financial information is only visible to administrators.</p>
               </div>
-              <div className="flex justify-between font-bold">
-                <span>Total:</span>
-                <span>{formatCurrency(total / 100)}</span>
-              </div>
-            </div>
+            )}
 
             {/* Notes */}
             <FormField

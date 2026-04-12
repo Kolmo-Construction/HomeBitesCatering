@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MenuItem } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
 import { PenIcon, PlusIcon, EyeIcon, TrashIcon } from "lucide-react";
+import { useCanViewFinancials, useCanWrite } from "@/hooks/usePermissions";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import MenuItemFilters, { MenuFilters } from "./MenuItemFilters";
 
 export default function MenuItemList() {
+  const canViewFinancials = useCanViewFinancials();
+  const canWrite = useCanWrite();
   const { data: menuItems = [], isLoading } = useQuery({
     queryKey: ["/api/menu-items"],
     queryFn: async () => {
@@ -33,7 +36,7 @@ export default function MenuItemList() {
       return res.json();
     }
   });
-  
+
   const [filters, setFilters] = useState<MenuFilters>({
     search: "",
     category: "",
@@ -104,97 +107,114 @@ export default function MenuItemList() {
     }
   };
 
-  const columns: ColumnDef<MenuItem>[] = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => (
-        <div className="font-medium text-neutral-900">{row.original.name}</div>
-      ),
-    },
-    {
-      accessorKey: "category",
-      header: "Category",
-      cell: ({ row }) => {
-        const categoryLabels: Record<string, string> = {
-          appetizer: "Appetizer",
-          entree: "Main Course",
-          side: "Side",
-          dessert: "Dessert",
-          beverage: "Beverage"
-        };
-        
-        return <span>{categoryLabels[row.original.category] || row.original.category}</span>;
+  const columns: ColumnDef<MenuItem>[] = useMemo(() => {
+    const baseColumns: ColumnDef<MenuItem>[] = [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => (
+          <div className="font-medium text-neutral-900">{row.original.name}</div>
+        ),
       },
-    },
-    {
-      accessorKey: "price",
-      header: "Price",
-      cell: ({ row }) => {
-        // Handle numeric or null price
-        const price = row.original.price;
-        return <span>{price !== null && price !== undefined ? formatCurrency(Number(price)) : 'Not set'}</span>;
+      {
+        accessorKey: "category",
+        header: "Category",
+        cell: ({ row }) => {
+          const categoryLabels: Record<string, string> = {
+            appetizer: "Appetizer",
+            entree: "Main Course",
+            side: "Side",
+            dessert: "Dessert",
+            beverage: "Beverage"
+          };
+
+          return <span>{categoryLabels[row.original.category] || row.original.category}</span>;
+        },
       },
-    },
-    {
-      accessorKey: "dietary",
-      header: "Dietary",
-      cell: ({ row }) => {
-        const item = row.original;
-        const dietaryTags = [];
-        
-        if (item.isVegetarian) dietaryTags.push("Vegetarian");
-        if (item.isVegan) dietaryTags.push("Vegan");
-        if (item.isGlutenFree) dietaryTags.push("GF");
-        if (item.isDairyFree) dietaryTags.push("DF");
-        if (item.isNutFree) dietaryTags.push("NF");
-        
-        return (
-          <div className="flex flex-wrap gap-1">
-            {dietaryTags.map(tag => (
-              <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
-            ))}
-            {dietaryTags.length === 0 && "—"}
+    ];
+
+    // Conditionally add price column
+    if (canViewFinancials) {
+      baseColumns.push({
+        accessorKey: "price",
+        header: "Price",
+        cell: ({ row }) => {
+          // Handle numeric or null price
+          const price = row.original.price;
+          return <span>{price !== null && price !== undefined ? formatCurrency(Number(price)) : 'Not set'}</span>;
+        },
+      });
+    }
+
+    baseColumns.push(
+      {
+        accessorKey: "dietary",
+        header: "Dietary",
+        cell: ({ row }) => {
+          const item = row.original;
+          const dietaryTags = [];
+
+          if (item.isVegetarian) dietaryTags.push("Vegetarian");
+          if (item.isVegan) dietaryTags.push("Vegan");
+          if (item.isGlutenFree) dietaryTags.push("GF");
+          if (item.isDairyFree) dietaryTags.push("DF");
+          if (item.isNutFree) dietaryTags.push("NF");
+
+          return (
+            <div className="flex flex-wrap gap-1">
+              {dietaryTags.map(tag => (
+                <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+              ))}
+              {dietaryTags.length === 0 && "—"}
+            </div>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <div className="flex items-center space-x-2">
+            <Link to={`/menu-items/${row.original.id}`}>
+              <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
+                <EyeIcon className="h-4 w-4" />
+              </div>
+            </Link>
+            {canWrite && (
+              <>
+                <Link to={`/menu-items/${row.original.id}/edit`}>
+                  <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
+                    <PenIcon className="h-4 w-4" />
+                  </div>
+                </Link>
+                <button
+                  className="text-red-500 hover:text-red-700 transition"
+                  onClick={() => setItemToDelete(row.original)}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
-        );
-      },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center space-x-2">
-          <Link to={`/menu-items/${row.original.id}`}>
-            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
-              <EyeIcon className="h-4 w-4" />
-            </div>
-          </Link>
-          <Link to={`/menu-items/${row.original.id}/edit`}>
-            <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
-              <PenIcon className="h-4 w-4" />
-            </div>
-          </Link>
-          <button 
-            className="text-red-500 hover:text-red-700 transition"
-            onClick={() => setItemToDelete(row.original)}
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
-        </div>
-      ),
-    },
-  ];
+        ),
+      }
+    );
+
+    return baseColumns;
+  }, [canViewFinancials, canWrite]);
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="font-poppins text-2xl font-bold text-neutral-900">Menu Items</h1>
-        <Link to="/menu-items/new">
-          <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
-            <PlusIcon className="mr-1 h-4 w-4" />
-            New Menu Item
-          </Button>
-        </Link>
+        {canWrite && (
+          <Link to="/menu-items/new">
+            <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+              <PlusIcon className="mr-1 h-4 w-4" />
+              New Menu Item
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Menu Item Filters */}

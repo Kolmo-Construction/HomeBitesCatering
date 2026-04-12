@@ -14,6 +14,7 @@ import BaseIngredients from "@/pages/base-ingredients";
 import Recipes from "@/pages/recipes";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
+import Users from "@/pages/users";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
@@ -38,6 +39,9 @@ import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
+
+// Import the public quote request form
+import RequestQuote from "@/pages/RequestQuote";
 
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
@@ -105,7 +109,8 @@ function AppContent() {
   const isWeddingInquiryPage = location === "/wedding-inquiry";
   const isPublicInquiryPage = location === "/event-inquiry";
   // You can add more conditions here for other public forms like /corporate-inquiry, /event-selection etc.
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || location === "/inquiry" || location === "/event-selection";
+  const isRequestQuotePage = location === "/request-quote";
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || location === "/inquiry" || location === "/event-selection";
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -115,6 +120,7 @@ function AppContent() {
         <Switch>
           <Route path="/wedding-inquiry" component={ComprehensiveWeddingInquiry} />
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
+          <Route path="/request-quote" component={RequestQuote} />
           {/* Route for the generic event selection page */}
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
@@ -164,6 +170,7 @@ function AppContent() {
           <Route path="/menus/:id/edit" component={Menus} />
           <Route path="/calendar" component={Calendar} />
           <Route path="/settings" component={Settings} />
+          <Route path="/users" component={Users} />
           <Route path="/raw-leads" component={RawLeadsPage} />
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
@@ -178,6 +185,7 @@ function AppContent() {
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}
           <Route path="/wedding-inquiry" component={ComprehensiveWeddingInquiry} />
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
+          <Route path="/request-quote" component={RequestQuote} />
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
 

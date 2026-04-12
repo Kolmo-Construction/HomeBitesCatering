@@ -1,7 +1,9 @@
 import OpenAI from "openai";
 
-// Initialize the OpenAI client
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize the OpenAI client only if API key is provided
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 // The newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const DEFAULT_MODEL = "gpt-4o";
@@ -25,9 +27,15 @@ export interface SuggestionResponse {
  */
 export async function generateSuggestion(context: SuggestionContext): Promise<SuggestionResponse> {
   try {
+    if (!openai) {
+      return {
+        suggestion: "AI suggestions are not available. Please configure OPENAI_API_KEY."
+      };
+    }
+
     // Build a prompt based on the context
     const prompt = buildPrompt(context);
-    
+
     // Call OpenAI API for suggestions
     const response = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
@@ -146,6 +154,27 @@ export async function analyzeFormData(formData: Record<string, any>, questions: 
   suggestions: string[];
 }> {
   try {
+    if (!openai) {
+      // Count completed required fields without AI
+      const requiredFields = questions.filter(q => q.isRequired).length;
+      const completedRequiredFields = questions
+        .filter(q => q.isRequired)
+        .filter(q => {
+          const value = formData[q.questionKey];
+          return value !== undefined && value !== '' &&
+            !(Array.isArray(value) && value.length === 0);
+        }).length;
+
+      const completeness = requiredFields > 0
+        ? Math.round((completedRequiredFields / requiredFields) * 100)
+        : 100;
+
+      return {
+        completeness,
+        suggestions: ["AI suggestions are not available. Please configure OPENAI_API_KEY."]
+      };
+    }
+
     // Count completed required fields
     const requiredFields = questions.filter(q => q.isRequired).length;
     const completedRequiredFields = questions

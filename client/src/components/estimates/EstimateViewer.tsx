@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import BadgeStatus from "@/components/ui/badge-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCanViewFinancials } from "@/hooks/usePermissions";
 import { 
   CheckIcon, 
   XIcon, 
@@ -63,6 +64,7 @@ interface ClientType {
 export default function EstimateViewer({ id, isClient = false }: EstimateViewerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const canViewFinancials = useCanViewFinancials();
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false);
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
@@ -361,8 +363,12 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                       <tr>
                         <th className="text-left py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Item</th>
                         <th className="text-center py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Qty</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Price/Unit</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Line Total</th>
+                        {canViewFinancials && (
+                          <>
+                            <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Price/Unit</th>
+                            <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Line Total</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -373,8 +379,12 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                             {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
                           </td>
                           <td className="py-2 px-3 text-center">{item.quantity}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(item.price / 100)}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
+                          {canViewFinancials && (
+                            <>
+                              <td className="py-2 px-3 text-right">{formatCurrency(item.price / 100)}</td>
+                              <td className="py-2 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -392,8 +402,12 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                       <tr>
                         <th className="text-left py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Item</th>
                         <th className="text-center py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Qty</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Price/Unit</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Line Total</th>
+                        {canViewFinancials && (
+                          <>
+                            <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Price/Unit</th>
+                            <th className="text-right py-2 px-3 font-medium text-gray-600 uppercase tracking-wider">Line Total</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -401,8 +415,12 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                         <tr key={`custom-${item.id || index}`} className="border-b print:border-gray-300">
                           <td className="py-2 px-3">{item.name}</td>
                           <td className="py-2 px-3 text-center">{item.quantity}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(item.price / 100)}</td>
-                           <td className="py-2 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
+                          {canViewFinancials && (
+                            <>
+                              <td className="py-2 px-3 text-right">{formatCurrency(item.price / 100)}</td>
+                              <td className="py-2 px-3 text-right">{formatCurrency((item.price * item.quantity) / 100)}</td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -416,20 +434,26 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
             )}
 
             <div className="border-t border-gray-200 pt-4 mt-6 print:border-gray-300">
-              <div className="max-w-xs ml-auto text-sm">
-                <div className="flex justify-between mb-1">
-                  <span className="font-medium">Subtotal:</span>
-                  <span>{formatCurrency(estimate.subtotal / 100)}</span>
+              {canViewFinancials ? (
+                <div className="max-w-xs ml-auto text-sm">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium">Subtotal:</span>
+                    <span>{formatCurrency(estimate.subtotal / 100)}</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium">Tax:</span>
+                    <span>{formatCurrency(estimate.tax / 100)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
+                    <span>Total:</span>
+                    <span>{formatCurrency(estimate.total / 100)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between mb-1">
-                  <span className="font-medium">Tax:</span>
-                  <span>{formatCurrency(estimate.tax / 100)}</span>
+              ) : (
+                <div className="text-center text-sm text-gray-500 py-4">
+                  <p>Pricing information is only visible to administrators.</p>
                 </div>
-                <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
-                  <span>Total:</span>
-                  <span>{formatCurrency(estimate.total / 100)}</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

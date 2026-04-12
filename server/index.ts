@@ -1,15 +1,14 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { registerFormRoutes } from "./formRoutes";
 import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
-import formBuilderRoutes from "./formBuilderRoutes";
 import ingredientRoutes from "./ingredientRoutes";
-import { fixedCloneQuestion } from "./fixedCloneRoute";
-import { 
-  getWeddingMenuThemes, 
-  getMenuItemsByCategory, 
-  getMenuItemsByIds, 
-  getDietaryRecommendations 
+import quoteRoutes from "./quoteRoutes";
+import {
+  getWeddingMenuThemes,
+  getMenuItemsByCategory,
+  getMenuItemsByIds,
+  getDietaryRecommendations
 } from "./menuQuestionnaireRoutes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -49,21 +48,15 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-  
-  // Register form-building API routes
-  registerFormRoutes(app);
-  
+
   // Register question library API routes
   registerQuestionLibraryRoutes(app);
-  
-  // Register form builder API routes
-  app.use('/api/form-builder', formBuilderRoutes);
-  
+
   // Register ingredient management routes
   app.use('/api/ingredients', ingredientRoutes);
-  
-  // Register the fixed clone question endpoint
-  app.post('/api/form-builder/library-questions/:id/clone', fixedCloneQuestion);
+
+  // Register quote request routes (venues, promo codes, quote requests)
+  app.use('/api/quotes', quoteRoutes);
   
   // Register menu questionnaire routes for rich menu data integration
   app.get('/api/questionnaire/wedding-menu-themes', getWeddingMenuThemes);
@@ -91,12 +84,8 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const port = process.env.PORT || 3002;
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();

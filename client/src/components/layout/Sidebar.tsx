@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsAdmin } from "@/hooks/usePermissions";
 import {
   LayoutDashboard,
   Filter,
@@ -20,12 +21,14 @@ import {
   ChevronRight,
   Calculator,
   ShoppingBasket,
-  ChefHat
+  ChefHat,
+  UserCog
 } from "lucide-react";
 
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const isAdmin = useIsAdmin();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   const navigation = [
@@ -50,6 +53,7 @@ export default function Sidebar() {
     },
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
+    ...(isAdmin ? [{ name: "Users", href: "/users", icon: UserCog }] : []),
   ];
 
   // Toggle submenu expansion

@@ -25,6 +25,8 @@ import {
 } from "@shared/schema";
 import { aiService } from './services/aiService';
 import { normalizePhoneNumber, isValidPhone } from './services/phoneService';
+import { hasWriteAccess, canViewFinancials, isAdminOrUser } from './middleware/permissions';
+import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
 
 // Helper function to map lead quality to opportunity priority
 function mapLeadQualityToPriority(leadQuality?: string): 'high' | 'medium' | 'low' {
@@ -366,12 +368,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updateData = req.body;
-      
+
+      // Prevent users from changing their own role
+      if (userId === req.session.userId) {
+        const currentUser = await storage.getUser(req.session.userId);
+        if (currentUser && currentUser.role !== 'admin' && updateData.role) {
+          return res.status(403).json({ message: 'You cannot change your own role' });
+        }
+
+        // Prevent last admin from changing their role
+        if (currentUser && currentUser.role === 'admin' && updateData.role !== 'admin') {
+          const allUsers = await storage.listUsers();
+          const adminCount = allUsers.filter(u => u.role === 'admin').length;
+          if (adminCount <= 1) {
+            return res.status(400).json({ message: 'Cannot change role of last admin' });
+          }
+        }
+      }
+
       // If password is being updated, hash it
       if (updateData.password) {
         updateData.password = await bcrypt.hash(updateData.password, 10);
       }
-      
+
       const updatedUser = await storage.updateUser(userId, updateData);
       
       if (!updatedUser) {
@@ -389,6 +408,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
       
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Delete a user (admin only)
+  app.delete('/api/users/:id', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      // Prevent deleting self
+      if (userId === req.session.userId) {
+        return res.status(400).json({ message: 'You cannot delete your own account' });
+      }
+
+      // Prevent deleting last admin
+      const user = await storage.getUser(userId);
+      if (user && user.role === 'admin') {
+        const allUsers = await storage.listUsers();
+        const adminCount = allUsers.filter(u => u.role === 'admin').length;
+        if (adminCount <= 1) {
+          return res.status(400).json({ message: 'Cannot delete the last admin user' });
+        }
+      }
+
+      const success = await storage.deleteUser(userId);
+
+      if (!success) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting user:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -444,12 +500,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new opportunity
-  app.post('/api/opportunities', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/opportunities', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const { rawLeadId, ...opportunityData } = req.body;
       const validatedData = insertOpportunitySchema.parse(opportunityData);
-      
-      const newOpportunity = await storage.createOpportunity(validatedData);
+
+      // Track who created this opportunity
+      const newOpportunity = await storage.createOpportunity({
+        ...validatedData,
+        createdBy: req.session.userId,
+      });
       
       // If this opportunity was created from a raw lead, update thread mappings
       if (rawLeadId) {
@@ -512,16 +572,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update an opportunity
-  app.patch('/api/opportunities/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/opportunities/:id', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const opportunityId = parseInt(req.params.id);
-      
+
       if (isNaN(opportunityId)) {
         return res.status(400).json({ message: 'Invalid opportunity ID' });
       }
-      
+
+      // Check ownership for non-admins
+      const user = await storage.getUser(req.session.userId!);
+      if (user!.role !== 'admin') {
+        const opportunity = await storage.getOpportunity(opportunityId);
+        if (!opportunity) {
+          return res.status(404).json({ message: 'Opportunity not found' });
+        }
+        if (opportunity.createdBy !== user!.id) {
+          return res.status(403).json({ message: 'You can only edit opportunities you created' });
+        }
+      }
+
       const updateData = req.body;
-      
+
       const updatedOpportunity = await storage.updateOpportunity(opportunityId, updateData);
       
       if (!updatedOpportunity) {
@@ -541,7 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete an opportunity
-  app.delete('/api/opportunities/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/opportunities/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const opportunityId = parseInt(req.params.id);
       
@@ -679,8 +751,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/menu-items', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const menuItems = await storage.listMenuItems();
-      
-      res.status(200).json(menuItems);
+
+      // Filter financial data for non-admin users
+      const user = await storage.getUser(req.session.userId!);
+      const filteredItems = filterMenuItems(menuItems, user!.role);
+
+      res.status(200).json(filteredItems);
     } catch (error) {
       console.error('Error getting menu items:', error);
       res.status(500).json({ message: 'Server error' });
@@ -714,10 +790,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price: menuItem.price ? parseFloat(menuItem.price.toString()) : menuItem.price,
         upcharge: menuItem.upcharge ? parseFloat(menuItem.upcharge.toString()) : menuItem.upcharge,
       };
-      
+
       console.log('Menu item price after conversion:', responseItem.price, 'Type:', typeof responseItem.price);
-      
-      res.status(200).json(responseItem);
+
+      // Filter financial data for non-admin users
+      const user = await storage.getUser(req.session.userId!);
+      const filtered = filterMenuItem(responseItem, user!.role);
+
+      res.status(200).json(filtered);
     } catch (error) {
       console.error('Error getting menu item:', error);
       res.status(500).json({ message: 'Server error' });
@@ -725,7 +805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new menu item
-  app.post('/api/menu-items', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/menu-items', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const menuItemData = insertMenuItemSchema.parse(req.body);
       
@@ -744,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update a menu item
-  app.patch('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/menu-items/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const menuItemId = req.params.id; // Accept both string and numeric IDs
       
@@ -773,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete a menu item
-  app.delete('/api/menu-items/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/menu-items/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const menuItemId = req.params.id; // Accept both string and numeric IDs
       
@@ -831,7 +911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new menu (now uses recipes instead of menu items)
-  app.post('/api/menus', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/menus', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       console.log('Menu creation request body:', JSON.stringify(req.body, null, 2));
       
@@ -853,7 +933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update a menu
-  app.patch('/api/menus/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/menus/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const menuId = parseInt(req.params.id);
       
@@ -894,7 +974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete a menu
-  app.delete('/api/menus/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/menus/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const menuId = parseInt(req.params.id);
       
@@ -952,7 +1032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new client
-  app.post('/api/clients', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/clients', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const clientData = insertClientSchema.parse(req.body);
       
@@ -971,7 +1051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update a client
-  app.patch('/api/clients/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/clients/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const clientId = parseInt(req.params.id);
       
@@ -1000,7 +1080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete a client
-  app.delete('/api/clients/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/clients/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const clientId = parseInt(req.params.id);
       
@@ -1027,8 +1107,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/estimates', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const estimates = await storage.listEstimates();
-      
-      res.status(200).json(estimates);
+
+      // Filter financial data for non-admin users
+      const user = await storage.getUser(req.session.userId!);
+      const filtered = filterEstimates(estimates, user!.role);
+
+      res.status(200).json(filtered);
     } catch (error) {
       console.error('Error getting estimates:', error);
       res.status(500).json({ message: 'Server error' });
@@ -1045,12 +1129,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const estimate = await storage.getEstimate(estimateId);
-      
+
       if (!estimate) {
         return res.status(404).json({ message: 'Estimate not found' });
       }
-      
-      res.status(200).json(estimate);
+
+      // Filter financial data for non-admin users
+      const user = await storage.getUser(req.session.userId!);
+      const filtered = filterEstimate(estimate, user!.role);
+
+      res.status(200).json(filtered);
     } catch (error) {
       console.error('Error getting estimate:', error);
       res.status(500).json({ message: 'Server error' });
@@ -1058,7 +1146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new estimate
-  app.post('/api/estimates', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/estimates', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const estimateData = insertEstimateSchema.parse(req.body);
       
@@ -1077,7 +1165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update an estimate
-  app.patch('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/estimates/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const estimateId = parseInt(req.params.id);
       
@@ -1106,7 +1194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete an estimate
-  app.delete('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/estimates/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const estimateId = parseInt(req.params.id);
       
@@ -1168,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new event
-  app.post('/api/events', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/events', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const eventData = insertEventSchema.parse(req.body);
       
@@ -1187,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update an event
-  app.patch('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/events/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);
       
@@ -1216,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete an event
-  app.delete('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/events/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);
       
@@ -1341,7 +1429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== Communications Routes =====
   
   // Create a new communication
-  app.post('/api/communications', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/communications', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const data = insertCommunicationSchema.parse(req.body);
       
@@ -1677,11 +1765,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new raw lead
-  app.post('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/raw-leads', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const leadData = insertRawLeadSchema.parse(req.body);
-      
-      const newLead = await storage.createRawLead(leadData);
+
+      // Track who created this lead
+      const newLead = await storage.createRawLead({
+        ...leadData,
+        createdBy: req.session.userId,
+      });
       
       res.status(201).json(newLead);
     } catch (error) {
@@ -1696,16 +1788,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update a raw lead
-  app.patch('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.patch('/api/raw-leads/:id', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const leadId = parseInt(req.params.id);
-      
+
       if (isNaN(leadId)) {
         return res.status(400).json({ message: 'Invalid lead ID' });
       }
-      
+
+      // Check ownership for non-admins
+      const user = await storage.getUser(req.session.userId!);
+      if (user!.role !== 'admin') {
+        const lead = await storage.getRawLead(leadId);
+        if (!lead) {
+          return res.status(404).json({ message: 'Raw lead not found' });
+        }
+        if (lead.createdBy !== user!.id) {
+          return res.status(403).json({ message: 'You can only edit leads you created' });
+        }
+      }
+
       const updateData = req.body;
-      
+
       const updatedLead = await storage.updateRawLead(leadId, updateData);
       
       if (!updatedLead) {
@@ -1725,7 +1829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete a raw lead
-  app.delete('/api/raw-leads/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/raw-leads/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const leadId = parseInt(req.params.id);
       

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "wouter";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Opportunity } from "../../types/opportunity";
 import { formatDate, cn } from "@/lib/utils";
 import { PenIcon, PlusIcon, FilterIcon } from "lucide-react";
+import { useCanEditRecord, useIsStaff } from "@/hooks/usePermissions";
 import { 
   Select, 
   SelectContent, 
@@ -18,8 +19,9 @@ import {
 } from "@/components/ui/select";
 
 export default function OpportunityList() {
+  const isStaff = useIsStaff();
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
-  
+
   const { data: opportunities = [], isLoading } = useQuery({
     queryKey: ["/api/opportunities", { priority: priorityFilter }],
     queryFn: async ({ queryKey }) => {
@@ -39,7 +41,7 @@ export default function OpportunityList() {
     }
   });
 
-  const columns: ColumnDef<Opportunity>[] = [
+  const columns: ColumnDef<Opportunity>[] = useMemo(() => [
     {
       accessorKey: "name",
       header: "Name",
@@ -112,7 +114,7 @@ export default function OpportunityList() {
           default:
             badgeClass = "bg-gray-400 hover:bg-gray-500";
         }
-        
+
         return (
           <Badge className={cn("capitalize px-2.5 py-1 text-xs font-semibold", badgeClass, textColor)}>
             {priority}
@@ -124,17 +126,23 @@ export default function OpportunityList() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center space-x-2">
-          <Link href={`/opportunities/${row.original.id}/edit`}>
-            <a className="text-primary-purple hover:text-primary-blue transition">
-              <PenIcon className="h-4 w-4" />
-            </a>
-          </Link>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const canEdit = useCanEditRecord(row.original.createdBy);
+
+        return (
+          <div className="flex items-center space-x-2">
+            {canEdit && (
+              <Link href={`/opportunities/${row.original.id}/edit`}>
+                <a className="text-primary-purple hover:text-primary-blue transition">
+                  <PenIcon className="h-4 w-4" />
+                </a>
+              </Link>
+            )}
+          </div>
+        );
+      },
     },
-  ];
+  ], []);
 
   // Priority filtering is now handled directly through the API query
 
@@ -142,12 +150,14 @@ export default function OpportunityList() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="font-poppins text-2xl font-bold text-neutral-900">Opportunities</h1>
-        <Link href="/opportunities/new">
-          <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
-            <PlusIcon className="mr-1 h-4 w-4" />
-            New Opportunity
-          </Button>
-        </Link>
+        {isStaff && (
+          <Link href="/opportunities/new">
+            <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+              <PlusIcon className="mr-1 h-4 w-4" />
+              New Opportunity
+            </Button>
+          </Link>
+        )}
       </div>
       
       <div className="flex items-center py-4 gap-2">

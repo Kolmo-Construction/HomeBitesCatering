@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "wouter";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Estimate } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { EyeIcon, PenIcon, PlusIcon, TrashIcon, SendIcon } from "lucide-react";
+import { useCanWrite, useCanViewFinancials } from "@/hooks/usePermissions";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -24,14 +25,16 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EstimateList() {
+  const canWrite = useCanWrite();
+  const canViewFinancials = useCanViewFinancials();
   const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["/api/estimates"],
   });
-  
+
   const { data: clients = [] } = useQuery({
     queryKey: ["/api/clients"],
   });
-  
+
   const [estimateToDelete, setEstimateToDelete] = useState<Estimate | null>(null);
   const [estimateToSend, setEstimateToSend] = useState<Estimate | null>(null);
   const { toast } = useToast();
@@ -102,100 +105,114 @@ export default function EstimateList() {
     }
   };
 
-  const columns: ColumnDef<Estimate>[] = [
-    {
-      accessorKey: "client",
-      header: "Client",
-      cell: ({ row }) => (
-        <span className="font-medium text-neutral-900">
-          {getClientName(row.original.clientId)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "eventType",
-      header: "Event Type",
-      cell: ({ row }) => <span>{row.original.eventType}</span>,
-    },
-    {
-      accessorKey: "eventDate",
-      header: "Event Date",
-      cell: ({ row }) => (
-        <span>
-          {row.original.eventDate
-            ? formatDate(new Date(row.original.eventDate))
-            : "—"}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "total",
-      header: "Amount",
-      cell: ({ row }) => (
-        <span className="font-medium">{formatCurrency(row.original.total / 100)}</span>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => <BadgeStatus status={row.original.status} />,
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const isEditable = row.original.status === "draft";
-        const isSendable = row.original.status === "draft";
-        
-        return (
-          <div className="flex items-center space-x-2">
-            <Link to={`/estimates/${row.original.id}/view`}>
-              <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
-                <EyeIcon className="h-4 w-4" />
-              </div>
-            </Link>
-            
-            {isEditable && (
-              <Link to={`/estimates/${row.original.id}/edit`}>
+  const columns: ColumnDef<Estimate>[] = useMemo(() => {
+    const baseColumns: ColumnDef<Estimate>[] = [
+      {
+        accessorKey: "client",
+        header: "Client",
+        cell: ({ row }) => (
+          <span className="font-medium text-neutral-900">
+            {getClientName(row.original.clientId)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "eventType",
+        header: "Event Type",
+        cell: ({ row }) => <span>{row.original.eventType}</span>,
+      },
+      {
+        accessorKey: "eventDate",
+        header: "Event Date",
+        cell: ({ row }) => (
+          <span>
+            {row.original.eventDate
+              ? formatDate(new Date(row.original.eventDate))
+              : "—"}
+          </span>
+        ),
+      },
+    ];
+
+    // Conditionally add Amount column for admins
+    if (canViewFinancials) {
+      baseColumns.push({
+        accessorKey: "total",
+        header: "Amount",
+        cell: ({ row }) => (
+          <span className="font-medium">{formatCurrency(row.original.total / 100)}</span>
+        ),
+      });
+    }
+
+    // Add Status and Actions columns
+    baseColumns.push(
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => <BadgeStatus status={row.original.status} />,
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const isEditable = row.original.status === "draft" && canWrite;
+          const isSendable = row.original.status === "draft" && canWrite;
+
+          return (
+            <div className="flex items-center space-x-2">
+              <Link to={`/estimates/${row.original.id}/view`}>
                 <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
-                  <PenIcon className="h-4 w-4" />
+                  <EyeIcon className="h-4 w-4" />
                 </div>
               </Link>
-            )}
-            
-            {isSendable && (
-              <button 
-                className="text-primary-purple hover:text-primary-blue transition"
-                onClick={() => setEstimateToSend(row.original)}
-              >
-                <SendIcon className="h-4 w-4" />
-              </button>
-            )}
-            
-            {isEditable && (
-              <button 
-                className="text-red-500 hover:text-red-700 transition"
-                onClick={() => setEstimateToDelete(row.original)}
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        );
-      },
-    },
-  ];
+
+              {isEditable && (
+                <Link to={`/estimates/${row.original.id}/edit`}>
+                  <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
+                    <PenIcon className="h-4 w-4" />
+                  </div>
+                </Link>
+              )}
+
+              {isSendable && (
+                <button
+                  className="text-primary-purple hover:text-primary-blue transition"
+                  onClick={() => setEstimateToSend(row.original)}
+                >
+                  <SendIcon className="h-4 w-4" />
+                </button>
+              )}
+
+              {isEditable && (
+                <button
+                  className="text-red-500 hover:text-red-700 transition"
+                  onClick={() => setEstimateToDelete(row.original)}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          );
+        },
+      }
+    );
+
+    return baseColumns;
+  }, [canWrite, canViewFinancials, clients]);
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="font-poppins text-2xl font-bold text-neutral-900">Quotes</h1>
-        <Link href="/estimates/new">
-          <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
-            <PlusIcon className="mr-1 h-4 w-4" />
-            New Quote
-          </Button>
-        </Link>
+        {canWrite && (
+          <Link href="/estimates/new">
+            <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+              <PlusIcon className="mr-1 h-4 w-4" />
+              New Quote
+            </Button>
+          </Link>
+        )}
       </div>
 
       <DataTable 
