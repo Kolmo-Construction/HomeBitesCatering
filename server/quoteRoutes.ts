@@ -13,6 +13,7 @@ import { eq, desc, sql, and, ilike } from "drizzle-orm";
 import { analyzeQuoteRequest } from "./services/quoteAiService";
 import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
 import { calculateMenuMargin } from "./utils/menuMargin";
+import { calculateShoppingListForQuoteRequest } from "./utils/shoppingList";
 
 const router = Router();
 
@@ -45,6 +46,73 @@ router.get("/menus/:id/margin", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error calculating menu margin:", error);
     return res.status(500).json({ message: "Failed to calculate menu margin" });
+  }
+});
+
+// Get aggregated shopping list for a specific quote request
+// Returns all ingredients needed (scaled to guest count) grouped by category
+router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Response) => {
+  try {
+    const quoteRequestId = parseInt(req.params.id);
+    if (isNaN(quoteRequestId)) return res.status(400).json({ message: "Invalid quote request ID" });
+
+    // Optional override for portion multiplier (e.g., ?multiplier=0.8)
+    const multiplierParam = req.query.multiplier;
+    const portionMultiplier = multiplierParam ? parseFloat(multiplierParam as string) : undefined;
+
+    const shoppingList = await calculateShoppingListForQuoteRequest(quoteRequestId, {
+      portionMultiplier,
+    });
+
+    if (!shoppingList) return res.status(404).json({ message: "Quote request not found" });
+    return res.json(shoppingList);
+  } catch (error) {
+    console.error("Error generating shopping list:", error);
+    return res.status(500).json({ message: "Failed to generate shopping list" });
+  }
+});
+
+// Get shopping list for an event (looks up the originating quote request via estimate link)
+router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    if (isNaN(eventId)) return res.status(400).json({ message: "Invalid event ID" });
+
+    // Find the event's estimate, then find the originating quote request
+    const { events } = await import("@shared/schema");
+    const [event] = await db.select().from(events).where(eq(events.id, eventId));
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    if (!event.estimateId) {
+      return res.status(404).json({
+        message: "Event is not linked to an estimate — cannot generate shopping list",
+      });
+    }
+
+    // Find the quote request that was converted to this estimate
+    const [originatingQuote] = await db
+      .select()
+      .from(quoteRequests)
+      .where(eq(quoteRequests.estimateId, event.estimateId));
+
+    if (!originatingQuote) {
+      return res.status(404).json({
+        message: "No original quote request found for this event — shopping list requires structured menu data",
+      });
+    }
+
+    const multiplierParam = req.query.multiplier;
+    const portionMultiplier = multiplierParam ? parseFloat(multiplierParam as string) : undefined;
+
+    const shoppingList = await calculateShoppingListForQuoteRequest(originatingQuote.id, {
+      portionMultiplier,
+    });
+
+    if (!shoppingList) return res.status(404).json({ message: "Failed to generate shopping list" });
+    return res.json(shoppingList);
+  } catch (error) {
+    console.error("Error generating event shopping list:", error);
+    return res.status(500).json({ message: "Failed to generate shopping list" });
   }
 });
 

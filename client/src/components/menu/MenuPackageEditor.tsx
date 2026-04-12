@@ -19,6 +19,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Trash2,
   DollarSign,
@@ -75,6 +82,22 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
     queryFn: async () => {
       const res = await fetch(`/api/menus/${menuId}`);
       if (!res.ok) throw new Error("Failed to fetch menu");
+      return res.json();
+    },
+  });
+
+  // Load available recipes for the dropdown picker
+  interface RecipeOption {
+    id: number;
+    name: string;
+    category: string | null;
+    ingredientCount?: number;
+  }
+  const { data: availableRecipes = [] } = useQuery<RecipeOption[]>({
+    queryKey: ["/api/ingredients/recipes"],
+    queryFn: async () => {
+      const res = await fetch("/api/ingredients/recipes");
+      if (!res.ok) return [];
       return res.json();
     },
   });
@@ -504,40 +527,81 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
                             {(categoryItems[selectedCategory] || []).map((item, idx) => (
                               <div
                                 key={item.id}
-                                className="flex items-center gap-2 p-2 rounded-lg border bg-white"
+                                className="p-3 rounded-lg border bg-white space-y-2"
                               >
-                                <Input
-                                  value={item.name}
-                                  onChange={(e) =>
-                                    updateItem(selectedCategory, idx, { name: e.target.value })
-                                  }
-                                  placeholder="Item name"
-                                  className="flex-1"
-                                />
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-gray-500">+$</span>
+                                <div className="flex items-center gap-2">
                                   <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={((item.upchargeCents || 0) / 100).toFixed(2)}
+                                    value={item.name}
                                     onChange={(e) =>
+                                      updateItem(selectedCategory, idx, { name: e.target.value })
+                                    }
+                                    placeholder="Item name"
+                                    className="flex-1"
+                                  />
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-gray-500">+$</span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={((item.upchargeCents || 0) / 100).toFixed(2)}
+                                      onChange={(e) =>
+                                        updateItem(selectedCategory, idx, {
+                                          upchargeCents: Math.round(
+                                            parseFloat(e.target.value || "0") * 100,
+                                          ),
+                                        })
+                                      }
+                                      className="w-20 text-sm"
+                                    />
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeItem(selectedCategory, idx)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                {/* Recipe picker — links this menu item to an actual recipe
+                                    for shopping list and margin calculation */}
+                                <div className="flex items-center gap-2 pl-1">
+                                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                                    Recipe:
+                                  </span>
+                                  <Select
+                                    value={item.recipeId ? item.recipeId.toString() : "none"}
+                                    onValueChange={(v) =>
                                       updateItem(selectedCategory, idx, {
-                                        upchargeCents: Math.round(
-                                          parseFloat(e.target.value || "0") * 100,
-                                        ),
+                                        recipeId: v === "none" ? undefined : parseInt(v),
                                       })
                                     }
-                                    className="w-20 text-sm"
-                                  />
+                                  >
+                                    <SelectTrigger className="h-8 text-xs flex-1">
+                                      <SelectValue placeholder="Not linked (no ingredients)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">
+                                        <span className="text-gray-500">Not linked</span>
+                                      </SelectItem>
+                                      {availableRecipes.map((r) => (
+                                        <SelectItem key={r.id} value={r.id.toString()}>
+                                          {r.name}
+                                          {r.category && (
+                                            <span className="text-gray-400 ml-2 text-xs">
+                                              {r.category}
+                                            </span>
+                                          )}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {item.recipeId && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Linked
+                                    </Badge>
+                                  )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeItem(selectedCategory, idx)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
                               </div>
                             ))}
                             {(categoryItems[selectedCategory] || []).length === 0 && (

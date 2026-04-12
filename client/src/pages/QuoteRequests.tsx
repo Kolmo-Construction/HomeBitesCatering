@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import ShoppingList from "@/components/shopping/ShoppingList";
 
 import {
   Sparkles,
@@ -1255,6 +1256,9 @@ export default function QuoteRequests() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* ─── Shopping List (aggregated ingredients) ────────────────── */}
+              <ShoppingList quoteRequestId={selectedRequest.id} />
             </div>
           )}
         </div>

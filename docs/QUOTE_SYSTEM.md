@@ -150,7 +150,39 @@ TOTAL             = subtotal + fee - discount + tax
 
 Tier prices are read from the `menus` table via a 60-second in-memory cache, so admin price changes propagate automatically.
 
-### 6. Margin Analysis
+### 6. Shopping List Aggregator
+
+**Files:**
+- `server/utils/shoppingList.ts`
+- `client/src/components/shopping/ShoppingList.tsx`
+
+Given a quote request (or event), walks through every selected menu item, looks up its linked recipe, scales the recipe by guest count, and aggregates all ingredients across every item in the event. Output is grouped by ingredient category (Meat & Poultry, Seafood, Produce, Dairy, etc.) with:
+
+- Total quantity per ingredient (in purchase units)
+- Estimated cost per ingredient
+- Supplier and SKU
+- Which recipes contribute to each ingredient
+- Grand total food cost
+- List of menu items NOT linked to recipes (so Mike knows why they're missing)
+
+**Portion multiplier logic:**
+- **Buffet** with 4+ options: 0.6 portions/guest/item (guests sample multiple things)
+- **Buffet** with 2-3 options: 0.8 portions/guest/item
+- **Family style**: 0.7 portions/guest/item
+- **Plated**: 1 / number of options (evenly split plating)
+- **Cocktail party**: 0.5 portions/guest/item
+
+Admin can override the multiplier via a slider in the UI for conservative/aggressive overproduction.
+
+**Shown in:**
+- The Quote Requests detail view (below pricing summary)
+- Event detail view (via the originating quote request)
+
+**Export options:**
+- Print (browser native print with clean print CSS)
+- CSV download (for supplier handoff)
+
+### 7. Margin Analysis
 
 **File:** `server/utils/menuMargin.ts`
 
@@ -244,6 +276,8 @@ Exposed via `GET /api/quotes/menus/:id/margin`.
 | `POST` | `/api/quotes/quote-requests/:id/recalculate-pricing` | Re-calculate pricing from current DB |
 | `POST` | `/api/quotes/quote-requests/:id/convert` | Convert to Client + Opportunity + Estimate |
 | `GET` | `/api/quotes/menus/:id/margin` | Food cost margin breakdown per tier |
+| `GET` | `/api/quotes/quote-requests/:id/shopping-list` | Aggregated ingredient list for a quote |
+| `GET` | `/api/quotes/events/:id/shopping-list` | Aggregated ingredient list for a confirmed event |
 
 ---
 
