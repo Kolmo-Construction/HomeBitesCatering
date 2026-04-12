@@ -98,6 +98,7 @@ export async function generateRecipeDraft(
   // Try model cascade: DeepSeek → Gemini → Claude
   let rawResponse: any = null;
   let lastError: any = null;
+  let lastRawContent: string | null = null;
 
   for (const model of [DEEPSEEK_MODEL, GEMINI_MODEL, CLAUDE_MODEL]) {
     try {
@@ -107,15 +108,27 @@ export async function generateRecipeDraft(
         messages: [{ role: "user", content: prompt }],
         max_tokens: 3000,
         temperature: 0.4,
+        // Note: response_format is a hint — free-tier models often ignore it
         response_format: { type: "json_object" },
       });
 
       const content = response.choices[0]?.message?.content?.trim();
       if (!content) continue;
+      lastRawContent = content;
 
-      rawResponse = JSON.parse(content);
-      console.log(`Recipe AI: successfully drafted "${input.itemName}" with ${model}`);
-      break;
+      // Try to parse with progressive cleanup strategies
+      const parsed = robustJsonParse(content);
+      if (parsed) {
+        rawResponse = parsed;
+        console.log(`Recipe AI: successfully drafted "${input.itemName}" with ${model}`);
+        break;
+      }
+
+      // If parse failed, log the problematic content (truncated) and try next model
+      console.error(
+        `Recipe AI: ${model} returned unparseable JSON (first 500 chars): ${content.substring(0, 500)}`,
+      );
+      lastError = new Error(`${model} returned malformed JSON that couldn't be repaired`);
     } catch (err: any) {
       lastError = err;
       console.error(`Recipe AI: ${model} failed:`, err.message);
@@ -124,11 +137,195 @@ export async function generateRecipeDraft(
   }
 
   if (!rawResponse) {
-    throw new Error(`All AI models failed to generate recipe: ${lastError?.message || "unknown"}`);
+    console.error("Recipe AI: all models failed. Last raw content:", lastRawContent?.substring(0, 1000));
+    throw new Error(
+      `Could not generate recipe — AI models returned malformed responses. ` +
+        `This sometimes happens with free-tier models. Please try again in a moment. ` +
+        `(Details: ${lastError?.message || "unknown"})`,
+    );
   }
 
   // Process the response — match ingredient IDs, calculate costs
   return processDraft(rawResponse, allIngredients, input);
+}
+
+// ============================================================================
+// Robust JSON parser — handles common LLM output issues
+// ============================================================================
+
+/**
+ * Parse JSON from an LLM response, applying progressive cleanup strategies.
+ * Handles:
+ *   - Markdown code fences (```json ... ``` or ``` ... ```)
+ *   - Leading/trailing text around the JSON object
+ *   - Trailing commas before } or ]
+ *   - Unescaped newlines inside string values
+ *   - Smart quotes (converted to straight quotes)
+ *   - Truncated JSON (as long as the top-level object is closed)
+ */
+function robustJsonParse(raw: string): any | null {
+  if (!raw) return null;
+
+  // Strategy 1: direct parse
+  try {
+    return JSON.parse(raw);
+  } catch {}
+
+  // Strategy 2: strip markdown code fences
+  let cleaned = raw.trim();
+  const fenceRegex = /^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/;
+  const fenceMatch = cleaned.match(fenceRegex);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  }
+
+  // Strategy 3: extract the first balanced JSON object
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // Strategy 4: apply syntactic cleanup
+  //   - Remove trailing commas before } or ]
+  //   - Replace smart quotes with straight quotes
+  //   - Escape bare newlines inside strings (best-effort)
+  let fixed = cleaned
+    // Smart quotes → straight quotes
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    // Remove trailing commas (,\s*} or ,\s*])
+    .replace(/,(\s*[}\]])/g, "$1");
+
+  try {
+    return JSON.parse(fixed);
+  } catch {}
+
+  // Strategy 5: escape unescaped newlines and tabs inside string literals
+  // This is a best-effort pass; we walk the string and track whether we're
+  // inside a quoted value, then replace raw newlines with \n.
+  try {
+    fixed = escapeControlCharsInStrings(fixed);
+    return JSON.parse(fixed);
+  } catch {}
+
+  // Strategy 6: try to close any dangling array/object if the response was truncated
+  try {
+    const balanced = balanceBrackets(fixed);
+    return JSON.parse(balanced);
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Walk the string and escape raw newlines/tabs inside string literals.
+ * This is imperfect but handles the common case where an LLM forgets to escape
+ * multi-line string values.
+ */
+function escapeControlCharsInStrings(s: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (inString) {
+      if (escaped) {
+        out += ch;
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        out += ch;
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        out += ch;
+        continue;
+      }
+      // Replace raw control chars with their escape sequences
+      if (ch === "\n") {
+        out += "\\n";
+        continue;
+      }
+      if (ch === "\r") {
+        out += "\\r";
+        continue;
+      }
+      if (ch === "\t") {
+        out += "\\t";
+        continue;
+      }
+      out += ch;
+    } else {
+      if (ch === '"') {
+        inString = true;
+      }
+      out += ch;
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Best-effort bracket balancer — if the JSON was truncated, append closing
+ * brackets to make it parseable. Handles arrays and objects, but not strings.
+ */
+function balanceBrackets(s: string): string {
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+    } else if (ch === "}") {
+      if (stack[stack.length - 1] === "{") stack.pop();
+    } else if (ch === "]") {
+      if (stack[stack.length - 1] === "[") stack.pop();
+    }
+  }
+
+  let result = s;
+  // If we ended mid-string, close it
+  if (inString) result += '"';
+  // Close any unclosed brackets in reverse order
+  while (stack.length > 0) {
+    const open = stack.pop();
+    result += open === "{" ? "}" : "]";
+  }
+  return result;
 }
 
 // ============================================================================
@@ -141,57 +338,31 @@ function buildRecipePrompt(input: GenerateDraftInput, ingredientList: string): s
     ? THEME_DESCRIPTIONS[input.menuTheme] || input.menuThemeName || ""
     : "";
 
-  return `You are an expert catering chef at Home Bites Catering in Seattle, WA. Your task is to create a recipe that the kitchen staff will actually cook for catering events.
+  return `You are an expert catering chef at Home Bites Catering in Seattle. Create a recipe for the kitchen team.
 
-RECIPE REQUEST:
-- Dish name: "${input.itemName}"
-- Category: ${input.category}${themeContext ? `\n- Cuisine context: ${themeContext}` : ''}${input.menuThemeName ? `\n- Menu theme: ${input.menuThemeName}` : ''}
-- Target yield: ${yieldAmount} servings
+DISH: ${input.itemName}
+CATEGORY: ${input.category}${themeContext ? `\nCUISINE: ${themeContext}` : ''}${input.menuThemeName ? `\nMENU: ${input.menuThemeName}` : ''}
+YIELD: ${yieldAmount} servings
 
-AVAILABLE INGREDIENTS (you MUST only use ingredients from this list — use the exact name given):
+AVAILABLE INGREDIENTS (use ONLY these, copy the exact name):
 ${ingredientList}
 
-INSTRUCTIONS:
-1. Create a realistic, well-proportioned catering recipe for "${input.itemName}"
-2. ONLY use ingredients from the list above — do not invent or assume any ingredients
-3. Scale quantities appropriately for ${yieldAmount} servings
-4. Use the exact ingredient names shown in the list so they can be matched back to our inventory
-5. Keep the recipe practical for a catering kitchen (not overly complex)
-6. Include basic prep steps (3-6 steps maximum)
+OUTPUT RULES — CRITICAL:
+1. Respond with ONLY a JSON object. No markdown fences. No text before or after. No code blocks.
+2. All strings must use double quotes and escape any internal quotes with backslash.
+3. Do not include trailing commas.
+4. Keep the description to one short sentence. Keep instructions to one line each.
+5. Scale quantities realistically for ${yieldAmount} servings (e.g., 3-4 lb chicken for 10 people, not 1 oz or 50 lb).
+6. Only use ingredients from the list above. Use the exact name.
+7. Keep to 6-12 ingredients and 3-5 prep steps maximum.
 
-Return ONLY a JSON object in this exact format:
-{
-  "name": "${input.itemName}",
-  "description": "A brief 1-2 sentence description of the dish",
-  "category": "entree" | "appetizer" | "side" | "salad" | "dessert" | "sauce" | "soup",
-  "yieldAmount": ${yieldAmount},
-  "yieldUnit": "serving",
-  "components": [
-    {
-      "ingredientName": "EXACT name from the list above",
-      "quantity": number,
-      "unit": "pound" | "ounce" | "cup" | "tablespoon" | "teaspoon" | "each" | "gallon" | "liter",
-      "prepNotes": "optional: diced, minced, chopped, etc."
-    }
-  ],
-  "preparationSteps": [
-    {
-      "stepNumber": 1,
-      "title": "Step title",
-      "instruction": "Clear cooking instruction",
-      "duration": 10
-    }
-  ],
-  "dietaryFlags": {
-    "allergenWarnings": ["Contains Gluten", "Contains Dairy"],
-    "manualDesignations": ["vegetarian"]
-  }
-}
+Return this JSON structure:
+{"name":"${input.itemName}","description":"short description","category":"entree","yieldAmount":${yieldAmount},"yieldUnit":"serving","components":[{"ingredientName":"exact name from list","quantity":1.5,"unit":"pound","prepNotes":"diced"}],"preparationSteps":[{"stepNumber":1,"title":"Prep","instruction":"short instruction","duration":10}],"dietaryFlags":{"allergenWarnings":["Contains Gluten"],"manualDesignations":["vegetarian"]}}
 
-Use only these allergenWarnings: "Contains Gluten", "Contains Nuts", "Contains Dairy", "Contains Egg", "Contains Soy", "Contains Shellfish", "Contains Sesame"
-Use only these manualDesignations: "vegan", "vegetarian", "keto", "paleo", "low_carb", "low_sodium", "sugar_free", "organic", "kosher", "halal"
-
-Be realistic with quantities. Example: a ${yieldAmount}-serving entree of chicken parmigiana would use about 3-4 pounds of chicken breast, not 1 ounce or 50 pounds.`;
+Valid categories: appetizer, entree, side, salad, dessert, sauce, soup, beverage
+Valid units: pound, ounce, gram, kilogram, cup, tablespoon, teaspoon, each, gallon, liter, milliliter
+Valid allergenWarnings: "Contains Gluten", "Contains Nuts", "Contains Dairy", "Contains Egg", "Contains Soy", "Contains Shellfish", "Contains Sesame"
+Valid manualDesignations: vegan, vegetarian, keto, paleo, low_carb, low_sodium, sugar_free, organic, kosher, halal`;
 }
 
 // ============================================================================
