@@ -553,6 +553,14 @@ export const baseIngredients = pgTable("base_ingredients", {
   supplier: text("supplier"), // optional vendor/supplier name
   notes: text("notes"), // optional storage notes, quality specs, etc.
   dietaryTags: jsonb("dietary_tags").$type<string[]>().default([]), // dietary characteristics: gluten_free, nut_free, keto, etc.
+  // Custom unit conversions used when a recipe calls for this ingredient in a unit
+  // that is incompatible with the purchase unit (e.g., cup → kilogram).
+  // Shape: Record<recipeUnit, purchaseUnitFactor>
+  //   e.g., for artichokes purchased in "pound":
+  //     { "cup": 0.33 }  means 1 cup = 0.33 pounds
+  //   e.g., for flour purchased in "kilogram":
+  //     { "cup": 0.125 }  means 1 cup = 0.125 kg
+  unitConversions: jsonb("unit_conversions").$type<Record<string, number>>().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -561,6 +569,7 @@ export const insertBaseIngredientSchema = createInsertSchema(baseIngredients, {
   purchasePrice: z.coerce.number().nonnegative("Price must be non-negative"),
   purchaseQuantity: z.coerce.number().positive("Quantity must be positive").default(1),
   dietaryTags: z.array(z.string()).optional().default([]),
+  unitConversions: z.record(z.string(), z.number().positive()).optional().default({}),
 }).omit({
   id: true,
   createdAt: true,

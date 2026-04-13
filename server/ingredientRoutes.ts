@@ -326,6 +326,48 @@ router.put("/base-ingredients/:id", async (req, res) => {
   }
 });
 
+// Save/update a custom unit conversion on a base ingredient.
+// Body: { recipeUnit: string, purchaseUnitFactor: number }
+// Meaning: "1 recipeUnit = purchaseUnitFactor purchaseUnits"
+// Example: POST .../42/unit-conversion  { recipeUnit: "cup", purchaseUnitFactor: 0.15 }
+// → adds/replaces { "cup": 0.15 } on ingredient #42's unitConversions map.
+router.post("/base-ingredients/:id/unit-conversion", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ingredient ID" });
+
+    const { recipeUnit, purchaseUnitFactor } = req.body;
+    if (typeof recipeUnit !== "string" || !recipeUnit.trim()) {
+      return res.status(400).json({ message: "recipeUnit is required" });
+    }
+    const factor = parseFloat(purchaseUnitFactor);
+    if (isNaN(factor) || factor <= 0) {
+      return res.status(400).json({ message: "purchaseUnitFactor must be a positive number" });
+    }
+
+    // Fetch existing conversions
+    const [existing] = await db
+      .select()
+      .from(baseIngredients)
+      .where(eq(baseIngredients.id, id));
+    if (!existing) return res.status(404).json({ message: "Ingredient not found" });
+
+    const current = (existing.unitConversions as Record<string, number>) || {};
+    const updated = { ...current, [recipeUnit.toLowerCase().trim()]: factor };
+
+    const [result] = await db
+      .update(baseIngredients)
+      .set({ unitConversions: updated as any, updatedAt: new Date() })
+      .where(eq(baseIngredients.id, id))
+      .returning();
+
+    return res.json(result);
+  } catch (error) {
+    console.error("Error saving unit conversion:", error);
+    return res.status(500).json({ message: "Failed to save unit conversion" });
+  }
+});
+
 // Delete a base ingredient
 router.delete("/base-ingredients/:id", async (req, res) => {
   try {
@@ -482,14 +524,20 @@ router.get("/menu-items/:menuItemId/recipe", async (req, res) => {
     
     // Calculate cost for each ingredient
     const recipeWithCosts = recipe.map((item: any) => {
-      const cost = calculateIngredientCost(
-        parseFloat(item.ingredient.purchasePrice),
-        parseFloat(item.ingredient.purchaseQuantity),
-        item.ingredient.purchaseUnit,
-        parseFloat(item.quantity),
-        item.unit
-      );
-      
+      let cost = 0;
+      try {
+        cost = calculateIngredientCost(
+          parseFloat(item.baseIngredient.purchasePrice),
+          parseFloat(item.baseIngredient.purchaseQuantity),
+          item.baseIngredient.purchaseUnit,
+          parseFloat(item.quantity),
+          item.unit,
+          (item.baseIngredient.unitConversions as Record<string, number> | undefined) || undefined,
+        );
+      } catch (err) {
+        console.warn("Ingredient cost conversion failed:", err);
+      }
+
       return {
         ...item,
         calculatedCost: cost,
@@ -677,18 +725,26 @@ function safeCalculateIngredientCost(
   purchaseQuantity: string,
   purchaseUnit: string,
   recipeQuantity: string,
-  recipeUnit: string
+  recipeUnit: string,
+  customConversions?: Record<string, number> | null,
 ): number {
   const price = parseFloat(purchasePrice);
   const purchaseQty = parseFloat(purchaseQuantity);
   const recipeQty = parseFloat(recipeQuantity);
-  
+
   if (isNaN(price) || isNaN(purchaseQty) || isNaN(recipeQty) || purchaseQty <= 0 || recipeQty <= 0) {
     return 0;
   }
-  
+
   try {
-    return calculateIngredientCost(price, purchaseQty, purchaseUnit, recipeQty, recipeUnit);
+    return calculateIngredientCost(
+      price,
+      purchaseQty,
+      purchaseUnit,
+      recipeQty,
+      recipeUnit,
+      customConversions || undefined,
+    );
   } catch (error) {
     console.warn(`Unit conversion failed from ${recipeUnit} to ${purchaseUnit}:`, error);
     return 0;
@@ -757,11 +813,12 @@ router.get("/recipes", async (req, res) => {
           comp.baseIngredient.purchaseQuantity,
           comp.baseIngredient.purchaseUnit,
           comp.quantity,
-          comp.unit
+          comp.unit,
+          comp.baseIngredient.unitConversions as Record<string, number> | null,
         );
         totalCost += cost;
       }
-      
+
       // Calculate cost per serving
       const yieldAmount = parseFloat(recipe.yield || "1") || 1;
       const costPerServing = yieldAmount > 0 ? totalCost / yieldAmount : totalCost;
@@ -822,10 +879,11 @@ router.get("/recipes/:id", async (req, res) => {
         comp.baseIngredient.purchaseQuantity,
         comp.baseIngredient.purchaseUnit,
         comp.quantity,
-        comp.unit
+        comp.unit,
+        comp.baseIngredient.unitConversions as Record<string, number> | null,
       );
       totalCost += cost;
-      
+
       return {
         ...comp,
         calculatedCost: cost,
@@ -1122,16 +1180,17 @@ router.get("/recipes/:recipeId/components", async (req, res) => {
         comp.baseIngredient.purchaseQuantity,
         comp.baseIngredient.purchaseUnit,
         comp.quantity,
-        comp.unit
+        comp.unit,
+        comp.baseIngredient.unitConversions as Record<string, number> | null,
       );
       totalCost += cost;
-      
+
       return {
         ...comp,
         calculatedCost: cost,
       };
     });
-    
+
     return res.json({
       components: componentsWithCosts,
       totalCost,

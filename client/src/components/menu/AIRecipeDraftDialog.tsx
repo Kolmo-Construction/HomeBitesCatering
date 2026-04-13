@@ -209,6 +209,7 @@ interface BaseIngredient {
   name: string;
   category: string;
   purchaseUnit: string;
+  unitConversions?: Record<string, number> | null;
 }
 
 // ============================================================================
@@ -240,6 +241,33 @@ const UNITS = [
   "milliliter",
   "fl oz",
 ];
+
+// ============================================================================
+// Unit classification — used to detect when a conversion is needed
+// ============================================================================
+
+const WEIGHT_UNITS = new Set(["pound", "pounds", "lb", "lbs", "ounce", "ounces", "oz", "gram", "grams", "g", "kilogram", "kilograms", "kg"]);
+const VOLUME_UNITS = new Set(["cup", "cups", "tablespoon", "tablespoons", "tbsp", "teaspoon", "teaspoons", "tsp", "gallon", "gallons", "gal", "quart", "quarts", "qt", "pint", "pints", "pt", "liter", "liters", "l", "milliliter", "milliliters", "ml", "fl oz", "fluid ounce"]);
+const COUNT_UNITS = new Set(["each", "dozen", "doz", "case", "cases"]);
+
+function unitCategory(unit: string): "weight" | "volume" | "count" | "unknown" {
+  const u = unit.toLowerCase().trim();
+  if (WEIGHT_UNITS.has(u)) return "weight";
+  if (VOLUME_UNITS.has(u)) return "volume";
+  if (COUNT_UNITS.has(u)) return "count";
+  return "unknown";
+}
+
+/**
+ * Returns true if converting recipeUnit → purchaseUnit requires a stored custom conversion.
+ * That's true when they're in different unit categories (e.g., cup → pound).
+ */
+function needsCustomConversion(recipeUnit: string, purchaseUnit: string): boolean {
+  const r = unitCategory(recipeUnit);
+  const p = unitCategory(purchaseUnit);
+  if (r === "unknown" || p === "unknown") return false; // can't tell, don't prompt
+  return r !== p;
+}
 
 // ============================================================================
 // Component
@@ -309,6 +337,67 @@ export default function AIRecipeDraftDialog({
     // We intentionally only re-run when `open` toggles
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // --------------------------------------------------------------------------
+  // Unit conversion persistence
+  // --------------------------------------------------------------------------
+  // Local draft state for per-row conversion input (keyed by component index)
+  const [conversionDrafts, setConversionDrafts] = useState<Record<number, string>>({});
+
+  const conversionMutation = useMutation({
+    mutationFn: async (args: {
+      baseIngredientId: number;
+      recipeUnit: string;
+      purchaseUnitFactor: number;
+    }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/ingredients/base-ingredients/${args.baseIngredientId}/unit-conversion`,
+        { recipeUnit: args.recipeUnit, purchaseUnitFactor: args.purchaseUnitFactor },
+      );
+      return (await res.json()) as BaseIngredient;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ingredients/base-ingredients"] });
+      toast({
+        title: "Conversion saved",
+        description: "Future recipes will use this automatically.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to save conversion",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveConversion = (idx: number, component: DraftRecipeComponent) => {
+    if (!component.matchedIngredientId) return;
+    const ing = baseIngredients.find((b) => b.id === component.matchedIngredientId);
+    if (!ing) return;
+    const factor = parseFloat(conversionDrafts[idx] || "");
+    if (isNaN(factor) || factor <= 0) {
+      toast({
+        title: "Invalid number",
+        description: "Enter a positive number for the conversion factor.",
+        variant: "destructive",
+      });
+      return;
+    }
+    conversionMutation.mutate({
+      baseIngredientId: ing.id,
+      recipeUnit: component.unit,
+      purchaseUnitFactor: factor,
+    });
+    // Clear the local draft so the UI picks up the new stored conversion
+    setConversionDrafts((prev) => {
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
+  };
 
   // --------------------------------------------------------------------------
   // Save
@@ -823,17 +912,99 @@ export default function AIRecipeDraftDialog({
                         </Label>
                         <div className="mt-1">
                           <IngredientCombobox
-                            ingredients={baseIngredients.map((b) => ({
-                              id: b.id,
-                              name: b.name,
-                              category: b.category,
-                              purchaseUnit: b.purchaseUnit,
-                            }))}
+                            ingredients={baseIngredients}
                             selectedId={component.matchedIngredientId}
                             onSelect={(id) => handleManualMatch(idx, id.toString())}
                           />
                         </div>
                       </div>
+
+                      {/* Unit conversion prompt — only appears when the recipe unit
+                          is incompatible with the matched ingredient's purchase unit
+                          AND no stored conversion exists yet. */}
+                      {(() => {
+                        if (!component.matchedIngredientId) return null;
+                        const matched = baseIngredients.find(
+                          (b) => b.id === component.matchedIngredientId,
+                        );
+                        if (!matched) return null;
+                        if (!needsCustomConversion(component.unit, matched.purchaseUnit)) return null;
+
+                        const storedFactor =
+                          matched.unitConversions?.[component.unit.toLowerCase().trim()];
+
+                        if (storedFactor) {
+                          // A conversion already exists — just show a note
+                          return (
+                            <div className="pt-1 border-t">
+                              <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1.5 flex items-center gap-1.5">
+                                <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+                                <span>
+                                  Using saved conversion: 1 {component.unit} ={" "}
+                                  {storedFactor} {matched.purchaseUnit}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // No conversion yet — prompt the admin
+                        return (
+                          <div className="pt-1 border-t">
+                            <div className="bg-amber-50 border border-amber-200 rounded px-2.5 py-2 space-y-2">
+                              <div className="flex items-start gap-1.5 text-[11px] text-amber-800">
+                                <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <strong>Unit conversion needed.</strong> This recipe uses{" "}
+                                  <strong>{component.unit}</strong>, but{" "}
+                                  <strong>{matched.name}</strong> is purchased in{" "}
+                                  <strong>{matched.purchaseUnit}</strong>. Define the conversion
+                                  once and every future recipe will use it automatically.
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] text-gray-700">
+                                  1 {component.unit} =
+                                </span>
+                                <Input
+                                  type="number"
+                                  step="0.001"
+                                  min="0"
+                                  value={conversionDrafts[idx] || ""}
+                                  onChange={(e) =>
+                                    setConversionDrafts((prev) => ({
+                                      ...prev,
+                                      [idx]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="0.15"
+                                  className="h-7 w-24 text-xs"
+                                />
+                                <span className="text-[11px] text-gray-700">
+                                  {matched.purchaseUnit}
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-[11px] ml-auto"
+                                  onClick={() => handleSaveConversion(idx, component)}
+                                  disabled={
+                                    !conversionDrafts[idx] ||
+                                    conversionMutation.isPending
+                                  }
+                                >
+                                  {conversionMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    "Save"
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 ))}

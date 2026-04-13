@@ -12,6 +12,7 @@ import { eq, inArray } from "drizzle-orm";
 import {
   calculateIngredientCost,
   convertUnit,
+  convertToPurchaseUnits,
   normalizeUnit,
 } from "@shared/unitConversion";
 
@@ -237,6 +238,7 @@ export async function calculateShoppingList(
     purchasePrice: number;
     purchaseQuantity: number;
     purchaseUnit: string;
+    unitConversions: Record<string, number> | null;
     supplier: string | null;
     sku: string | null;
     // Sum quantities per recipe unit (we convert to purchase unit at the end)
@@ -283,6 +285,7 @@ export async function calculateShoppingList(
           purchasePrice: parseFloat(ing.purchasePrice) || 0,
           purchaseQuantity: parseFloat(String(ing.purchaseQuantity)) || 1,
           purchaseUnit: ing.purchaseUnit,
+          unitConversions: (ing.unitConversions as Record<string, number>) || null,
           supplier: ing.supplier,
           sku: ing.sku,
           quantityByUnit: new Map(),
@@ -309,14 +312,15 @@ export async function calculateShoppingList(
     for (const [unit, qty] of Array.from(acc.quantityByUnit.entries())) {
       rawTotalByUnit[unit] = qty;
       try {
-        const converted = convertUnit(qty, unit, acc.purchaseUnit);
+        const converted = convertToPurchaseUnits(
+          qty,
+          unit,
+          acc.purchaseUnit,
+          acc.unitConversions || undefined,
+        );
         totalInPurchaseUnit += converted;
       } catch {
-        // Can't convert — assume the recipe unit matches purchase unit or skip
-        if (normalizeUnit(unit) === normalizeUnit(acc.purchaseUnit)) {
-          totalInPurchaseUnit += qty;
-        }
-        // Otherwise, the mismatch is a data issue; we still record the raw qty
+        // Can't convert — leave raw qty unmapped
       }
     }
 
@@ -330,6 +334,7 @@ export async function calculateShoppingList(
           acc.purchaseUnit,
           qty,
           unit,
+          acc.unitConversions || undefined,
         );
       } catch {
         // Fallback: assume unit matches

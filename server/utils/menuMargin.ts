@@ -19,13 +19,21 @@ function safeCalculateIngredientCost(
   purchaseUnit: string,
   recipeQty: string | number,
   recipeUnit: string,
+  customConversions?: Record<string, number> | null,
 ): number {
   try {
     const price = typeof purchasePrice === "string" ? parseFloat(purchasePrice) : purchasePrice;
     const pqty = typeof purchaseQty === "string" ? parseFloat(purchaseQty) : purchaseQty;
     const rqty = typeof recipeQty === "string" ? parseFloat(recipeQty) : recipeQty;
     if (isNaN(price) || isNaN(pqty) || isNaN(rqty)) return 0;
-    const result = calculateIngredientCost(price, pqty, purchaseUnit, rqty, recipeUnit);
+    const result = calculateIngredientCost(
+      price,
+      pqty,
+      purchaseUnit,
+      rqty,
+      recipeUnit,
+      customConversions || undefined,
+    );
     return isNaN(result) ? 0 : result;
   } catch {
     return 0;
@@ -46,6 +54,7 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
       purchasePrice: baseIngredients.purchasePrice,
       purchaseQuantity: baseIngredients.purchaseQuantity,
       purchaseUnit: baseIngredients.purchaseUnit,
+      unitConversions: baseIngredients.unitConversions,
     })
     .from(recipeComponents)
     .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
@@ -59,6 +68,7 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
       comp.purchaseUnit,
       comp.quantity,
       comp.unit,
+      comp.unitConversions as Record<string, number> | null,
     );
   }
 

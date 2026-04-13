@@ -155,18 +155,61 @@ export function calculateIngredientCost(
   purchaseQuantity: number,
   purchaseUnit: string,
   recipeQuantity: number,
-  recipeUnit: string
+  recipeUnit: string,
+  customConversions?: Record<string, number>,
 ): number {
-  // Calculate cost per recipe unit
-  const costPerRecipeUnit = calculateCostPerUnit(
-    purchasePrice,
-    purchaseQuantity,
+  const recipeQtyInPurchaseUnits = convertToPurchaseUnits(
+    recipeQuantity,
+    recipeUnit,
     purchaseUnit,
-    recipeUnit
+    customConversions,
   );
-  
-  // Multiply by recipe quantity
-  return costPerRecipeUnit * recipeQuantity;
+  // Cost per purchase unit × how many purchase units we need
+  const costPerPurchaseUnit = purchasePrice / purchaseQuantity;
+  return costPerPurchaseUnit * recipeQtyInPurchaseUnits;
+}
+
+/**
+ * Convert a recipe quantity into purchase units.
+ *
+ * Uses three strategies in order:
+ *   1. If recipeUnit === purchaseUnit → no conversion needed
+ *   2. If units are compatible (both weight or both volume) → use built-in converter
+ *   3. If a custom conversion is provided (customConversions[recipeUnit]) → use it
+ *      The value in the map means "1 recipeUnit = N purchaseUnits".
+ *
+ * Throws when no strategy applies.
+ */
+export function convertToPurchaseUnits(
+  recipeQuantity: number,
+  recipeUnit: string,
+  purchaseUnit: string,
+  customConversions?: Record<string, number>,
+): number {
+  const from = normalizeUnit(recipeUnit);
+  const to = normalizeUnit(purchaseUnit);
+
+  // Same unit — no conversion
+  if (from === to) return recipeQuantity;
+
+  // Built-in compatible conversion (weight↔weight, volume↔volume)
+  if (areUnitsCompatible(from, to)) {
+    return convertUnit(recipeQuantity, from, to);
+  }
+
+  // Custom conversion stored on the ingredient (volume→weight, each→weight, etc.)
+  // Look up by the raw recipe unit first, then the normalized form
+  if (customConversions) {
+    const factor = customConversions[recipeUnit] ?? customConversions[from];
+    if (typeof factor === "number" && factor > 0) {
+      return recipeQuantity * factor;
+    }
+  }
+
+  throw new Error(
+    `Cannot convert ${recipeUnit} → ${purchaseUnit}: incompatible unit types and no custom conversion defined. ` +
+      `Add a conversion on the base ingredient (e.g., "1 cup = 0.15 kg") to fix this.`,
+  );
 }
 
 /**
