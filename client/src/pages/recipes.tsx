@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered, Link2, CalendarDays, Leaf, AlertTriangle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_CONTAINS_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
@@ -79,6 +79,31 @@ interface RecipeWithCost extends Recipe {
   laborCost?: number;
   costPerServing: number;
   ingredientCount: number;
+}
+
+interface RecipeDashboardStats {
+  menuLinkage: {
+    totalRecipes: number;
+    linkedRecipes: number;
+    orphanCount: number;
+    topUsed: { id: number; name: string; menuCount: number }[];
+  };
+  upcomingEvents: {
+    windowDays: number;
+    eventCount: number;
+    recipeCount: number;
+    nextEventDate: string | null;
+  };
+  dietaryCoverage: {
+    total: number;
+    uncertified: number;
+    byTag: { tag: string; label: string; count: number }[];
+  };
+  laborLeaders: {
+    totalHours: number;
+    recipesWithLabor: number;
+    top: { id: number; name: string; laborHours: number; laborCost: number }[];
+  };
 }
 
 interface RecipeComponentItem {
@@ -180,6 +205,10 @@ export default function RecipesPage() {
 
   const { data: baseIngredients = [] } = useQuery<BaseIngredient[]>({
     queryKey: ["/api/ingredients/base-ingredients"],
+  });
+
+  const { data: dashboardStats } = useQuery<RecipeDashboardStats>({
+    queryKey: ["/api/ingredients/recipes/dashboard-stats"],
   });
 
   const createMutation = useMutation({
@@ -492,25 +521,24 @@ export default function RecipesPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const totalRecipes = recipes.length;
-  
-  const getCostStats = () => {
-    if (recipes.length === 0) return null;
-    
-    const costs = recipes.map(r => r.totalCost || 0).sort((a, b) => a - b);
-    const min = costs[0];
-    const max = costs[costs.length - 1];
-    const median = costs.length % 2 === 0 
-      ? (costs[costs.length / 2 - 1] + costs[costs.length / 2]) / 2 
-      : costs[Math.floor(costs.length / 2)];
-    const average = costs.reduce((a, b) => a + b, 0) / costs.length;
-    const q1 = costs[Math.floor(costs.length / 4)];
-    const q3 = costs[Math.floor(costs.length * 3 / 4)];
-    
-    return { min, max, median, average, q1, q3 };
-  };
-  
-  const costStats = getCostStats();
+  const nextEventLabel = (() => {
+    if (!dashboardStats?.upcomingEvents.nextEventDate) return null;
+    const d = new Date(dashboardStats.upcomingEvents.nextEventDate);
+    if (Number.isNaN(d.getTime())) return null;
+    const days = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    if (days <= 0) return `${dateStr} (today)`;
+    if (days === 1) return `${dateStr} (tomorrow)`;
+    return `${dateStr} (in ${days} days)`;
+  })();
+
+  const menuLinkagePct = dashboardStats && dashboardStats.menuLinkage.totalRecipes > 0
+    ? Math.round((dashboardStats.menuLinkage.linkedRecipes / dashboardStats.menuLinkage.totalRecipes) * 100)
+    : 0;
+
+  const coveredDietaryTags = dashboardStats
+    ? dashboardStats.dietaryCoverage.byTag.filter(t => t.count > 0)
+    : [];
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl" data-testid="page-recipes">
@@ -531,79 +559,174 @@ export default function RecipesPage() {
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Recipes</CardDescription>
-              <CardTitle className="text-3xl" data-testid="text-total-recipes">
-                {totalRecipes}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* 1. MENU LINKAGE HEALTH */}
+          <Card data-testid="card-menu-linkage">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5" />
+                Menu Linkage
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {dashboardStats
+                  ? `${dashboardStats.menuLinkage.linkedRecipes}/${dashboardStats.menuLinkage.totalRecipes}`
+                  : "—"}
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  on menus
+                </span>
               </CardTitle>
             </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Categories</CardDescription>
-              <CardTitle className="text-3xl" data-testid="text-total-categories">
-                {new Set(recipes.map((r) => r.category).filter(Boolean)).size}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Cost Distribution</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {costStats ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Lowest</p>
-                      <p className="font-semibold text-lg">{formatCurrency(costStats.min)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Highest</p>
-                      <p className="font-semibold text-lg">{formatCurrency(costStats.max)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Median</p>
-                      <p className="font-semibold">{formatCurrency(costStats.median)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Average</p>
-                      <p className="font-semibold">{formatCurrency(costStats.average)}</p>
-                    </div>
+            <CardContent className="pt-0">
+              {dashboardStats ? (
+                <div className="space-y-3">
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${menuLinkagePct}%` }}
+                    />
                   </div>
-                  
-                  <div className="pt-2">
-                    <p className="text-xs text-muted-foreground mb-2">Distribution Range</p>
-                    <div className="flex h-8 rounded-md overflow-hidden gap-1 bg-muted">
-                      <div 
-                        className="bg-red-400 hover:bg-red-500 transition-colors"
-                        style={{ width: '25%' }}
-                        title={`0-25%: ${formatCurrency(costStats.min)} - ${formatCurrency(costStats.q1)}`}
-                      />
-                      <div 
-                        className="bg-orange-400 hover:bg-orange-500 transition-colors"
-                        style={{ width: '25%' }}
-                        title={`25-50%: ${formatCurrency(costStats.q1)} - ${formatCurrency(costStats.median)}`}
-                      />
-                      <div 
-                        className="bg-yellow-400 hover:bg-yellow-500 transition-colors"
-                        style={{ width: '25%' }}
-                        title={`50-75%: ${formatCurrency(costStats.median)} - ${formatCurrency(costStats.q3)}`}
-                      />
-                      <div 
-                        className="bg-green-400 hover:bg-green-500 transition-colors"
-                        style={{ width: '25%' }}
-                        title={`75-100%: ${formatCurrency(costStats.q3)} - ${formatCurrency(costStats.max)}`}
-                      />
+                  {dashboardStats.menuLinkage.orphanCount > 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {dashboardStats.menuLinkage.orphanCount} orphan{dashboardStats.menuLinkage.orphanCount !== 1 ? "s" : ""} (not on any menu)
+                    </p>
+                  )}
+                  {dashboardStats.menuLinkage.topUsed.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Most used</p>
+                      <ul className="space-y-0.5">
+                        {dashboardStats.menuLinkage.topUsed.map(r => (
+                          <li key={r.id} className="text-xs flex justify-between gap-2">
+                            <span className="truncate">{r.name}</span>
+                            <span className="text-muted-foreground shrink-0">{r.menuCount}×</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
+                  )}
                 </div>
               ) : (
-                <div className="text-center text-muted-foreground text-sm">
-                  <p>No recipes yet</p>
+                <p className="text-xs text-muted-foreground">Loading…</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 2. UPCOMING EVENT EXPOSURE */}
+          <Card data-testid="card-upcoming-events">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Upcoming Events ({dashboardStats?.upcomingEvents.windowDays ?? 30}d)
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {dashboardStats?.upcomingEvents.eventCount ?? "—"}
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  event{dashboardStats?.upcomingEvents.eventCount === 1 ? "" : "s"}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {dashboardStats ? (
+                dashboardStats.upcomingEvents.eventCount > 0 ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Recipes feeding them</span>
+                      <span className="font-semibold">{dashboardStats.upcomingEvents.recipeCount}</span>
+                    </div>
+                    {nextEventLabel && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Next event</span>
+                        <span className="font-semibold">{nextEventLabel}</span>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground pt-1 border-t">
+                      These recipes are about to hit the kitchen — make sure costs and prep are accurate.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No confirmed events in the next 30 days.</p>
+                )
+              ) : (
+                <p className="text-xs text-muted-foreground">Loading…</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 3. DIETARY COVERAGE */}
+          <Card data-testid="card-dietary-coverage">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Leaf className="h-3.5 w-3.5" />
+                Dietary Coverage
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {dashboardStats
+                  ? `${dashboardStats.dietaryCoverage.total - dashboardStats.dietaryCoverage.uncertified}/${dashboardStats.dietaryCoverage.total}`
+                  : "—"}
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  certified
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {dashboardStats ? (
+                <div className="space-y-2">
+                  {coveredDietaryTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {coveredDietaryTags.map(t => (
+                        <Badge key={t.tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {t.label} {t.count}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No recipes certified yet.</p>
+                  )}
+                  {dashboardStats.dietaryCoverage.uncertified > 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 pt-1 border-t">
+                      <AlertTriangle className="h-3 w-3" />
+                      {dashboardStats.dietaryCoverage.uncertified} without any designation
+                    </p>
+                  )}
                 </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Loading…</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 4. LABOR-HOUR LEADERS */}
+          <Card data-testid="card-labor-leaders">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                Labor-Hour Leaders
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {dashboardStats ? `${dashboardStats.laborLeaders.totalHours.toFixed(1)}h` : "—"}
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  total
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {dashboardStats ? (
+                dashboardStats.laborLeaders.top.length > 0 ? (
+                  <ul className="space-y-1">
+                    {dashboardStats.laborLeaders.top.map(r => (
+                      <li key={r.id} className="text-xs flex justify-between gap-2">
+                        <span className="truncate">{r.name}</span>
+                        <span className="text-muted-foreground shrink-0">
+                          {r.laborHours.toFixed(1)}h · {formatCurrency(r.laborCost)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No labor hours logged yet.</p>
+                )
+              ) : (
+                <p className="text-xs text-muted-foreground">Loading…</p>
               )}
             </CardContent>
           </Card>

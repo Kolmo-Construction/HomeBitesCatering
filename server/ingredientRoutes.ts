@@ -1,21 +1,26 @@
 import { Router } from "express";
 import { db } from "./db";
-import { 
-  baseIngredients, 
-  recipeIngredients, 
+import {
+  baseIngredients,
+  recipeIngredients,
   recipes,
   recipeComponents,
-  insertBaseIngredientSchema, 
+  menus,
+  events,
+  insertBaseIngredientSchema,
   insertRecipeIngredientSchema,
   insertRecipeSchema,
   insertRecipeComponentSchema,
   InsertRecipeComponent,
   DIETARY_TAGS,
   ALLERGEN_CONTAINS_TAGS,
+  LIFESTYLE_TAGS,
   RecipeDietaryFlags,
   LABOR_RATE_PER_HOUR_CENTS,
+  MenuRecipeItem,
+  MenuCategoryItem,
 } from "@shared/schema";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, ne, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { calculateIngredientCost } from "@shared/unitConversion";
 import { ObjectStorageService } from "./objectStorage";
@@ -759,6 +764,194 @@ function safeCalculateIngredientCost(
     return 0;
   }
 }
+
+// ============================================
+// RECIPE DASHBOARD STATS
+// ============================================
+// Aggregate signals that help the catering operator understand recipe-book
+// health: which recipes are actually used on menus, which ones are feeding
+// upcoming events, dietary coverage, and labor-hour leaders. Placed before
+// `/recipes/:id` so Express matches the literal path first.
+router.get("/recipes/dashboard-stats", async (_req, res) => {
+  try {
+    const [allRecipes, allMenus] = await Promise.all([
+      db.select({
+        id: recipes.id,
+        name: recipes.name,
+        laborHours: recipes.laborHours,
+        dietaryFlags: recipes.dietaryFlags,
+      }).from(recipes),
+      db.select({
+        id: menus.id,
+        name: menus.name,
+        recipes: menus.recipes,
+        categoryItems: menus.categoryItems,
+      }).from(menus),
+    ]);
+
+    const totalRecipes = allRecipes.length;
+
+    // ---- 1. MENU LINKAGE HEALTH ----
+    // Count how many times each recipe is referenced across menus.recipes[]
+    // and menus.categoryItems[*].recipeId. Recipes with zero references are
+    // orphaned (dead weight in the book).
+    const recipeMenuCounts = new Map<number, number>();
+    for (const menu of allMenus) {
+      const seenInThisMenu = new Set<number>();
+      const recipeItems = (menu.recipes as MenuRecipeItem[] | null) || [];
+      for (const item of recipeItems) {
+        if (typeof item?.recipeId === "number") seenInThisMenu.add(item.recipeId);
+      }
+      const categoryItemsMap = (menu.categoryItems as Record<string, MenuCategoryItem[]> | null) || {};
+      for (const items of Object.values(categoryItemsMap)) {
+        for (const item of items || []) {
+          if (typeof item?.recipeId === "number") seenInThisMenu.add(item.recipeId);
+        }
+      }
+      seenInThisMenu.forEach(rid => {
+        recipeMenuCounts.set(rid, (recipeMenuCounts.get(rid) || 0) + 1);
+      });
+    }
+
+    const recipeNameById = new Map<number, string>();
+    for (const r of allRecipes) recipeNameById.set(r.id, r.name);
+
+    const linkedRecipes = allRecipes.filter(r => (recipeMenuCounts.get(r.id) || 0) > 0).length;
+    const orphanCount = totalRecipes - linkedRecipes;
+
+    const topUsed = Array.from(recipeMenuCounts.entries())
+      .filter(([rid]) => recipeNameById.has(rid))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([rid, menuCount]) => ({
+        id: rid,
+        name: recipeNameById.get(rid)!,
+        menuCount,
+      }));
+
+    // ---- 2. UPCOMING EVENT EXPOSURE ----
+    // Events booked in the next 30 days that aren't cancelled. Tells the
+    // operator which recipes are about to hit the kitchen — these are the
+    // ones whose cost & prep data need to be right RIGHT NOW.
+    const now = new Date();
+    const windowDays = 30;
+    const windowEnd = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000);
+
+    const upcomingEventRows = await db.select({
+      id: events.id,
+      eventDate: events.eventDate,
+      menuId: events.menuId,
+    })
+      .from(events)
+      .where(and(
+        gte(events.eventDate, now),
+        lte(events.eventDate, windowEnd),
+        ne(events.status, "cancelled"),
+      ))
+      .orderBy(events.eventDate);
+
+    const menuRecipesById = new Map<number, Set<number>>();
+    for (const menu of allMenus) {
+      const set = new Set<number>();
+      const recipeItems = (menu.recipes as MenuRecipeItem[] | null) || [];
+      for (const item of recipeItems) {
+        if (typeof item?.recipeId === "number") set.add(item.recipeId);
+      }
+      const categoryItemsMap = (menu.categoryItems as Record<string, MenuCategoryItem[]> | null) || {};
+      for (const items of Object.values(categoryItemsMap)) {
+        for (const item of items || []) {
+          if (typeof item?.recipeId === "number") set.add(item.recipeId);
+        }
+      }
+      menuRecipesById.set(menu.id, set);
+    }
+
+    const upcomingRecipeIds = new Set<number>();
+    for (const ev of upcomingEventRows) {
+      if (ev.menuId == null) continue;
+      const set = menuRecipesById.get(ev.menuId);
+      if (!set) continue;
+      set.forEach(rid => upcomingRecipeIds.add(rid));
+    }
+
+    const nextEventDate = upcomingEventRows[0]?.eventDate ?? null;
+
+    const upcomingEvents = {
+      windowDays,
+      eventCount: upcomingEventRows.length,
+      recipeCount: upcomingRecipeIds.size,
+      nextEventDate: nextEventDate instanceof Date ? nextEventDate.toISOString() : nextEventDate,
+    };
+
+    // ---- 3. DIETARY COVERAGE ----
+    // How many recipes are certified for each lifestyle tag (vegan, GF,
+    // kosher, halal, etc.). The scariest number is `uncertified` — recipes
+    // with no manual designation at all, which also creates liability when
+    // planning for guests with restrictions.
+    const byTag = LIFESTYLE_TAGS.map(tag => ({
+      tag: tag.value as string,
+      label: tag.label,
+      count: 0,
+    }));
+    const tagIndex = new Map<string, number>(byTag.map((t, i) => [t.tag, i] as const));
+
+    let uncertified = 0;
+    for (const r of allRecipes) {
+      const flags = (r.dietaryFlags as RecipeDietaryFlags | null) || { allergenWarnings: [], manualDesignations: [] };
+      const designations = flags.manualDesignations || [];
+      if (designations.length === 0) uncertified++;
+      for (const d of designations) {
+        const idx = tagIndex.get(d);
+        if (idx !== undefined) byTag[idx].count++;
+      }
+    }
+
+    const dietaryCoverage = {
+      total: totalRecipes,
+      uncertified,
+      byTag,
+    };
+
+    // ---- 4. LABOR-HOUR LEADERS ----
+    // Top 3 most labor-intensive recipes. When scaling for a 200-guest event,
+    // these are the ones that dictate kitchen staffing.
+    const laborRanked = allRecipes
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        laborHours: parseFloat(String(r.laborHours || "0")) || 0,
+      }))
+      .filter(r => r.laborHours > 0)
+      .sort((a, b) => b.laborHours - a.laborHours);
+
+    const totalLaborHours = laborRanked.reduce((sum, r) => sum + r.laborHours, 0);
+    const laborLeaders = {
+      totalHours: totalLaborHours,
+      recipesWithLabor: laborRanked.length,
+      top: laborRanked.slice(0, 3).map(r => ({
+        id: r.id,
+        name: r.name,
+        laborHours: r.laborHours,
+        laborCost: (r.laborHours * LABOR_RATE_PER_HOUR_CENTS) / 100,
+      })),
+    };
+
+    return res.json({
+      menuLinkage: {
+        totalRecipes,
+        linkedRecipes,
+        orphanCount,
+        topUsed,
+      },
+      upcomingEvents,
+      dietaryCoverage,
+      laborLeaders,
+    });
+  } catch (error) {
+    console.error("Error fetching recipe dashboard stats:", error);
+    return res.status(500).json({ message: "Failed to fetch recipe dashboard stats" });
+  }
+});
 
 // Get all recipes with their total cost
 router.get("/recipes", async (req, res) => {
