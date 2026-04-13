@@ -75,6 +75,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RecipeWithCost extends Recipe {
   totalCost: number;
+  ingredientCost?: number;
+  laborCost?: number;
   costPerServing: number;
   ingredientCount: number;
 }
@@ -245,6 +247,7 @@ export default function RecipesPage() {
       category: undefined,
       yield: 1,
       yieldUnit: "serving",
+      laborHours: 0,
       notes: "",
     },
   });
@@ -262,6 +265,7 @@ export default function RecipesPage() {
       category: undefined,
       yield: 1,
       yieldUnit: "serving",
+      laborHours: 0,
       notes: "",
     });
     setSelectedIngredientId(null);
@@ -287,6 +291,7 @@ export default function RecipesPage() {
       category: recipe.category || undefined,
       yield: parseFloat(recipe.yield || "1"),
       yieldUnit: recipe.yieldUnit || "serving",
+      laborHours: parseFloat(String(recipe.laborHours || "0")),
       notes: recipe.notes || "",
     });
     
@@ -437,8 +442,11 @@ export default function RecipesPage() {
     }
   };
 
-  const totalRecipeCost = recipeComponents.reduce((sum, comp) => sum + calculateComponentCost(comp), 0);
+  const ingredientCost = recipeComponents.reduce((sum, comp) => sum + calculateComponentCost(comp), 0);
   const yieldAmount = form.watch("yield") || 1;
+  const laborHoursValue = Number(form.watch("laborHours")) || 0;
+  const laborCost = laborHoursValue * 35; // $35/hour
+  const totalRecipeCost = ingredientCost + laborCost;
   const costPerServing = yieldAmount > 0 ? totalRecipeCost / yieldAmount : totalRecipeCost;
 
   const handleAddComponent = () => {
@@ -853,7 +861,7 @@ export default function RecipesPage() {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="yield"
@@ -861,13 +869,13 @@ export default function RecipesPage() {
                     <FormItem>
                       <FormLabel>Yield Amount</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.5" 
-                          min="0.5" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 1)}
-                          data-testid="input-yield" 
+                          data-testid="input-yield"
                         />
                       </FormControl>
                       <FormMessage />
@@ -895,6 +903,38 @@ export default function RecipesPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="laborHours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1.5">
+                        Labor Hours
+                        <span className="text-xs font-normal text-muted-foreground">
+                          (prep + cook, at $35/hr)
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          placeholder="0"
+                          value={field.value ?? 0}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          data-testid="input-labor-hours"
+                        />
+                      </FormControl>
+                      <div className="text-xs text-muted-foreground">
+                        {field.value && field.value > 0
+                          ? `≈ $${(Number(field.value) * 35).toFixed(2)} labor cost`
+                          : "Optional — leave blank or 0 if no labor cost"}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1192,18 +1232,36 @@ export default function RecipesPage() {
                     </Table>
 
                     <div className="flex justify-end">
-                      <div className="bg-primary/10 rounded-lg p-4 min-w-[240px]">
-                        <div className="text-sm text-muted-foreground mb-1">Total Ingredient Cost</div>
-                        <div className="text-2xl font-bold text-green-600" data-testid="text-recipe-total-cost">
-                          {formatCurrency(totalRecipeCost)}
+                      <div className="bg-primary/10 rounded-lg p-4 min-w-[280px] space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Ingredient Cost</span>
+                          <span className="font-medium text-green-700">
+                            {formatCurrency(ingredientCost)}
+                          </span>
                         </div>
-                        <div className="text-sm text-muted-foreground mt-2 pt-2 border-t">
-                          Cost per {form.watch("yieldUnit") || "serving"}: 
+                        {laborHoursValue > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              Labor ({laborHoursValue}h × $35)
+                            </span>
+                            <span className="font-medium text-blue-700">
+                              {formatCurrency(laborCost)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <span className="text-sm font-semibold">Total Cost</span>
+                          <span className="text-2xl font-bold text-primary" data-testid="text-recipe-total-cost">
+                            {formatCurrency(totalRecipeCost)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground pt-1">
+                          Cost per {form.watch("yieldUnit") || "serving"}:
                           <span className="font-semibold ml-1" data-testid="text-cost-per-serving">
                             {formatCurrency(costPerServing)}
                           </span>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-muted-foreground">
                           {recipeComponents.length} ingredient{recipeComponents.length !== 1 ? "s" : ""}
                         </div>
                       </div>
