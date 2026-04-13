@@ -194,6 +194,7 @@ interface DraftRecipe {
   category: string;
   yieldAmount: number;
   yieldUnit: string;
+  laborHours: number;
   components: DraftRecipeComponent[];
   preparationSteps: DraftPreparationStep[];
   dietaryFlags: {
@@ -201,6 +202,7 @@ interface DraftRecipe {
     manualDesignations: string[];
   };
   estimatedFoodCostCents: number;
+  estimatedLaborCostCents: number;
   unmatchedIngredients: string[];
 }
 
@@ -416,6 +418,7 @@ export default function AIRecipeDraftDialog({
         category: draft.category,
         yield: draft.yieldAmount, // API expects `yield`
         yieldUnit: draft.yieldUnit,
+        laborHours: draft.laborHours,
         preparationSteps: draft.preparationSteps,
         dietaryFlags: draft.dietaryFlags,
         components: matchedComponents.map((c) => ({
@@ -468,12 +471,16 @@ export default function AIRecipeDraftDialog({
 
   const totalComponents = draft?.components.length ?? 0;
 
-  const costDollars = draft
-    ? (draft.estimatedFoodCostCents / 100).toFixed(2)
-    : "0.00";
-  const costPerServing = draft && draft.yieldAmount > 0
-    ? (draft.estimatedFoodCostCents / 100 / draft.yieldAmount).toFixed(2)
-    : "0.00";
+  const foodCost = draft ? draft.estimatedFoodCostCents / 100 : 0;
+  const laborCost = draft ? draft.laborHours * 35 : 0; // $35/hour
+  const totalCost = foodCost + laborCost;
+  const costDollars = foodCost.toFixed(2);
+  const laborCostDollars = laborCost.toFixed(2);
+  const totalCostDollars = totalCost.toFixed(2);
+  const costPerServing =
+    draft && draft.yieldAmount > 0
+      ? (totalCost / draft.yieldAmount).toFixed(2)
+      : "0.00";
 
   const canSave =
     !!draft &&
@@ -738,7 +745,7 @@ export default function AIRecipeDraftDialog({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <Label className="text-xs text-gray-500">Category</Label>
                     <Select
@@ -781,6 +788,28 @@ export default function AIRecipeDraftDialog({
                       }
                       placeholder="serving"
                     />
+                  </div>
+                  <div>
+                    <Label
+                      className="text-xs text-gray-500 flex items-center gap-1"
+                      title="Kitchen hours to prepare this recipe at $35/hour"
+                    >
+                      Labor Hours
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      value={draft.laborHours}
+                      onChange={(e) =>
+                        updateDraft({
+                          laborHours: parseFloat(e.target.value || "0"),
+                        })
+                      }
+                    />
+                    <div className="text-[10px] text-gray-400 mt-1">
+                      ${(draft.laborHours * 35).toFixed(2)} @ $35/hr
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1140,20 +1169,35 @@ export default function AIRecipeDraftDialog({
         {/* ================= COST SUMMARY FOOTER ================= */}
         {draft && (
           <div className="border-t bg-gray-50 px-6 py-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-600">
-                  Estimated food cost:{" "}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">
+                    Food:{" "}
+                    <span className="font-semibold text-gray-900">
+                      ${costDollars}
+                    </span>
+                  </span>
+                </div>
+                <div className="text-gray-600">
+                  Labor:{" "}
                   <span className="font-semibold text-gray-900">
-                    ${costDollars}
-                  </span>{" "}
-                  for {draft.yieldAmount} {draft.yieldUnit}
-                  {draft.yieldAmount !== 1 ? "s" : ""}
-                </span>
+                    ${laborCostDollars}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-1">
+                    ({draft.laborHours}h × $35)
+                  </span>
+                </div>
+                <div className="text-gray-700 font-medium">
+                  Total:{" "}
+                  <span className="font-semibold text-gray-900">
+                    ${totalCostDollars}
+                  </span>
+                </div>
               </div>
               <div className="text-sm text-gray-600">
-                Cost per serving:{" "}
+                Per serving:{" "}
                 <span className="font-semibold text-gray-900">
                   ${costPerServing}
                 </span>

@@ -47,9 +47,17 @@ interface ShoppingListData {
   groupedByCategory: Record<string, ShoppingListLine[]>;
   allLines: ShoppingListLine[];
   totalEstimatedCost: number;
+  totalLaborCost: number;
+  totalLaborHours: number;
+  totalFullyLoadedCost: number;
   totalLineCount: number;
   unlinkedItems: Array<{ category: string; itemName: string; reason: string }>;
-  resolvedRecipes: Array<{ recipeId: number; recipeName: string; scaledBy: number }>;
+  resolvedRecipes: Array<{
+    recipeId: number;
+    recipeName: string;
+    scaledBy: number;
+    laborHoursPerBatch: number;
+  }>;
 }
 
 // Nice labels for ingredient categories
@@ -214,8 +222,8 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          {/* Stats row — ingredients, recipes, labor, ingredient cost */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="text-xs text-gray-500 flex items-center gap-1">
                 <Package className="h-3 w-3" /> Ingredients
@@ -234,13 +242,46 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
               </div>
               <div className="text-2xl font-bold">{currentMultiplier.toFixed(1)}x</div>
             </div>
+            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div className="text-xs text-blue-700 flex items-center gap-1">
+                <ChefHat className="h-3 w-3" /> Labor ({data.totalLaborHours.toFixed(1)}h)
+              </div>
+              <div className="text-2xl font-bold text-blue-700">
+                ${data.totalLaborCost.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          {/* Cost summary — food + labor = fully-loaded */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-green-50 rounded-lg p-3 border border-green-200">
               <div className="text-xs text-green-700 flex items-center gap-1">
-                <DollarSign className="h-3 w-3" /> Est. Food Cost
+                <DollarSign className="h-3 w-3" /> Ingredient Cost
               </div>
-              <div className="text-2xl font-bold text-green-700">
+              <div className="text-xl font-bold text-green-700">
                 ${data.totalEstimatedCost.toFixed(2)}
               </div>
+              <div className="text-[10px] text-green-600 mt-0.5">What Mike buys</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div className="text-xs text-blue-700 flex items-center gap-1">
+                <DollarSign className="h-3 w-3" /> Labor Cost
+              </div>
+              <div className="text-xl font-bold text-blue-700">
+                ${data.totalLaborCost.toFixed(2)}
+              </div>
+              <div className="text-[10px] text-blue-600 mt-0.5">
+                {data.totalLaborHours.toFixed(1)} hrs × $35
+              </div>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <div className="text-xs text-purple-700 flex items-center gap-1">
+                <DollarSign className="h-3 w-3" /> Fully Loaded
+              </div>
+              <div className="text-xl font-bold text-purple-700">
+                ${data.totalFullyLoadedCost.toFixed(2)}
+              </div>
+              <div className="text-[10px] text-purple-600 mt-0.5">Cost to execute</div>
             </div>
           </div>
 

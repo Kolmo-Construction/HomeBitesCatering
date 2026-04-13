@@ -12,7 +12,8 @@ import {
   InsertRecipeComponent,
   DIETARY_TAGS,
   ALLERGEN_CONTAINS_TAGS,
-  RecipeDietaryFlags
+  RecipeDietaryFlags,
+  LABOR_RATE_PER_HOUR_CENTS,
 } from "@shared/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -125,22 +126,24 @@ async function updateRecipesForIngredient(ingredientId: number): Promise<void> {
 router.get("/base-ingredients", async (req, res) => {
   try {
     const { category, search } = req.query;
-    
-    let query = db.select().from(baseIngredients);
-    
-    // Filter by category if provided
-    if (category && typeof category === 'string') {
-      query = query.where(eq(baseIngredients.category, category));
+
+    // Build filter conditions
+    const conditions = [];
+    if (category && typeof category === "string") {
+      conditions.push(eq(baseIngredients.category, category));
     }
-    
-    // Search by name if provided
-    if (search && typeof search === 'string') {
-      query = query.where(sql`LOWER(${baseIngredients.name}) LIKE LOWER(${'%' + search + '%'})`);
+    if (search && typeof search === "string") {
+      conditions.push(
+        sql`LOWER(${baseIngredients.name}) LIKE LOWER(${"%" + search + "%"})`,
+      );
     }
-    
-    query = query.orderBy(baseIngredients.category, baseIngredients.name);
-    
-    const ingredients = await query;
+
+    const ingredients = await db
+      .select()
+      .from(baseIngredients)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(baseIngredients.category, baseIngredients.name);
+
     return res.json(ingredients);
   } catch (error) {
     console.error("Error fetching base ingredients:", error);
@@ -645,16 +648,22 @@ router.put("/menu-items/:menuItemId/recipe", async (req, res) => {
     }
     
     // Validate each ingredient before processing
-    const validatedIngredients = [];
+    type ValidatedIngredient = {
+      baseIngredientId: number;
+      quantity: number;
+      unit: string;
+      prepNotes?: string | null;
+    };
+    const validatedIngredients: ValidatedIngredient[] = [];
     for (const ing of ingredients) {
       const validation = insertRecipeIngredientSchema.omit({ menuItemId: true }).safeParse(ing);
       if (!validation.success) {
-        return res.status(400).json({ 
-          message: "Invalid ingredient data", 
-          errors: validation.error.format() 
+        return res.status(400).json({
+          message: "Invalid ingredient data",
+          errors: validation.error.format(),
         });
       }
-      validatedIngredients.push(validation.data);
+      validatedIngredients.push(validation.data as ValidatedIngredient);
     }
     
     // Use a transaction to ensure atomicity
@@ -804,9 +813,9 @@ router.get("/recipes", async (req, res) => {
     // Calculate costs for each recipe
     const recipesWithCosts = allRecipes.map((recipe) => {
       const components = componentsByRecipeId.get(recipe.id) || [];
-      
-      // Calculate total cost with safe parsing
-      let totalCost = 0;
+
+      // Food cost from ingredients
+      let ingredientCost = 0;
       for (const comp of components) {
         const cost = safeCalculateIngredientCost(
           comp.baseIngredient.purchasePrice,
@@ -816,16 +825,24 @@ router.get("/recipes", async (req, res) => {
           comp.unit,
           comp.baseIngredient.unitConversions as Record<string, number> | null,
         );
-        totalCost += cost;
+        ingredientCost += cost;
       }
+
+      // Labor cost: laborHours × $35/hour (LABOR_RATE_PER_HOUR_CENTS in dollars)
+      const laborHours = parseFloat(String(recipe.laborHours || "0")) || 0;
+      const laborCost = (laborHours * LABOR_RATE_PER_HOUR_CENTS) / 100;
+
+      const totalCost = ingredientCost + laborCost;
 
       // Calculate cost per serving
       const yieldAmount = parseFloat(recipe.yield || "1") || 1;
       const costPerServing = yieldAmount > 0 ? totalCost / yieldAmount : totalCost;
-      
+
       return {
         ...recipe,
         totalCost,
+        ingredientCost,
+        laborCost,
         costPerServing,
         ingredientCount: components.length,
       };
@@ -872,7 +889,7 @@ router.get("/recipes/:id", async (req, res) => {
       .where(eq(recipeComponents.recipeId, id));
     
     // Calculate costs for each component using safe calculation
-    let totalCost = 0;
+    let ingredientCost = 0;
     const componentsWithCosts = components.map((comp) => {
       const cost = safeCalculateIngredientCost(
         comp.baseIngredient.purchasePrice,
@@ -882,22 +899,29 @@ router.get("/recipes/:id", async (req, res) => {
         comp.unit,
         comp.baseIngredient.unitConversions as Record<string, number> | null,
       );
-      totalCost += cost;
+      ingredientCost += cost;
 
       return {
         ...comp,
         calculatedCost: cost,
       };
     });
-    
+
+    // Labor cost
+    const laborHours = parseFloat(String(recipe.laborHours || "0")) || 0;
+    const laborCost = (laborHours * LABOR_RATE_PER_HOUR_CENTS) / 100;
+    const totalCost = ingredientCost + laborCost;
+
     // Calculate cost per serving
     const yieldAmount = parseFloat(recipe.yield || "1") || 1;
     const costPerServing = yieldAmount > 0 ? totalCost / yieldAmount : totalCost;
-    
+
     return res.json({
       ...recipe,
       components: componentsWithCosts,
       totalCost,
+      ingredientCost,
+      laborCost,
       costPerServing,
     });
   } catch (error) {
@@ -957,6 +981,7 @@ router.post("/recipes", async (req, res) => {
         .values({
           ...parsed.data,
           yield: parsed.data.yield?.toString() || "1",
+          laborHours: parsed.data.laborHours?.toString() || "0",
         })
         .returning();
       
@@ -1022,6 +1047,9 @@ router.put("/recipes/:id", async (req, res) => {
       const updateData: any = { ...parsed.data, updatedAt: new Date() };
       if (updateData.yield !== undefined) {
         updateData.yield = updateData.yield.toString();
+      }
+      if (updateData.laborHours !== undefined) {
+        updateData.laborHours = updateData.laborHours.toString();
       }
       
       const [updatedRecipe] = await tx

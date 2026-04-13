@@ -4,6 +4,7 @@ import {
   recipes,
   recipeComponents,
   baseIngredients,
+  LABOR_RATE_PER_HOUR_CENTS,
   type MenuCategoryItem,
   type MenuPackageTier,
 } from "@shared/schema";
@@ -60,9 +61,9 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
     .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
     .where(eq(recipeComponents.recipeId, recipeId));
 
-  let totalCost = 0;
+  let ingredientCost = 0;
   for (const comp of components) {
-    totalCost += safeCalculateIngredientCost(
+    ingredientCost += safeCalculateIngredientCost(
       comp.purchasePrice,
       comp.purchaseQuantity,
       comp.purchaseUnit,
@@ -71,6 +72,11 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
       comp.unitConversions as Record<string, number> | null,
     );
   }
+
+  // Labor cost: recipe.laborHours × $35/hour
+  const laborHours = parseFloat(String(recipe.laborHours || "0")) || 0;
+  const laborCost = (laborHours * LABOR_RATE_PER_HOUR_CENTS) / 100;
+  const totalCost = ingredientCost + laborCost;
 
   const yieldAmount = parseFloat(recipe.yield || "1") || 1;
   return yieldAmount > 0 ? totalCost / yieldAmount : totalCost;

@@ -36,6 +36,7 @@ export interface DraftRecipe {
   category: string;              // appetizer, entree, side, dessert, sauce, etc.
   yieldAmount: number;           // e.g., 10 (makes 10 servings)
   yieldUnit: string;             // "serving", "portion"
+  laborHours: number;            // estimated hours to prepare the full yield
   components: DraftRecipeComponent[];
   preparationSteps: Array<{
     stepNumber: number;
@@ -49,6 +50,7 @@ export interface DraftRecipe {
   };
   // Metadata about the draft
   estimatedFoodCostCents: number;
+  estimatedLaborCostCents: number;
   unmatchedIngredients: string[];  // items the AI suggested that we couldn't match
 }
 
@@ -357,7 +359,9 @@ OUTPUT RULES — CRITICAL:
 7. Keep to 6-12 ingredients and 3-5 prep steps maximum.
 
 Return this JSON structure:
-{"name":"${input.itemName}","description":"short description","category":"entree","yieldAmount":${yieldAmount},"yieldUnit":"serving","components":[{"ingredientName":"exact name from list","quantity":1.5,"unit":"pound","prepNotes":"diced"}],"preparationSteps":[{"stepNumber":1,"title":"Prep","instruction":"short instruction","duration":10}],"dietaryFlags":{"allergenWarnings":["Contains Gluten"],"manualDesignations":["vegetarian"]}}
+{"name":"${input.itemName}","description":"short description","category":"entree","yieldAmount":${yieldAmount},"yieldUnit":"serving","laborHours":1.5,"components":[{"ingredientName":"exact name from list","quantity":1.5,"unit":"pound","prepNotes":"diced"}],"preparationSteps":[{"stepNumber":1,"title":"Prep","instruction":"short instruction","duration":10}],"dietaryFlags":{"allergenWarnings":["Contains Gluten"],"manualDesignations":["vegetarian"]}}
+
+laborHours: realistic total kitchen hours to prep AND cook this recipe for ${yieldAmount} servings at $35/hour labor rate. Examples: a simple salad = 0.5 hours, braised short ribs = 4 hours, a quick sauté = 0.75 hours.
 
 Valid categories: appetizer, entree, side, salad, dessert, sauce, soup, beverage
 Valid units: pound, ounce, gram, kilogram, cup, tablespoon, teaspoon, each, gallon, liter, milliliter
@@ -420,12 +424,19 @@ function processDraft(
     }
   }
 
+  // Labor hours — fall back to 1 hour if AI didn't provide a reasonable value
+  const aiLaborHours = parseFloat(raw.laborHours);
+  const laborHours = isNaN(aiLaborHours) || aiLaborHours < 0 ? 1 : Math.min(aiLaborHours, 20);
+  const LABOR_RATE_CENTS = 3500; // $35/hour
+  const estimatedLaborCostCents = Math.round(laborHours * LABOR_RATE_CENTS);
+
   return {
     name: raw.name || input.itemName,
     description: raw.description || "",
     category: raw.category || input.category || "entree",
     yieldAmount: parseFloat(raw.yieldAmount) || input.yieldAmount || 10,
     yieldUnit: raw.yieldUnit || "serving",
+    laborHours,
     components,
     preparationSteps: Array.isArray(raw.preparationSteps) ? raw.preparationSteps : [],
     dietaryFlags: {
@@ -437,6 +448,7 @@ function processDraft(
         : [],
     },
     estimatedFoodCostCents: totalCostCents,
+    estimatedLaborCostCents,
     unmatchedIngredients,
   };
 }

@@ -615,6 +615,10 @@ export const preparationStepSchema = z.object({
 
 export type PreparationStep = z.infer<typeof preparationStepSchema>;
 
+// Labor cost constant — $35/hour for kitchen staff
+// Stored in cents to avoid floating-point issues in calculations
+export const LABOR_RATE_PER_HOUR_CENTS = 3500;
+
 // Standalone Recipes - grouping of ingredients with calculated costs
 export const recipes = pgTable("recipes", {
   id: serial("id").primaryKey(),
@@ -623,6 +627,9 @@ export const recipes = pgTable("recipes", {
   category: text("category"), // appetizer, entree, side, dessert, beverage, sauce, etc.
   yield: numeric("yield", { precision: 10, scale: 2 }).default("1"), // How many portions/servings this recipe makes
   yieldUnit: text("yield_unit").default("serving"), // serving, portion, batch, etc.
+  // Labor time to prepare this recipe (for the full yield, not per serving).
+  // Multiplied by LABOR_RATE_PER_HOUR_CENTS to get the labor component of total cost.
+  laborHours: numeric("labor_hours", { precision: 10, scale: 2 }).default("0"),
   notes: text("notes"), // Preparation notes, tips, etc.
   images: jsonb("images").$type<string[]>().default([]), // Array of image URLs for final product
   preparationSteps: jsonb("preparation_steps").$type<PreparationStep[]>().default([]), // Step-by-step cooking instructions
@@ -633,6 +640,7 @@ export const recipes = pgTable("recipes", {
 
 export const insertRecipeSchema = createInsertSchema(recipes, {
   yield: z.coerce.number().positive("Yield must be positive").default(1),
+  laborHours: z.coerce.number().nonnegative("Labor hours must be non-negative").default(0),
   images: z.array(z.string()).optional().default([]),
   preparationSteps: z.array(preparationStepSchema).optional().default([]),
   dietaryFlags: z.object({

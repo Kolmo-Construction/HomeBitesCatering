@@ -5,6 +5,7 @@ import {
   recipeComponents,
   baseIngredients,
   quoteRequests,
+  LABOR_RATE_PER_HOUR_CENTS,
   type QuoteRequest,
   type MenuCategoryItem,
 } from "@shared/schema";
@@ -49,8 +50,11 @@ export interface ShoppingListResult {
   groupedByCategory: Record<string, ShoppingListLine[]>;
   // Flat list for export
   allLines: ShoppingListLine[];
-  // Totals
-  totalEstimatedCost: number;      // dollars
+  // Totals (all in dollars)
+  totalEstimatedCost: number;           // ingredient cost only (what Mike will buy)
+  totalLaborCost: number;                // labor cost from the resolved recipes at $35/hr
+  totalLaborHours: number;               // total labor hours across all resolved recipes
+  totalFullyLoadedCost: number;          // ingredients + labor (what the event "costs" to execute)
   totalLineCount: number;
   // Transparency: what WASN'T included
   unlinkedItems: Array<{
@@ -63,6 +67,7 @@ export interface ShoppingListResult {
     recipeId: number;
     recipeName: string;
     scaledBy: number;              // how many batches we're cooking
+    laborHoursPerBatch: number;    // labor hours for one batch of this recipe
   }>;
 }
 
@@ -193,6 +198,9 @@ export async function calculateShoppingList(
       groupedByCategory: {},
       allLines: [],
       totalEstimatedCost: 0,
+      totalLaborCost: 0,
+      totalLaborHours: 0,
+      totalFullyLoadedCost: 0,
       totalLineCount: 0,
       unlinkedItems,
       resolvedRecipes: [],
@@ -267,6 +275,7 @@ export async function calculateShoppingList(
       recipeId: recipe.id,
       recipeName: recipe.name,
       scaledBy: batches,
+      laborHoursPerBatch: parseFloat(String(recipe.laborHours || "0")) || 0,
     });
 
     const components = componentsByRecipe.get(recipe.id) || [];
@@ -367,11 +376,19 @@ export async function calculateShoppingList(
     groupedByCategory[cat].push(line);
   }
 
-  // Totals
+  // Ingredient cost total
   const totalEstimatedCost = allLines.reduce(
     (sum, line) => sum + line.estimatedCost,
     0,
   );
+
+  // Labor totals — sum (laborHoursPerBatch × scaledBy) across resolved recipes
+  const totalLaborHours = resolvedRecipes.reduce(
+    (sum, r) => sum + r.laborHoursPerBatch * r.scaledBy,
+    0,
+  );
+  const totalLaborCost = (totalLaborHours * LABOR_RATE_PER_HOUR_CENTS) / 100;
+  const totalFullyLoadedCost = totalEstimatedCost + totalLaborCost;
 
   return {
     quoteRequestId: quote.id,
@@ -387,6 +404,9 @@ export async function calculateShoppingList(
     groupedByCategory,
     allLines,
     totalEstimatedCost: Math.round(totalEstimatedCost * 100) / 100,
+    totalLaborCost: Math.round(totalLaborCost * 100) / 100,
+    totalLaborHours: Math.round(totalLaborHours * 100) / 100,
+    totalFullyLoadedCost: Math.round(totalFullyLoadedCost * 100) / 100,
     totalLineCount: allLines.length,
     unlinkedItems,
     resolvedRecipes,
