@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,19 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Sparkles,
@@ -39,7 +53,109 @@ import {
   ListOrdered,
   ShieldAlert,
   DollarSign,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
+
+// ============================================================================
+// Searchable ingredient combobox
+// ============================================================================
+
+interface BaseIngredientOption {
+  id: number;
+  name: string;
+  category: string;
+  purchaseUnit: string;
+}
+
+interface IngredientComboboxProps {
+  ingredients: BaseIngredientOption[];
+  selectedId: number | null;
+  onSelect: (id: number) => void;
+  placeholder?: string;
+}
+
+/**
+ * Searchable combobox for picking a base ingredient.
+ * Filters as the user types — searches name, category, and purchase unit.
+ */
+function IngredientCombobox({
+  ingredients,
+  selectedId,
+  onSelect,
+  placeholder = "Pick a base ingredient...",
+}: IngredientComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const selected = ingredients.find((i) => i.id === selectedId);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-8 w-full justify-between text-sm font-normal"
+        >
+          {selected ? (
+            <span className="truncate">
+              {selected.name}
+              <span className="text-gray-400 ml-2 text-xs">
+                {selected.category} · {selected.purchaseUnit}
+              </span>
+            </span>
+          ) : (
+            <span className="text-gray-500">{placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[380px] max-w-[calc(100vw-2rem)]" align="start">
+        <Command
+          filter={(value, search) => {
+            // Custom filter: match against name, category, and purchase unit (stored in the value string)
+            // We encode the searchable string as the value, so CMDK's built-in filter handles it.
+            if (value.toLowerCase().includes(search.toLowerCase())) return 1;
+            return 0;
+          }}
+        >
+          <CommandInput placeholder="Search ingredients..." className="h-9" />
+          <CommandList className="max-h-[300px]">
+            <CommandEmpty>No ingredient found.</CommandEmpty>
+            <CommandGroup>
+              {ingredients.map((ing) => {
+                // The value string is what CMDK searches against — include name + category + unit
+                const searchValue = `${ing.name} ${ing.category} ${ing.purchaseUnit}`;
+                return (
+                  <CommandItem
+                    key={ing.id}
+                    value={searchValue}
+                    onSelect={() => {
+                      onSelect(ing.id);
+                      setOpen(false);
+                    }}
+                    className="flex items-start justify-between gap-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate">{ing.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {ing.category} · {ing.purchaseUnit}
+                      </div>
+                    </div>
+                    {selectedId === ing.id && (
+                      <Check className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 // ============================================================================
 // Types
@@ -691,32 +807,33 @@ export default function AIRecipeDraftDialog({
                         </div>
                       </div>
 
-                      {/* Manual match picker — shown for unmatched components */}
-                      {component.matchedIngredientId === null && (
-                        <div className="pt-1 border-t">
-                          <Label className="text-[10px] text-red-600 uppercase font-medium">
-                            Manually match to base ingredient
-                          </Label>
-                          <Select
-                            value=""
-                            onValueChange={(v) => handleManualMatch(idx, v)}
-                          >
-                            <SelectTrigger className="h-8 text-sm mt-1">
-                              <SelectValue placeholder="Pick a base ingredient..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {baseIngredients.map((b) => (
-                                <SelectItem key={b.id} value={b.id.toString()}>
-                                  {b.name}
-                                  <span className="text-gray-400 ml-2 text-xs">
-                                    {b.category} · {b.purchaseUnit}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                      {/* Base ingredient picker — searchable combobox for manual matching */}
+                      <div className="pt-1 border-t">
+                        <Label
+                          className={cn(
+                            "text-[10px] uppercase font-medium",
+                            component.matchedIngredientId === null
+                              ? "text-red-600"
+                              : "text-gray-500",
+                          )}
+                        >
+                          {component.matchedIngredientId === null
+                            ? "Manually match to base ingredient"
+                            : "Base ingredient (change if needed)"}
+                        </Label>
+                        <div className="mt-1">
+                          <IngredientCombobox
+                            ingredients={baseIngredients.map((b) => ({
+                              id: b.id,
+                              name: b.name,
+                              category: b.category,
+                              purchaseUnit: b.purchaseUnit,
+                            }))}
+                            selectedId={component.matchedIngredientId}
+                            onSelect={(id) => handleManualMatch(idx, id.toString())}
+                          />
                         </div>
-                      )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
