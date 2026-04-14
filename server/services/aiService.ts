@@ -1,272 +1,116 @@
-import { OpenAI } from 'openai';
+import { createChatCompletion, hasLlmProvider, LlmProvider } from "./llmClient";
 
-// Open Router integration with the latest client format
-const openRouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY || '',
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'https://catering-cms.replit.app',
-    'X-Title': 'Catering CMS'
-  }
-});
+function providerLabel(provider: LlmProvider): string {
+  return provider === "deepseek-native" ? "DeepSeek V3 (native API)" : "DeepSeek V3 (OpenRouter free)";
+}
 
-// OpenRouter model IDs
-// Primary model: DeepSeek V3 0324 as specified by user
-const OPENROUTER_MODEL_ID = 'deepseek/deepseek-chat-v3-0324:free';
-// First fallback: Gemini 2.0 Flash via OpenRouter
-const GEMINI_MODEL_ID = 'google/gemini-2.0-flash-exp:free';
-// Final fallback: Claude Haiku via OpenRouter
-const CLAUDE_MODEL_ID = 'anthropic/claude-3-haiku';
-
-/**
- * AI Service that provides various AI capabilities using 
- * DeepSeek as primary model, with Gemini and Claude as fallbacks
- */
 export class AIService {
-  /**
-   * Generates a summary of a text using the AI model cascade
-   */
   async generateSummary(text: string): Promise<string> {
+    if (!text || text.trim().length === 0) {
+      return "No content to summarize.";
+    }
+
     try {
-      if (!text || text.trim().length === 0) {
-        return "No content to summarize.";
-      }
-
-      console.log(`AI Summarization: Sending text of length ${text.length} to DeepSeek via OpenRouter...`);
-
-      const response = await openRouter.chat.completions.create({
-        model: OPENROUTER_MODEL_ID,
+      console.log(`AI Summarization: Sending text of length ${text.length} to DeepSeek...`);
+      const { content, provider } = await createChatCompletion({
         messages: [
           {
-            role: 'system',
-            content: 'You are a helpful assistant that summarizes texts concisely. Create a brief summary that captures the main points. Be factual and direct.'
+            role: "system",
+            content:
+              "You are a helpful assistant that summarizes texts concisely. Create a brief summary that captures the main points. Be factual and direct.",
           },
           {
-            role: 'user',
-            content: `Please summarize the following text in 2-3 sentences:\n\n${text}`
-          }
+            role: "user",
+            content: `Please summarize the following text in 2-3 sentences:\n\n${text}`,
+          },
         ],
-        max_tokens: 300,
-        temperature: 0.3
+        maxTokens: 300,
+        temperature: 0.3,
       });
 
-      const summary = response.choices[0]?.message?.content?.trim() || "Unable to generate summary.";
-      console.log("AI Summarization: Summary generated successfully.");
-      return summary;
+      console.log(`AI Summarization: Summary generated via ${provider}.`);
+      return content || "Unable to generate summary.";
     } catch (error) {
       console.error("AI Summarization Error:", error);
-      
-      // Fallback to Claude if DeepSeek fails
-      try {
-        console.log("AI Summarization: Falling back to Claude...");
-        const response = await openRouter.chat.completions.create({
-          model: CLAUDE_MODEL_ID,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that summarizes texts concisely. Create a brief summary that captures the main points. Be factual and direct.'
-            },
-            {
-              role: 'user',
-              content: `Please summarize the following text in 2-3 sentences:\n\n${text}`
-            }
-          ],
-          max_tokens: 300,
-          temperature: 0.3
-        });
-
-        const summary = response.choices[0]?.message?.content?.trim() || "Unable to generate summary.";
-        console.log("AI Summarization: Summary generated successfully with fallback model.");
-        return summary;
-      } catch (fallbackError) {
-        console.error("AI Summarization Fallback Error:", fallbackError);
-        return "Error generating summary.";
-      }
+      return "Error generating summary.";
     }
   }
-  
-  /**
-   * Analyzes the sentiment of a text and returns a sentiment category and confidence score
-   */
+
   async analyzeSentiment(text: string): Promise<{
-    sentiment: 'positive' | 'neutral' | 'negative' | 'urgent';
+    sentiment: "positive" | "neutral" | "negative" | "urgent";
     confidence: number;
   }> {
+    if (!text || text.trim().length === 0) {
+      return { sentiment: "neutral", confidence: 0 };
+    }
+
+    console.log(`AI Sentiment Analysis: Processing text of length ${text.length}`);
+
     try {
-      if (!text || text.trim().length === 0) {
-        return { sentiment: 'neutral', confidence: 0 };
-      }
-      
-      console.log(`AI Sentiment Analysis: Processing text of length ${text.length}`);
-      
-      // Try DeepSeek model via OpenRouter first
-      try {
-        console.log("AI Sentiment Analysis: Using DeepSeek via OpenRouter for sentiment analysis");
-        
-        const response = await openRouter.chat.completions.create({
-          model: OPENROUTER_MODEL_ID,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a sentiment analysis expert focusing on business communications. 
-              Analyze the sentiment of emails and messages, categorizing them as one of:
-              - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
-              - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
-              - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
-              - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
-              
-              Your response must be in JSON format with two fields:
-              - sentiment: one of "positive", "neutral", "negative", or "urgent"
-              - confidence: a number from 0 to 1 representing your confidence in the analysis
-              
-              Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.`
-            },
-            {
-              role: 'user',
-              content: text
-            }
-          ],
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        });
-        
-        const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-        const result = JSON.parse(resultText);
-        
-        if (result.sentiment && typeof result.confidence === 'number') {
-          console.log(`AI Sentiment Analysis: DeepSeek detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
-          return {
-            sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
-            confidence: result.confidence
-          };
-        }
-        throw new Error("Invalid response format from DeepSeek");
-      } catch (deepseekError) {
-        console.error("DeepSeek Sentiment Analysis Error:", deepseekError);
-        
-        // Try Gemini via OpenRouter as first fallback
-        try {
-          console.log("AI Sentiment Analysis: Falling back to Gemini via OpenRouter for sentiment analysis");
-          
-          const response = await openRouter.chat.completions.create({
-            model: GEMINI_MODEL_ID,
-            messages: [
-              {
-                role: 'user',
-                content: `You are a sentiment analysis expert focusing on business communications. 
-                Analyze the sentiment of emails and messages, categorizing them as one of:
-                - positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
-                - negative: Email/message expresses dissatisfaction, complaints, anger, frustration
-                - urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
-                - neutral: Email/message is informational, has balanced sentiment, or is purely transactional
-                
-                Your response must be in JSON format with two fields:
-                - sentiment: one of "positive", "neutral", "negative", or "urgent"
-                - confidence: a number from 0 to 1 representing your confidence in the analysis
-                
-                Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.
-                
-                Here's the text to analyze:
-                ${text}`
-              }
-            ],
-            temperature: 0.1,
-            response_format: { type: "json_object" }
-          });
-          
-          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-          const result = JSON.parse(resultText);
-          
-          if (result.sentiment && typeof result.confidence === 'number') {
-            console.log(`AI Sentiment Analysis: Gemini detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
-            return {
-              sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
-              confidence: result.confidence
-            };
-          }
-          throw new Error("Invalid response format from Gemini");
-        } catch (geminiError) {
-          console.error("Gemini Sentiment Analysis Error:", geminiError);
-          // Fall back to Claude via OpenRouter
-        }
-      }
-      
-      // Final fallback to Claude
-      console.log("AI Sentiment Analysis: Falling back to Claude via OpenRouter for sentiment analysis");
-      
-      const response = await openRouter.chat.completions.create({
-        model: CLAUDE_MODEL_ID,
+      const { content, provider } = await createChatCompletion({
         messages: [
           {
-            role: 'system',
-            content: `You are a sentiment analysis expert focusing on business communications. 
-            Your task is to analyze the sentiment of emails and messages.`
+            role: "system",
+            content: `You are a sentiment analysis expert focusing on business communications.
+Analyze the sentiment of emails and messages, categorizing them as one of:
+- positive: Email/message expresses satisfaction, agreement, enthusiasm, happiness
+- negative: Email/message expresses dissatisfaction, complaints, anger, frustration
+- urgent: Email/message requires immediate attention, indicates time-sensitivity or emergencies
+- neutral: Email/message is informational, has balanced sentiment, or is purely transactional
+
+Your response must be in JSON format with two fields:
+- sentiment: one of "positive", "neutral", "negative", or "urgent"
+- confidence: a number from 0 to 1 representing your confidence in the analysis
+
+Be extremely sparing with marking things as "urgent" - only use for true time-sensitive matters.`,
           },
-          {
-            role: 'user',
-            content: `Analyze the sentiment of the following text. Respond ONLY with a JSON object with two fields:
-            - sentiment: one of "positive", "neutral", "negative", or "urgent"
-            - confidence: a number from 0 to 1 representing your confidence
-            
-            Text to analyze:
-            ${text}`
-          }
+          { role: "user", content: text },
         ],
-        max_tokens: 150,
         temperature: 0.1,
-        response_format: { type: "json_object" }
+        json: true,
       });
-      
-      const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-      
+
       try {
-        const result = JSON.parse(resultText);
-        
-        if (result.sentiment && typeof result.confidence === 'number') {
-          console.log(`AI Sentiment Analysis: Claude detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`);
+        const result = JSON.parse(content);
+        if (result.sentiment && typeof result.confidence === "number") {
+          console.log(
+            `AI Sentiment Analysis: ${provider} detected sentiment: ${result.sentiment} (confidence: ${result.confidence})`,
+          );
           return {
-            sentiment: result.sentiment as 'positive' | 'neutral' | 'negative' | 'urgent',
-            confidence: result.confidence
+            sentiment: result.sentiment as "positive" | "neutral" | "negative" | "urgent",
+            confidence: result.confidence,
           };
         }
-        
         console.warn("AI Sentiment Analysis: Invalid response format, using fallback");
-        return { sentiment: 'neutral', confidence: 0.5 };
+        return { sentiment: "neutral", confidence: 0.5 };
       } catch (parseError) {
         console.error("AI Sentiment Analysis Parsing Error:", parseError);
-        return { sentiment: 'neutral', confidence: 0 };
+        return { sentiment: "neutral", confidence: 0 };
       }
     } catch (error) {
       console.error("AI Sentiment Analysis Error:", error);
-      return { sentiment: 'neutral', confidence: 0 };
+      return { sentiment: "neutral", confidence: 0 };
     }
   }
 
-  /**
-   * Helper method to process lead analysis response from any model
-   */
   private processLeadAnalysisResponse(resultText: string) {
     try {
-      // Parse the JSON response
       const result = JSON.parse(resultText);
 
-      // Convert guest count to number if present
-      if (result.extractedGuestCount && typeof result.extractedGuestCount === 'string') {
+      if (result.extractedGuestCount && typeof result.extractedGuestCount === "string") {
         const parsedCount = parseInt(result.extractedGuestCount, 10);
         if (!isNaN(parsedCount)) {
           result.extractedGuestCount = parsedCount;
         }
       }
 
-      // Convert budget value to number if present
-      if (result.extractedBudgetValue && typeof result.extractedBudgetValue === 'string') {
+      if (result.extractedBudgetValue && typeof result.extractedBudgetValue === "string") {
         const parsedBudget = parseInt(result.extractedBudgetValue, 10);
         if (!isNaN(parsedBudget)) {
           result.extractedBudgetValue = parsedBudget;
         }
       }
 
-      // Ensure arrays are actually arrays
       if (!Array.isArray(result.extractedServicesNeeded)) {
         result.extractedServicesNeeded = [];
       }
@@ -275,23 +119,18 @@ export class AIService {
         result.aiPotentialRedFlags = [];
       }
 
-      // Handle backward compatibility with previous field names
       if (result.extractedName && !result.extractedProspectName) {
         result.extractedProspectName = result.extractedName;
       }
-      
       if (result.extractedEmail && !result.extractedProspectEmail) {
         result.extractedProspectEmail = result.extractedEmail;
       }
-      
       if (result.extractedPhone && !result.extractedProspectPhone) {
         result.extractedProspectPhone = result.extractedPhone;
       }
-      
       if (result.aiBudgetIndication && !result.extractedBudgetIndication) {
         result.extractedBudgetIndication = result.aiBudgetIndication;
       }
-      
       if (result.aiBudgetValue && !result.extractedBudgetValue) {
         result.extractedBudgetValue = result.aiBudgetValue;
       }
@@ -303,15 +142,11 @@ export class AIService {
       return {
         extractedMessageSummary: "Error parsing AI response.",
         aiOverallLeadQuality: "cold",
-        aiConfidenceScore: 0
+        aiConfidenceScore: 0,
       };
     }
   }
 
-  /**
-   * Analyzes an email or message to extract structured information and insights
-   * @param message The email or message content to analyze
-   */
   async analyzeLeadMessage(message: string): Promise<{
     extractedProspectName?: string;
     extractedProspectEmail?: string;
@@ -337,14 +172,13 @@ export class AIService {
     aiSentiment?: string;
     aiConfidenceScore?: number;
   }> {
-    try {
-      if (!message || message.trim().length === 0) {
-        return {};
-      }
+    if (!message || message.trim().length === 0) {
+      return {};
+    }
 
-      console.log(`AI Lead Analysis: Sending message of length ${message.length} to DeepSeek via OpenRouter...`);
+    console.log(`AI Lead Analysis: Sending message of length ${message.length} to DeepSeek...`);
 
-      const prompt = `
+    const prompt = `
 You are an expert lead analysis assistant for 'Home Bites Catering'.
 Your task is to meticulously extract all relevant information from vendor lead emails and assess the lead's quality.
 The email provided might be from a vendor (e.g., Zola, WeddingWire) forwarding a prospect's inquiry.
@@ -381,77 +215,24 @@ Provide your output ONLY in the following JSON format. Fill fields with null if 
 Email to analyze:
 ${message}`;
 
-      // Try DeepSeek first (primary model)
-      try {
-        const response = await openRouter.chat.completions.create({
-          model: OPENROUTER_MODEL_ID,
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 1500,
-          temperature: 0.2,
-          response_format: { type: "json_object" }
-        });
-        
-        return this.processLeadAnalysisResponse(response.choices[0]?.message?.content?.trim() || "{}");
-      } catch (deepseekError) {
-        console.error("AI Lead Analysis DeepSeek Error:", deepseekError);
-        console.log("AI Lead Analysis: Falling back to Gemini...");
-        
-        // Try Gemini as first fallback
-        try {
-          const response = await openRouter.chat.completions.create({
-            model: GEMINI_MODEL_ID,
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 1500,
-            temperature: 0.2,
-            response_format: { type: "json_object" }
-          });
-          
-          return this.processLeadAnalysisResponse(response.choices[0]?.message?.content?.trim() || "{}");
-        } catch (geminiError) {
-          console.error("AI Lead Analysis Gemini Error:", geminiError);
-          console.log("AI Lead Analysis: Falling back to Claude...");
-          
-          // Finally try Claude
-          const response = await openRouter.chat.completions.create({
-            model: CLAUDE_MODEL_ID,
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 1500,
-            temperature: 0.2,
-            response_format: { type: "json_object" }
-          });
-          
-          return this.processLeadAnalysisResponse(response.choices[0]?.message?.content?.trim() || "{}");
-        }
-      }
+    try {
+      const { content } = await createChatCompletion({
+        messages: [{ role: "user", content: prompt }],
+        maxTokens: 1500,
+        temperature: 0.2,
+        json: true,
+      });
+      return this.processLeadAnalysisResponse(content);
     } catch (error) {
       console.error("AI Lead Analysis Error:", error);
       return {
         extractedMessageSummary: "Error analyzing message with AI.",
         aiOverallLeadQuality: "cold",
-        aiConfidenceScore: 0
+        aiConfidenceScore: 0,
       };
     }
   }
 
-  /**
-   * Extract structured lead data from email (Google Apps Script format)
-   * Returns data in the format: { parser_metadata, inquiry_data, analysis, summary_text }
-   */
   async extractLeadDataFromEmail(emailData: {
     subject: string;
     from: string;
@@ -459,10 +240,9 @@ ${message}`;
     bodyHtml?: string;
     receivedDate: Date;
   }): Promise<any> {
-    try {
-      console.log(`AI Email Extraction: Processing email "${emailData.subject}" from ${emailData.from}`);
+    console.log(`AI Email Extraction: Processing email "${emailData.subject}" from ${emailData.from}`);
 
-      const prompt = `You are an expert at analyzing catering inquiry emails. Extract structured data from this email.
+    const prompt = `You are an expert at analyzing catering inquiry emails. Extract structured data from this email.
 
 Email Details:
 Subject: ${emailData.subject}
@@ -511,106 +291,34 @@ Extract the following information and return it as JSON:
 
 Be thorough and accurate. If information is not present, use null. Infer the source system from email content, headers, or domain.`;
 
-      // Try DeepSeek first
-      try {
-        const response = await openRouter.chat.completions.create({
-          model: OPENROUTER_MODEL_ID,
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 2000,
-          temperature: 0.2,
-          response_format: { type: "json_object" }
-        });
+    try {
+      const { content, provider } = await createChatCompletion({
+        messages: [{ role: "user", content: prompt }],
+        maxTokens: 2000,
+        temperature: 0.2,
+        json: true,
+      });
 
-        const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-        const parsed = JSON.parse(resultText);
-        
-        console.log("AI Email Extraction: Successfully extracted data with DeepSeek");
-        return parsed;
-
-      } catch (deepseekError) {
-        console.error("DeepSeek Email Extraction Error:", deepseekError);
-        
-        // Fallback to Gemini
-        try {
-          console.log("AI Email Extraction: Falling back to Gemini...");
-          
-          const response = await openRouter.chat.completions.create({
-            model: GEMINI_MODEL_ID,
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 2000,
-            temperature: 0.2,
-            response_format: { type: "json_object" }
-          });
-
-          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-          const parsed = JSON.parse(resultText);
-          
-          // Update model in metadata
-          if (parsed.parser_metadata) {
-            parsed.parser_metadata.extracted_by_model = "Gemini 2.0 Flash";
-          }
-          
-          console.log("AI Email Extraction: Successfully extracted data with Gemini");
-          return parsed;
-
-        } catch (geminiError) {
-          console.error("Gemini Email Extraction Error:", geminiError);
-          
-          // Final fallback to Claude
-          console.log("AI Email Extraction: Falling back to Claude...");
-          
-          const response = await openRouter.chat.completions.create({
-            model: CLAUDE_MODEL_ID,
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 2000,
-            temperature: 0.2,
-            response_format: { type: "json_object" }
-          });
-
-          const resultText = response.choices[0]?.message?.content?.trim() || "{}";
-          const parsed = JSON.parse(resultText);
-          
-          // Update model in metadata
-          if (parsed.parser_metadata) {
-            parsed.parser_metadata.extracted_by_model = "Claude Haiku";
-          }
-          
-          console.log("AI Email Extraction: Successfully extracted data with Claude");
-          return parsed;
-        }
+      const parsed = JSON.parse(content);
+      if (parsed.parser_metadata) {
+        parsed.parser_metadata.extracted_by_model = providerLabel(provider);
       }
-
+      console.log(`AI Email Extraction: Successfully extracted data via ${provider}`);
+      return parsed;
     } catch (error) {
       console.error("AI Email Extraction Error:", error);
-      
-      // Return minimal structure on complete failure
       return {
         parser_metadata: {
           source_system: "Unknown",
           received_timestamp: emailData.receivedDate.toISOString(),
           internal_sender_email: emailData.from,
           extracted_by_model: "Error",
-          error: error instanceof Error ? error.message : "Unknown error"
+          error: error instanceof Error ? error.message : "Unknown error",
         },
         inquiry_data: {
           client_name: "",
           client_email: emailData.from,
-          event_type: "Unknown"
+          event_type: "Unknown",
         },
         analysis: {
           lead_quality: "cold",
@@ -620,13 +328,14 @@ Be thorough and accurate. If information is not present, use null. Infer the sou
           budget_indication: "not_mentioned",
           key_requirements: [],
           potential_concerns: ["Failed to extract data - AI service unavailable"],
-          suggested_next_step: "Manual review required"
+          suggested_next_step: "Manual review required",
         },
-        summary_text: `Email from ${emailData.from} with subject "${emailData.subject}" - AI extraction failed, manual review needed`
+        summary_text: `Email from ${emailData.from} with subject "${emailData.subject}" - AI extraction failed, manual review needed`,
       };
     }
   }
 }
 
-// Export a singleton instance
 export const aiService = new AIService();
+
+export { hasLlmProvider };

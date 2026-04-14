@@ -19,14 +19,6 @@ import Users from "@/pages/users";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
-// Form Builder pages
-import QuestionLibraryManager from "@/pages/QuestionLibraryManager";
-import QuestionLibraryEdit from "@/pages/QuestionLibraryEdit";
-import FormManager from "@/pages/FormManager";
-import FormEditor from "@/pages/FormEditor";
-// Calculator Test
-import CalculatorTest from "@/pages/CalculatorTest";
-
 // Import the comprehensive wedding inquiry form
 import WeddingInquiryForm from "@/pages/wedding/WeddingInquiryForm";
 import ComprehensiveWeddingInquiry from "@/pages/wedding/ComprehensiveWeddingInquiry";
@@ -179,13 +171,7 @@ function AppContent() {
           <Route path="/raw-leads" component={RawLeadsPage} />
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
-          <Route path="/admin/form-builder/question-library" component={QuestionLibraryManager} />
-          <Route path="/admin/form-builder/question-library/new" component={QuestionLibraryEdit} />
-          <Route path="/admin/form-builder/question-library/:id/edit" component={QuestionLibraryEdit} />
-          <Route path="/admin/form-builder/forms" component={FormManager} />
-          <Route path="/admin/form-builder/forms/:formId/edit" component={FormEditor} />
           <Route path="/quote-requests" component={QuoteRequests} />
-          <Route path="/calculator-test" component={CalculatorTest} />
           <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}

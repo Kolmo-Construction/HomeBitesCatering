@@ -1,20 +1,6 @@
-import { OpenAI } from 'openai';
 import { db } from '../db';
 import { baseIngredients } from '@shared/schema';
-import { eq } from 'drizzle-orm';
-
-const openRouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY || '',
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'https://homebites.design',
-    'X-Title': 'Home Bites Catering CMS',
-  },
-});
-
-const DEEPSEEK_MODEL = 'deepseek/deepseek-chat-v3-0324:free';
-const GEMINI_MODEL = 'google/gemini-2.0-flash-exp:free';
-const CLAUDE_MODEL = 'anthropic/claude-3-haiku';
+import { createChatCompletion, hasLlmProvider, LlmUnavailableError } from './llmClient';
 
 // ============================================================================
 // Types
@@ -82,8 +68,8 @@ const THEME_DESCRIPTIONS: Record<string, string> = {
 export async function generateRecipeDraft(
   input: GenerateDraftInput,
 ): Promise<DraftRecipe> {
-  if (!process.env.OPENROUTER_API_KEY) {
-    throw new Error("OPENROUTER_API_KEY is not configured");
+  if (!hasLlmProvider()) {
+    throw new LlmUnavailableError();
   }
 
   // Load the full base_ingredients catalog so the AI can only pick from real data
@@ -97,58 +83,40 @@ export async function generateRecipeDraft(
 
   const prompt = buildRecipePrompt(input, ingredientList);
 
-  // Try model cascade: DeepSeek → Gemini → Claude
-  let rawResponse: any = null;
-  let lastError: any = null;
-  let lastRawContent: string | null = null;
-
-  for (const model of [DEEPSEEK_MODEL, GEMINI_MODEL, CLAUDE_MODEL]) {
-    try {
-      console.log(`Recipe AI: trying ${model} for "${input.itemName}"`);
-      const response = await openRouter.chat.completions.create({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 3000,
-        temperature: 0.4,
-        // Note: response_format is a hint — free-tier models often ignore it
-        response_format: { type: "json_object" },
-      });
-
-      const content = response.choices[0]?.message?.content?.trim();
-      if (!content) continue;
-      lastRawContent = content;
-
-      // Try to parse with progressive cleanup strategies
-      const parsed = robustJsonParse(content);
-      if (parsed) {
-        rawResponse = parsed;
-        console.log(`Recipe AI: successfully drafted "${input.itemName}" with ${model}`);
-        break;
-      }
-
-      // If parse failed, log the problematic content (truncated) and try next model
-      console.error(
-        `Recipe AI: ${model} returned unparseable JSON (first 500 chars): ${content.substring(0, 500)}`,
-      );
-      lastError = new Error(`${model} returned malformed JSON that couldn't be repaired`);
-    } catch (err: any) {
-      lastError = err;
-      console.error(`Recipe AI: ${model} failed:`, err.message);
-      continue;
-    }
-  }
-
-  if (!rawResponse) {
-    console.error("Recipe AI: all models failed. Last raw content:", lastRawContent?.substring(0, 1000));
+  let rawContent: string;
+  let providerLabel: string;
+  try {
+    console.log(`Recipe AI: drafting "${input.itemName}"`);
+    const result = await createChatCompletion({
+      messages: [{ role: "user", content: prompt }],
+      maxTokens: 3000,
+      temperature: 0.4,
+      json: true,
+    });
+    rawContent = result.content;
+    providerLabel = result.provider;
+  } catch (err: any) {
+    console.error("Recipe AI: all providers failed:", err?.message);
     throw new Error(
-      `Could not generate recipe — AI models returned malformed responses. ` +
-        `This sometimes happens with free-tier models. Please try again in a moment. ` +
-        `(Details: ${lastError?.message || "unknown"})`,
+      `Could not generate recipe — AI providers returned errors. Please try again in a moment. ` +
+        `(Details: ${err?.message || "unknown"})`,
     );
   }
 
+  const parsed = robustJsonParse(rawContent);
+  if (!parsed) {
+    console.error(
+      `Recipe AI: ${providerLabel} returned unparseable JSON (first 500 chars): ${rawContent.substring(0, 500)}`,
+    );
+    throw new Error(
+      `Could not generate recipe — ${providerLabel} returned malformed JSON that couldn't be repaired. ` +
+        `This sometimes happens with free-tier models. Please try again in a moment.`,
+    );
+  }
+
+  console.log(`Recipe AI: successfully drafted "${input.itemName}" via ${providerLabel}`);
   // Process the response — match ingredient IDs, calculate costs
-  return processDraft(rawResponse, allIngredients, input);
+  return processDraft(parsed, allIngredients, input);
 }
 
 // ============================================================================

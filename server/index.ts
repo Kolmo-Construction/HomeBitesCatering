@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { registerQuestionLibraryRoutes } from "./questionLibraryRoutes";
 import ingredientRoutes from "./ingredientRoutes";
 import quoteRoutes from "./quoteRoutes";
 import {
@@ -48,9 +47,6 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-
-  // Register question library API routes
-  registerQuestionLibraryRoutes(app);
 
   // Register ingredient management routes
   app.use('/api/ingredients', ingredientRoutes);

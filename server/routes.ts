@@ -6,22 +6,25 @@ import { db } from "./db"; // For direct database access
 import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import session from "express-session";
-import { eq } from "drizzle-orm"; // For equality operations
+import { eq, and, isNull, inArray } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
-import { generateSuggestion, getQuestionTypeHelp, analyzeFormData } from "./services/ai-suggestions";
 import pgSession from 'connect-pg-simple';
 import {
-  insertUserSchema, 
-  insertOpportunitySchema, 
-  insertMenuItemSchema, 
-  insertMenuSchema, 
-  insertClientSchema, 
-  insertEstimateSchema, 
+  insertUserSchema,
+  insertOpportunitySchema,
+  insertMenuItemSchema,
+  insertMenuSchema,
+  insertClientSchema,
+  insertEstimateSchema,
   insertEventSchema,
   insertContactIdentifierSchema, // New
   insertCommunicationSchema,     // New
   opportunityPriorityEnum,       // For priority filtering
   insertRawLeadSchema,           // For raw leads management
+  communications,                // table for drizzle updates
+  opportunityEmailThreads,       // table for thread migration
+  type InsertCommunication,
+  type InsertOpportunityEmailThread,
 } from "@shared/schema";
 import { aiService } from './services/aiService';
 import { normalizePhoneNumber, isValidPhone } from './services/phoneService';
@@ -690,37 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the opportunity
       const newOpportunity = await storage.createOpportunity(opportunityData);
-      
-      // If form data is provided, create form submission record
-      if (inquiryData.formId && inquiryData.formResponses) {
-        try {
-          // Create form submission record
-          const submissionData = {
-            formId: inquiryData.formId,
-            formVersion: inquiryData.formVersion || 1,
-            opportunityId: newOpportunity.id,
-            status: "completed",
-            submittedAt: new Date()
-          };
-          
-          const formSubmission = await storage.createFormSubmission(submissionData);
-          
-          // Store individual answers
-          for (const response of inquiryData.formResponses) {
-            await storage.createFormSubmissionAnswer({
-              formSubmissionId: formSubmission.id,
-              formPageQuestionId: response.questionId,
-              answerValue: response.answer
-            });
-          }
-          
-          console.log(`Created form submission ${formSubmission.id} for opportunity ${newOpportunity.id}`);
-        } catch (formError) {
-          console.error('Error creating form submission record:', formError);
-          // Don't fail the opportunity creation if form submission fails
-        }
-      }
-      
+
       // Return success response with opportunity ID
       res.status(201).json({
         message: 'Inquiry received successfully',
@@ -1581,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create the sample lead with the current time
       // Create a lead data object that conforms to the expected schema
-      const leadData = {
+      const leadData: any = {
         source: sampleWeddingInquiryEmail.source,
         rawData: sampleWeddingInquiryEmail.rawData,
         status: sampleWeddingInquiryEmail.status,
@@ -1667,22 +1640,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         opportunitySource: lead.leadSourcePlatform || lead.source || 'raw_lead',
         status: 'new',
         // Combine AI message summary with internal notes if both exist
-        notes: formatNotes(lead)
+        notes: formatNotes(lead),
+        // Priority derived from AI lead quality (defaults to 'medium')
+        priority: mapLeadQualityToPriority(lead.aiOverallLeadQuality ?? undefined),
       };
-      
-      // Add priority based on AI lead quality if available
-      if (lead.aiOverallLeadQuality) {
-        opportunityData.priority = mapLeadQualityToPriority(lead.aiOverallLeadQuality);
-      }
-      
+
       const opportunity = await storage.createOpportunity(opportunityData);
-      
-      // Update the raw lead status to indicate it's been processed
-      await storage.updateRawLead(leadId, { 
+
+      // Update the raw lead status and link the created opportunity
+      await storage.updateRawLead(leadId, {
         status: 'qualified',
-        processed: true,
-        processedAt: new Date(),
-        relatedOpportunityId: opportunity.id
+        createdOpportunityId: opportunity.id,
       });
       
       // Return the created opportunity
@@ -1953,7 +1921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clarity: lead.aiClarityOfRequestScore || '',
         sentiment: lead.aiSentiment || 'neutral',
         suggestedNextStep: lead.aiSuggestedNextStep || '',
-        calendarConflict: lead.aiCalendarConflictAssessment || '',
+        calendarConflict: '',
         rawEmailData: lead.rawData
       };
       
@@ -2072,14 +2040,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const comm = await storage.createCommunication(communicationData);
         console.log(`GAS Email Intake: Created follow-up communication ID ${comm.id} for thread ${threadId}`);
-        
+
         // Mark email as processed
         await storage.recordProcessedEmail({
           messageId: gmailMessageId,
           gmailId: gmailMessageId,
-          serviceName: 'google_apps_script',
-          processedAt: new Date(),
-          labelApplied: true
+          service: 'google_apps_script',
+          email: to || from,
+          labelApplied: true,
         });
         
         return res.status(200).json({
@@ -2197,9 +2165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.recordProcessedEmail({
         messageId: gmailMessageId,
         gmailId: gmailMessageId,
-        serviceName: 'google_apps_script',
-        processedAt: new Date(),
-        labelApplied: true
+        service: 'google_apps_script',
+        email: to || from,
+        labelApplied: true,
       });
 
       res.status(201).json({
@@ -2341,8 +2309,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clientId: null,
           type: 'phone',
           value: customerPhone,
-          label: 'Primary Phone',
-          isPrimary: true
+          isPrimary: true,
+          source: 'openphone',
         });
         
         console.log(`OpenPhone Webhook: Created raw lead ${rawLeadId} for ${customerPhone}`);
@@ -2450,65 +2418,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // ===== AI Suggestions =====
-  
-  // Get suggestions for form fields
-  app.post('/api/ai/suggestions', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const context = req.body;
-      
-      if (!context.questionType || !context.questionText) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-      
-      const suggestion = await generateSuggestion(context);
-      
-      res.status(200).json(suggestion);
-    } catch (error) {
-      console.error('Error generating suggestions:', error);
-      res.status(500).json({ 
-        message: 'Unable to generate suggestions',
-        suggestion: 'Consider providing a clear, concise response.'
-      });
-    }
-  });
-  
-  // Get help text for question types
-  app.get('/api/ai/help/:questionType', isAuthenticated, (req: Request, res: Response) => {
-    try {
-      const { questionType } = req.params;
-      
-      const helpText = getQuestionTypeHelp(questionType);
-      
-      res.status(200).json({ helpText });
-    } catch (error) {
-      console.error('Error getting help text:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // Analyze form data
-  app.post('/api/ai/analyze-form', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { formData, questions } = req.body;
-      
-      if (!formData || !questions) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
-      
-      const analysis = await analyzeFormData(formData, questions);
-      
-      res.status(200).json(analysis);
-    } catch (error) {
-      console.error('Error analyzing form data:', error);
-      res.status(500).json({ 
-        message: 'Unable to analyze form data',
-        completeness: 0,
-        suggestions: ['Please complete all required fields.']
-      });
-    }
-  });
-
   // API routes removed
 
   // Create an HTTP server

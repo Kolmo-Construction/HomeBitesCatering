@@ -18,14 +18,10 @@ import {
   type ProcessedEmail, type InsertProcessedEmail,
   type OpportunityEmailThread, type InsertOpportunityEmailThread
 } from "@shared/schema";
-import {
-  formSubmissions, formSubmissionAnswers,
-  type FormSubmission, type InsertFormSubmission,
-  type FormSubmissionAnswer, type InsertFormSubmissionAnswer
-} from "@shared/form-schema";
 import { db, pool } from "./db";
 import { eq, gte, lte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added lte for date range query
 import { z } from "zod";
+import { hasLlmProvider } from "./services/llmClient";
 
 // Define storage interface
 export interface IStorage {
@@ -125,10 +121,6 @@ export interface IStorage {
   deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }>;
   findContactsByIdentifier(identifier: string, type?: string): Promise<any[]>;
   getLeadSystemSettings(): Promise<any>;
-
-  // Form Submissions
-  createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
-  createFormSubmissionAnswer(answer: InsertFormSubmissionAnswer): Promise<FormSubmissionAnswer>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -844,7 +836,7 @@ export class DatabaseStorage implements IStorage {
     // This is a placeholder for future implementation
     return {
       autoProcessing: true,
-      aiIntegration: !!process.env.OPENAI_API_KEY,
+      aiIntegration: hasLlmProvider(),
       emailSync: {
         enabled: !!process.env.GMAIL_API_KEY,
         interval: 5, // minutes
@@ -852,16 +844,6 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Form Submissions
-  async createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission> {
-    const [newSubmission] = await db.insert(formSubmissions).values(submission).returning();
-    return newSubmission;
-  }
-
-  async createFormSubmissionAnswer(answer: InsertFormSubmissionAnswer): Promise<FormSubmissionAnswer> {
-    const [newAnswer] = await db.insert(formSubmissionAnswers).values(answer).returning();
-    return newAnswer;
-  }
 }
 
 // Create and export the storage instance
