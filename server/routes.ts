@@ -42,7 +42,17 @@ import {
   hasChefOrAboveWriteAccess,
 } from './middleware/permissions';
 import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
-import { getSiteConfig } from './utils/siteConfig';
+import { getSiteConfig, getEmailConfig } from './utils/siteConfig';
+import { sendEmail, sendEmailInBackground } from './utils/email';
+import {
+  quoteSentEmail,
+  quoteViewedAdminEmail,
+  quoteAcceptedCustomerEmail,
+  quoteAcceptedAdminEmail,
+  findMyEventEmail,
+  eventReminderEmail,
+  type ReminderKind,
+} from './utils/emailTemplates';
 
 // Helper function to map lead quality to opportunity priority
 function mapLeadQualityToPriority(leadQuality?: string): 'high' | 'medium' | 'low' {
@@ -1284,8 +1294,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send a quote to the customer — bumps status draft→sent, stamps sentAt,
-  // lazily issues a viewToken (unguessable base64url) if one doesn't exist.
-  // The returned publicUrl is what Mike pastes into the email/SMS to the customer.
+  // lazily issues a viewToken (unguessable base64url) if one doesn't exist,
+  // and (if RESEND_API_KEY is configured) fires an automated email with the
+  // public URL. When Resend is not configured, the response still includes
+  // publicUrl and the UI falls back to the mailto draft flow.
   app.post('/api/estimates/:id/send', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const estimateId = parseInt(req.params.id);
@@ -1317,7 +1329,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const proto = req.get('x-forwarded-proto') || req.protocol;
       const publicUrl = `${proto}://${host}/quote/${viewToken}`;
 
-      return res.status(200).json({ estimate: updated, publicUrl });
+      // Fetch the client so we can send the email
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+
+      let emailSent = false;
+      let emailSkipped = true;
+      let emailRecipient: string | null = null;
+      if (client?.email) {
+        emailRecipient = client.email;
+        const template = quoteSentEmail({
+          customerFirstName: client.firstName || 'there',
+          eventType: estimate.eventType,
+          eventDate: estimate.eventDate,
+          guestCount: estimate.guestCount,
+          publicQuoteUrl: publicUrl,
+        });
+        const result = await sendEmail({
+          to: client.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          clientId: client.id,
+          templateKey: 'quote_sent',
+        });
+        emailSent = result.sent;
+        emailSkipped = result.skipped;
+      }
+
+      return res.status(200).json({
+        estimate: updated,
+        publicUrl,
+        emailSent,
+        emailSkipped,
+        emailRecipient,
+      });
     } catch (error) {
       console.error('Error sending estimate:', error);
       return res.status(500).json({ message: 'Server error' });
@@ -1423,7 +1468,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public: stamp viewedAt the first time the customer opens the quote
+  // Public: stamp viewedAt the first time the customer opens the quote.
+  // Also fires a one-shot admin notification (fire-and-forget) so Mike knows
+  // the customer engaged with the quote.
   app.post('/api/public/quote/:token/view', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
@@ -1432,12 +1479,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Quote not found' });
       }
 
+      const isFirstView = !estimate.viewedAt;
+
       // First-view-wins: don't overwrite an existing viewedAt so we track the initial open time
-      if (!estimate.viewedAt) {
+      if (isFirstView) {
         await db
           .update(estimates)
           .set({ viewedAt: new Date(), updatedAt: new Date() })
           .where(eq(estimates.id, estimate.id));
+
+        // Fire the admin notification in the background. Don't block the customer's page load.
+        try {
+          const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+          const emailCfg = getEmailConfig();
+          const adminQuoteUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}/view`;
+          const template = quoteViewedAdminEmail({
+            customerName: client ? `${client.firstName} ${client.lastName}` : 'A customer',
+            eventType: estimate.eventType,
+            eventDate: estimate.eventDate,
+            totalCents: estimate.total,
+            adminQuoteUrl,
+          });
+          sendEmailInBackground({
+            to: emailCfg.adminNotificationEmail,
+            subject: template.subject,
+            html: template.html,
+            text: template.text,
+            clientId: estimate.clientId,
+            templateKey: 'quote_viewed_admin',
+          });
+        } catch (notifyError) {
+          console.warn('Failed to fire quote-viewed admin notification:', notifyError);
+        }
       }
 
       return res.status(200).json({ ok: true });
@@ -1529,6 +1602,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${proto}://${host}/event/${eventForResponse.viewToken}`
         : null;
 
+      // Fire customer + admin notifications. Fire-and-forget so the customer's
+      // response isn't delayed by email latency.
+      try {
+        const [acceptingClient] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+        if (acceptingClient?.email) {
+          const customerTemplate = quoteAcceptedCustomerEmail({
+            customerFirstName: acceptingClient.firstName || 'there',
+            eventType: estimate.eventType,
+            eventDate: estimate.eventDate,
+            publicEventUrl: eventPublicUrl,
+          });
+          sendEmailInBackground({
+            to: acceptingClient.email,
+            subject: customerTemplate.subject,
+            html: customerTemplate.html,
+            text: customerTemplate.text,
+            clientId: acceptingClient.id,
+            eventId: eventForResponse?.id ?? null,
+            templateKey: 'quote_accepted_customer',
+          });
+        }
+
+        const emailCfg = getEmailConfig();
+        const adminEventUrl = eventForResponse?.id
+          ? `${emailCfg.publicBaseUrl}/events/${eventForResponse.id}`
+          : `${emailCfg.publicBaseUrl}/events`;
+        const adminTemplate = quoteAcceptedAdminEmail({
+          customerName: acceptingClient
+            ? `${acceptingClient.firstName} ${acceptingClient.lastName}`
+            : 'A customer',
+          customerEmail: acceptingClient?.email || 'unknown',
+          eventType: estimate.eventType,
+          eventDate: estimate.eventDate,
+          totalCents: estimate.total,
+          adminEventUrl,
+        });
+        sendEmailInBackground({
+          to: emailCfg.adminNotificationEmail,
+          subject: adminTemplate.subject,
+          html: adminTemplate.html,
+          text: adminTemplate.text,
+          clientId: estimate.clientId,
+          eventId: eventForResponse?.id ?? null,
+          templateKey: 'quote_accepted_admin',
+        });
+      } catch (notifyError) {
+        console.warn('Failed to fire quote-accepted notifications:', notifyError);
+      }
+
       return res.status(200).json({
         ok: true,
         estimate: sanitizeEstimateForPublic(updatedEstimate),
@@ -1607,6 +1729,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json({ publicUrl, viewToken });
     } catch (error) {
       console.error('Error sharing event:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Scheduled reminder dispatcher — designed to be invoked by a cron job
+  // (Railway cron or any external scheduler) once a day around 8am local time.
+  // Protected by the CRON_SECRET env var passed in the x-cron-secret header;
+  // if CRON_SECRET is not set, the endpoint responds 503 to avoid silent access.
+  //
+  // Iterates all confirmed events, computes days until each, and sends the
+  // appropriate reminder template (14d / 7d / 2d / day_of / thank_you). Dedupes
+  // via events.completedTasks using reserved keys like `reminder:14d`, so the
+  // endpoint is idempotent — hitting it twice a day is fine.
+  app.post('/api/cron/event-reminders', async (req: Request, res: Response) => {
+    try {
+      const emailCfg = getEmailConfig();
+      if (!emailCfg.cronSecret) {
+        return res.status(503).json({ message: 'CRON_SECRET not configured' });
+      }
+      const supplied = req.get('x-cron-secret');
+      if (supplied !== emailCfg.cronSecret) {
+        return res.status(403).json({ message: 'Invalid cron secret' });
+      }
+
+      const allEvents = await db.select().from(events);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const results: Array<{ eventId: number; sent: ReminderKind[]; skipped: string[] }> = [];
+
+      for (const ev of allEvents) {
+        // Skip events that aren't in a state where reminders make sense.
+        if (ev.status === 'cancelled') {
+          results.push({ eventId: ev.id, sent: [], skipped: ['cancelled'] });
+          continue;
+        }
+
+        const eventDay = new Date(ev.eventDate);
+        eventDay.setHours(0, 0, 0, 0);
+        const daysUntil = Math.round(
+          (eventDay.getTime() - now.getTime()) / 86400000
+        );
+
+        // Determine which reminder this event should receive today, if any.
+        let kind: ReminderKind | null = null;
+        if (daysUntil === 14) kind = '14d';
+        else if (daysUntil === 7) kind = '7d';
+        else if (daysUntil === 2) kind = '2d';
+        else if (daysUntil === 0) kind = 'day_of';
+        else if (daysUntil === -1) kind = 'thank_you';
+
+        if (!kind) {
+          results.push({ eventId: ev.id, sent: [], skipped: [`no_match_${daysUntil}d`] });
+          continue;
+        }
+
+        const dedupKey = `reminder:${kind}`;
+        const completed = Array.isArray(ev.completedTasks) ? (ev.completedTasks as string[]) : [];
+        if (completed.includes(dedupKey)) {
+          results.push({ eventId: ev.id, sent: [], skipped: [`already_sent_${kind}`] });
+          continue;
+        }
+
+        // Fetch the client for the email
+        const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
+        if (!client?.email) {
+          results.push({ eventId: ev.id, sent: [], skipped: ['no_client_email'] });
+          continue;
+        }
+
+        const publicEventUrl = ev.viewToken
+          ? `${emailCfg.publicBaseUrl}/event/${ev.viewToken}`
+          : null;
+
+        const template = eventReminderEmail({
+          kind,
+          customerFirstName: client.firstName || 'there',
+          eventType: ev.eventType,
+          eventDate: ev.eventDate,
+          guestCount: ev.guestCount,
+          publicEventUrl,
+        });
+
+        const result = await sendEmail({
+          to: client.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          clientId: client.id,
+          eventId: ev.id,
+          templateKey: `event_reminder_${kind}`,
+        });
+
+        if (result.sent || result.skipped) {
+          // Even if skipped (no API key), mark it so we don't retry forever once
+          // Resend comes online — we don't want to suddenly blast 10 reminders
+          // on the first day the key is added.
+          await db
+            .update(events)
+            .set({
+              completedTasks: [...completed, dedupKey],
+              updatedAt: new Date(),
+            })
+            .where(eq(events.id, ev.id));
+          results.push({ eventId: ev.id, sent: [kind], skipped: result.skipped ? ['no_resend_key'] : [] });
+        } else {
+          results.push({ eventId: ev.id, sent: [], skipped: [result.error || 'unknown_error'] });
+        }
+      }
+
+      return res.status(200).json({ ok: true, results, processedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error('Error running event reminder cron:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: self-serve "find my event" — customer enters their email, we email
+  // them the event page link for any accepted event we find. Always responds
+  // with the same "if we found an event, we've sent the link" message to prevent
+  // email enumeration.
+  app.post('/api/public/find-my-event', async (req: Request, res: Response) => {
+    try {
+      const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+      if (!email || !/.+@.+\..+/.test(email)) {
+        return res.status(400).json({ message: 'Please enter a valid email address.' });
+      }
+
+      // Find clients with this email. Then find any linked events.
+      const matchingClients = await db.select().from(clients).where(eq(clients.email, email));
+      const emailCfg = getEmailConfig();
+
+      let sentAny = false;
+      for (const c of matchingClients) {
+        const clientEvents = await db.select().from(events).where(eq(events.clientId, c.id));
+        for (const ev of clientEvents) {
+          if (ev.status === 'cancelled') continue;
+          if (!ev.viewToken) continue;
+          const publicEventUrl = `${emailCfg.publicBaseUrl}/event/${ev.viewToken}`;
+          const template = findMyEventEmail({
+            customerFirstName: c.firstName || 'there',
+            publicEventUrl,
+          });
+          sendEmailInBackground({
+            to: c.email,
+            subject: template.subject,
+            html: template.html,
+            text: template.text,
+            clientId: c.id,
+            eventId: ev.id,
+            templateKey: 'find_my_event',
+          });
+          sentAny = true;
+        }
+      }
+
+      // Always respond the same way regardless of whether we found a match.
+      // Don't leak which emails are in the system.
+      return res.status(200).json({
+        ok: true,
+        message:
+          "If we found an event for that email, we've sent the link. Please check your inbox (and spam folder) in the next few minutes.",
+      });
+    } catch (error) {
+      console.error('Error in find-my-event:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });

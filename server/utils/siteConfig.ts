@@ -25,6 +25,39 @@ export interface SiteConfig {
   };
 }
 
+// Server-side email config. NEVER sent to the client — only used internally by
+// the email helper to decide whether to send, and what from/reply-to addresses
+// to use. Public base URL is used when composing absolute links in outbound emails
+// (e.g. from the scheduled reminder cron where there's no request context).
+export interface EmailConfig {
+  resendApiKey: string | null;
+  fromEmail: string;
+  fromName: string;
+  replyToEmail: string;
+  adminNotificationEmail: string;
+  publicBaseUrl: string;
+  cronSecret: string | null;
+}
+
+export function getEmailConfig(): EmailConfig {
+  return {
+    resendApiKey: process.env.RESEND_API_KEY || null,
+    fromEmail: process.env.HOMEBITES_FROM_EMAIL || "events@eathomebites.com",
+    fromName: process.env.HOMEBITES_FROM_NAME || "Homebites Catering",
+    replyToEmail:
+      process.env.HOMEBITES_REPLY_TO_EMAIL ||
+      process.env.HOMEBITES_FROM_EMAIL ||
+      "events@eathomebites.com",
+    adminNotificationEmail:
+      process.env.HOMEBITES_ADMIN_NOTIFICATION_EMAIL ||
+      process.env.HOMEBITES_CHEF_EMAIL ||
+      process.env.HOMEBITES_EMAIL ||
+      "events@eathomebites.com",
+    publicBaseUrl: process.env.HOMEBITES_PUBLIC_BASE_URL || "https://homebitescatering-production.up.railway.app",
+    cronSecret: process.env.CRON_SECRET || null,
+  };
+}
+
 export function getSiteConfig(): SiteConfig {
   return {
     businessName: process.env.HOMEBITES_BUSINESS_NAME || "Homebites Catering",

@@ -14,6 +14,12 @@ import { analyzeQuoteRequest } from "./services/quoteAiService";
 import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
 import { calculateMenuMargin } from "./utils/menuMargin";
 import { calculateShoppingListForQuoteRequest } from "./utils/shoppingList";
+import { getEmailConfig } from "./utils/siteConfig";
+import { sendEmailInBackground } from "./utils/email";
+import {
+  newInquiryCustomerAckEmail,
+  newInquiryAdminEmail,
+} from "./utils/emailTemplates";
 
 const router = Router();
 
@@ -378,6 +384,50 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
         console.log(`AI analysis completed for quote #${request.id}`);
       })
       .catch((err) => console.error(`AI analysis failed for quote #${request.id}:`, err));
+
+    // Fire customer auto-acknowledgment + admin notification.
+    // Fire-and-forget — email latency doesn't block the customer's form submission.
+    try {
+      const emailCfg = getEmailConfig();
+
+      // Customer ack
+      const customerTemplate = newInquiryCustomerAckEmail({
+        customerFirstName: request.firstName,
+        eventType: request.eventType,
+        eventDate: request.eventDate,
+      });
+      sendEmailInBackground({
+        to: request.email,
+        subject: customerTemplate.subject,
+        html: customerTemplate.html,
+        text: customerTemplate.text,
+        templateKey: 'new_inquiry_customer_ack',
+      });
+
+      // Admin notification
+      const adminInquiryUrl = `${emailCfg.publicBaseUrl}/quote-requests?id=${request.id}`;
+      const adminTemplate = newInquiryAdminEmail({
+        customerName: `${request.firstName} ${request.lastName}`,
+        customerEmail: request.email,
+        customerPhone: request.phone,
+        eventType: request.eventType,
+        eventDate: request.eventDate,
+        guestCount: request.guestCount,
+        menuTheme: request.menuTheme,
+        menuTier: request.menuTier,
+        estimatedTotalCents: request.estimatedTotalCents,
+        adminInquiryUrl,
+      });
+      sendEmailInBackground({
+        to: emailCfg.adminNotificationEmail,
+        subject: adminTemplate.subject,
+        html: adminTemplate.html,
+        text: adminTemplate.text,
+        templateKey: 'new_inquiry_admin',
+      });
+    } catch (notifyError) {
+      console.warn('Failed to fire new-inquiry notifications:', notifyError);
+    }
 
     return res.status(201).json(request);
   } catch (error) {

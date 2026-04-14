@@ -48,6 +48,9 @@ import PublicQuote from "@/pages/PublicQuote";
 // Public customer event page (celebration view, separate from the quote page)
 import PublicEventPage from "@/pages/PublicEventPage";
 
+// Public self-serve "find my event" link recovery page
+import FindMyEvent from "@/pages/FindMyEvent";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -117,7 +120,8 @@ function AppContent() {
   const isRequestQuotePage = location === "/request-quote";
   const isPublicQuotePage = location.startsWith("/quote/");
   const isPublicEventPage = location.startsWith("/event/");
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || location === "/inquiry" || location === "/event-selection";
+  const isFindMyEventPage = location === "/find-my-event";
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || location === "/inquiry" || location === "/event-selection";
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -130,6 +134,7 @@ function AppContent() {
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
+          <Route path="/find-my-event" component={FindMyEvent} />
           {/* Route for the generic event selection page */}
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
@@ -222,6 +227,7 @@ function AppContent() {
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
+          <Route path="/find-my-event" component={FindMyEvent} />
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
 

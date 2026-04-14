@@ -74,6 +74,8 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [sentPublicUrl, setSentPublicUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [sentEmailAuto, setSentEmailAuto] = useState<boolean>(false);
+  const [sentEmailRecipient, setSentEmailRecipient] = useState<string | null>(null);
 
   const { data: estimate, isLoading, isError, error } = useQuery<EstimateType, Error>({
     queryKey: ["/api/estimates", id, isClient], // Added isClient to queryKey to differentiate cache if needed
@@ -143,17 +145,33 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   const sendMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/estimates/${id}/send`);
-      return res.json() as Promise<{ estimate: EstimateType; publicUrl: string }>;
+      return res.json() as Promise<{
+        estimate: EstimateType;
+        publicUrl: string;
+        emailSent: boolean;
+        emailSkipped: boolean;
+        emailRecipient: string | null;
+      }>;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       setSentPublicUrl(data.publicUrl);
+      setSentEmailAuto(data.emailSent === true);
+      setSentEmailRecipient(data.emailRecipient ?? null);
       setLinkCopied(false);
-      toast({
-        title: "Quote ready to send",
-        description: "Copy the link or open an email draft to send it to the customer.",
-      });
+      if (data.emailSent) {
+        toast({
+          title: "Email sent",
+          description: `Quote sent to ${data.emailRecipient}.`,
+        });
+      } else {
+        toast({
+          title: "Quote ready to send",
+          description:
+            "Copy the link or open an email draft to send it to the customer.",
+        });
+      }
     },
     onError: (err: Error) =>
       toast({ title: "Error", description: `Failed to send estimate: ${err.message}`, variant: "destructive" }),
@@ -620,6 +638,8 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
             if (!open) {
               setSentPublicUrl(null);
               setLinkCopied(false);
+              setSentEmailAuto(false);
+              setSentEmailRecipient(null);
             }
           }}
         >
@@ -657,13 +677,35 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
             ) : (
               <>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Your customer link is ready</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {sentEmailAuto ? "Quote sent ✨" : "Your customer link is ready"}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Copy this link and send it to {client?.firstName ?? "the customer"}. They
-                    don't need to log in — they just click, review, and accept or decline.
+                    {sentEmailAuto ? (
+                      <>
+                        We emailed the quote to{" "}
+                        <strong>{sentEmailRecipient}</strong>. You'll get a
+                        notification when they view it. The link below is the same one
+                        they received — copy it if you want to text it too.
+                      </>
+                    ) : (
+                      <>
+                        Copy this link and send it to{" "}
+                        {client?.firstName ?? "the customer"}. They don't need to log
+                        in — they just click, review, and accept or decline.
+                      </>
+                    )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="my-4 space-y-3">
+                  {sentEmailAuto && (
+                    <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-md">
+                      <CheckIcon className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="text-sm text-emerald-900">
+                        Sent automatically via email to {sentEmailRecipient}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-md border">
                     <LinkIcon className="h-4 w-4 text-gray-500 shrink-0" />
                     <code className="flex-1 text-xs text-gray-800 break-all select-all">
@@ -679,7 +721,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                       <CopyIcon className="h-4 w-4 mr-2" />
                       {linkCopied ? "Copied!" : "Copy Link"}
                     </Button>
-                    {client?.email && (
+                    {client?.email && !sentEmailAuto && (
                       <Button
                         className="flex-1 bg-gradient-to-r from-[#8A2BE2] to-[#4169E1]"
                         onClick={handleOpenEmailDraft}
@@ -696,6 +738,8 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                       setIsSendDialogOpen(false);
                       setSentPublicUrl(null);
                       setLinkCopied(false);
+                      setSentEmailAuto(false);
+                      setSentEmailRecipient(null);
                     }}
                   >
                     Done
