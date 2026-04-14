@@ -16,6 +16,7 @@ import { calculateMenuMargin } from "./utils/menuMargin";
 import { calculateShoppingListForQuoteRequest } from "./utils/shoppingList";
 import { getEmailConfig } from "./utils/siteConfig";
 import { sendEmailInBackground } from "./utils/email";
+import { storage } from "./storage";
 import {
   newInquiryCustomerAckEmail,
   newInquiryAdminEmail,
@@ -57,12 +58,25 @@ router.get("/menus/:id/margin", async (req: Request, res: Response) => {
 
 // Require an authenticated staff session. Returns the viewer's role, or sends a
 // 401/403 response and returns null to the caller (caller should early-return).
-function requireStaffSession(req: Request, res: Response): string | null {
+// Falls back to a DB lookup if the role isn't cached in the session yet —
+// needed for sessions created before the login handler started caching userRole.
+async function requireStaffSession(req: Request, res: Response): Promise<string | null> {
   if (!req.session?.userId) {
     res.status(401).json({ message: "Not authenticated" });
     return null;
   }
-  const role = req.session.userRole || "";
+  let role = req.session.userRole || "";
+  if (!role) {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (user) {
+        role = user.role;
+        req.session.userRole = user.role;
+      }
+    } catch (err) {
+      console.error("Failed to fetch user role for session:", err);
+    }
+  }
   if (role !== "admin" && role !== "user" && role !== "chef") {
     res.status(403).json({ message: "Insufficient permissions" });
     return null;
@@ -96,7 +110,7 @@ function sanitizeShoppingListForRole(list: any, role: string) {
 // Returns all ingredients needed (scaled to guest count) grouped by category
 router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Response) => {
   try {
-    const role = requireStaffSession(req, res);
+    const role = await requireStaffSession(req, res);
     if (!role) return;
 
     const quoteRequestId = parseInt(req.params.id);
@@ -121,7 +135,7 @@ router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Respon
 // Get shopping list for an event (looks up the originating quote request via estimate link)
 router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
   try {
-    const role = requireStaffSession(req, res);
+    const role = await requireStaffSession(req, res);
     if (!role) return;
 
     const eventId = parseInt(req.params.id);

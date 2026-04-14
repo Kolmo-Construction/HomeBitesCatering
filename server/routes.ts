@@ -205,6 +205,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(401).json({ message: 'Not authenticated' });
   };
 
+  // Lazy role lookup — returns req.session.userRole if cached, else fetches
+  // from the DB and caches it. Handles sessions created before userRole was
+  // populated at login (the sessions table is persistent across deploys).
+  const getSessionRole = async (req: Request): Promise<string | null> => {
+    if (req.session.userRole) return req.session.userRole;
+    if (!req.session.userId) return null;
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (user) {
+        req.session.userRole = user.role;
+        return user.role;
+      }
+    } catch (err) {
+      console.error('Failed to fetch user role for session:', err);
+    }
+    return null;
+  };
+
   // Middleware to check if user is an admin
   const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.session.userId) {
@@ -274,8 +292,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
       
-      // Set the user id in the session
+      // Set the user id and role in the session. The role is cached here so
+      // endpoints that read req.session.userRole directly don't have to
+      // round-trip to the DB on every request. Any role change requires the
+      // user to log out and back in — acceptable trade-off for SSR/perf.
       req.session.userId = user.id;
+      req.session.userRole = user.role;
       
       // Save the session explicitly before responding
       req.session.save((err) => {
@@ -2105,7 +2127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Strip financial data for non-admins. The events tab reads menu/dietary/
       // equipment from quoteRequest; estimate is only needed for pricing displays.
-      const viewerRole = req.session.userRole;
+      const viewerRole = await getSessionRole(req);
       const canSeeFinancials = viewerRole === 'admin';
 
       return res.status(200).json({
@@ -2191,7 +2213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid event ID' });
       }
 
-      const role = req.session.userRole;
+      const role = await getSessionRole(req);
       const isAdmin = role === 'admin';
 
       // Field whitelist for non-admin operational writes
