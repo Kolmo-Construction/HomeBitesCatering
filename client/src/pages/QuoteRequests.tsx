@@ -429,13 +429,13 @@ export default function QuoteRequests() {
     <div className="h-full">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Quote Requests</h1>
+          <h1 className="text-3xl font-bold">Inquiries</h1>
           <p className="text-muted-foreground mt-1">
-            Manage incoming quote requests and AI-powered insights
+            Incoming event inquiries ready to be priced and quoted
           </p>
         </div>
         <Badge variant="outline" className="text-sm py-1 px-3">
-          {quoteRequests.length} total request{quoteRequests.length !== 1 ? "s" : ""}
+          {quoteRequests.length} total inquir{quoteRequests.length !== 1 ? "ies" : "y"}
         </Badge>
       </div>
 
@@ -465,7 +465,7 @@ export default function QuoteRequests() {
                 <Card className="border-red-200 bg-red-50">
                   <CardContent className="py-8 text-center text-red-600">
                     <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-                    <p>Failed to load quote requests. Please refresh the page.</p>
+                    <p>Failed to load inquiries. Please refresh the page.</p>
                   </CardContent>
                 </Card>
               )}
@@ -474,7 +474,7 @@ export default function QuoteRequests() {
                 <Card>
                   <CardContent className="py-12 text-center text-muted-foreground">
                     <Inbox className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                    <p className="text-lg font-medium">No quote requests found</p>
+                    <p className="text-lg font-medium">No inquiries found</p>
                     <p className="text-sm mt-1">
                       {activeTab === "all"
                         ? "New requests will appear here when submitted."
@@ -558,7 +558,7 @@ export default function QuoteRequests() {
             <div className="flex flex-col items-center justify-center h-full text-center py-24">
               <FileText className="h-16 w-16 text-muted-foreground/30 mb-4" />
               <p className="text-lg font-medium text-muted-foreground">
-                Select a quote request to view details
+                Select an inquiry to view details
               </p>
               <p className="text-sm text-muted-foreground/70 mt-1">
                 Click on any request from the list
@@ -1250,7 +1250,7 @@ export default function QuoteRequests() {
                       )}
                     </div>
                     <Textarea
-                      placeholder="Add internal notes about this quote request..."
+                      placeholder="Add internal notes about this inquiry..."
                       value={internalNotesValue}
                       onChange={(e) => setInternalNotesValue(e.target.value)}
                       onBlur={handleNotesBlur}
@@ -1340,7 +1340,7 @@ export default function QuoteRequests() {
       <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Convert Quote Request</DialogTitle>
+            <DialogTitle>Convert Inquiry to Quote</DialogTitle>
             <DialogDescription>
               This will create a Client, Opportunity, and pre-filled Estimate from this quote
               request.
@@ -1437,7 +1437,7 @@ export default function QuoteRequests() {
       <Dialog open={disqualifyDialogOpen} onOpenChange={setDisqualifyDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Disqualify this quote request</DialogTitle>
+            <DialogTitle>Disqualify this inquiry</DialogTitle>
             <DialogDescription>
               Tell us why. This gets stored as the disqualification reason so we can learn
               what kinds of inbound aren't a fit (wrong date, out of area, budget mismatch,

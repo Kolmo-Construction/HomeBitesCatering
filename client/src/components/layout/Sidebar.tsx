@@ -38,7 +38,7 @@ export default function Sidebar() {
     { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket },
     { name: "Recipes", href: "/recipes", icon: ChefHat },
     { name: "Menus", href: "/menus", icon: ClipboardList },
-    { name: "Quote Requests", href: "/quote-requests", icon: MessageSquareQuote },
+    { name: "Inquiries", href: "/quote-requests", icon: MessageSquareQuote },
     { name: "Quotes", href: "/estimates", icon: FileText },
     { name: "Events", href: "/events", icon: CalendarCheck },
     { name: "Calendar", href: "/calendar", icon: Calendar },

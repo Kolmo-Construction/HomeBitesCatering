@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { db } from "./db"; // For direct database access
 import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import session from "express-session";
 import { eq, and, isNull, inArray } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
@@ -1271,6 +1272,285 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error accepting estimate:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Send a quote to the customer — bumps status draft→sent, stamps sentAt,
+  // lazily issues a viewToken (unguessable base64url) if one doesn't exist.
+  // The returned publicUrl is what Mike pastes into the email/SMS to the customer.
+  app.post('/api/estimates/:id/send', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
+      }
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Estimate not found' });
+      }
+
+      const now = new Date();
+      const viewToken = estimate.viewToken || randomBytes(24).toString('base64url');
+
+      const [updated] = await db
+        .update(estimates)
+        .set({
+          status: 'sent',
+          sentAt: estimate.sentAt ?? now,
+          viewToken,
+          updatedAt: now,
+        })
+        .where(eq(estimates.id, estimateId))
+        .returning();
+
+      // Build the public URL using the request's own origin so it works in any env
+      const host = req.get('host');
+      const proto = req.get('x-forwarded-proto') || req.protocol;
+      const publicUrl = `${proto}://${host}/quote/${viewToken}`;
+
+      return res.status(200).json({ estimate: updated, publicUrl });
+    } catch (error) {
+      console.error('Error sending estimate:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Decline an estimate (admin-triggered — e.g. Mike declines on behalf of a customer
+  // who responded by email instead of clicking the public link)
+  app.post('/api/estimates/:id/decline', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
+      }
+
+      const now = new Date();
+      const [updated] = await db
+        .update(estimates)
+        .set({
+          status: 'declined',
+          declinedAt: now,
+          declinedReason: typeof req.body?.reason === 'string' ? req.body.reason : null,
+          updatedAt: now,
+        })
+        .where(eq(estimates.id, estimateId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Estimate not found' });
+      }
+
+      return res.status(200).json(updated);
+    } catch (error) {
+      console.error('Error declining estimate:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PUBLIC QUOTE ENDPOINTS — no authentication. Token-keyed. Only exposes
+  // customer-facing fields; strips internal notes and any admin metadata.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // Sanitize a client row for public consumption — strip internal fields
+  const sanitizeClientForPublic = (c: typeof clients.$inferSelect) => ({
+    firstName: c.firstName,
+    lastName: c.lastName,
+    email: c.email,
+    phone: c.phone,
+    company: c.company,
+    address: c.address,
+    city: c.city,
+    state: c.state,
+    zip: c.zip,
+  });
+
+  // Sanitize an estimate row for public consumption
+  const sanitizeEstimateForPublic = (e: typeof estimates.$inferSelect) => ({
+    id: e.id,
+    eventType: e.eventType,
+    eventDate: e.eventDate,
+    guestCount: e.guestCount,
+    venue: e.venue,
+    venueAddress: e.venueAddress,
+    venueCity: e.venueCity,
+    venueZip: e.venueZip,
+    items: e.items,
+    additionalServices: e.additionalServices,
+    subtotal: e.subtotal,
+    tax: e.tax,
+    total: e.total,
+    status: e.status,
+    notes: e.notes,
+    expiresAt: e.expiresAt,
+    sentAt: e.sentAt,
+    viewedAt: e.viewedAt,
+    acceptedAt: e.acceptedAt,
+    declinedAt: e.declinedAt,
+  });
+
+  // Public: fetch a quote by its view token
+  app.get('/api/public/quote/:token', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      if (!token || token.length < 10) {
+        return res.status(400).json({ message: 'Invalid token' });
+      }
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+
+      return res.status(200).json({
+        estimate: sanitizeEstimateForPublic(estimate),
+        client: client ? sanitizeClientForPublic(client) : null,
+      });
+    } catch (error) {
+      console.error('Error fetching public quote:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: stamp viewedAt the first time the customer opens the quote
+  app.post('/api/public/quote/:token/view', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+
+      // First-view-wins: don't overwrite an existing viewedAt so we track the initial open time
+      if (!estimate.viewedAt) {
+        await db
+          .update(estimates)
+          .set({ viewedAt: new Date(), updatedAt: new Date() })
+          .where(eq(estimates.id, estimate.id));
+      }
+
+      return res.status(200).json({ ok: true });
+    } catch (error) {
+      console.error('Error stamping view:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: accept the quote — same downstream effect as the admin accept endpoint
+  // (client graduates to customer, event is auto-created). Token-keyed so no auth needed.
+  app.post('/api/public/quote/:token/accept', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+
+      if (estimate.status === 'declined') {
+        return res.status(400).json({ message: 'This quote has already been declined.' });
+      }
+
+      const now = new Date();
+      const [updatedEstimate] = await db
+        .update(estimates)
+        .set({ status: 'accepted', acceptedAt: estimate.acceptedAt ?? now, updatedAt: now })
+        .where(eq(estimates.id, estimate.id))
+        .returning();
+
+      // Graduate the client → customer
+      await db
+        .update(clients)
+        .set({ type: 'customer', updatedAt: now })
+        .where(eq(clients.id, estimate.clientId));
+
+      // Auto-create an event if one doesn't already exist for this estimate
+      const [existingEvent] = await db.select().from(events).where(eq(events.estimateId, estimate.id));
+      if (!existingEvent) {
+        const [originatingQuote] = await db
+          .select()
+          .from(quoteRequests)
+          .where(eq(quoteRequests.estimateId, estimate.id));
+
+        const eventDate = estimate.eventDate ?? now;
+        const composeTime = (base: Date, hhmm?: string | null, fallbackHours: number = 12): Date => {
+          const d = new Date(base);
+          if (hhmm && /^\d{1,2}:\d{2}/.test(hhmm)) {
+            const [h, m] = hhmm.split(':').map((p) => parseInt(p, 10));
+            d.setHours(h, m || 0, 0, 0);
+          } else {
+            d.setHours(fallbackHours, 0, 0, 0);
+          }
+          return d;
+        };
+        const startTime = composeTime(eventDate, originatingQuote?.eventStartTime, 12);
+        const endTime = composeTime(eventDate, originatingQuote?.eventEndTime, 16);
+        if (endTime.getTime() <= startTime.getTime()) {
+          endTime.setTime(startTime.getTime() + 4 * 60 * 60 * 1000);
+        }
+
+        await db.insert(events).values({
+          clientId: estimate.clientId,
+          estimateId: estimate.id,
+          eventDate,
+          startTime,
+          endTime,
+          eventType: estimate.eventType,
+          guestCount: estimate.guestCount ?? originatingQuote?.guestCount ?? 1,
+          venue: estimate.venue || originatingQuote?.venueName || 'Venue TBD',
+          menuId: estimate.menuId ?? null,
+          status: 'confirmed',
+          notes: estimate.notes ?? null,
+          completedTasks: [],
+        } as any);
+      }
+
+      return res.status(200).json({
+        ok: true,
+        estimate: sanitizeEstimateForPublic(updatedEstimate),
+      });
+    } catch (error) {
+      console.error('Error accepting public quote:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: decline the quote with an optional reason
+  app.post('/api/public/quote/:token/decline', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+
+      if (estimate.status === 'accepted') {
+        return res.status(400).json({ message: 'This quote has already been accepted.' });
+      }
+
+      const now = new Date();
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason : null;
+
+      const [updated] = await db
+        .update(estimates)
+        .set({
+          status: 'declined',
+          declinedAt: now,
+          declinedReason: reason,
+          updatedAt: now,
+        })
+        .where(eq(estimates.id, estimate.id))
+        .returning();
+
+      return res.status(200).json({
+        ok: true,
+        estimate: sanitizeEstimateForPublic(updated),
+      });
+    } catch (error) {
+      console.error('Error declining public quote:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });

@@ -9,17 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCanViewFinancials } from "@/hooks/usePermissions";
 import homebitesLogo from "@assets/homebites-logo.avif";
-import { 
-  CheckIcon, 
-  XIcon, 
-  PrinterIcon, 
-  ArrowLeftIcon, 
-  SendIcon, 
-  DownloadIcon, 
-  CalendarIcon, 
-  MapPinIcon, 
+import {
+  CheckIcon,
+  XIcon,
+  PrinterIcon,
+  ArrowLeftIcon,
+  SendIcon,
+  DownloadIcon,
+  CalendarIcon,
+  MapPinIcon,
   UsersIcon,
-  FileTextIcon
+  FileTextIcon,
+  CopyIcon,
+  MailIcon,
+  LinkIcon,
 } from "lucide-react";
 import { 
   AlertDialog,
@@ -69,6 +72,8 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false);
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [sentPublicUrl, setSentPublicUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { data: estimate, isLoading, isError, error } = useQuery<EstimateType, Error>({
     queryKey: ["/api/estimates", id, isClient], // Added isClient to queryKey to differentiate cache if needed
@@ -136,14 +141,47 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   });
 
   const sendMutation = useMutation({
-    mutationFn: async () => apiRequest("PATCH", `/api/estimates/${id}`, { status: "sent", sentAt: new Date().toISOString() }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
-      toast({ title: "Estimate sent", description: "The estimate has been sent to the client." });
-      setIsSendDialogOpen(false);
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/estimates/${id}/send`);
+      return res.json() as Promise<{ estimate: EstimateType; publicUrl: string }>;
     },
-    onError: (err: Error) => toast({ title: "Error", description: `Failed to send estimate: ${err.message}`, variant: "destructive" }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      setSentPublicUrl(data.publicUrl);
+      setLinkCopied(false);
+      toast({
+        title: "Quote ready to send",
+        description: "Copy the link or open an email draft to send it to the customer.",
+      });
+    },
+    onError: (err: Error) =>
+      toast({ title: "Error", description: `Failed to send estimate: ${err.message}`, variant: "destructive" }),
   });
+
+  const handleCopyLink = async () => {
+    if (!sentPublicUrl) return;
+    try {
+      await navigator.clipboard.writeText(sentPublicUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      toast({ title: "Couldn't copy", description: "Select and copy manually.", variant: "destructive" });
+    }
+  };
+
+  const handleOpenEmailDraft = () => {
+    if (!sentPublicUrl || !client?.email) return;
+    const subject = encodeURIComponent(`Your Homebites catering quote`);
+    const body = encodeURIComponent(
+      `Hi ${client.firstName || ""},\n\n` +
+        `Thanks for reaching out to Homebites! Your quote is ready. You can review it and accept or decline here:\n\n` +
+        `${sentPublicUrl}\n\n` +
+        `Let us know if you have any questions.\n\n` +
+        `— Homebites Catering`
+    );
+    window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
+  };
 
   if (isLoading) {
     return (
@@ -237,15 +275,29 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
           </Link>
 
           <div className="flex items-center gap-2">
-            {estimate.status === "draft" && (
-              <Button 
-                variant="outline" 
+            {estimate.status !== "accepted" && estimate.status !== "declined" && (
+              <Button
+                variant="outline"
                 className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
                 onClick={() => setIsSendDialogOpen(true)}
                 disabled={sendMutation.isPending}
               >
                 <SendIcon className="mr-2 h-4 w-4" />
-                {sendMutation.isPending ? "Sending..." : "Send to Client"}
+                {sendMutation.isPending
+                  ? "Preparing..."
+                  : estimate.status === "draft"
+                  ? "Send Quote"
+                  : "Resend / Copy Link"}
+              </Button>
+            )}
+            {estimate.status !== "accepted" && estimate.status !== "declined" && (
+              <Button
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setIsAcceptDialogOpen(true)}
+                disabled={acceptMutation.isPending}
+              >
+                <CheckIcon className="mr-2 h-4 w-4" />
+                Mark Accepted
               </Button>
             )}
             <Button variant="outline" onClick={handlePrint}>
@@ -561,24 +613,96 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
       </AlertDialog>
 
       {!isClient && (
-        <AlertDialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
+        <AlertDialog
+          open={isSendDialogOpen}
+          onOpenChange={(open) => {
+            setIsSendDialogOpen(open);
+            if (!open) {
+              setSentPublicUrl(null);
+              setLinkCopied(false);
+            }
+          }}
+        >
           <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Send Estimate to Client?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will mark the estimate as "Sent" and (notionally) email it to the client.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={sendMutation.isPending}>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => sendMutation.mutate()}
-                className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1]"
-                disabled={sendMutation.isPending}
-              >
-                {sendMutation.isPending ? "Sending..." : "Send Estimate"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+            {!sentPublicUrl ? (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Send Quote to {client?.firstName ?? "customer"}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This generates a private link to a customer-facing page where{" "}
+                    {client?.firstName ?? "they"} can review the quote and click{" "}
+                    <span className="font-semibold">Accept</span> or{" "}
+                    <span className="font-semibold">Decline</span>. Accepting auto-creates a
+                    confirmed event and graduates them to a customer.
+                    <br />
+                    <br />
+                    You'll paste the link into an email (or open a prefilled draft) — nothing
+                    goes out automatically yet.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={sendMutation.isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      sendMutation.mutate();
+                    }}
+                    className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1]"
+                    disabled={sendMutation.isPending}
+                  >
+                    {sendMutation.isPending ? "Preparing..." : "Generate Link"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            ) : (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Your customer link is ready</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Copy this link and send it to {client?.firstName ?? "the customer"}. They
+                    don't need to log in — they just click, review, and accept or decline.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="my-4 space-y-3">
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-md border">
+                    <LinkIcon className="h-4 w-4 text-gray-500 shrink-0" />
+                    <code className="flex-1 text-xs text-gray-800 break-all select-all">
+                      {sentPublicUrl}
+                    </code>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleCopyLink}
+                    >
+                      <CopyIcon className="h-4 w-4 mr-2" />
+                      {linkCopied ? "Copied!" : "Copy Link"}
+                    </Button>
+                    {client?.email && (
+                      <Button
+                        className="flex-1 bg-gradient-to-r from-[#8A2BE2] to-[#4169E1]"
+                        onClick={handleOpenEmailDraft}
+                      >
+                        <MailIcon className="h-4 w-4 mr-2" />
+                        Open Email Draft
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setIsSendDialogOpen(false);
+                      setSentPublicUrl(null);
+                      setLinkCopied(false);
+                    }}
+                  >
+                    Done
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
           </AlertDialogContent>
         </AlertDialog>
       )}

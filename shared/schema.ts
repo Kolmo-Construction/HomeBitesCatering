@@ -326,6 +326,9 @@ export const estimates = pgTable("estimates", {
   viewedAt: timestamp("viewed_at"),
   acceptedAt: timestamp("accepted_at"),
   declinedAt: timestamp("declined_at"),
+  declinedReason: text("declined_reason"), // customer's reason if they click Decline
+  // Unguessable token used in public quote URLs (/quote/:token). Null until the quote is sent.
+  viewToken: text("view_token").unique(),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

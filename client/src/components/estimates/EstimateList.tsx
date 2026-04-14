@@ -150,7 +150,15 @@ export default function EstimateList() {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => <BadgeStatus status={row.original.status} />,
+        cell: ({ row }) => {
+          // Derive "viewed" from viewedAt being set even though the underlying
+          // status column stays "sent" — that's how we signal customer engagement
+          // without losing the original send timestamp.
+          const raw = row.original.status;
+          const derived =
+            raw === "sent" && (row.original as any).viewedAt ? "viewed" : raw;
+          return <BadgeStatus status={derived} />;
+        },
       },
       {
         id: "actions",

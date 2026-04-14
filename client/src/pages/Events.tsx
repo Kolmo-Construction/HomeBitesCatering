@@ -948,7 +948,7 @@ function OverviewTab({
               onClick={() => navigate(`/quote-requests?id=${quoteRequest.id}`)}
             >
               <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              Quote Request #{quoteRequest.id}
+              Inquiry #{quoteRequest.id}
             </Button>
           )}
           {client && (

@@ -171,10 +171,10 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/raw-leads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/quotes/quote-requests'] });
       toast({
-        title: data.alreadyExisted ? 'Already promoted' : 'Promoted to quote request',
+        title: data.alreadyExisted ? 'Already promoted' : 'Promoted to inquiry',
         description: data.alreadyExisted
-          ? `This lead is already linked to quote request #${data.quoteRequest.id}.`
-          : `Draft quote request #${data.quoteRequest.id} created. Fill in menu/guest details to send a quote.`,
+          ? `This lead is already linked to inquiry #${data.quoteRequest.id}.`
+          : `Draft inquiry #${data.quoteRequest.id} created. Fill in menu/guest details to send a quote.`,
       });
       navigate(`/quote-requests?id=${data.quoteRequest.id}`);
     },
@@ -1127,7 +1127,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 data-testid="button-promote-to-quote-request"
               >
                 <SparklesIcon className="h-4 w-4 mr-2" />
-                {promoteMutation.isPending ? 'Promoting…' : 'Promote to Quote Request'}
+                {promoteMutation.isPending ? 'Promoting…' : 'Promote to Inquiry'}
               </Button>
               <Button
                 variant="outline"
