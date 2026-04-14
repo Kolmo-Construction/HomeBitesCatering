@@ -39,6 +39,9 @@ import RequestQuote from "@/pages/RequestQuote";
 // Import the admin Quote Requests inbox
 import QuoteRequests from "@/pages/QuoteRequests";
 
+// Import the Event Command Center (chef one-stop-shop)
+import Events from "@/pages/Events";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -172,6 +175,8 @@ function AppContent() {
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
           <Route path="/quote-requests" component={QuoteRequests} />
+          <Route path="/events" component={Events} />
+          <Route path="/events/:id" component={Events} />
           <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible even when logged in, if desired, or redirect from here */}

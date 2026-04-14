@@ -359,11 +359,16 @@ export const events = pgTable("events", {
   menuId: integer("menu_id").references(() => menus.id),
   status: text("status").default("confirmed").notNull(), // confirmed, in-progress, completed, cancelled
   notes: text("notes"),
+  // Checklist state — array of checklist item ids that have been marked complete.
+  // Shopping list check-offs are stored under a "shopping:<ingredient>" prefix in the same array.
+  completedTasks: jsonb("completed_tasks").$type<string[]>().default([]).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertEventSchema = createInsertSchema(events).omit({
+export const insertEventSchema = createInsertSchema(events, {
+  completedTasks: z.array(z.string()).optional(),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true
@@ -396,6 +401,7 @@ export const communications = pgTable("communications", {
   id: serial("id").primaryKey(),
   opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }), // Link to opportunity
   clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }), // Link to client
+  eventId: integer("event_id").references(() => events.id, { onDelete: 'set null' }), // Link to event (for post-booking chef context)
   userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }), // User who created/logged this, or involved internal user
   type: communicationTypeEnum("type").notNull(),
   direction: communicationDirectionEnum("direction").notNull(),
@@ -1107,7 +1113,7 @@ export const estimateRelations = relations(estimates, ({ one }) => ({
   }),
 }));
 
-export const eventRelations = relations(events, ({ one }) => ({
+export const eventRelations = relations(events, ({ one, many }) => ({
   client: one(clients, {
     fields: [events.clientId],
     references: [clients.id]
@@ -1120,6 +1126,7 @@ export const eventRelations = relations(events, ({ one }) => ({
     fields: [events.menuId],
     references: [menus.id]
   }),
+  communications: many(communications),
 }));
 
 export const contactIdentifierRelations = relations(contactIdentifiers, ({ one }) => ({
@@ -1141,6 +1148,10 @@ export const communicationRelations = relations(communications, ({ one }) => ({
   client: one(clients, {
     fields: [communications.clientId],
     references: [clients.id]
+  }),
+  event: one(events, {
+    fields: [communications.eventId],
+    references: [events.id]
   }),
   user: one(users, {
     fields: [communications.userId],

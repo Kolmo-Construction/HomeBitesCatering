@@ -27,6 +27,8 @@ import {
   rawLeads,                      // for promote-to-quote-request endpoint
   estimates,                     // for accept-estimate endpoint
   clients,                       // for accept-estimate endpoint (prospect→customer graduation)
+  events,                        // for auto-create event on accept and /full endpoint
+  menus,                         // for /api/events/:id/full aggregate endpoint
   type InsertCommunication,
   type InsertOpportunityEmailThread,
 } from "@shared/schema";
@@ -1170,9 +1172,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Accept an estimate — graduates the linked client from 'prospect' to 'customer'.
-  // This is the prospect→customer transition: it happens when the deal becomes real,
-  // not when the quote was first sent. Keeps the clients table clean of tire-kickers.
+  // Accept an estimate — graduates the linked client from 'prospect' to 'customer'
+  // and auto-creates a confirmed Event row so the chef has a prep surface the moment
+  // the deal closes. Idempotent: if an event already exists for this estimate, we skip
+  // the creation step and return the existing one.
   app.post('/api/estimates/:id/accept', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const estimateId = parseInt(req.params.id);
@@ -1199,10 +1202,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(clients.id, estimate.clientId))
         .returning();
 
+      // Auto-create (or fetch existing) Event row for this estimate
+      const [existingEvent] = await db.select().from(events).where(eq(events.estimateId, estimateId));
+      let createdEvent = existingEvent ?? null;
+
+      if (!existingEvent) {
+        // Find the originating quote request so we can use its time/venue details
+        const [originatingQuote] = await db
+          .select()
+          .from(quoteRequests)
+          .where(eq(quoteRequests.estimateId, estimateId));
+
+        // Compose start/end timestamps. Quote request stores them as text ("14:00") — combine
+        // with the event date to get real timestamps. Fall back to noon + 4h if missing.
+        const eventDate = estimate.eventDate ?? now;
+        const composeTime = (base: Date, hhmm?: string | null, fallbackHours: number = 12): Date => {
+          const d = new Date(base);
+          if (hhmm && /^\d{1,2}:\d{2}/.test(hhmm)) {
+            const [h, m] = hhmm.split(':').map((p) => parseInt(p, 10));
+            d.setHours(h, m || 0, 0, 0);
+          } else {
+            d.setHours(fallbackHours, 0, 0, 0);
+          }
+          return d;
+        };
+        const startTime = composeTime(eventDate, originatingQuote?.eventStartTime, 12);
+        const endTime = composeTime(eventDate, originatingQuote?.eventEndTime, 16);
+        // If end ended up before start (missing endTime and default is less than explicit start),
+        // push end to 4h after start.
+        if (endTime.getTime() <= startTime.getTime()) {
+          endTime.setTime(startTime.getTime() + 4 * 60 * 60 * 1000);
+        }
+
+        const venueText =
+          estimate.venue ||
+          originatingQuote?.venueName ||
+          (originatingQuote?.venueAddress as any)?.street ||
+          'Venue TBD';
+        const guestCount = estimate.guestCount ?? originatingQuote?.guestCount ?? 1;
+
+        [createdEvent] = await db
+          .insert(events)
+          .values({
+            clientId: estimate.clientId,
+            estimateId: estimate.id,
+            eventDate,
+            startTime,
+            endTime,
+            eventType: estimate.eventType,
+            guestCount,
+            venue: venueText,
+            menuId: estimate.menuId ?? null,
+            status: 'confirmed',
+            notes: estimate.notes ?? null,
+            completedTasks: [],
+          } as any)
+          .returning();
+      }
+
       return res.status(200).json({
-        message: 'Estimate accepted; client graduated from prospect to customer',
+        message: existingEvent
+          ? 'Estimate re-accepted; existing event retained'
+          : 'Estimate accepted; client graduated to customer and event created',
         estimate: updatedEstimate,
         client: updatedClient,
+        event: createdEvent,
+        eventAlreadyExisted: !!existingEvent,
       });
     } catch (error) {
       console.error('Error accepting estimate:', error);
@@ -1254,24 +1319,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);
-      
+
       if (isNaN(eventId)) {
         return res.status(400).json({ message: 'Invalid event ID' });
       }
-      
+
       const event = await storage.getEvent(eventId);
-      
+
       if (!event) {
         return res.status(404).json({ message: 'Event not found' });
       }
-      
+
       res.status(200).json(event);
     } catch (error) {
       console.error('Error getting event:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
+
+  // Event Command Center payload — returns everything the event detail page needs
+  // in a single request: the event itself, its client, its estimate (with line items),
+  // the originating quote request (menu selections, dietary, equipment, beverages,
+  // appetizers, AI analysis), and the menu metadata. Any of the joined objects may be
+  // null if the data isn't linked — the UI handles missing pieces gracefully.
+  app.get('/api/events/:id/full', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: 'Invalid event ID' });
+      }
+
+      const [event] = await db.select().from(events).where(eq(events.id, eventId));
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, event.clientId));
+
+      let estimate: typeof estimates.$inferSelect | null = null;
+      let quoteRequest: typeof quoteRequests.$inferSelect | null = null;
+      if (event.estimateId) {
+        const [e] = await db.select().from(estimates).where(eq(estimates.id, event.estimateId));
+        estimate = e ?? null;
+        const [qr] = await db
+          .select()
+          .from(quoteRequests)
+          .where(eq(quoteRequests.estimateId, event.estimateId));
+        quoteRequest = qr ?? null;
+      }
+
+      let menu: typeof menus.$inferSelect | null = null;
+      if (event.menuId) {
+        const [m] = await db.select().from(menus).where(eq(menus.id, event.menuId));
+        menu = m ?? null;
+      }
+
+      return res.status(200).json({
+        event,
+        client: client ?? null,
+        estimate,
+        quoteRequest,
+        menu,
+      });
+    } catch (error) {
+      console.error('Error getting event full payload:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Toggle a single checklist item on an event. Body: { taskId: string, done: boolean }.
+  // Keeps the event detail page responsive without sending the whole task list on every tick.
+  app.patch('/api/events/:id/checklist', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: 'Invalid event ID' });
+      }
+
+      const { taskId, done } = req.body ?? {};
+      if (typeof taskId !== 'string' || typeof done !== 'boolean') {
+        return res.status(400).json({ message: 'Body must include { taskId: string, done: boolean }' });
+      }
+
+      const [event] = await db.select().from(events).where(eq(events.id, eventId));
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      const current = Array.isArray(event.completedTasks) ? (event.completedTasks as string[]) : [];
+      let next: string[];
+      if (done) {
+        next = current.includes(taskId) ? current : [...current, taskId];
+      } else {
+        next = current.filter((id) => id !== taskId);
+      }
+
+      const [updated] = await db
+        .update(events)
+        .set({ completedTasks: next, updatedAt: new Date() })
+        .where(eq(events.id, eventId))
+        .returning();
+
+      return res.status(200).json(updated);
+    } catch (error) {
+      console.error('Error updating event checklist:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Create a new event
   app.post('/api/events', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
