@@ -67,7 +67,9 @@ import {
 
 interface QuoteRequest {
   id: number;
-  status: "draft" | "submitted" | "reviewing" | "quoted" | "converted" | "expired" | "archived";
+  status: "draft" | "submitted" | "reviewing" | "quoted" | "converted" | "disqualified" | "expired" | "archived";
+  disqualificationReason: string | null;
+  rawLeadId: number | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -202,6 +204,7 @@ const STATUS_COLORS: Record<string, string> = {
   reviewing: "bg-yellow-100 text-yellow-700 border-yellow-300",
   quoted: "bg-purple-100 text-purple-700 border-purple-300",
   converted: "bg-green-100 text-green-700 border-green-300",
+  disqualified: "bg-orange-100 text-orange-700 border-orange-300",
   expired: "bg-red-100 text-red-700 border-red-300",
   archived: "bg-gray-100 text-gray-500 border-gray-300",
 };
@@ -212,6 +215,7 @@ const STATUS_LABELS: Record<string, string> = {
   reviewing: "Reviewing",
   quoted: "Quoted",
   converted: "Converted",
+  disqualified: "Disqualified",
   expired: "Expired",
   archived: "Archived",
 };
@@ -245,6 +249,8 @@ export default function QuoteRequests() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [disqualifyDialogOpen, setDisqualifyDialogOpen] = useState(false);
+  const [disqualifyReason, setDisqualifyReason] = useState<string>("");
   const [internalNotesValue, setInternalNotesValue] = useState<string>("");
   const [notesInitializedForId, setNotesInitializedForId] = useState<number | null>(null);
 
@@ -271,15 +277,35 @@ export default function QuoteRequests() {
   // ─── Mutations ────────────────────────────────────────────────────────────
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/quotes/quote-requests/${id}`, { status });
+    mutationFn: async ({
+      id,
+      status,
+      disqualificationReason,
+    }: {
+      id: number;
+      status: string;
+      disqualificationReason?: string;
+    }) => {
+      const payload: Record<string, unknown> = { status };
+      if (disqualificationReason !== undefined) {
+        payload.disqualificationReason = disqualificationReason;
+      }
+      const res = await apiRequest("PATCH", `/api/quotes/quote-requests/${id}`, payload);
       return res.json();
     },
-    onMutate: async ({ id, status }) => {
+    onMutate: async ({ id, status, disqualificationReason }) => {
       await queryClient.cancelQueries({ queryKey: ["/api/quotes/quote-requests"] });
       const previous = queryClient.getQueryData<QuoteRequest[]>(["/api/quotes/quote-requests"]);
       queryClient.setQueryData<QuoteRequest[]>(["/api/quotes/quote-requests"], (old) =>
-        (old ?? []).map((qr) => (qr.id === id ? { ...qr, status: status as QuoteRequest["status"] } : qr))
+        (old ?? []).map((qr) =>
+          qr.id === id
+            ? {
+                ...qr,
+                status: status as QuoteRequest["status"],
+                ...(disqualificationReason !== undefined ? { disqualificationReason } : {}),
+              }
+            : qr
+        )
       );
       return { previous };
     },
@@ -293,6 +319,35 @@ export default function QuoteRequests() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes/quote-requests"] });
     },
   });
+
+  const handleStatusChange = (value: string) => {
+    if (!selectedRequest) return;
+    if (value === "disqualified") {
+      setDisqualifyReason(selectedRequest.disqualificationReason ?? "");
+      setDisqualifyDialogOpen(true);
+      return;
+    }
+    statusMutation.mutate({ id: selectedRequest.id, status: value });
+  };
+
+  const confirmDisqualify = () => {
+    if (!selectedRequest) return;
+    const reason = disqualifyReason.trim();
+    if (!reason) {
+      toast({
+        title: "Reason required",
+        description: "Please enter a short reason before disqualifying.",
+        variant: "destructive",
+      });
+      return;
+    }
+    statusMutation.mutate({
+      id: selectedRequest.id,
+      status: "disqualified",
+      disqualificationReason: reason,
+    });
+    setDisqualifyDialogOpen(false);
+  };
 
   const notesMutation = useMutation({
     mutationFn: async ({ id, internalNotes }: { id: number; internalNotes: string }) => {
@@ -394,6 +449,7 @@ export default function QuoteRequests() {
               <TabsTrigger value="reviewing">Reviewing</TabsTrigger>
               <TabsTrigger value="quoted">Quoted</TabsTrigger>
               <TabsTrigger value="converted">Converted</TabsTrigger>
+              <TabsTrigger value="disqualified">Disqualified</TabsTrigger>
               <TabsTrigger value="archived">Archived</TabsTrigger>
             </TabsList>
 
@@ -534,9 +590,7 @@ export default function QuoteRequests() {
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <Select
                         value={selectedRequest.status}
-                        onValueChange={(value) =>
-                          statusMutation.mutate({ id: selectedRequest.id, status: value })
-                        }
+                        onValueChange={handleStatusChange}
                       >
                         <SelectTrigger className="w-[140px] h-8">
                           <SelectValue />
@@ -546,6 +600,7 @@ export default function QuoteRequests() {
                           <SelectItem value="reviewing">Reviewing</SelectItem>
                           <SelectItem value="quoted">Quoted</SelectItem>
                           <SelectItem value="converted">Converted</SelectItem>
+                          <SelectItem value="disqualified">Disqualified</SelectItem>
                           <SelectItem value="expired">Expired</SelectItem>
                           <SelectItem value="archived">Archived</SelectItem>
                         </SelectContent>
@@ -565,7 +620,24 @@ export default function QuoteRequests() {
                       <Users className="h-3 w-3 mr-1" />
                       {selectedRequest.guestCount} guests
                     </Badge>
+                    {selectedRequest.rawLeadId && (
+                      <Badge
+                        variant="outline"
+                        className="cursor-pointer border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                        onClick={() => navigate(`/raw-leads/${selectedRequest.rawLeadId}`)}
+                      >
+                        <Inbox className="h-3 w-3 mr-1" />
+                        Promoted from Lead #{selectedRequest.rawLeadId}
+                      </Badge>
+                    )}
                   </div>
+
+                  {selectedRequest.status === "disqualified" && selectedRequest.disqualificationReason && (
+                    <div className="mt-3 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+                      <span className="font-semibold">Disqualified: </span>
+                      {selectedRequest.disqualificationReason}
+                    </div>
+                  )}
 
                   <Separator className="my-3" />
 
@@ -1357,6 +1429,37 @@ export default function QuoteRequests() {
                 )}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Disqualify Dialog ────────────────────────────────────────── */}
+      <Dialog open={disqualifyDialogOpen} onOpenChange={setDisqualifyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disqualify this quote request</DialogTitle>
+            <DialogDescription>
+              Tell us why. This gets stored as the disqualification reason so we can learn
+              what kinds of inbound aren't a fit (wrong date, out of area, budget mismatch,
+              ghosted, spam, etc).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Textarea
+              value={disqualifyReason}
+              onChange={(e) => setDisqualifyReason(e.target.value)}
+              placeholder="e.g. Date already booked; out of service area; budget too low; no response after 3 follow-ups"
+              rows={4}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDisqualifyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDisqualify}>
+              Disqualify
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -263,6 +263,9 @@ export const insertMenuSchema = createInsertSchema(menus, {
   updatedAt: true
 });
 
+// Client type — prospect (has quote/estimate but hasn't paid) vs customer (accepted estimate or booked event)
+export const clientTypeEnum = pgEnum("client_type", ["prospect", "customer"]);
+
 // Clients
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
@@ -277,6 +280,7 @@ export const clients = pgTable("clients", {
   state: text("state"),
   zip: text("zip"),
   notes: text("notes"),
+  type: clientTypeEnum("type").default("prospect").notNull(),
   opportunityId: integer("opportunity_id").references(() => opportunities.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -687,7 +691,7 @@ export const budgetIndicationEnum = pgEnum("budget_indication", ['not_mentioned'
 export const sentimentEnum = pgEnum("sentiment", ['positive', 'neutral', 'negative', 'urgent']);
 
 // Updated status enum to include new statuses
-export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'archived', 'junk', 'parsing_failed', 'needs_manual_review']);
+export const rawLeadStatusEnum = pgEnum("raw_lead_status", ['new', 'under_review', 'qualified', 'disqualified', 'archived', 'junk', 'parsing_failed', 'needs_manual_review']);
 
 // Forward declare rawLeads for circular references
 export const rawLeads = pgTable("raw_leads", {
@@ -700,6 +704,7 @@ export const rawLeads = pgTable("raw_leads", {
   eventSummary: text("event_summary"), // Brief summary/keywords from raw_data
   receivedAt: timestamp("received_at").notNull(), // Removed defaultNow() so we can set this to the email's original date
   status: rawLeadStatusEnum("status").default('new').notNull(),
+  disqualificationReason: text("disqualification_reason"), // Free-text reason when status is 'disqualified' (wrong fit, out of area, ghosted, spam, etc.)
   // This field links a raw lead to the opportunity created from it.
   createdOpportunityId: integer("created_opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
   notes: text("internal_notes"), // For internal notes about this raw lead
@@ -817,6 +822,7 @@ export const quoteRequestStatusEnum = pgEnum("quote_request_status", [
   "reviewing",    // Staff is reviewing
   "quoted",       // Estimate has been generated
   "converted",    // Converted to opportunity/booking
+  "disqualified", // Not a real fit — out of area, spam, wrong date, ghosted. Captures reason separately.
   "expired",      // Quote expired without action
   "archived",     // Manually archived
 ]);
@@ -1004,9 +1010,13 @@ export const quoteRequests = pgTable("quote_requests", {
   // Notes
   specialRequests: text("special_requests"),
   internalNotes: text("internal_notes"),
+  disqualificationReason: text("disqualification_reason"), // Free-text reason when status is 'disqualified'
 
   // AI Analysis — populated asynchronously after submission
   aiAnalysis: jsonb("ai_analysis").$type<QuoteAiAnalysis>(),
+
+  // Origin: set when this quote request was promoted from a raw lead (vs. submitted directly via public form)
+  rawLeadId: integer("raw_lead_id").references(() => rawLeads.id, { onDelete: 'set null' }),
 
   // Links to other entities (set when converted)
   opportunityId: integer("opportunity_id").references(() => opportunities.id),
@@ -1138,7 +1148,7 @@ export const communicationRelations = relations(communications, ({ one }) => ({
   }),
 }));
 
-export const rawLeadRelations = relations(rawLeads, ({ one }) => ({
+export const rawLeadRelations = relations(rawLeads, ({ one, many }) => ({
   createdOpportunity: one(opportunities, {
     fields: [rawLeads.createdOpportunityId],
     references: [opportunities.id],
@@ -1149,7 +1159,10 @@ export const rawLeadRelations = relations(rawLeads, ({ one }) => ({
     references: [users.id],
     relationName: 'assignedRawLeads'
   }),
+  // A raw lead may have been promoted to one or more quote requests (usually just one)
+  promotedQuoteRequests: many(quoteRequests, { relationName: 'promotedFromRawLead' }),
 }));
+
 
 // Gmail Sync State table to track the last known history ID and watch expiration
 export const gmailSyncState = pgTable("gmail_sync_state", {
@@ -1197,6 +1210,11 @@ export const quoteRequestRelations = relations(quoteRequests, ({ one }) => ({
   promoCode: one(promoCodes, { fields: [quoteRequests.promoCodeId], references: [promoCodes.id] }),
   opportunity: one(opportunities, { fields: [quoteRequests.opportunityId], references: [opportunities.id] }),
   estimate: one(estimates, { fields: [quoteRequests.estimateId], references: [estimates.id] }),
+  rawLead: one(rawLeads, {
+    fields: [quoteRequests.rawLeadId],
+    references: [rawLeads.id],
+    relationName: 'promotedFromRawLead',
+  }),
 }));
 
 export const venueRelations = relations(venues, ({ many }) => ({

@@ -430,7 +430,7 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
 
     const { opportunities, clients, estimates } = await import("@shared/schema");
 
-    // 1. Create client
+    // 1. Create client as PROSPECT (graduates to 'customer' when they accept the estimate)
     const billingAddr = request.billingAddress as any;
     const [client] = await db.insert(clients).values({
       firstName: request.firstName,
@@ -442,6 +442,7 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       city: billingAddr?.city || undefined,
       state: billingAddr?.state || undefined,
       zip: billingAddr?.zip || undefined,
+      type: 'prospect',
     }).returning();
 
     // 2. Create opportunity

@@ -31,7 +31,7 @@ export default function Sidebar() {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Incoming Leads", href: "/raw-leads", icon: Inbox },
+    { name: "Leads", href: "/raw-leads", icon: Inbox },
     { name: "Opportunities", href: "/opportunities", icon: Filter },
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket },

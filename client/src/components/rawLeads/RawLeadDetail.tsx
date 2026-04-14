@@ -154,6 +154,39 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
     },
   });
   
+  const promoteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/raw-leads/${leadId}/promote-to-quote-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to promote lead: ${errorText}`);
+      }
+      return response.json() as Promise<{ quoteRequest: { id: number }; alreadyExisted?: boolean }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/raw-leads/${leadId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/raw-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes/quote-requests'] });
+      toast({
+        title: data.alreadyExisted ? 'Already promoted' : 'Promoted to quote request',
+        description: data.alreadyExisted
+          ? `This lead is already linked to quote request #${data.quoteRequest.id}.`
+          : `Draft quote request #${data.quoteRequest.id} created. Fill in menu/guest details to send a quote.`,
+      });
+      navigate(`/quote-requests?id=${data.quoteRequest.id}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const deleteLeadMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/raw-leads/${leadId}`, {
@@ -193,9 +226,35 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
     }
   };
 
+  const [isDisqualifyDialogOpen, setIsDisqualifyDialogOpen] = React.useState<boolean>(false);
+  const [disqualifyReason, setDisqualifyReason] = React.useState<string>('');
+
   const handleStatusChange = (newStatus: string) => {
+    if (newStatus === 'disqualified') {
+      setDisqualifyReason(rawLead?.disqualificationReason ?? '');
+      setIsDisqualifyDialogOpen(true);
+      return;
+    }
     setStatus(newStatus);
     updateLeadMutation.mutate({ status: newStatus as any });
+  };
+
+  const confirmDisqualify = () => {
+    const reason = disqualifyReason.trim();
+    if (!reason) {
+      toast({
+        title: 'Reason required',
+        description: 'Please enter a short reason before disqualifying.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setStatus('disqualified');
+    updateLeadMutation.mutate({
+      status: 'disqualified' as any,
+      disqualificationReason: reason,
+    } as any);
+    setIsDisqualifyDialogOpen(false);
   };
 
   const handleConvertClick = () => {
@@ -490,6 +549,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                       <SelectItem value="new">New</SelectItem>
                       <SelectItem value="under_review">Under Review</SelectItem>
                       <SelectItem value="qualified">Qualified</SelectItem>
+                      <SelectItem value="disqualified">Disqualified</SelectItem>
                       <SelectItem value="archived">Archived</SelectItem>
                       <SelectItem value="junk">Junk</SelectItem>
                     </SelectContent>
@@ -1057,20 +1117,31 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
             </Button>
           )}
         </div>
-        <div>
-          {!rawLead.createdOpportunityId && status !== 'junk' && (
-            <Button 
-              onClick={handleConvertClick}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-              data-testid="button-convert"
-            >
-              <ZapIcon className="h-4 w-4 mr-2" />
-              Convert to Opportunity
-            </Button>
+        <div className="flex gap-2">
+          {!rawLead.createdOpportunityId && status !== 'junk' && status !== 'disqualified' && (
+            <>
+              <Button
+                onClick={() => promoteMutation.mutate()}
+                disabled={promoteMutation.isPending}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
+                data-testid="button-promote-to-quote-request"
+              >
+                <SparklesIcon className="h-4 w-4 mr-2" />
+                {promoteMutation.isPending ? 'Promoting…' : 'Promote to Quote Request'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleConvertClick}
+                data-testid="button-convert"
+              >
+                <ZapIcon className="h-4 w-4 mr-2" />
+                Skip to Opportunity
+              </Button>
+            </>
           )}
           {rawLead.createdOpportunityId && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate(`/opportunities/${rawLead.createdOpportunityId}`)}
               className="text-green-600 border-green-600 hover:bg-green-50"
               data-testid="button-view-opportunity"
@@ -1091,12 +1162,44 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteConfirm} 
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
               className="bg-red-500 hover:bg-red-600"
               data-testid="button-confirm-delete"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDisqualifyDialogOpen} onOpenChange={setIsDisqualifyDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disqualify this lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tell us why — we store this reason so we can learn what inbound isn't a fit
+              (wrong date, out of area, budget mismatch, ghosted, spam, etc).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Textarea
+              value={disqualifyReason}
+              onChange={(e) => setDisqualifyReason(e.target.value)}
+              placeholder="e.g. Date already booked; out of service area; budget too low; no response after 3 follow-ups"
+              rows={4}
+              autoFocus
+              data-testid="textarea-disqualify-reason"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-disqualify">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDisqualify}
+              className="bg-orange-600 hover:bg-orange-700"
+              data-testid="button-confirm-disqualify"
+            >
+              Disqualify
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

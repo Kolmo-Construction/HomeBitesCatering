@@ -337,6 +337,7 @@ export default function RawLeadList({ initialFilter = '' }: RawLeadListProps) {
                 <SelectItem value="new">New</SelectItem>
                 <SelectItem value="under_review">Under Review</SelectItem>
                 <SelectItem value="qualified">Qualified</SelectItem>
+                <SelectItem value="disqualified">Disqualified</SelectItem>
                 <SelectItem value="archived">Archived</SelectItem>
                 <SelectItem value="junk">Junk</SelectItem>
               </SelectContent>

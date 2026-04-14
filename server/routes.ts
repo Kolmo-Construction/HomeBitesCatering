@@ -23,6 +23,10 @@ import {
   insertRawLeadSchema,           // For raw leads management
   communications,                // table for drizzle updates
   opportunityEmailThreads,       // table for thread migration
+  quoteRequests,                 // for promote-to-quote-request endpoint
+  rawLeads,                      // for promote-to-quote-request endpoint
+  estimates,                     // for accept-estimate endpoint
+  clients,                       // for accept-estimate endpoint (prospect→customer graduation)
   type InsertCommunication,
   type InsertOpportunityEmailThread,
 } from "@shared/schema";
@@ -1166,6 +1170,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Accept an estimate — graduates the linked client from 'prospect' to 'customer'.
+  // This is the prospect→customer transition: it happens when the deal becomes real,
+  // not when the quote was first sent. Keeps the clients table clean of tire-kickers.
+  app.post('/api/estimates/:id/accept', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
+      }
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Estimate not found' });
+      }
+
+      const now = new Date();
+      const [updatedEstimate] = await db
+        .update(estimates)
+        .set({ status: 'accepted', acceptedAt: now, updatedAt: now })
+        .where(eq(estimates.id, estimateId))
+        .returning();
+
+      // Graduate the linked client from prospect → customer
+      const [updatedClient] = await db
+        .update(clients)
+        .set({ type: 'customer', updatedAt: now })
+        .where(eq(clients.id, estimate.clientId))
+        .returning();
+
+      return res.status(200).json({
+        message: 'Estimate accepted; client graduated from prospect to customer',
+        estimate: updatedEstimate,
+        client: updatedClient,
+      });
+    } catch (error) {
+      console.error('Error accepting estimate:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Delete an estimate
   app.delete('/api/estimates/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
@@ -1654,16 +1698,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Return the created opportunity
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'Raw lead processed successfully',
-        opportunity 
+        opportunity
       });
     } catch (error) {
       console.error('Error processing raw lead:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
+
+  // Promote a raw lead to a quote request (structured, priced stage of the funnel).
+  // Pre-fills the quote request from extracted lead fields so Mike can finish the details
+  // in the QuoteRequests admin view (or send the customer a link to complete it themselves).
+  app.post('/api/raw-leads/:id/promote-to-quote-request', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      if (isNaN(leadId)) {
+        return res.status(400).json({ message: 'Invalid lead ID' });
+      }
+
+      const [lead] = await db.select().from(rawLeads).where(eq(rawLeads.id, leadId));
+      if (!lead) {
+        return res.status(404).json({ message: 'Raw lead not found' });
+      }
+
+      // Idempotent: if already promoted, return the existing quote request
+      const existing = await db.select().from(quoteRequests).where(eq(quoteRequests.rawLeadId, leadId));
+      if (existing.length > 0) {
+        return res.status(200).json({
+          message: 'Lead was already promoted to a quote request',
+          quoteRequest: existing[0],
+          alreadyExisted: true,
+        });
+      }
+
+      // Split extracted name into first/last
+      let firstName = 'Unknown';
+      let lastName = 'Contact';
+      if (lead.extractedProspectName) {
+        const parts = lead.extractedProspectName.trim().split(/\s+/);
+        if (parts.length > 0 && parts[0]) firstName = parts[0];
+        if (parts.length > 1) lastName = parts.slice(1).join(' ');
+      }
+
+      // Parse event date if it looks valid
+      let eventDate: Date | null = null;
+      if (lead.extractedEventDate) {
+        const parsed = new Date(lead.extractedEventDate);
+        if (!isNaN(parsed.getTime())) eventDate = parsed;
+      }
+
+      const [quoteRequest] = await db.insert(quoteRequests).values({
+        firstName,
+        lastName,
+        email: lead.extractedProspectEmail || 'unknown@example.com',
+        phone: lead.extractedProspectPhone || null,
+        eventType: lead.extractedEventType || 'other',
+        eventDate,
+        // guestCount is NOT NULL — default to 1 as a placeholder; Mike updates before sending quote
+        guestCount: lead.extractedGuestCount && lead.extractedGuestCount > 0 ? lead.extractedGuestCount : 1,
+        venueName: lead.extractedVenue || null,
+        specialRequests: lead.extractedMessageSummary || lead.eventSummary || null,
+        internalNotes: lead.notes || null,
+        source: lead.leadSourcePlatform || lead.source || 'promoted_from_lead',
+        status: 'draft',
+        rawLeadId: lead.id,
+      } as any).returning();
+
+      // Mark the raw lead as qualified (it's moved into the pricing stage of the funnel)
+      await db
+        .update(rawLeads)
+        .set({ status: 'qualified', updatedAt: new Date() })
+        .where(eq(rawLeads.id, leadId));
+
+      return res.status(201).json({
+        message: 'Raw lead promoted to quote request',
+        quoteRequest,
+      });
+    } catch (error) {
+      console.error('Error promoting raw lead to quote request:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Get all raw leads
   app.get('/api/raw-leads', isAuthenticated, async (req: Request, res: Response) => {
     try {
