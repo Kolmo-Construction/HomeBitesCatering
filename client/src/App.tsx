@@ -13,6 +13,7 @@ import Menus from "@/pages/menus";
 import BaseIngredients from "@/pages/base-ingredients";
 import StagingBaseIngredients from "@/pages/StagingBaseIngredients";
 import Recipes from "@/pages/recipes";
+import KitchenHelp from "@/pages/kitchen-help";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import Users from "@/pages/users";
@@ -178,6 +179,7 @@ function AppContent() {
             <Route path="/menus" component={Menus} />
             <Route path="/menus/:id" component={Menus} />
             <Route path="/calendar" component={Calendar} />
+            <Route path="/help" component={KitchenHelp} />
             {/* Anything else: send chefs to their workspace */}
             <Route>
               {() => {
@@ -206,6 +208,7 @@ function AppContent() {
           <Route path="/base-ingredients" component={BaseIngredients} />
           <Route path="/admin/staging-base-ingredients" component={StagingBaseIngredients} />
           <Route path="/recipes" component={Recipes} />
+          <Route path="/help" component={KitchenHelp} />
           <Route path="/menus" component={Menus} />
           <Route path="/menus/new" component={Menus} />
           <Route path="/menus/:id" component={Menus} />

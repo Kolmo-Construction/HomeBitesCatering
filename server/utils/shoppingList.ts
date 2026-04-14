@@ -4,10 +4,12 @@ import {
   recipes,
   recipeComponents,
   baseIngredients,
+  ingredientPackSizes,
   quoteRequests,
   LABOR_RATE_PER_HOUR_CENTS,
   type QuoteRequest,
   type MenuCategoryItem,
+  type IngredientPackSize,
 } from "@shared/schema";
 import { eq, inArray } from "drizzle-orm";
 import {
@@ -15,6 +17,7 @@ import {
   convertUnit,
   convertToPurchaseUnits,
   normalizeUnit,
+  areUnitsCompatible,
 } from "@shared/unitConversion";
 
 // ============================================================================
@@ -33,6 +36,26 @@ export interface ShoppingListLine {
   usedInRecipes: string[];        // names of the recipes that contribute to this ingredient
   // Raw recipe-unit total for debugging
   rawTotalQuantityByUnit: Record<string, number>;
+  // Pack-level purchasing plan, when pack sizes are defined on the ingredient.
+  // Tells Mike exactly which packs to buy ("2 × 5 lb bag + 1 × 1 lb bag").
+  packPlan?: {
+    packs: Array<{
+      packSizeId: number;
+      label: string;
+      packs: number;           // whole packs to purchase (≥ minOrderPacks)
+      unitQuantity: number;    // quantity per pack
+      unitUnit: string;
+      totalQuantity: number;   // packs × unitQuantity (in unitUnit)
+      pricePerPack: number;    // dollars
+      totalPrice: number;      // dollars
+      supplier: string | null;
+      sku: string | null;
+    }>;
+    plannedTotalQuantity: number;   // sum of totalQuantity, in the anchor unit
+    plannedTotalPrice: number;      // sum of totalPrice, in dollars
+    anchorUnit: string;             // unit the plan is anchored to (usually purchaseUnit)
+    overBuyQuantity: number;        // how much over the raw need we end up buying
+  };
 }
 
 export interface ShoppingListResult {
@@ -73,6 +96,133 @@ export interface ShoppingListResult {
 
 interface CalculateOptions {
   portionMultiplier?: number;      // default depends on service style
+}
+
+// ============================================================================
+// Pack planning
+// ============================================================================
+
+/**
+ * Given how much of an ingredient the event needs, and a set of pack sizes
+ * the ingredient is sold in, compute the cheapest combination of packs that
+ * meets or exceeds the need.
+ *
+ * Strategy — greedy largest-pack-first with a single-small-pack top-up. This
+ * is not globally optimal (classic unbounded knapsack) but catches the 95%
+ * case: "we need 7 lb flour; buy 1× 5 lb bag + 2× 1 lb bag = 7 lb".
+ *
+ * All packs are assumed to be weight/volume compatible with the anchor unit.
+ * Incompatible packs (different kind) are ignored.
+ */
+export function planPacks(
+  neededQuantity: number,
+  anchorUnit: string,
+  packs: IngredientPackSize[],
+  customConversions: Record<string, number> | null,
+): NonNullable<ShoppingListLine["packPlan"]> | undefined {
+  if (neededQuantity <= 0 || packs.length === 0) return undefined;
+
+  // Convert every pack's unit to the anchor unit so the math is uniform.
+  // Incompatible packs are skipped (they can't fulfill a need expressed in the
+  // anchor unit).
+  const normalized = packs
+    .map((p) => {
+      const qty = parseFloat(String(p.quantity)) || 0;
+      const price = parseFloat(String(p.price)) || 0;
+      if (qty <= 0) return null;
+      let quantityInAnchor: number;
+      try {
+        quantityInAnchor = convertToPurchaseUnits(
+          qty,
+          p.unit,
+          anchorUnit,
+          customConversions || undefined,
+        );
+      } catch {
+        return null;
+      }
+      if (!Number.isFinite(quantityInAnchor) || quantityInAnchor <= 0) return null;
+      return {
+        pack: p,
+        quantityPerPack: qty,
+        quantityInAnchor,
+        pricePerPack: price,
+        pricePerAnchorUnit: price / quantityInAnchor,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (normalized.length === 0) return undefined;
+
+  // Sort largest-first so greedy peels off bulk packs first
+  normalized.sort((a, b) => b.quantityInAnchor - a.quantityInAnchor);
+
+  let remaining = neededQuantity;
+  const chosen = new Map<number, { entry: typeof normalized[number]; count: number }>();
+
+  // Greedy: take as many of the largest pack as fit, then descend to smaller
+  // packs. Skip packs whose single unit exceeds remaining unless it's the
+  // smallest pack — that's the "top up" step.
+  for (let i = 0; i < normalized.length; i++) {
+    const n = normalized[i];
+    if (n.quantityInAnchor > remaining) continue;
+    const whole = Math.floor(remaining / n.quantityInAnchor);
+    if (whole <= 0) continue;
+    const minOrder = Math.max(1, n.pack.minOrderPacks || 1);
+    const count = Math.max(whole, minOrder);
+    chosen.set(n.pack.id, { entry: n, count });
+    remaining -= count * n.quantityInAnchor;
+    if (remaining <= 0.0001) break;
+  }
+
+  // If we still have a leftover need, top up with the smallest available pack.
+  if (remaining > 0.0001) {
+    const smallest = normalized[normalized.length - 1];
+    const minOrder = Math.max(1, smallest.pack.minOrderPacks || 1);
+    const topupCount = Math.max(
+      minOrder,
+      Math.ceil(remaining / smallest.quantityInAnchor),
+    );
+    const prev = chosen.get(smallest.pack.id);
+    if (prev) {
+      prev.count += topupCount;
+    } else {
+      chosen.set(smallest.pack.id, { entry: smallest, count: topupCount });
+    }
+    remaining -= topupCount * smallest.quantityInAnchor;
+  }
+
+  const packLines: NonNullable<ShoppingListLine["packPlan"]>["packs"] = [];
+  let plannedTotalQuantity = 0;
+  let plannedTotalPrice = 0;
+
+  for (const { entry, count } of Array.from(chosen.values())) {
+    const totalQ = count * entry.quantityInAnchor;
+    const totalP = count * entry.pricePerPack;
+    plannedTotalQuantity += totalQ;
+    plannedTotalPrice += totalP;
+    packLines.push({
+      packSizeId: entry.pack.id,
+      label: entry.pack.label,
+      packs: count,
+      unitQuantity: entry.quantityPerPack,
+      unitUnit: entry.pack.unit,
+      totalQuantity: Math.round(totalQ * 100) / 100,
+      pricePerPack: Math.round(entry.pricePerPack * 100) / 100,
+      totalPrice: Math.round(totalP * 100) / 100,
+      supplier: entry.pack.supplier,
+      sku: entry.pack.sku,
+    });
+  }
+
+  return {
+    packs: packLines,
+    plannedTotalQuantity: Math.round(plannedTotalQuantity * 100) / 100,
+    plannedTotalPrice: Math.round(plannedTotalPrice * 100) / 100,
+    anchorUnit,
+    overBuyQuantity:
+      Math.round((plannedTotalQuantity - neededQuantity) * 100) / 100,
+  };
 }
 
 // ============================================================================
@@ -227,6 +377,24 @@ export async function calculateShoppingList(
     .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
     .where(inArray(recipeComponents.recipeId, uniqueRecipeIds));
 
+  // Batch fetch all pack sizes for the ingredients in the shopping list
+  const uniqueIngredientIds = Array.from(
+    new Set(componentRows.map((c) => c.baseIngredientId)),
+  );
+  const packSizeRows: IngredientPackSize[] = uniqueIngredientIds.length
+    ? await db
+        .select()
+        .from(ingredientPackSizes)
+        .where(inArray(ingredientPackSizes.baseIngredientId, uniqueIngredientIds))
+    : [];
+  const packsByIngredient = new Map<number, IngredientPackSize[]>();
+  for (const p of packSizeRows) {
+    if (!packsByIngredient.has(p.baseIngredientId)) {
+      packsByIngredient.set(p.baseIngredientId, []);
+    }
+    packsByIngredient.get(p.baseIngredientId)!.push(p);
+  }
+
   // Group components by recipe ID
   const componentsByRecipe = new Map<number, typeof componentRows>();
   for (const comp of componentRows) {
@@ -247,6 +415,7 @@ export async function calculateShoppingList(
     purchaseQuantity: number;
     purchaseUnit: string;
     unitConversions: Record<string, number> | null;
+    yieldPct: number | null;
     supplier: string | null;
     sku: string | null;
     // Sum quantities per recipe unit (we convert to purchase unit at the end)
@@ -295,6 +464,8 @@ export async function calculateShoppingList(
           purchaseQuantity: parseFloat(String(ing.purchaseQuantity)) || 1,
           purchaseUnit: ing.purchaseUnit,
           unitConversions: (ing.unitConversions as Record<string, number>) || null,
+          yieldPct:
+            ing.yieldPct != null ? parseFloat(String(ing.yieldPct)) : null,
           supplier: ing.supplier,
           sku: ing.sku,
           quantityByUnit: new Map(),
@@ -326,6 +497,7 @@ export async function calculateShoppingList(
           unit,
           acc.purchaseUnit,
           acc.unitConversions || undefined,
+          acc.yieldPct,
         );
         totalInPurchaseUnit += converted;
       } catch {
@@ -344,10 +516,30 @@ export async function calculateShoppingList(
           qty,
           unit,
           acc.unitConversions || undefined,
+          acc.yieldPct,
         );
       } catch {
         // Fallback: assume unit matches
         estimatedCost += acc.purchasePrice * (qty / acc.purchaseQuantity);
+      }
+    }
+
+    // If pack sizes are defined for this ingredient, plan out the actual
+    // purchase (which packs, how many, at what total cost). When a plan is
+    // computed, its totalPrice overrides the naive per-unit cost estimate —
+    // it's the real out-of-pocket number for the event.
+    const packs = packsByIngredient.get(acc.baseIngredientId) || [];
+    let packPlan: ShoppingListLine["packPlan"];
+    let finalEstimatedCost = estimatedCost;
+    if (packs.length > 0 && totalInPurchaseUnit > 0) {
+      packPlan = planPacks(
+        totalInPurchaseUnit,
+        acc.purchaseUnit,
+        packs,
+        acc.unitConversions,
+      );
+      if (packPlan && packPlan.plannedTotalPrice > 0) {
+        finalEstimatedCost = packPlan.plannedTotalPrice;
       }
     }
 
@@ -357,11 +549,12 @@ export async function calculateShoppingList(
       category: acc.category,
       totalQuantity: Math.round(totalInPurchaseUnit * 100) / 100,
       purchaseUnit: acc.purchaseUnit,
-      estimatedCost: Math.round(estimatedCost * 100) / 100,
+      estimatedCost: Math.round(finalEstimatedCost * 100) / 100,
       supplier: acc.supplier,
       sku: acc.sku,
       usedInRecipes: Array.from(acc.usedInRecipes),
       rawTotalQuantityByUnit: rawTotalByUnit,
+      packPlan,
     });
   }
 

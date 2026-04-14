@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, ClipboardCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, ClipboardCheck, Wand2, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type BaseIngredient, insertBaseIngredientSchema, DIETARY_TAGS } from "@shared/schema";
@@ -88,10 +88,19 @@ const COMMON_UNITS = [
   { value: "quart", label: "Quart (qt)" },
   { value: "liter", label: "Liter (L)" },
   { value: "cup", label: "Cup" },
+  { value: "tablespoon", label: "Tablespoon (tbsp)" },
+  { value: "teaspoon", label: "Teaspoon (tsp)" },
   { value: "each", label: "Each" },
   { value: "dozen", label: "Dozen" },
   { value: "case", label: "Case" },
 ];
+
+interface ConversionSuggestion {
+  matched: string | null;
+  label: string | null;
+  conversions: Record<string, number>;
+  yieldPct: number | null;
+}
 
 export default function BaseIngredientsPage() {
   const { toast } = useToast();
@@ -100,6 +109,8 @@ export default function BaseIngredientsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<BaseIngredient | null>(null);
   const [deletingIngredient, setDeletingIngredient] = useState<BaseIngredient | null>(null);
+  const [suggestion, setSuggestion] = useState<ConversionSuggestion | null>(null);
+  const [isBackfilling, setIsBackfilling] = useState(false);
 
   // Fetch ingredients
   const { data: ingredients = [], isLoading } = useQuery<BaseIngredient[]>({
@@ -217,12 +228,14 @@ export default function BaseIngredientsPage() {
       supplier: "",
       notes: "",
       dietaryTags: [],
+      yieldPct: null,
     },
   });
 
   // Handle edit
   const handleEdit = (ingredient: BaseIngredient) => {
     setEditingIngredient(ingredient);
+    setSuggestion(null);
     form.reset({
       name: ingredient.name,
       category: ingredient.category,
@@ -233,7 +246,75 @@ export default function BaseIngredientsPage() {
       supplier: ingredient.supplier || "",
       notes: ingredient.notes || "",
       dietaryTags: (ingredient.dietaryTags as string[]) || [],
+      yieldPct:
+        ingredient.yieldPct != null ? parseFloat(ingredient.yieldPct) : null,
     });
+  };
+
+  // Watch name + purchaseUnit to provide live unit-conversion suggestions from
+  // the density library. This is what lets a chef add "All-Purpose Flour"
+  // bought by the pound and immediately see "we'll auto-convert cup/tbsp/tsp".
+  const watchedName = form.watch("name");
+  const watchedPurchaseUnit = form.watch("purchaseUnit");
+  const watchedCategory = form.watch("category");
+
+  useEffect(() => {
+    const name = (watchedName || "").trim();
+    const unit = (watchedPurchaseUnit || "").trim();
+    if (!name || !unit || name.length < 3) {
+      setSuggestion(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ name, purchaseUnit: unit });
+        if (watchedCategory) params.set("category", watchedCategory);
+        const res = await fetch(
+          `/api/ingredients/base-ingredients/suggest-conversions?${params.toString()}`,
+        );
+        if (!res.ok) return;
+        const data: ConversionSuggestion = await res.json();
+        if (cancelled) return;
+        if (data.matched && Object.keys(data.conversions).length > 0) {
+          setSuggestion(data);
+        } else {
+          setSuggestion(null);
+        }
+      } catch {
+        /* ignore — suggestion is purely informational */
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [watchedName, watchedPurchaseUnit, watchedCategory]);
+
+  const runBackfill = async () => {
+    setIsBackfilling(true);
+    try {
+      const res = await apiRequest(
+        "POST",
+        "/api/ingredients/base-ingredients/backfill-conversions",
+      );
+      const data = await res.json();
+      toast({
+        title: "Backfill complete",
+        description: `Updated ${data.updated} ingredients · ${data.skipped} already had conversions · ${data.unmatched} had no match.`,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/ingredients/base-ingredients"],
+      });
+    } catch (err: any) {
+      toast({
+        title: "Backfill failed",
+        description: err?.message ?? "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBackfilling(false);
+    }
   };
 
   // Handle form submit
@@ -294,6 +375,16 @@ export default function BaseIngredientsPage() {
                 </Button>
               </Link>
             )}
+            <Button
+              variant="outline"
+              onClick={runBackfill}
+              disabled={isBackfilling}
+              data-testid="button-backfill-conversions"
+              title="Apply density-library conversions to ingredients that don't have any yet"
+            >
+              <Wand2 className="mr-2 h-4 w-4" />
+              {isBackfilling ? "Backfilling…" : "Auto-fill conversions"}
+            </Button>
             <Button
               onClick={() => {
                 form.reset({
@@ -510,6 +601,7 @@ export default function BaseIngredientsPage() {
           if (!open) {
             setIsAddDialogOpen(false);
             setEditingIngredient(null);
+            setSuggestion(null);
             form.reset();
           }
         }}
@@ -639,6 +731,39 @@ export default function BaseIngredientsPage() {
                 )}
               />
 
+              {suggestion && (
+                <div
+                  className="rounded-md border border-violet-200 bg-violet-50 p-3 text-sm dark:border-violet-900 dark:bg-violet-950/40"
+                  data-testid="panel-conversion-suggestion"
+                >
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-4 w-4 text-violet-600 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-violet-900 dark:text-violet-200">
+                        Matched to “{suggestion.label}” — we’ll auto-convert these units for you
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {Object.entries(suggestion.conversions)
+                          .slice(0, 8)
+                          .map(([unit, factor]) => (
+                            <Badge
+                              key={unit}
+                              variant="secondary"
+                              className="bg-white dark:bg-violet-900/60 font-mono text-[11px]"
+                            >
+                              1 {unit} = {factor} {form.watch("purchaseUnit") || "?"}
+                            </Badge>
+                          ))}
+                      </div>
+                      <p className="mt-2 text-xs text-violet-700 dark:text-violet-300">
+                        Applied automatically when you save. Override any of
+                        these later from the recipe builder.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -678,6 +803,44 @@ export default function BaseIngredientsPage() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="yieldPct"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yield / Trim (Optional)</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max="1"
+                          placeholder="e.g., 0.9"
+                          className="w-32"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === "") {
+                              field.onChange(null);
+                            } else {
+                              field.onChange(parseFloat(v));
+                            }
+                          }}
+                          data-testid="input-yield-pct"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          Edible portion after trim (1.0 = no waste). Used to
+                          scale buy quantity: a recipe calling for 1 lb diced
+                          onion with yield 0.9 will buy ~1.11 lb whole onion.
+                        </span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

@@ -577,6 +577,12 @@ export const baseIngredients = pgTable("base_ingredients", {
   //   e.g., for flour purchased in "kilogram":
   //     { "cup": 0.125 }  means 1 cup = 0.125 kg
   unitConversions: jsonb("unit_conversions").$type<Record<string, number>>().default({}),
+  // Yield / trim factor — edible weight ÷ as-purchased weight.
+  // e.g., for yellow onions ~0.9 (10% lost to skin/ends).
+  // Recipes are written in the ready-to-cook form ("1 cup diced onion"), so
+  // the shopping list divides by yieldPct to get the actual purchase qty.
+  // 1.0 (or null) = no waste adjustment.
+  yieldPct: numeric("yield_pct", { precision: 5, scale: 3 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -586,6 +592,12 @@ export const insertBaseIngredientSchema = createInsertSchema(baseIngredients, {
   purchaseQuantity: z.coerce.number().positive("Quantity must be positive").default(1),
   dietaryTags: z.array(z.string()).optional().default([]),
   unitConversions: z.record(z.string(), z.number().positive()).optional().default({}),
+  yieldPct: z.coerce
+    .number()
+    .positive("Yield must be positive")
+    .max(1, "Yield cannot exceed 100%")
+    .optional()
+    .nullable(),
 }).omit({
   id: true,
   createdAt: true,
@@ -595,6 +607,58 @@ export const insertBaseIngredientSchema = createInsertSchema(baseIngredients, {
 
 export type BaseIngredient = typeof baseIngredients.$inferSelect;
 export type InsertBaseIngredient = z.infer<typeof insertBaseIngredientSchema>;
+
+// Pack sizes — real-world purchase SKUs for a base ingredient.
+//
+// A single base ingredient (e.g. "All-Purpose Flour") can be purchased in
+// multiple pack sizes: a 5 lb bag at one price, a 25 lb sack at a per-pound
+// discount, a 50 lb case at Costco, etc. The shopping list picks the best
+// pack(s) to fill the recipe's needed quantity, and the UI can show both
+// per-unit cost and per-case total.
+//
+// The legacy `baseIngredients.purchasePrice/Quantity/Unit` triple represents
+// the *default* pack (marked with isDefault=true in this table). That keeps
+// backward compatibility with the existing recipe cost math.
+export const ingredientPackSizes = pgTable("ingredient_pack_sizes", {
+  id: serial("id").primaryKey(),
+  baseIngredientId: integer("base_ingredient_id")
+    .notNull()
+    .references(() => baseIngredients.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),                     // e.g., "5 lb bag", "50 lb case"
+  quantity: numeric("quantity", { precision: 10, scale: 3 }).notNull(), // 5, 50, etc.
+  unit: text("unit").notNull(),                        // lb, kg, each, case, pack
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  supplier: text("supplier"),
+  sku: text("sku"),
+  // Minimum purchase quantity (in packs). Defaults to 1. Mike might be forced
+  // to buy a case of 6 even if he only needs 2 bags.
+  minOrderPacks: integer("min_order_packs").default(1).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertIngredientPackSizeSchema = createInsertSchema(
+  ingredientPackSizes,
+  {
+    label: z.string().min(1, "Label is required"),
+    quantity: z.coerce.number().positive("Quantity must be positive"),
+    unit: z.string().min(1, "Unit is required"),
+    price: z.coerce.number().nonnegative("Price must be non-negative"),
+    minOrderPacks: z.coerce.number().int().positive().default(1),
+    isDefault: z.boolean().optional().default(false),
+  },
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type IngredientPackSize = typeof ingredientPackSizes.$inferSelect;
+export type InsertIngredientPackSize = z.infer<
+  typeof insertIngredientPackSizeSchema
+>;
 
 // Recipe Ingredients - junction table linking menu items to base ingredients
 export const recipeIngredients = pgTable("recipe_ingredients", {

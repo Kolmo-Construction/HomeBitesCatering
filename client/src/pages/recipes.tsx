@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Came
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_CONTAINS_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
-import { formatCurrency, calculateIngredientCost } from "@shared/unitConversion";
+import { formatCurrency, calculateIngredientCost, convertToPurchaseUnits } from "@shared/unitConversion";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
@@ -452,9 +452,9 @@ export default function RecipesPage() {
   }, [isPlayingSteps, activeStepIndex, viewingRecipe]);
 
   const calculateComponentCost = (component: RecipeComponentItem): number => {
-    const baseIngredient = component.baseIngredient || 
+    const baseIngredient = component.baseIngredient ||
       baseIngredients.find((bi) => bi.id === component.baseIngredientId);
-    
+
     if (!baseIngredient) return 0;
 
     try {
@@ -463,11 +463,74 @@ export default function RecipesPage() {
         parseFloat(baseIngredient.purchaseQuantity),
         baseIngredient.purchaseUnit,
         component.quantity,
-        component.unit
+        component.unit,
+        (baseIngredient.unitConversions as Record<string, number>) || undefined,
+        baseIngredient.yieldPct != null
+          ? parseFloat(baseIngredient.yieldPct)
+          : null,
       );
     } catch (error) {
-      console.error("Error calculating cost:", error);
       return 0;
+    }
+  };
+
+  // Compute how much of this ingredient we'd have to BUY (in purchase units)
+  // for one full batch of the recipe, plus per-serving. Returns null if we
+  // can't convert — the UI then shows a "missing conversion" warning so the
+  // chef can fix the base ingredient in place.
+  const computeBuyPreview = (
+    component: RecipeComponentItem,
+  ): {
+    totalBuy: number;
+    totalBuyUnit: string;
+    perServing: number;
+    perServingGrams: number | null;
+    error: string | null;
+  } | null => {
+    const baseIngredient = component.baseIngredient ||
+      baseIngredients.find((bi) => bi.id === component.baseIngredientId);
+    if (!baseIngredient) return null;
+    const yieldAmount = parseFloat(String(form.watch("yield") || 1)) || 1;
+    try {
+      const totalBuy = convertToPurchaseUnits(
+        component.quantity,
+        component.unit,
+        baseIngredient.purchaseUnit,
+        (baseIngredient.unitConversions as Record<string, number>) || undefined,
+        baseIngredient.yieldPct != null
+          ? parseFloat(baseIngredient.yieldPct)
+          : null,
+      );
+      const perServing = totalBuy / yieldAmount;
+      // Try to also express per-serving in grams for chef intuition
+      let perServingGrams: number | null = null;
+      try {
+        perServingGrams = convertToPurchaseUnits(
+          perServing,
+          baseIngredient.purchaseUnit,
+          "gram",
+        );
+      } catch {
+        perServingGrams = null;
+      }
+      return {
+        totalBuy,
+        totalBuyUnit: baseIngredient.purchaseUnit,
+        perServing,
+        perServingGrams,
+        error: null,
+      };
+    } catch (e: any) {
+      return {
+        totalBuy: 0,
+        totalBuyUnit: baseIngredient.purchaseUnit,
+        perServing: 0,
+        perServingGrams: null,
+        error:
+          e?.message?.includes("Cannot convert")
+            ? "No conversion from this unit to purchase unit"
+            : "Conversion failed",
+      };
     }
   };
 
@@ -1280,20 +1343,32 @@ export default function RecipesPage() {
                           <TableHead>Quantity</TableHead>
                           <TableHead>Unit</TableHead>
                           <TableHead>Prep Notes</TableHead>
+                          <TableHead>Buy / Per Person</TableHead>
                           <TableHead className="text-right">Cost</TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {recipeComponents.map((comp, index) => {
-                          const baseIngredient = comp.baseIngredient || 
+                          const baseIngredient = comp.baseIngredient ||
                             baseIngredients.find((bi) => bi.id === comp.baseIngredientId);
                           const cost = calculateComponentCost(comp);
+                          const buyPreview = computeBuyPreview(comp);
 
                           return (
                             <TableRow key={index} data-testid={`row-component-${index}`}>
                               <TableCell className="font-medium">
                                 {baseIngredient?.name || "Unknown"}
+                                {baseIngredient?.yieldPct != null &&
+                                  parseFloat(baseIngredient.yieldPct) < 1 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="ml-1.5 text-[10px] font-normal"
+                                      title={`${Math.round(parseFloat(baseIngredient.yieldPct) * 100)}% yield — buy quantity is scaled up for trim/waste`}
+                                    >
+                                      yield {Math.round(parseFloat(baseIngredient.yieldPct) * 100)}%
+                                    </Badge>
+                                  )}
                               </TableCell>
                               <TableCell>
                                 <Input
@@ -1333,6 +1408,36 @@ export default function RecipesPage() {
                                   className="w-28"
                                   data-testid={`input-comp-prep-${index}`}
                                 />
+                              </TableCell>
+                              <TableCell
+                                className="text-xs"
+                                data-testid={`cell-buy-preview-${index}`}
+                              >
+                                {!buyPreview ? (
+                                  <span className="text-muted-foreground">—</span>
+                                ) : buyPreview.error ? (
+                                  <div className="flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate max-w-[170px]" title={buyPreview.error}>
+                                      Needs conversion
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="leading-tight">
+                                    <div className="font-medium">
+                                      {buyPreview.totalBuy.toFixed(
+                                        buyPreview.totalBuy < 1 ? 3 : 2,
+                                      )}{" "}
+                                      {buyPreview.totalBuyUnit}
+                                      <span className="text-muted-foreground font-normal"> total</span>
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      {buyPreview.perServingGrams != null && buyPreview.perServingGrams > 0
+                                        ? `${buyPreview.perServingGrams < 1 ? buyPreview.perServingGrams.toFixed(2) : Math.round(buyPreview.perServingGrams)}g / person`
+                                        : `${buyPreview.perServing.toFixed(3)} ${buyPreview.totalBuyUnit} / person`}
+                                    </div>
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="text-right font-medium text-green-600">
                                 {formatCurrency(cost)}

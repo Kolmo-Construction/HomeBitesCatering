@@ -21,7 +21,8 @@ import {
   ShoppingBasket,
   ChefHat,
   UserCog,
-  MessageSquareQuote
+  MessageSquareQuote,
+  BookOpen,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -39,6 +40,7 @@ export default function Sidebar() {
     icon: any;
     chef?: boolean;
     adminOnly?: boolean;
+    submenu?: { name: string; href: string }[];
   };
 
   const allNav: NavItem[] = [
@@ -48,6 +50,7 @@ export default function Sidebar() {
     { name: "Clients", href: "/clients", icon: Users },
     { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket, chef: true },
     { name: "Recipes", href: "/recipes", icon: ChefHat, chef: true },
+    { name: "Help", href: "/help", icon: BookOpen, chef: true },
     { name: "Menus", href: "/menus", icon: ClipboardList, chef: true },
     { name: "Inquiries", href: "/quote-requests", icon: MessageSquareQuote },
     { name: "Quotes", href: "/estimates", icon: FileText },
@@ -125,7 +128,7 @@ export default function Sidebar() {
                     </div>
                     
                     {/* Submenu */}
-                    {isExpanded && (
+                    {isExpanded && item.submenu && (
                       <ul className="mt-1 pl-6 space-y-1">
                         {item.submenu.map((subItem: any) => {
                           const isSubActive = location === subItem.href || 

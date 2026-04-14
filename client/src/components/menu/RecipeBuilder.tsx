@@ -92,10 +92,13 @@ export default function RecipeBuilder({
         parseFloat(baseIngredient.purchaseQuantity),
         baseIngredient.purchaseUnit,
         recipeItem.quantity,
-        recipeItem.unit
+        recipeItem.unit,
+        (baseIngredient.unitConversions as Record<string, number>) || undefined,
+        baseIngredient.yieldPct != null
+          ? parseFloat(baseIngredient.yieldPct)
+          : null,
       );
     } catch (error) {
-      console.error("Error calculating cost:", error);
       return 0;
     }
   };

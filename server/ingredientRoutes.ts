@@ -7,10 +7,12 @@ import {
   recipeComponents,
   menus,
   events,
+  ingredientPackSizes,
   insertBaseIngredientSchema,
   insertRecipeIngredientSchema,
   insertRecipeSchema,
   insertRecipeComponentSchema,
+  insertIngredientPackSizeSchema,
   InsertRecipeComponent,
   DIETARY_TAGS,
   ALLERGEN_CONTAINS_TAGS,
@@ -23,6 +25,11 @@ import {
 import { eq, desc, sql, and, gte, lte, ne, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { calculateIngredientCost } from "@shared/unitConversion";
+import {
+  suggestConversionsForIngredient,
+  findDensityForIngredient,
+  mergeConversions,
+} from "@shared/ingredientDensities";
 import { ObjectStorageService } from "./objectStorage";
 
 const router = Router();
@@ -217,15 +224,47 @@ router.post("/base-ingredients", async (req, res) => {
     
     // Normalize SKU
     const normalizedSku = normalizeSku(parsed.data.sku);
-    
+
     // Check for duplicate SKU
     if (normalizedSku && await checkDuplicateSku(normalizedSku)) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         message: "An ingredient with this SKU already exists",
         field: "sku"
       });
     }
-    
+
+    // Auto-suggest unit conversions from the density library when the user
+    // hasn't already provided custom ones. This fills the volume↔weight gap
+    // for common ingredients so shopping-list rollups "just work".
+    const providedConversions =
+      (parsed.data.unitConversions as Record<string, number> | undefined) || {};
+    const hasProvidedConversions = Object.keys(providedConversions).length > 0;
+    let finalConversions: Record<string, number> = providedConversions;
+    if (!hasProvidedConversions) {
+      const { conversions } = suggestConversionsForIngredient(
+        parsed.data.name,
+        parsed.data.purchaseUnit,
+        parsed.data.category,
+      );
+      if (Object.keys(conversions).length > 0) {
+        finalConversions = conversions;
+      }
+    }
+
+    // If the density library suggests a yieldPct and the user didn't set one,
+    // apply it automatically (e.g., onions default to 0.9).
+    let finalYieldPct: string | null =
+      parsed.data.yieldPct != null ? String(parsed.data.yieldPct) : null;
+    if (finalYieldPct === null) {
+      const density = findDensityForIngredient(
+        parsed.data.name,
+        parsed.data.category,
+      );
+      if (density?.yieldPct && density.yieldPct > 0 && density.yieldPct < 1) {
+        finalYieldPct = String(density.yieldPct);
+      }
+    }
+
     const [newIngredient] = await db
       .insert(baseIngredients)
       .values({
@@ -234,6 +273,8 @@ router.post("/base-ingredients", async (req, res) => {
         purchasePrice: parsed.data.purchasePrice.toString(),
         purchaseQuantity: parsed.data.purchaseQuantity.toString(),
         previousPurchasePrice: parsed.data.purchasePrice.toString(),
+        unitConversions: finalConversions,
+        yieldPct: finalYieldPct,
       })
       .returning();
     
@@ -290,12 +331,35 @@ router.put("/base-ingredients/:id", async (req, res) => {
       return res.status(404).json({ message: "Ingredient not found" });
     }
     
+    // If the user didn't supply any unit conversions and none exist on the
+    // ingredient yet, fall back to the density library. Any existing
+    // user-curated conversions are preserved.
+    const incomingConv =
+      (parsed.data.unitConversions as Record<string, number> | undefined) || {};
+    const currentConv =
+      (existingIngredient.unitConversions as Record<string, number>) || {};
+    let nextConversions: Record<string, number> = {
+      ...currentConv,
+      ...incomingConv,
+    };
+    if (Object.keys(nextConversions).length === 0) {
+      const { conversions } = suggestConversionsForIngredient(
+        parsed.data.name,
+        parsed.data.purchaseUnit,
+        parsed.data.category,
+      );
+      nextConversions = conversions;
+    }
+
     // Prepare update data with previous price
     const updateData: any = {
       ...parsed.data,
       sku: normalizedSku,
       purchasePrice: parsed.data.purchasePrice.toString(),
       purchaseQuantity: parsed.data.purchaseQuantity.toString(),
+      unitConversions: nextConversions,
+      yieldPct:
+        parsed.data.yieldPct != null ? String(parsed.data.yieldPct) : null,
       updatedAt: new Date()
     };
     
@@ -331,6 +395,87 @@ router.put("/base-ingredients/:id", async (req, res) => {
     }
     console.error("Error updating base ingredient:", error);
     return res.status(500).json({ message: "Failed to update base ingredient" });
+  }
+});
+
+// Suggest unit conversions for an ingredient from the density library.
+// Used by the base-ingredient form to preview auto-fill before saving, and by
+// the recipe builder to show "we can convert cup → lb for this ingredient".
+// Query: ?name=...&purchaseUnit=...&category=...
+router.get("/base-ingredients/suggest-conversions", (req, res) => {
+  try {
+    const { name, purchaseUnit, category } = req.query;
+    if (typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ message: "name is required" });
+    }
+    if (typeof purchaseUnit !== "string" || !purchaseUnit.trim()) {
+      return res.status(400).json({ message: "purchaseUnit is required" });
+    }
+    const result = suggestConversionsForIngredient(
+      name,
+      purchaseUnit,
+      typeof category === "string" ? category : undefined,
+    );
+    const density = findDensityForIngredient(
+      name,
+      typeof category === "string" ? category : undefined,
+    );
+    return res.json({
+      matched: result.matched,
+      label: density?.label ?? null,
+      conversions: result.conversions,
+      yieldPct: density?.yieldPct ?? null,
+    });
+  } catch (error) {
+    console.error("Error suggesting conversions:", error);
+    return res.status(500).json({ message: "Failed to suggest conversions" });
+  }
+});
+
+// Backfill endpoint: apply density-library suggestions to all existing base
+// ingredients that don't yet have any unit conversions set. Idempotent — runs
+// can be repeated; ingredients with user-set conversions are left untouched.
+router.post("/base-ingredients/backfill-conversions", async (_req, res) => {
+  try {
+    const rows = await db.select().from(baseIngredients);
+    let updated = 0;
+    let skipped = 0;
+    let unmatched = 0;
+    const updates: Array<{ id: number; name: string; matched: string }> = [];
+
+    for (const row of rows) {
+      const existing = (row.unitConversions as Record<string, number>) || {};
+      if (Object.keys(existing).length > 0) {
+        skipped++;
+        continue;
+      }
+      const { conversions, matched } = suggestConversionsForIngredient(
+        row.name,
+        row.purchaseUnit,
+        row.category,
+      );
+      if (!matched || Object.keys(conversions).length === 0) {
+        unmatched++;
+        continue;
+      }
+      await db
+        .update(baseIngredients)
+        .set({ unitConversions: conversions, updatedAt: new Date() })
+        .where(eq(baseIngredients.id, row.id));
+      updated++;
+      updates.push({ id: row.id, name: row.name, matched });
+    }
+
+    return res.json({
+      total: rows.length,
+      updated,
+      skipped,
+      unmatched,
+      examples: updates.slice(0, 20),
+    });
+  } catch (error) {
+    console.error("Error backfilling conversions:", error);
+    return res.status(500).json({ message: "Failed to backfill conversions" });
   }
 });
 
@@ -373,6 +518,148 @@ router.post("/base-ingredients/:id/unit-conversion", async (req, res) => {
   } catch (error) {
     console.error("Error saving unit conversion:", error);
     return res.status(500).json({ message: "Failed to save unit conversion" });
+  }
+});
+
+// ============================================
+// INGREDIENT PACK SIZES CRUD
+// ============================================
+// A base ingredient can have multiple pack sizes (5 lb bag, 25 lb sack, 50 lb
+// case, etc.). The shopping list picks the cheapest pack(s) that satisfy the
+// recipe's needed quantity. The default pack is the one backed by the legacy
+// purchase_* columns on base_ingredients.
+
+// List pack sizes for an ingredient
+router.get("/base-ingredients/:id/pack-sizes", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ingredient ID" });
+
+    const rows = await db
+      .select()
+      .from(ingredientPackSizes)
+      .where(eq(ingredientPackSizes.baseIngredientId, id))
+      .orderBy(desc(ingredientPackSizes.isDefault), ingredientPackSizes.quantity);
+
+    return res.json(rows);
+  } catch (error) {
+    console.error("Error listing pack sizes:", error);
+    return res.status(500).json({ message: "Failed to list pack sizes" });
+  }
+});
+
+// Create a pack size
+router.post("/base-ingredients/:id/pack-sizes", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ingredient ID" });
+
+    const parsed = insertIngredientPackSizeSchema.safeParse({
+      ...req.body,
+      baseIngredientId: id,
+    });
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Invalid pack size data",
+        errors: parsed.error.format(),
+      });
+    }
+
+    // Uphold "one default per ingredient": if this pack is being set as
+    // default, unset any existing default first.
+    if (parsed.data.isDefault) {
+      await db
+        .update(ingredientPackSizes)
+        .set({ isDefault: false })
+        .where(eq(ingredientPackSizes.baseIngredientId, id));
+    }
+
+    const [created] = await db
+      .insert(ingredientPackSizes)
+      .values({
+        ...parsed.data,
+        quantity: parsed.data.quantity.toString(),
+        price: parsed.data.price.toString(),
+      })
+      .returning();
+
+    return res.status(201).json(created);
+  } catch (error) {
+    console.error("Error creating pack size:", error);
+    return res.status(500).json({ message: "Failed to create pack size" });
+  }
+});
+
+// Update a pack size
+router.put("/pack-sizes/:packId", async (req, res) => {
+  try {
+    const packId = parseInt(req.params.packId);
+    if (isNaN(packId)) return res.status(400).json({ message: "Invalid pack size ID" });
+
+    const [existing] = await db
+      .select()
+      .from(ingredientPackSizes)
+      .where(eq(ingredientPackSizes.id, packId));
+    if (!existing) return res.status(404).json({ message: "Pack size not found" });
+
+    const parsed = insertIngredientPackSizeSchema.safeParse({
+      ...req.body,
+      baseIngredientId: existing.baseIngredientId,
+    });
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Invalid pack size data",
+        errors: parsed.error.format(),
+      });
+    }
+
+    if (parsed.data.isDefault) {
+      // Unset other defaults for this ingredient
+      await db
+        .update(ingredientPackSizes)
+        .set({ isDefault: false })
+        .where(
+          and(
+            eq(ingredientPackSizes.baseIngredientId, existing.baseIngredientId),
+            ne(ingredientPackSizes.id, packId),
+          ),
+        );
+    }
+
+    const [updated] = await db
+      .update(ingredientPackSizes)
+      .set({
+        ...parsed.data,
+        quantity: parsed.data.quantity.toString(),
+        price: parsed.data.price.toString(),
+        updatedAt: new Date(),
+      })
+      .where(eq(ingredientPackSizes.id, packId))
+      .returning();
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("Error updating pack size:", error);
+    return res.status(500).json({ message: "Failed to update pack size" });
+  }
+});
+
+// Delete a pack size (refuses to delete the last default-marked pack)
+router.delete("/pack-sizes/:packId", async (req, res) => {
+  try {
+    const packId = parseInt(req.params.packId);
+    if (isNaN(packId)) return res.status(400).json({ message: "Invalid pack size ID" });
+
+    const [deleted] = await db
+      .delete(ingredientPackSizes)
+      .where(eq(ingredientPackSizes.id, packId))
+      .returning();
+
+    if (!deleted) return res.status(404).json({ message: "Pack size not found" });
+    return res.json({ message: "Pack size deleted" });
+  } catch (error) {
+    console.error("Error deleting pack size:", error);
+    return res.status(500).json({ message: "Failed to delete pack size" });
   }
 });
 
