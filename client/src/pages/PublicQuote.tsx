@@ -116,6 +116,7 @@ export default function PublicQuote() {
   >("idle");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
+  const [eventPublicUrl, setEventPublicUrl] = useState<string | null>(null);
 
   // Fetch the quote
   const { data, isLoading, isError, refetch } = useQuery<PublicQuotePayload>({
@@ -152,11 +153,14 @@ export default function PublicQuote() {
         const err = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(err.message || "Failed to accept quote");
       }
-      return res.json();
+      return res.json() as Promise<{ ok: boolean; eventPublicUrl?: string | null }>;
     },
     onMutate: () => setLocalStatus("accepting"),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setLocalStatus("accepted");
+      if (result.eventPublicUrl) {
+        setEventPublicUrl(result.eventPublicUrl);
+      }
       refetch();
     },
     onError: (e: Error) => {
@@ -255,6 +259,23 @@ export default function PublicQuote() {
             <p className="text-green-700 mt-1">
               Thanks! We'll reach out shortly to lock in the details and handle the deposit.
             </p>
+            {eventPublicUrl && (
+              <div className="mt-4 pt-4 border-t border-green-200">
+                <p className="text-sm text-green-800 font-semibold mb-2">
+                  ✨ Your personal event page is ready
+                </p>
+                <p className="text-xs text-green-700 mb-3">
+                  Bookmark this — it's where you'll find your menu, timeline, and
+                  everything we're preparing for you.
+                </p>
+                <a
+                  href={eventPublicUrl}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-md hover:bg-emerald-700 transition"
+                >
+                  Open My Event Page →
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -45,6 +45,9 @@ import Events from "@/pages/Events";
 // Public quote viewer (customer accepts/declines via tokenized link)
 import PublicQuote from "@/pages/PublicQuote";
 
+// Public customer event page (celebration view, separate from the quote page)
+import PublicEventPage from "@/pages/PublicEventPage";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -113,7 +116,8 @@ function AppContent() {
   // You can add more conditions here for other public forms like /corporate-inquiry, /event-selection etc.
   const isRequestQuotePage = location === "/request-quote";
   const isPublicQuotePage = location.startsWith("/quote/");
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || location === "/inquiry" || location === "/event-selection";
+  const isPublicEventPage = location.startsWith("/event/");
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || location === "/inquiry" || location === "/event-selection";
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -125,6 +129,7 @@ function AppContent() {
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
+          <Route path="/event/:token" component={PublicEventPage} />
           {/* Route for the generic event selection page */}
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
@@ -189,6 +194,7 @@ function AppContent() {
           <Route path="/event-inquiry" component={PublicEventInquiryPage} />
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
+          <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/inquiry" component={PublicRoutes} />
           <Route path="/event-selection" component={PublicRoutes} />
 

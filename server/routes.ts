@@ -37,6 +37,7 @@ import { aiService } from './services/aiService';
 import { normalizePhoneNumber, isValidPhone } from './services/phoneService';
 import { hasWriteAccess, canViewFinancials, isAdminOrUser } from './middleware/permissions';
 import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
+import { getSiteConfig } from './utils/siteConfig';
 
 // Helper function to map lead quality to opportunity priority
 function mapLeadQualityToPriority(leadQuality?: string): 'high' | 'medium' | 'low' {
@@ -1257,6 +1258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'confirmed',
             notes: estimate.notes ?? null,
             completedTasks: [],
+            viewToken: randomBytes(24).toString('base64url'),
           } as any)
           .returning();
       }
@@ -1505,12 +1507,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: 'confirmed',
           notes: estimate.notes ?? null,
           completedTasks: [],
+          viewToken: randomBytes(24).toString('base64url'),
         } as any);
       }
+
+      // Find the event (freshly created or pre-existing) so we can return the public URL
+      const [eventForResponse] = await db
+        .select()
+        .from(events)
+        .where(eq(events.estimateId, estimate.id));
+
+      // Compose the customer event URL from the request origin
+      const host = req.get('host');
+      const proto = req.get('x-forwarded-proto') || req.protocol;
+      const eventPublicUrl = eventForResponse?.viewToken
+        ? `${proto}://${host}/event/${eventForResponse.viewToken}`
+        : null;
 
       return res.status(200).json({
         ok: true,
         estimate: sanitizeEstimateForPublic(updatedEstimate),
+        eventPublicUrl,
       });
     } catch (error) {
       console.error('Error accepting public quote:', error);
@@ -1551,6 +1568,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error declining public quote:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Admin: generate (or fetch existing) the customer-facing event page URL.
+  // Lazy-issues a viewToken if the event doesn't have one yet (heals old events
+  // that were created before tokens existed).
+  app.post('/api/events/:id/share', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: 'Invalid event ID' });
+      }
+
+      const [event] = await db.select().from(events).where(eq(events.id, eventId));
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      const viewToken = event.viewToken || randomBytes(24).toString('base64url');
+      if (!event.viewToken) {
+        await db
+          .update(events)
+          .set({ viewToken, updatedAt: new Date() })
+          .where(eq(events.id, eventId));
+      }
+
+      const host = req.get('host');
+      const proto = req.get('x-forwarded-proto') || req.protocol;
+      const publicUrl = `${proto}://${host}/event/${viewToken}`;
+
+      return res.status(200).json({ publicUrl, viewToken });
+    } catch (error) {
+      console.error('Error sharing event:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: fetch the customer-facing event page payload by token.
+  // Sanitized: strips internal notes, shopping list, prep schedule, AI analysis,
+  // pricing internals, completed tasks, and admin metadata. Includes the site
+  // config (chef info, brand, contact) so the client can render without another call.
+  app.get('/api/public/event/:token', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      if (!token || token.length < 10) {
+        return res.status(400).json({ message: 'Invalid token' });
+      }
+
+      const [event] = await db.select().from(events).where(eq(events.viewToken, token));
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, event.clientId));
+
+      let quoteRequest: typeof quoteRequests.$inferSelect | null = null;
+      let estimate: typeof estimates.$inferSelect | null = null;
+      if (event.estimateId) {
+        const [e] = await db.select().from(estimates).where(eq(estimates.id, event.estimateId));
+        estimate = e ?? null;
+        const [qr] = await db
+          .select()
+          .from(quoteRequests)
+          .where(eq(quoteRequests.estimateId, event.estimateId));
+        quoteRequest = qr ?? null;
+      }
+
+      let menu: typeof menus.$inferSelect | null = null;
+      if (event.menuId) {
+        const [m] = await db.select().from(menus).where(eq(menus.id, event.menuId));
+        menu = m ?? null;
+      }
+
+      // Public event payload: only the fields a customer should see.
+      // Explicitly strip: internal notes, completed tasks, admin metadata, pricing.
+      const publicEvent = {
+        id: event.id,
+        eventType: event.eventType,
+        eventDate: event.eventDate,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        guestCount: event.guestCount,
+        venue: event.venue,
+        status: event.status,
+      };
+
+      const publicClient = client
+        ? {
+            firstName: client.firstName,
+            lastName: client.lastName,
+            company: client.company,
+          }
+        : null;
+
+      const publicQuoteRequest = quoteRequest
+        ? {
+            partnerFirstName: quoteRequest.partnerFirstName,
+            partnerLastName: quoteRequest.partnerLastName,
+            menuTheme: quoteRequest.menuTheme,
+            menuTier: quoteRequest.menuTier,
+            menuSelections: quoteRequest.menuSelections,
+            appetizers: quoteRequest.appetizers,
+            desserts: quoteRequest.desserts,
+            beverages: quoteRequest.beverages,
+            dietary: quoteRequest.dietary,
+            hasCocktailHour: quoteRequest.hasCocktailHour,
+            cocktailStartTime: quoteRequest.cocktailStartTime,
+            cocktailEndTime: quoteRequest.cocktailEndTime,
+            mainMealStartTime: quoteRequest.mainMealStartTime,
+            mainMealEndTime: quoteRequest.mainMealEndTime,
+            specialRequests: quoteRequest.specialRequests,
+            serviceStyle: quoteRequest.serviceStyle,
+            // Link back to the quote page in case the customer wants to renegotiate
+            quoteViewToken: estimate?.viewToken ?? null,
+          }
+        : null;
+
+      const publicMenu = menu
+        ? {
+            name: menu.name,
+            description: menu.description,
+            themeKey: menu.themeKey,
+          }
+        : null;
+
+      return res.status(200).json({
+        event: publicEvent,
+        client: publicClient,
+        quoteRequest: publicQuoteRequest,
+        menu: publicMenu,
+        siteConfig: getSiteConfig(),
+      });
+    } catch (error) {
+      console.error('Error fetching public event:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });

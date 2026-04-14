@@ -365,6 +365,9 @@ export const events = pgTable("events", {
   // Checklist state — array of checklist item ids that have been marked complete.
   // Shopping list check-offs are stored under a "shopping:<ingredient>" prefix in the same array.
   completedTasks: jsonb("completed_tasks").$type<string[]>().default([]).notNull(),
+  // Unguessable token used in customer-facing event URLs (/event/:token).
+  // Minted on event creation; can be rotated later if a link leaks.
+  viewToken: text("view_token").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

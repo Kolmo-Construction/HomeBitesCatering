@@ -29,6 +29,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ShoppingList from "@/components/shopping/ShoppingList";
 
 import {
@@ -51,6 +59,9 @@ import {
   FileText,
   StickyNote,
   CalendarX,
+  Share2,
+  Copy,
+  Link as LinkIcon,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -729,6 +740,60 @@ function OverviewTab({
   menu: MenuRow | null;
 }) {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [sharedUrl, setSharedUrl] = useState<string | null>(null);
+  const [sharedLinkCopied, setSharedLinkCopied] = useState(false);
+
+  const shareMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/events/${event.id}/share`);
+      return res.json() as Promise<{ publicUrl: string; viewToken: string }>;
+    },
+    onSuccess: (data) => {
+      setSharedUrl(data.publicUrl);
+      setSharedLinkCopied(false);
+      setShareDialogOpen(true);
+    },
+    onError: () => {
+      toast({
+        title: "Couldn't generate link",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCopySharedUrl = async () => {
+    if (!sharedUrl) return;
+    try {
+      await navigator.clipboard.writeText(sharedUrl);
+      setSharedLinkCopied(true);
+      setTimeout(() => setSharedLinkCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Couldn't copy",
+        description: "Select and copy manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenShareEmail = () => {
+    if (!sharedUrl || !client?.email) return;
+    const firstName = client.firstName || "";
+    const subject = encodeURIComponent("Your event page is ready ✨");
+    const body = encodeURIComponent(
+      `Hi ${firstName},\n\n` +
+        `We're so excited to be cooking for you! Here's your personal event page — ` +
+        `bookmark it and check in anytime to see the menu we're preparing, the timeline ` +
+        `for the day, and what's coming up as we get closer.\n\n` +
+        `${sharedUrl}\n\n` +
+        `If you need to change anything, just reply to this email or reach out directly.\n\n` +
+        `— The Homebites team`
+    );
+    window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
+  };
 
   const allergies = quoteRequest?.dietary?.allergies ?? [];
   const restrictions = quoteRequest?.dietary?.restrictions ?? [];
@@ -931,6 +996,15 @@ function OverviewTab({
 
       <Card className="md:col-span-2">
         <CardContent className="p-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+            onClick={() => shareMutation.mutate()}
+            disabled={shareMutation.isPending}
+          >
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
+            {shareMutation.isPending ? "Generating..." : "Share with Customer"}
+          </Button>
           {estimate && (
             <Button
               size="sm"
@@ -963,6 +1037,52 @@ function OverviewTab({
           )}
         </CardContent>
       </Card>
+
+      {/* ─── Share with Customer dialog ────────────────────────────────── */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Customer event page is ready</DialogTitle>
+            <DialogDescription>
+              Copy this link and send it to {client?.firstName ?? "the customer"}. They'll
+              see a warm, celebration-focused view of their event — menu, timeline,
+              milestones, and a way to reach you directly. No login required.
+            </DialogDescription>
+          </DialogHeader>
+          {sharedUrl && (
+            <div className="my-4 space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-md border">
+                <LinkIcon className="h-4 w-4 text-gray-500 shrink-0" />
+                <code className="flex-1 text-xs text-gray-800 break-all select-all">
+                  {sharedUrl}
+                </code>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleCopySharedUrl}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {sharedLinkCopied ? "Copied!" : "Copy Link"}
+                </Button>
+                {client?.email && (
+                  <Button
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                    onClick={handleOpenShareEmail}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Open Email Draft
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShareDialogOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
