@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3.1";
 const DEEPSEEK_NATIVE_MODEL = "deepseek-chat";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -27,7 +27,8 @@ function readDeepseekKeyFile(): string | null {
 }
 
 const openRouterApiKey = process.env.OPENROUTER_API_KEY ?? "";
-const deepseekNativeApiKey = readDeepseekKeyFile();
+const deepseekNativeApiKey =
+  process.env.DEEPSEEK_API_KEY?.trim() || readDeepseekKeyFile();
 
 const openRouterClient: OpenAI | null = openRouterApiKey
   ? new OpenAI({
@@ -56,18 +57,18 @@ interface ProviderAttempt {
 }
 
 const providerAttempts: ProviderAttempt[] = [];
-if (openRouterClient) {
-  providerAttempts.push({
-    label: "openrouter-deepseek-free",
-    client: openRouterClient,
-    model: OPENROUTER_MODEL,
-  });
-}
 if (deepseekNativeClient) {
   providerAttempts.push({
     label: "deepseek-native",
     client: deepseekNativeClient,
     model: DEEPSEEK_NATIVE_MODEL,
+  });
+}
+if (openRouterClient) {
+  providerAttempts.push({
+    label: "openrouter-deepseek-free",
+    client: openRouterClient,
+    model: OPENROUTER_MODEL,
   });
 }
 
