@@ -288,9 +288,9 @@ export default function BaseIngredientsPage() {
           <div className="flex gap-2 items-center">
             {stagingPendingCount > 0 && (
               <Link href="/admin/staging-base-ingredients">
-                <Button variant="outline" data-testid="button-review-staging">
+                <Button variant="outline" className="border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-900" data-testid="button-review-staging">
                   <ClipboardCheck className="mr-2 h-4 w-4" />
-                  Review imports ({stagingPendingCount})
+                  {stagingPendingCount} new ingredients to review
                 </Button>
               </Link>
             )}
