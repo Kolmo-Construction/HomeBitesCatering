@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "./db";
+import { db, pool } from "./db";
 import {
   baseIngredients,
   recipeIngredients,
@@ -499,6 +499,162 @@ router.post("/base-ingredients/batch-import", async (req, res) => {
     }
     console.error("Error batch importing base ingredients:", error);
     return res.status(500).json({ message: "Failed to batch import base ingredients" });
+  }
+});
+
+// ============================================
+// STAGING BASE INGREDIENTS (temporary review table)
+// ============================================
+// The `staging_base_ingredients` table is populated by
+// scripts/seed-staging-base-ingredients.mjs with AI-suggested metadata.
+// Mike reviews each row in the chef-friendly UI at /admin/staging-base-ingredients,
+// then clicks "Promote Approved" to create real base_ingredients entries.
+// The table is intentionally NOT in shared/schema.ts — it's temporary and
+// will be dropped once the recipesgen import is complete.
+
+// Whitelist to prevent arbitrary column updates
+const STAGING_EDITABLE_FIELDS = [
+  "name",
+  "suggested_category",
+  "suggested_purchase_unit",
+  "suggested_purchase_quantity",
+  "suggested_price",
+  "suggested_dietary_tags",
+  "reviewer_notes",
+  "status",
+] as const;
+
+const STAGING_VALID_STATUSES = ["pending", "approved", "rejected", "modified", "promoted"] as const;
+
+router.get("/staging-base-ingredients", async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, suggested_category, suggested_purchase_unit,
+              suggested_purchase_quantity, suggested_price, suggested_dietary_tags,
+              ai_reasoning, reference_count, sample_recipes, status,
+              reviewer_notes, approved_as_id, source, created_at, updated_at
+       FROM staging_base_ingredients
+       WHERE source = 'recipesgen-import'
+       ORDER BY
+         CASE status
+           WHEN 'pending' THEN 0
+           WHEN 'modified' THEN 1
+           WHEN 'approved' THEN 2
+           WHEN 'rejected' THEN 3
+           WHEN 'promoted' THEN 4
+           ELSE 5
+         END,
+         reference_count DESC,
+         id`,
+    );
+    return res.json(rows);
+  } catch (error: any) {
+    if (error?.code === "42P01") {
+      // Table doesn't exist — seed script hasn't run
+      return res.json([]);
+    }
+    console.error("Error listing staging base ingredients:", error);
+    return res.status(500).json({ message: "Failed to fetch staging base ingredients" });
+  }
+});
+
+router.patch("/staging-base-ingredients/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+
+    const body = req.body || {};
+    const sets: string[] = [];
+    const values: any[] = [];
+
+    for (const field of STAGING_EDITABLE_FIELDS) {
+      // Support both snake_case and camelCase keys from the client
+      const camel = field.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      const v = body[field] ?? body[camel];
+      if (v === undefined) continue;
+
+      if (field === "status" && !STAGING_VALID_STATUSES.includes(v)) {
+        return res.status(400).json({ message: `Invalid status: ${v}` });
+      }
+
+      values.push(field === "suggested_dietary_tags" ? JSON.stringify(v) : v);
+      sets.push(`${field} = $${values.length}`);
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ message: "No editable fields in body" });
+    }
+
+    sets.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const { rows } = await pool.query(
+      `UPDATE staging_base_ingredients SET ${sets.join(", ")} WHERE id = $${values.length} RETURNING *`,
+      values,
+    );
+
+    if (rows.length === 0) return res.status(404).json({ message: "Not found" });
+    return res.json(rows[0]);
+  } catch (error) {
+    console.error("Error updating staging base ingredient:", error);
+    return res.status(500).json({ message: "Failed to update staging base ingredient" });
+  }
+});
+
+router.post("/staging-base-ingredients/promote", async (_req, res) => {
+  try {
+    // Read all approved/modified rows that haven't been promoted yet
+    const { rows: toPromote } = await pool.query(
+      `SELECT id, name, suggested_category, suggested_purchase_unit,
+              suggested_purchase_quantity, suggested_price, suggested_dietary_tags
+       FROM staging_base_ingredients
+       WHERE source = 'recipesgen-import'
+         AND status IN ('approved','modified')
+         AND approved_as_id IS NULL`,
+    );
+
+    if (toPromote.length === 0) {
+      return res.json({ promoted: 0, rows: [] });
+    }
+
+    const promoted: any[] = [];
+    const failed: { id: number; name: string; error: string }[] = [];
+
+    for (const r of toPromote) {
+      try {
+        const [inserted] = await db
+          .insert(baseIngredients)
+          .values({
+            name: r.name,
+            category: r.suggested_category,
+            purchaseUnit: r.suggested_purchase_unit,
+            purchaseQuantity: String(r.suggested_purchase_quantity || 1),
+            purchasePrice: String(r.suggested_price || 0),
+            previousPurchasePrice: String(r.suggested_price || 0),
+            dietaryTags: Array.isArray(r.suggested_dietary_tags)
+              ? r.suggested_dietary_tags
+              : [],
+            unitConversions: {},
+          })
+          .returning();
+
+        await pool.query(
+          `UPDATE staging_base_ingredients
+           SET status = 'promoted', approved_as_id = $1, updated_at = NOW()
+           WHERE id = $2`,
+          [inserted.id, r.id],
+        );
+
+        promoted.push({ stagingId: r.id, name: r.name, newBaseIngredientId: inserted.id });
+      } catch (err: any) {
+        failed.push({ id: r.id, name: r.name, error: err?.message || String(err) });
+      }
+    }
+
+    return res.json({ promoted: promoted.length, failed: failed.length, rows: promoted, errors: failed });
+  } catch (error) {
+    console.error("Error promoting staging base ingredients:", error);
+    return res.status(500).json({ message: "Failed to promote staging base ingredients" });
   }
 });
 

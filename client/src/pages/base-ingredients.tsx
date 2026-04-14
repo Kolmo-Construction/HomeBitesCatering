@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, ClipboardCheck } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type BaseIngredient, insertBaseIngredientSchema, DIETARY_TAGS } from "@shared/schema";
@@ -104,6 +105,14 @@ export default function BaseIngredientsPage() {
   const { data: ingredients = [], isLoading } = useQuery<BaseIngredient[]>({
     queryKey: ["/api/ingredients/base-ingredients", { category: categoryFilter, search: searchQuery }],
   });
+
+  // Show the review-queue button only when there are staging rows awaiting review
+  const { data: stagingRows = [] } = useQuery<Array<{ status: string }>>({
+    queryKey: ["/api/ingredients/staging-base-ingredients"],
+  });
+  const stagingPendingCount = stagingRows.filter(
+    (r) => r.status === "pending" || r.status === "approved" || r.status === "modified",
+  ).length;
 
   // Create mutation
   const createMutation = useMutation({
@@ -277,6 +286,14 @@ export default function BaseIngredientsPage() {
             </p>
           </div>
           <div className="flex gap-2 items-center">
+            {stagingPendingCount > 0 && (
+              <Link href="/admin/staging-base-ingredients">
+                <Button variant="outline" data-testid="button-review-staging">
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  Review imports ({stagingPendingCount})
+                </Button>
+              </Link>
+            )}
             <Button
               onClick={() => {
                 form.reset({

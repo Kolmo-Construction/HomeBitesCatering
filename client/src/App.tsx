@@ -11,6 +11,7 @@ import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
 import Menus from "@/pages/menus";
 import BaseIngredients from "@/pages/base-ingredients";
+import StagingBaseIngredients from "@/pages/StagingBaseIngredients";
 import Recipes from "@/pages/recipes";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
@@ -166,6 +167,7 @@ function AppContent() {
           <Route path="/estimates/:id/view" component={Estimates} />
           <Route path="/estimates/:id/edit" component={Estimates} />
           <Route path="/base-ingredients" component={BaseIngredients} />
+          <Route path="/admin/staging-base-ingredients" component={StagingBaseIngredients} />
           <Route path="/recipes" component={Recipes} />
           <Route path="/menus" component={Menus} />
           <Route path="/menus/new" component={Menus} />

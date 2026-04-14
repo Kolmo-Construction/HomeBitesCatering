@@ -4,3 +4,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Recipe migration data — contains recipe IP, never commit
+scripts/recipesgen-cards.json
+scripts/recipesgen-*.json
