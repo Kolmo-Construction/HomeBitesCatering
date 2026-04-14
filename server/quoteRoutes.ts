@@ -426,7 +426,19 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
     const id = parseInt(req.params.id);
     const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
     if (!request) return res.status(404).json({ message: "Quote request not found" });
-    if (request.status === "converted") return res.status(400).json({ message: "Already converted" });
+
+    // Belt-and-suspenders guard: refuse if this inquiry has ANY downstream rows
+    // already linked, regardless of the admin-editable status field. Previously we
+    // only checked status === "converted", which could be defeated by flipping the
+    // status dropdown back to "reviewing" in the admin UI — that produced duplicate
+    // client/opportunity/estimate rows on the second convert.
+    if (request.status === "converted" || request.opportunityId || request.estimateId) {
+      return res.status(400).json({
+        message: "This inquiry has already been converted to a quote.",
+        opportunityId: request.opportunityId,
+        estimateId: request.estimateId,
+      });
+    }
 
     const { opportunities, clients, estimates } = await import("@shared/schema");
 
