@@ -35,7 +35,12 @@ import {
 } from "@shared/schema";
 import { aiService } from './services/aiService';
 import { normalizePhoneNumber, isValidPhone } from './services/phoneService';
-import { hasWriteAccess, canViewFinancials, isAdminOrUser } from './middleware/permissions';
+import {
+  hasWriteAccess,
+  canViewFinancials,
+  isAdminOrUser,
+  hasChefOrAboveWriteAccess,
+} from './middleware/permissions';
 import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
 import { getSiteConfig } from './utils/siteConfig';
 
@@ -1774,6 +1779,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // the originating quote request (menu selections, dietary, equipment, beverages,
   // appetizers, AI analysis), and the menu metadata. Any of the joined objects may be
   // null if the data isn't linked — the UI handles missing pieces gracefully.
+  //
+  // Role-based filtering: chefs never see the estimate object (it contains line-item
+  // pricing and totals). They get all the operational data they need from quoteRequest
+  // and event. This is defense-in-depth — the UI also hides these fields, but stripping
+  // on the server means chefs can't craft requests to see pricing.
   app.get('/api/events/:id/full', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);
@@ -1806,10 +1816,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         menu = m ?? null;
       }
 
+      // Strip financial data for non-admins. The events tab reads menu/dietary/
+      // equipment from quoteRequest; estimate is only needed for pricing displays.
+      const viewerRole = req.session.userRole;
+      const canSeeFinancials = viewerRole === 'admin';
+
       return res.status(200).json({
         event,
         client: client ?? null,
-        estimate,
+        estimate: canSeeFinancials ? estimate : null,
         quoteRequest,
         menu,
       });
@@ -1821,7 +1836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Toggle a single checklist item on an event. Body: { taskId: string, done: boolean }.
   // Keeps the event detail page responsive without sending the whole task list on every tick.
-  app.patch('/api/events/:id/checklist', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.patch('/api/events/:id/checklist', isAuthenticated, hasChefOrAboveWriteAccess, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);
       if (isNaN(eventId)) {
@@ -1878,31 +1893,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update an event
-  app.patch('/api/events/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  // Update an event — chefs, users, and admins can all edit operational fields
+  // (status, notes, completedTasks). Only admins can touch commercial fields
+  // (clientId, estimateId, menuId, eventDate, venue, guestCount, startTime, endTime).
+  // A chef submitting a commercial field gets it silently dropped from the update.
+  app.patch('/api/events/:id', isAuthenticated, hasChefOrAboveWriteAccess, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);
-      
       if (isNaN(eventId)) {
         return res.status(400).json({ message: 'Invalid event ID' });
       }
-      
-      const updateData = req.body;
-      
-      const updatedEvent = await storage.updateEvent(eventId, updateData);
-      
+
+      const role = req.session.userRole;
+      const isAdmin = role === 'admin';
+
+      // Field whitelist for non-admin operational writes
+      const CHEF_ALLOWED_FIELDS = new Set(['status', 'notes', 'completedTasks']);
+      // Chefs can't cancel an event (commercial implication — affects billing)
+      const CHEF_ALLOWED_STATUSES = new Set(['confirmed', 'in-progress', 'completed']);
+
+      let updateData: Record<string, unknown>;
+      if (isAdmin) {
+        updateData = req.body;
+      } else {
+        updateData = {};
+        for (const [key, value] of Object.entries(req.body ?? {})) {
+          if (CHEF_ALLOWED_FIELDS.has(key)) {
+            if (key === 'status' && typeof value === 'string' && !CHEF_ALLOWED_STATUSES.has(value)) {
+              // Silently skip status transitions the chef can't make
+              continue;
+            }
+            updateData[key] = value;
+          }
+        }
+        if (Object.keys(updateData).length === 0) {
+          return res.status(403).json({
+            message: 'Chefs can only update event status, notes, and checklist items.',
+          });
+        }
+      }
+
+      const updatedEvent = await storage.updateEvent(eventId, updateData as any);
+
       if (!updatedEvent) {
         return res.status(404).json({ message: 'Event not found' });
       }
-      
+
       res.status(200).json(updatedEvent);
     } catch (error) {
       console.error('Error updating event:', error);
-      
+
       if (error instanceof ZodError) {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
-      
+
       res.status(500).json({ message: 'Server error' });
     }
   });

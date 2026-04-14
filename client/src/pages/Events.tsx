@@ -3,6 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useCanViewFinancials,
+  useCanViewSales,
+} from "@/hooks/usePermissions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -615,6 +619,7 @@ function EventHeader({
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canViewSales = useCanViewSales();
   const days = daysUntil(event.eventDate);
 
   const statusMutation = useMutation({
@@ -680,7 +685,7 @@ function EventHeader({
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="in-progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                {canViewSales && <SelectItem value="cancelled">Cancelled</SelectItem>}
               </SelectContent>
             </Select>
             <div
@@ -741,6 +746,7 @@ function OverviewTab({
 }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const canViewSales = useCanViewSales();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [sharedUrl, setSharedUrl] = useState<string | null>(null);
   const [sharedLinkCopied, setSharedLinkCopied] = useState(false);
@@ -994,49 +1000,51 @@ function OverviewTab({
         </Card>
       )}
 
-      <Card className="md:col-span-2">
-        <CardContent className="p-3 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
-            onClick={() => shareMutation.mutate()}
-            disabled={shareMutation.isPending}
-          >
-            <Share2 className="h-3.5 w-3.5 mr-1.5" />
-            {shareMutation.isPending ? "Generating..." : "Share with Customer"}
-          </Button>
-          {estimate && (
+      {canViewSales && (
+        <Card className="md:col-span-2">
+          <CardContent className="p-3 flex flex-wrap gap-2">
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => navigate(`/estimates/${estimate.id}/view`)}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+              onClick={() => shareMutation.mutate()}
+              disabled={shareMutation.isPending}
             >
-              <FileText className="h-3.5 w-3.5 mr-1.5" />
-              View Quote #{estimate.id}
+              <Share2 className="h-3.5 w-3.5 mr-1.5" />
+              {shareMutation.isPending ? "Generating..." : "Share with Customer"}
             </Button>
-          )}
-          {quoteRequest && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate(`/quote-requests?id=${quoteRequest.id}`)}
-            >
-              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              Inquiry #{quoteRequest.id}
-            </Button>
-          )}
-          {client && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate(`/clients/${client.id}`)}
-            >
-              <Users className="h-3.5 w-3.5 mr-1.5" />
-              Client Record
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+            {estimate && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/estimates/${estimate.id}/view`)}
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                View Quote #{estimate.id}
+              </Button>
+            )}
+            {quoteRequest && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/quote-requests?id=${quoteRequest.id}`)}
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                Inquiry #{quoteRequest.id}
+              </Button>
+            )}
+            {client && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/clients/${client.id}`)}
+              >
+                <Users className="h-3.5 w-3.5 mr-1.5" />
+                Client Record
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ─── Share with Customer dialog ────────────────────────────────── */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
@@ -1096,6 +1104,7 @@ function MenuDietaryTab({
   quoteRequest: QuoteRequestRow | null;
   menu: MenuRow | null;
 }) {
+  const canViewFinancials = useCanViewFinancials();
   if (!quoteRequest) {
     return (
       <Card>
@@ -1135,7 +1144,7 @@ function MenuDietaryTab({
                 {titleCase(quoteRequest.menuTier) || "—"}
               </p>
             </div>
-            {perPersonCents != null && (
+            {canViewFinancials && perPersonCents != null && (
               <div>
                 <p className="text-sm text-muted-foreground">Per person</p>
                 <p className="text-lg font-semibold text-emerald-700">
@@ -1173,7 +1182,7 @@ function MenuDietaryTab({
                         className="text-sm flex items-center justify-between"
                       >
                         <span>• {it.name}</span>
-                        {it.upcharge ? (
+                        {canViewFinancials && it.upcharge ? (
                           <span className="text-xs text-muted-foreground">
                             +${it.upcharge.toFixed(2)}/person
                           </span>
@@ -1289,6 +1298,7 @@ interface ShoppingListPayload {
 }
 
 function PrepScheduleTab({ eventId, event }: { eventId: number; event: EventRow }) {
+  const canViewFinancials = useCanViewFinancials();
   const { data, isLoading } = useQuery<ShoppingListPayload>({
     queryKey: [`/api/quotes/events/${eventId}/shopping-list`],
   });
@@ -1332,12 +1342,14 @@ function PrepScheduleTab({ eventId, event }: { eventId: number; event: EventRow 
               {data.totalLaborHours.toFixed(1)}h
             </p>
           </div>
-          <div>
-            <p className="text-muted-foreground">Labor cost</p>
-            <p className="text-xl font-semibold text-emerald-700">
-              {formatCents(data.totalLaborCost)}
-            </p>
-          </div>
+          {canViewFinancials && data.totalLaborCost != null && (
+            <div>
+              <p className="text-muted-foreground">Labor cost</p>
+              <p className="text-xl font-semibold text-emerald-700">
+                {formatCents(data.totalLaborCost)}
+              </p>
+            </div>
+          )}
           <div className="ml-auto text-xs text-muted-foreground max-w-xs text-right">
             v1: backwards-scheduled from event start, longest jobs first. Mike can override
             ordering mentally — a smart scheduler with dependencies is on the roadmap.

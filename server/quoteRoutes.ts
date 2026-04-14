@@ -49,10 +49,50 @@ router.get("/menus/:id/margin", async (req: Request, res: Response) => {
   }
 });
 
+// Require an authenticated staff session. Returns the viewer's role, or sends a
+// 401/403 response and returns null to the caller (caller should early-return).
+function requireStaffSession(req: Request, res: Response): string | null {
+  if (!req.session?.userId) {
+    res.status(401).json({ message: "Not authenticated" });
+    return null;
+  }
+  const role = req.session.userRole || "";
+  if (role !== "admin" && role !== "user" && role !== "chef") {
+    res.status(403).json({ message: "Insufficient permissions" });
+    return null;
+  }
+  return role;
+}
+
+// Strip financial fields from a shopping list response for non-admin roles.
+// Keeps labor HOURS (operational) and supplier/SKU/quantity info.
+function sanitizeShoppingListForRole(list: any, role: string) {
+  if (role === "admin") return list;
+
+  const stripLine = (line: any) => ({ ...line, estimatedCost: undefined });
+  const safe = {
+    ...list,
+    totalEstimatedCost: undefined,
+    totalLaborCost: undefined,
+    totalFullyLoadedCost: undefined,
+    allLines: Array.isArray(list.allLines) ? list.allLines.map(stripLine) : list.allLines,
+  };
+  if (list.groupedByCategory && typeof list.groupedByCategory === "object") {
+    safe.groupedByCategory = {};
+    for (const [cat, lines] of Object.entries(list.groupedByCategory)) {
+      safe.groupedByCategory[cat] = Array.isArray(lines) ? (lines as any[]).map(stripLine) : lines;
+    }
+  }
+  return safe;
+}
+
 // Get aggregated shopping list for a specific quote request
 // Returns all ingredients needed (scaled to guest count) grouped by category
 router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Response) => {
   try {
+    const role = requireStaffSession(req, res);
+    if (!role) return;
+
     const quoteRequestId = parseInt(req.params.id);
     if (isNaN(quoteRequestId)) return res.status(400).json({ message: "Invalid quote request ID" });
 
@@ -65,7 +105,7 @@ router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Respon
     });
 
     if (!shoppingList) return res.status(404).json({ message: "Quote request not found" });
-    return res.json(shoppingList);
+    return res.json(sanitizeShoppingListForRole(shoppingList, role));
   } catch (error) {
     console.error("Error generating shopping list:", error);
     return res.status(500).json({ message: "Failed to generate shopping list" });
@@ -75,6 +115,9 @@ router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Respon
 // Get shopping list for an event (looks up the originating quote request via estimate link)
 router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
   try {
+    const role = requireStaffSession(req, res);
+    if (!role) return;
+
     const eventId = parseInt(req.params.id);
     if (isNaN(eventId)) return res.status(400).json({ message: "Invalid event ID" });
 
@@ -109,7 +152,7 @@ router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
     });
 
     if (!shoppingList) return res.status(404).json({ message: "Failed to generate shopping list" });
-    return res.json(shoppingList);
+    return res.json(sanitizeShoppingListForRole(shoppingList, role));
   } catch (error) {
     console.error("Error generating event shopping list:", error);
     return res.status(500).json({ message: "Failed to generate shopping list" });

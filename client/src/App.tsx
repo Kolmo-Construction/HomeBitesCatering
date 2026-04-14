@@ -152,12 +152,39 @@ function AppContent() {
     );
   }
 
+  // Role-based routing: chefs only get kitchen-facing pages. Everything else
+  // redirects to /events (their primary workspace). Defense-in-depth — the
+  // server also strips financial data and blocks non-chef endpoints, but
+  // route-level guarding keeps chefs from seeing sales UI even momentarily.
+  const isChef = user.role === "chef";
+
   // User is logged in, show admin/dashboard layout
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster />
       <Layout>
-        <Switch>
+        {isChef ? (
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/events" component={Events} />
+            <Route path="/events/:id" component={Events} />
+            <Route path="/base-ingredients" component={BaseIngredients} />
+            <Route path="/recipes" component={Recipes} />
+            <Route path="/menus" component={Menus} />
+            <Route path="/menus/:id" component={Menus} />
+            <Route path="/calendar" component={Calendar} />
+            {/* Anything else: send chefs to their workspace */}
+            <Route>
+              {() => {
+                if (typeof window !== "undefined") {
+                  window.location.replace("/events");
+                }
+                return null;
+              }}
+            </Route>
+          </Switch>
+        ) : (
+          <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/opportunities" component={Opportunities} />
           <Route path="/opportunities/new" component={Opportunities} />
@@ -203,6 +230,7 @@ function AppContent() {
             <Dashboard /> {/* Or a 404 component within the Layout */}
           </Route>
         </Switch>
+        )}
       </Layout>
     </div>
   );

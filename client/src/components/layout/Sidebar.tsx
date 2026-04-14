@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useIsAdmin } from "@/hooks/usePermissions";
+import { useIsAdmin, useIsChef } from "@/hooks/usePermissions";
 import {
   LayoutDashboard,
   Filter,
@@ -28,24 +28,41 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const isAdmin = useIsAdmin();
+  const isChef = useIsChef();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
-  const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  // Full nav, with a `chef` flag on items kitchen staff should see. Items without
+  // the flag are sales/admin territory and get hidden for chef users.
+  type NavItem = {
+    name: string;
+    href: string;
+    icon: any;
+    chef?: boolean;
+    adminOnly?: boolean;
+  };
+
+  const allNav: NavItem[] = [
+    { name: "Dashboard", href: "/", icon: LayoutDashboard, chef: true },
     { name: "Leads", href: "/raw-leads", icon: Inbox },
     { name: "Opportunities", href: "/opportunities", icon: Filter },
     { name: "Clients", href: "/clients", icon: Users },
-    { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket },
-    { name: "Recipes", href: "/recipes", icon: ChefHat },
-    { name: "Menus", href: "/menus", icon: ClipboardList },
+    { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket, chef: true },
+    { name: "Recipes", href: "/recipes", icon: ChefHat, chef: true },
+    { name: "Menus", href: "/menus", icon: ClipboardList, chef: true },
     { name: "Inquiries", href: "/quote-requests", icon: MessageSquareQuote },
     { name: "Quotes", href: "/estimates", icon: FileText },
-    { name: "Events", href: "/events", icon: CalendarCheck },
-    { name: "Calendar", href: "/calendar", icon: Calendar },
+    { name: "Events", href: "/events", icon: CalendarCheck, chef: true },
+    { name: "Calendar", href: "/calendar", icon: Calendar, chef: true },
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
-    ...(isAdmin ? [{ name: "Users", href: "/users", icon: UserCog }] : []),
+    { name: "Users", href: "/users", icon: UserCog, adminOnly: true },
   ];
+
+  const navigation = allNav.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (isChef && !item.chef) return false;
+    return true;
+  });
 
   // Toggle submenu expansion
   const toggleSubmenu = (name: string) => {

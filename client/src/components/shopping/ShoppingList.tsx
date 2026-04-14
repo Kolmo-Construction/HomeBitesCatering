@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCanViewFinancials } from "@/hooks/usePermissions";
 import {
   ShoppingCart,
   Printer,
@@ -27,7 +28,8 @@ interface ShoppingListLine {
   category: string;
   totalQuantity: number;
   purchaseUnit: string;
-  estimatedCost: number;
+  // undefined when the server strips it for non-admin roles
+  estimatedCost?: number;
   supplier: string | null;
   sku: string | null;
   usedInRecipes: string[];
@@ -46,10 +48,11 @@ interface ShoppingListData {
   portionMultiplier: number;
   groupedByCategory: Record<string, ShoppingListLine[]>;
   allLines: ShoppingListLine[];
-  totalEstimatedCost: number;
-  totalLaborCost: number;
+  // Financial rollups — undefined when the server strips them for non-admin roles
+  totalEstimatedCost?: number;
+  totalLaborCost?: number;
+  totalFullyLoadedCost?: number;
   totalLaborHours: number;
-  totalFullyLoadedCost: number;
   totalLineCount: number;
   unlinkedItems: Array<{ category: string; itemName: string; reason: string }>;
   resolvedRecipes: Array<{
@@ -106,6 +109,7 @@ interface ShoppingListProps {
 
 export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListProps) {
   const [multiplier, setMultiplier] = useState<number | null>(null);
+  const canViewFinancials = useCanViewFinancials();
 
   const endpoint = quoteRequestId
     ? `/api/quotes/quote-requests/${quoteRequestId}/shopping-list`
@@ -157,18 +161,24 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
   const handlePrint = () => window.print();
 
   const handleExportCSV = () => {
+    const headers = canViewFinancials
+      ? ["Category", "Ingredient", "Quantity", "Unit", "Estimated Cost", "Supplier", "SKU", "Used In"]
+      : ["Category", "Ingredient", "Quantity", "Unit", "Supplier", "SKU", "Used In"];
     const rows = [
-      ["Category", "Ingredient", "Quantity", "Unit", "Estimated Cost", "Supplier", "SKU", "Used In"],
-      ...data.allLines.map((line) => [
-        CATEGORY_LABELS[line.category] || line.category,
-        line.name,
-        line.totalQuantity.toString(),
-        line.purchaseUnit,
-        line.estimatedCost.toFixed(2),
-        line.supplier || "",
-        line.sku || "",
-        line.usedInRecipes.join(", "),
-      ]),
+      headers,
+      ...data.allLines.map((line) => {
+        const base = [
+          CATEGORY_LABELS[line.category] || line.category,
+          line.name,
+          line.totalQuantity.toString(),
+          line.purchaseUnit,
+        ];
+        if (canViewFinancials) {
+          base.push(line.estimatedCost != null ? line.estimatedCost.toFixed(2) : "");
+        }
+        base.push(line.supplier || "", line.sku || "", line.usedInRecipes.join(", "));
+        return base;
+      }),
     ];
     const csv = rows.map((r) => r.map((c) => `"${c.toString().replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -222,8 +232,8 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          {/* Stats row — ingredients, recipes, labor, ingredient cost */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+          {/* Stats row — ingredients, recipes, portions, labor hours */}
+          <div className={cn("grid gap-3 mb-3", canViewFinancials ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4")}>
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="text-xs text-gray-500 flex items-center gap-1">
                 <Package className="h-3 w-3" /> Ingredients
@@ -244,46 +254,52 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
             </div>
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
               <div className="text-xs text-blue-700 flex items-center gap-1">
-                <ChefHat className="h-3 w-3" /> Labor ({data.totalLaborHours.toFixed(1)}h)
+                <ChefHat className="h-3 w-3" /> Prep time
               </div>
               <div className="text-2xl font-bold text-blue-700">
-                ${data.totalLaborCost.toFixed(2)}
+                {data.totalLaborHours.toFixed(1)}h
               </div>
             </div>
           </div>
 
-          {/* Cost summary — food + labor = fully-loaded */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-              <div className="text-xs text-green-700 flex items-center gap-1">
-                <DollarSign className="h-3 w-3" /> Ingredient Cost
+          {/* Cost summary — admin only; chefs don't see dollar rollups */}
+          {canViewFinancials && data.totalEstimatedCost != null && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                <div className="text-xs text-green-700 flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" /> Ingredient Cost
+                </div>
+                <div className="text-xl font-bold text-green-700">
+                  ${data.totalEstimatedCost.toFixed(2)}
+                </div>
+                <div className="text-[10px] text-green-600 mt-0.5">What Mike buys</div>
               </div>
-              <div className="text-xl font-bold text-green-700">
-                ${data.totalEstimatedCost.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-green-600 mt-0.5">What Mike buys</div>
+              {data.totalLaborCost != null && (
+                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                  <div className="text-xs text-blue-700 flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" /> Labor Cost
+                  </div>
+                  <div className="text-xl font-bold text-blue-700">
+                    ${data.totalLaborCost.toFixed(2)}
+                  </div>
+                  <div className="text-[10px] text-blue-600 mt-0.5">
+                    {data.totalLaborHours.toFixed(1)} hrs × $35
+                  </div>
+                </div>
+              )}
+              {data.totalFullyLoadedCost != null && (
+                <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                  <div className="text-xs text-purple-700 flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" /> Fully Loaded
+                  </div>
+                  <div className="text-xl font-bold text-purple-700">
+                    ${data.totalFullyLoadedCost.toFixed(2)}
+                  </div>
+                  <div className="text-[10px] text-purple-600 mt-0.5">Cost to execute</div>
+                </div>
+              )}
             </div>
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-              <div className="text-xs text-blue-700 flex items-center gap-1">
-                <DollarSign className="h-3 w-3" /> Labor Cost
-              </div>
-              <div className="text-xl font-bold text-blue-700">
-                ${data.totalLaborCost.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-blue-600 mt-0.5">
-                {data.totalLaborHours.toFixed(1)} hrs × $35
-              </div>
-            </div>
-            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-              <div className="text-xs text-purple-700 flex items-center gap-1">
-                <DollarSign className="h-3 w-3" /> Fully Loaded
-              </div>
-              <div className="text-xl font-bold text-purple-700">
-                ${data.totalFullyLoadedCost.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-purple-600 mt-0.5">Cost to execute</div>
-            </div>
-          </div>
+          )}
 
           {/* Portion multiplier slider */}
           <div className="space-y-2 print:hidden">
@@ -361,7 +377,9 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
       {hasIngredients &&
         sortedCategories.map((category) => {
           const lines = data.groupedByCategory[category];
-          const categoryTotal = lines.reduce((sum, l) => sum + l.estimatedCost, 0);
+          const categoryTotal = canViewFinancials
+            ? lines.reduce((sum, l) => sum + (l.estimatedCost ?? 0), 0)
+            : null;
           return (
             <Card
               key={category}
@@ -378,9 +396,11 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
                       ({lines.length} item{lines.length > 1 ? "s" : ""})
                     </span>
                   </CardTitle>
-                  <span className="text-sm font-semibold text-gray-700">
-                    ${categoryTotal.toFixed(2)}
-                  </span>
+                  {categoryTotal != null && (
+                    <span className="text-sm font-semibold text-gray-700">
+                      ${categoryTotal.toFixed(2)}
+                    </span>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
@@ -410,9 +430,11 @@ export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListPr
                           {line.totalQuantity} {line.purchaseUnit}
                           {line.totalQuantity !== 1 && !line.purchaseUnit.endsWith("s") ? "s" : ""}
                         </div>
-                        <div className="text-xs text-gray-600">
-                          ${line.estimatedCost.toFixed(2)}
-                        </div>
+                        {canViewFinancials && line.estimatedCost != null && (
+                          <div className="text-xs text-gray-600">
+                            ${line.estimatedCost.toFixed(2)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
