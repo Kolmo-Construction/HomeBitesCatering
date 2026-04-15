@@ -316,6 +316,12 @@ export const estimates = pgTable("estimates", {
   menuId: integer("menu_id").references(() => menus.id),
   items: jsonb("items"), // JSON of custom items if not using a standard menu
   additionalServices: jsonb("additional_services"), // JSON of additional services
+  // Full customer-facing wedding proposal payload. When present, this is the
+  // single source of truth for the public quote page — couple names, timeline,
+  // menu selections, appetizers, desserts, beverages, dietary, special requests,
+  // venue, pricing. Populated at quote_request → estimate conversion and edited
+  // by the admin before send. See shared/proposal.ts for the Proposal type.
+  proposal: jsonb("proposal"),
   subtotal: integer("subtotal").notNull(), // stored in cents
   tax: integer("tax").notNull(), // stored in cents
   total: integer("total").notNull(), // stored in cents

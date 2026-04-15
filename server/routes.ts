@@ -42,6 +42,8 @@ import {
   hasChefOrAboveWriteAccess,
 } from './middleware/permissions';
 import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
+import { buildProposalFromQuoteRequest, buildProposalFromEstimateAlone } from './lib/proposalFromQuoteRequest';
+import type { Proposal } from '@shared/proposal';
 import { getSiteConfig, getEmailConfig } from './utils/siteConfig';
 import { sendEmail, sendEmailInBackground } from './utils/email';
 import {
@@ -1163,6 +1165,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin preview of the customer-facing quote page. Returns the same
+  // { estimate, client, proposal } shape as the public token endpoint so the
+  // admin UI can render the identical QuoteProposalView component. Auth-gated
+  // to any logged-in user; no view token required.
+  app.get('/api/estimates/:id/preview', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
+      }
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Estimate not found' });
+      }
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const proposal = await resolveProposalForEstimate(estimate, client ?? null);
+
+      return res.status(200).json({
+        estimate: sanitizeEstimateForPublic(estimate),
+        client: client ? sanitizeClientForPublic(client) : null,
+        proposal,
+      });
+    } catch (error) {
+      console.error('Error fetching estimate preview:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Admin: save just the proposal blob for an estimate. Used by the customize
+  // drawer. Separate from the generic PATCH to avoid tangling with the legacy
+  // EstimateForm's line-item-focused save path.
+  app.patch('/api/estimates/:id/proposal', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) {
+        return res.status(400).json({ message: 'Invalid estimate ID' });
+      }
+
+      const proposal = req.body as Proposal;
+      if (!proposal || typeof proposal !== 'object' || proposal.version !== 1) {
+        return res.status(400).json({ message: 'Invalid proposal payload' });
+      }
+
+      // Mirror the proposal's computed totals onto the estimate columns so
+      // the rest of the admin UI (list view, email templates, reports) stays
+      // in sync with what the customer will see.
+      const [updated] = await db
+        .update(estimates)
+        .set({
+          proposal: proposal as any,
+          subtotal: proposal.pricing.subtotalCents,
+          tax: proposal.pricing.taxCents,
+          total: proposal.pricing.totalCents,
+          guestCount: proposal.guestCount ?? null,
+          eventDate: proposal.eventDate ? new Date(proposal.eventDate) : null,
+          venue: proposal.venue?.name ?? null,
+          venueAddress: proposal.venue?.street ?? null,
+          venueCity: proposal.venue?.city ?? null,
+          venueZip: proposal.venue?.zip ?? null,
+          notes: proposal.customerNotes ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(estimates.id, estimateId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Estimate not found' });
+      }
+
+      return res.status(200).json({
+        estimate: sanitizeEstimateForPublic(updated),
+        proposal: updated.proposal,
+      });
+    } catch (error) {
+      console.error('Error updating proposal:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Create a new estimate
   app.post('/api/estimates', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
@@ -1441,49 +1524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     zip: c.zip,
   });
 
-  // Sanitize a quote_request row for public consumption — pulls the wedding
-  // context the customer-facing quote page renders (couple, ceremony, menu
-  // selections, dietary, special requests). Strips internal fields.
-  const sanitizeQuoteRequestForPublic = (q: typeof quoteRequests.$inferSelect) => ({
-    firstName: q.firstName,
-    lastName: q.lastName,
-    partnerFirstName: q.partnerFirstName,
-    partnerLastName: q.partnerLastName,
-    eventType: q.eventType,
-    eventDate: q.eventDate,
-    eventStartTime: q.eventStartTime,
-    eventEndTime: q.eventEndTime,
-    guestCount: q.guestCount,
-    venueName: q.venueName,
-    venueAddress: q.venueAddress,
-    hasCeremony: q.hasCeremony,
-    ceremonyStartTime: q.ceremonyStartTime,
-    ceremonyEndTime: q.ceremonyEndTime,
-    serviceType: q.serviceType,
-    serviceStyle: q.serviceStyle,
-    hasCocktailHour: q.hasCocktailHour,
-    cocktailStartTime: q.cocktailStartTime,
-    cocktailEndTime: q.cocktailEndTime,
-    hasMainMeal: q.hasMainMeal,
-    mainMealStartTime: q.mainMealStartTime,
-    mainMealEndTime: q.mainMealEndTime,
-    menuTheme: q.menuTheme,
-    menuTier: q.menuTier,
-    menuSelections: q.menuSelections,
-    appetizers: q.appetizers,
-    desserts: q.desserts,
-    beverages: q.beverages,
-    equipment: q.equipment,
-    dietary: q.dietary,
-    specialRequests: q.specialRequests,
-    estimatedPerPersonCents: q.estimatedPerPersonCents,
-    estimatedSubtotalCents: q.estimatedSubtotalCents,
-    estimatedServiceFeeCents: q.estimatedServiceFeeCents,
-    estimatedTaxCents: q.estimatedTaxCents,
-    estimatedTotalCents: q.estimatedTotalCents,
-  });
-
-  // Sanitize an estimate row for public consumption
+  // Sanitize an estimate row for public consumption. Strips internal fields
+  // like createdBy. Intentionally does NOT include the proposal blob — that's
+  // returned as a separate top-level field on the response so the client
+  // treats it as the source of truth for rendering.
   const sanitizeEstimateForPublic = (e: typeof estimates.$inferSelect) => ({
     id: e.id,
     eventType: e.eventType,
@@ -1507,11 +1551,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     declinedAt: e.declinedAt,
   });
 
-  // Public: fetch a quote by its view token
-  // Enriched with the source quote_request when available — that's where the
-  // wedding-flavor data lives (couple names, ceremony times, service style,
-  // menu selections, dietary, special requests). The customer-facing page
-  // uses this to render a real wedding proposal instead of an invoice.
+  // Resolve (and lazily hydrate) the proposal for an estimate. New estimates
+  // have estimate.proposal populated at creation time; legacy estimates don't,
+  // so we fall back to building one from the originating quote_request (or
+  // from the estimate alone if there isn't one) and persist the result so
+  // subsequent reads are cheap and the admin can edit it.
+  async function resolveProposalForEstimate(
+    estimate: typeof estimates.$inferSelect,
+    client: typeof clients.$inferSelect | null,
+  ): Promise<Proposal> {
+    if (estimate.proposal) {
+      return estimate.proposal as Proposal;
+    }
+
+    const [originatingQuote] = await db
+      .select()
+      .from(quoteRequests)
+      .where(eq(quoteRequests.estimateId, estimate.id));
+
+    const proposal = originatingQuote
+      ? buildProposalFromQuoteRequest(originatingQuote, estimate)
+      : buildProposalFromEstimateAlone(estimate, client);
+
+    // Persist so future reads (and admin edits) use the same blob.
+    await db
+      .update(estimates)
+      .set({ proposal: proposal as any, updatedAt: new Date() })
+      .where(eq(estimates.id, estimate.id));
+
+    return proposal;
+  }
+
+  // Public: fetch a quote by its view token.
+  //
+  // Returns the Proposal blob stored on estimate.proposal — this is the
+  // single source of truth for the customer-facing page. If the estimate
+  // was created before the proposal column existed, it's lazily hydrated
+  // from the originating quote_request (or from the estimate alone) and
+  // persisted so subsequent reads are cheap.
   app.get('/api/public/quote/:token', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
@@ -1525,19 +1602,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
-
-      // Pull the source quote request if this estimate was promoted from one.
-      // It carries the rich wedding context (couple, ceremony, menu theme/tier,
-      // appetizers/desserts/beverages/equipment, dietary, special requests).
-      const [quoteRequest] = await db
-        .select()
-        .from(quoteRequests)
-        .where(eq(quoteRequests.estimateId, estimate.id));
+      const proposal = await resolveProposalForEstimate(estimate, client ?? null);
 
       return res.status(200).json({
         estimate: sanitizeEstimateForPublic(estimate),
         client: client ? sanitizeClientForPublic(client) : null,
-        wedding: quoteRequest ? sanitizeQuoteRequestForPublic(quoteRequest) : null,
+        proposal,
       });
     } catch (error) {
       console.error('Error fetching public quote:', error);

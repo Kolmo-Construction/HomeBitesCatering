@@ -21,6 +21,7 @@ import {
   newInquiryCustomerAckEmail,
   newInquiryAdminEmail,
 } from "./utils/emailTemplates";
+import { buildProposalFromQuoteRequest } from "./lib/proposalFromQuoteRequest";
 
 const router = Router();
 
@@ -702,6 +703,17 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       ].filter(Boolean).join("\n"),
     }).returning();
 
+    // Build and persist the full customer-facing Proposal blob. This is the
+    // single source of truth for the public quote page — everything the couple
+    // sees is rendered from this field. Admin edits go through PATCH on the
+    // estimate and overwrite this blob directly.
+    const proposal = buildProposalFromQuoteRequest(request, estimate);
+    const [estimateWithProposal] = await db
+      .update(estimates)
+      .set({ proposal: proposal as any, updatedAt: new Date() })
+      .where(eq(estimates.id, estimate.id))
+      .returning();
+
     // 5. Update quote request with all links
     await db
       .update(quoteRequests)
@@ -717,7 +729,7 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
     return res.json({
       client,
       opportunity,
-      estimate,
+      estimate: estimateWithProposal,
       message: "Quote request converted: client, opportunity, and estimate created",
     });
   } catch (error) {
