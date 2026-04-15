@@ -305,7 +305,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   const handleSelectAllVisible = () => {
     setPendingRecipeIds(prev => {
       const next = new Set(prev);
-      visibleAvailableRecipes.forEach(r => next.add(r.id));
+      availableRecipes.forEach(r => next.add(r.id));
       return next;
     });
   };
@@ -340,8 +340,6 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     !selectedRecipes.some(r => r.recipeId === recipe.id) &&
     recipe.name.toLowerCase().includes(recipeSearch.toLowerCase())
   );
-
-  const visibleAvailableRecipes = availableRecipes.slice(0, 10);
 
   const selectedRecipeDetails = selectedRecipes.map(menuRecipe => ({
     menuRecipe,
@@ -536,7 +534,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                             onClick={handleSelectAllVisible}
                             data-testid="button-select-all-recipes"
                           >
-                            Select all ({visibleAvailableRecipes.length})
+                            Select all ({availableRecipes.length})
                           </button>
                           {pendingRecipeIds.size > 0 && (
                             <button
@@ -550,7 +548,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                           )}
                         </div>
                         <div className="overflow-y-auto flex-1">
-                          {visibleAvailableRecipes.map((recipe) => {
+                          {availableRecipes.map((recipe) => {
                             const checked = pendingRecipeIds.has(recipe.id);
                             return (
                               <label
