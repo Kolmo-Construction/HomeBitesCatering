@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered, Link2, CalendarDays, Leaf, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered, Link2, CalendarDays, Leaf, AlertTriangle, Scale } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_CONTAINS_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
@@ -186,6 +186,21 @@ export default function RecipesPage() {
   const [newStepInstruction, setNewStepInstruction] = useState("");
   const [newStepDuration, setNewStepDuration] = useState("");
   const [newStepTips, setNewStepTips] = useState("");
+
+  // Inline conversion fix dialog — opened by clicking "Needs conversion"
+  // on a recipe ingredient row. Lets the chef teach the system how this
+  // ingredient's recipe unit relates to its purchase unit, without leaving
+  // the recipe builder.
+  const [fixingConversion, setFixingConversion] = useState<{
+    baseIngredientId: number;
+    ingredientName: string;
+    recipeUnit: string;
+    purchaseUnit: string;
+    purchaseQuantity: number;
+    purchasePrice: number;
+  } | null>(null);
+  const [fixFactor, setFixFactor] = useState<string>("");
+  const [savingFix, setSavingFix] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -471,6 +486,66 @@ export default function RecipesPage() {
       );
     } catch (error) {
       return 0;
+    }
+  };
+
+  // Open the inline fix dialog for a component that can't be converted yet
+  const openFixConversion = (component: RecipeComponentItem) => {
+    const baseIngredient = component.baseIngredient ||
+      baseIngredients.find((bi) => bi.id === component.baseIngredientId);
+    if (!baseIngredient) return;
+    setFixingConversion({
+      baseIngredientId: baseIngredient.id,
+      ingredientName: baseIngredient.name,
+      recipeUnit: component.unit,
+      purchaseUnit: baseIngredient.purchaseUnit,
+      purchaseQuantity: parseFloat(baseIngredient.purchaseQuantity) || 1,
+      purchasePrice: parseFloat(baseIngredient.purchasePrice) || 0,
+    });
+    setFixFactor("");
+  };
+
+  const saveConversionFix = async () => {
+    if (!fixingConversion) return;
+    const factor = parseFloat(fixFactor);
+    if (!isFinite(factor) || factor <= 0) {
+      toast({
+        title: "Need a number",
+        description: "Enter how many " + fixingConversion.purchaseUnit + " are in 1 " + fixingConversion.recipeUnit + ".",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingFix(true);
+    try {
+      const res = await apiRequest(
+        "POST",
+        `/api/ingredients/base-ingredients/${fixingConversion.baseIngredientId}/unit-conversion`,
+        {
+          recipeUnit: fixingConversion.recipeUnit,
+          purchaseUnitFactor: factor,
+        },
+      );
+      if (!res.ok) throw new Error("Failed to save");
+      // Refresh the base ingredients list so the inline calculator picks up
+      // the new conversion immediately.
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/ingredients/base-ingredients"],
+      });
+      toast({
+        title: "Conversion saved",
+        description: `1 ${fixingConversion.recipeUnit} of ${fixingConversion.ingredientName} = ${factor} ${fixingConversion.purchaseUnit}`,
+      });
+      setFixingConversion(null);
+      setFixFactor("");
+    } catch (e: any) {
+      toast({
+        title: "Couldn't save",
+        description: e?.message ?? "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingFix(false);
     }
   };
 
@@ -1416,12 +1491,18 @@ export default function RecipesPage() {
                                 {!buyPreview ? (
                                   <span className="text-muted-foreground">—</span>
                                 ) : buyPreview.error ? (
-                                  <div className="flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                                  <button
+                                    type="button"
+                                    onClick={() => openFixConversion(comp)}
+                                    className="flex items-center gap-1 text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline decoration-dotted underline-offset-2"
+                                    data-testid={`button-fix-conversion-${index}`}
+                                    title="Click to teach the system this conversion"
+                                  >
                                     <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="truncate max-w-[170px]" title={buyPreview.error}>
-                                      Needs conversion
+                                    <span className="truncate max-w-[170px]">
+                                      Fix conversion
                                     </span>
-                                  </div>
+                                  </button>
                                 ) : (
                                   <div className="leading-tight">
                                     <div className="font-medium">
@@ -1742,6 +1823,134 @@ export default function RecipesPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline conversion fix dialog */}
+      <Dialog
+        open={!!fixingConversion}
+        onOpenChange={(open) => {
+          if (!open) {
+            setFixingConversion(null);
+            setFixFactor("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" data-testid="dialog-fix-conversion">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5 text-amber-600" />
+              Teach the system this conversion
+            </DialogTitle>
+            <DialogDescription>
+              {fixingConversion && (
+                <>
+                  We don't yet know how to turn{" "}
+                  <strong>{fixingConversion.recipeUnit}</strong> of{" "}
+                  <strong>{fixingConversion.ingredientName}</strong> into{" "}
+                  <strong>{fixingConversion.purchaseUnit}</strong>{" "}
+                  (the way you buy it). Set it once and every recipe will use
+                  it from now on.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {fixingConversion && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                <div className="text-muted-foreground text-xs mb-1">
+                  Tip
+                </div>
+                <p>
+                  Put 1 <strong>{fixingConversion.recipeUnit}</strong> of
+                  &ldquo;{fixingConversion.ingredientName}&rdquo; on a scale
+                  (or estimate). How many{" "}
+                  <strong>{fixingConversion.purchaseUnit}</strong> is it?
+                </p>
+                {fixingConversion.recipeUnit.toLowerCase() === "each" && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Example: a whole chicken weighs about 4 lb → enter{" "}
+                    <code>4</code>
+                  </p>
+                )}
+                {(fixingConversion.recipeUnit.toLowerCase() === "cup" ||
+                  fixingConversion.recipeUnit.toLowerCase() === "quart" ||
+                  fixingConversion.recipeUnit.toLowerCase() ===
+                    "tablespoon") && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Example: 1 cup of ketchup ≈ 0.6 lb → enter <code>0.6</code>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label htmlFor="fix-factor" className="text-sm">
+                    1 {fixingConversion.recipeUnit} =
+                  </Label>
+                  <Input
+                    id="fix-factor"
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    autoFocus
+                    value={fixFactor}
+                    onChange={(e) => setFixFactor(e.target.value)}
+                    placeholder="e.g., 0.55"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        saveConversionFix();
+                      }
+                    }}
+                    data-testid="input-fix-factor"
+                  />
+                </div>
+                <div className="pb-2 text-sm text-muted-foreground whitespace-nowrap">
+                  {fixingConversion.purchaseUnit}
+                </div>
+              </div>
+
+              {fixFactor && parseFloat(fixFactor) > 0 && (
+                <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/40 p-3 text-xs text-green-900 dark:text-green-200">
+                  <div className="font-semibold">Preview</div>
+                  <div className="mt-1">
+                    Cost per {fixingConversion.recipeUnit}:{" "}
+                    <strong>
+                      {formatCurrency(
+                        (parseFloat(fixFactor) *
+                          fixingConversion.purchasePrice) /
+                          fixingConversion.purchaseQuantity,
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setFixingConversion(null);
+                setFixFactor("");
+              }}
+              data-testid="button-cancel-fix"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={saveConversionFix}
+              disabled={savingFix || !fixFactor || parseFloat(fixFactor) <= 0}
+              data-testid="button-save-fix"
+            >
+              {savingFix ? "Saving…" : "Save conversion"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
