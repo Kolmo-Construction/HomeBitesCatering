@@ -403,8 +403,8 @@ export default function PublicQuote() {
   if (isError || !estimate) {
     return (
       <PageShell>
-        <div className="bg-white rounded-2xl border border-rose-200 p-12 text-center shadow-sm">
-          <XCircle className="h-12 w-12 text-rose-400 mx-auto mb-3" />
+        <div className="bg-white rounded-2xl border border-[#e0d0b3] p-12 text-center shadow-sm">
+          <XCircle className="h-12 w-12 text-[#b8926a] mx-auto mb-3" />
           <h2 className="text-xl font-serif font-semibold mb-1">Proposal not found</h2>
           <p className="text-stone-600">
             This link may have expired. Please reach out to us directly and we&rsquo;ll send you a fresh one.
@@ -497,42 +497,42 @@ export default function PublicQuote() {
       )}
 
       {/* ═══════════════ HERO CARD ═══════════════ */}
-      <div className="relative mb-8 overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-amber-50/40 to-rose-50/60 shadow-sm">
+      <div className="relative mb-10 overflow-hidden rounded-3xl border border-[#e0d0b3] bg-gradient-to-br from-[#fbf6ea] via-[#fdf8ec] to-[#faf0dc] shadow-sm">
         {/* Decorative corner ornaments */}
-        <div className="absolute top-0 left-0 w-24 h-24 border-t border-l border-rose-200/70 rounded-tl-3xl" />
-        <div className="absolute top-0 right-0 w-24 h-24 border-t border-r border-rose-200/70 rounded-tr-3xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 border-b border-l border-rose-200/70 rounded-bl-3xl" />
-        <div className="absolute bottom-0 right-0 w-24 h-24 border-b border-r border-rose-200/70 rounded-br-3xl" />
+        <div className="absolute top-0 left-0 w-28 h-28 border-t-2 border-l-2 border-[#d4c09a] rounded-tl-3xl" />
+        <div className="absolute top-0 right-0 w-28 h-28 border-t-2 border-r-2 border-[#d4c09a] rounded-tr-3xl" />
+        <div className="absolute bottom-0 left-0 w-28 h-28 border-b-2 border-l-2 border-[#d4c09a] rounded-bl-3xl" />
+        <div className="absolute bottom-0 right-0 w-28 h-28 border-b-2 border-r-2 border-[#d4c09a] rounded-br-3xl" />
 
-        <div className="relative px-8 py-14 sm:py-16 text-center">
+        <div className="relative px-8 py-16 sm:py-20 text-center">
           {isWedding && (
-            <div className="inline-flex items-center gap-3 text-rose-700/80 text-[10px] uppercase tracking-[0.35em] mb-5 font-medium">
-              <span className="h-px w-8 bg-rose-300" />
-              <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+            <div className="inline-flex items-center gap-3 text-[#8B7355] text-xs sm:text-sm uppercase tracking-[0.32em] mb-6 font-semibold">
+              <span className="h-px w-10 bg-[#c9b089]" />
+              <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
               A Wedding Proposal
-              <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
-              <span className="h-px w-8 bg-rose-300" />
+              <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
+              <span className="h-px w-10 bg-[#c9b089]" />
             </div>
           )}
           <h1
-            className="font-serif text-5xl sm:text-6xl md:text-7xl text-stone-900 leading-[1.05] tracking-tight"
+            className="font-serif text-6xl sm:text-7xl md:text-8xl text-stone-900 leading-[1.02] tracking-tight"
             style={{ fontOpticalSizing: "auto", fontVariationSettings: "'opsz' 144" }}
             data-testid="text-couple-title"
           >
             {coupleTitle(wedding, client)}
           </h1>
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <span className="h-px w-12 bg-stone-300" />
-            <p className="text-stone-800 text-lg sm:text-xl font-medium">{longDate}</p>
-            <span className="h-px w-12 bg-stone-300" />
+          <div className="flex items-center justify-center gap-5 mt-8">
+            <span className="h-px w-16 bg-[#c9b089]" />
+            <p className="text-stone-800 text-xl sm:text-2xl font-semibold">{longDate}</p>
+            <span className="h-px w-16 bg-[#c9b089]" />
           </div>
           {venueName && (
-            <p className="mt-3 text-stone-600 text-base">
+            <p className="mt-4 text-stone-700 text-lg">
               {venueName}
               {venueLine && <span className="text-stone-500"> · {venueLine}</span>}
             </p>
           )}
-          <p className="mt-8 max-w-lg mx-auto text-stone-700 leading-relaxed text-base">
+          <p className="mt-10 max-w-xl mx-auto text-stone-700 leading-relaxed text-lg">
             {isWedding ? (
               <>
                 Congratulations on your engagement. It would be our honor to feed
@@ -564,12 +564,12 @@ export default function PublicQuote() {
         </div>
 
         {hasTimeline && (
-          <div className="mt-6 pt-6 border-t border-dashed border-stone-200">
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-4">
-              <Clock className="h-3 w-3" />
+          <div className="mt-8 pt-8 border-t border-dashed border-[#e0d0b3]">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[#8B7355] mb-4 font-semibold">
+              <Clock className="h-3.5 w-3.5" />
               Timeline
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {wedding!.hasCeremony && wedding!.ceremonyStartTime && (
                 <TimelineBlock
                   label="Ceremony"
@@ -685,8 +685,8 @@ export default function PublicQuote() {
             ((wedding.dietary.restrictions?.length ?? 0) > 0 ||
               (wedding.dietary.allergies?.length ?? 0) > 0 ||
               wedding.dietary.specialNotes) && (
-              <div className="mt-8 pt-6 border-t border-dashed border-rose-200/60">
-                <p className="text-[10px] uppercase tracking-[0.25em] text-rose-700/70 mb-3 font-medium">
+              <div className="mt-8 pt-6 border-t border-dashed border-[#e0d0b3]/60">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-[#8B7355] mb-3 font-medium">
                   Dietary accommodations
                 </p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -719,101 +719,93 @@ export default function PublicQuote() {
 
       {/* ═══════════════ SPECIAL REQUESTS ═══════════════ */}
       {wedding?.specialRequests && (
-        <div className="mb-8 rounded-3xl border border-rose-200/70 bg-rose-50/40 p-7 shadow-sm">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-rose-700/80 mb-3">
-            <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+        <div className="mb-8 rounded-3xl border border-[#e0d0b3] bg-[#faf5e9]/60 p-8 shadow-sm">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[#8B7355] mb-4 font-semibold">
+            <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
             Your special requests
           </div>
-          <p className="text-stone-800 leading-relaxed whitespace-pre-wrap text-base">
+          <p className="text-stone-800 leading-relaxed whitespace-pre-wrap text-lg">
             &ldquo;{wedding.specialRequests}&rdquo;
           </p>
-          <p className="mt-3 text-sm text-stone-600">We&rsquo;ve noted these — they&rsquo;re part of the plan.</p>
+          <p className="mt-4 text-base text-stone-600">We&rsquo;ve noted these — they&rsquo;re part of the plan.</p>
         </div>
       )}
 
-      {/* ═══════════════ TWO-COLUMN: INVESTMENT + PAYMENT PLAN ═══════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
-        {/* Investment card */}
-        <div className="lg:col-span-3">
-          <Card kicker="Your investment" title="What it comes to">
-            <div className="space-y-3 text-base">
-              {perPersonCents > 0 && guests > 0 && (
-                <Row
-                  label={`Catering · ${formatCents(perPersonCents)} × ${guests}`}
-                  value={formatCents(perPersonCents * guests)}
-                />
-              )}
-              {perPersonCents === 0 &&
-                lineItems.map((it, i) => (
-                  <Row
-                    key={it.id ?? i}
-                    label={`${it.name}${it.quantity > 1 ? ` × ${it.quantity}` : ""}`}
-                    value={formatCents(it.price * it.quantity)}
-                  />
-                ))}
-              {serviceFeeCents > 0 && <Row label="Service fee" value={formatCents(serviceFeeCents)} />}
-              <Row label="Subtotal" value={formatCents(subtotalCents)} muted />
-              <Row label="Tax" value={formatCents(taxCents)} muted />
-            </div>
-
-            <div className="mt-6 pt-5 border-t border-stone-200">
-              <div className="flex justify-between items-baseline">
-                <span className="font-serif text-lg text-stone-900">Total</span>
-                <span
-                  className="font-serif text-4xl text-stone-900 tabular-nums"
-                  style={{ fontVariationSettings: "'opsz' 144" }}
-                  data-testid="text-total"
-                >
-                  {formatCents(totalCents)}
-                </span>
-              </div>
-              {guests > 0 && (
-                <div className="text-right text-sm text-stone-600 mt-1.5">
-                  {formatCents(Math.round(totalCents / guests))} per guest, all-in
-                </div>
-              )}
-            </div>
-          </Card>
+      {/* ═══════════════ INVESTMENT CARD ═══════════════ */}
+      <Card kicker="Your investment" title="What it comes to">
+        <div className="space-y-3.5 text-lg">
+          {perPersonCents > 0 && guests > 0 && (
+            <Row
+              label={`Catering · ${formatCents(perPersonCents)} × ${guests}`}
+              value={formatCents(perPersonCents * guests)}
+            />
+          )}
+          {perPersonCents === 0 &&
+            lineItems.map((it, i) => (
+              <Row
+                key={it.id ?? i}
+                label={`${it.name}${it.quantity > 1 ? ` × ${it.quantity}` : ""}`}
+                value={formatCents(it.price * it.quantity)}
+              />
+            ))}
+          {serviceFeeCents > 0 && <Row label="Service fee" value={formatCents(serviceFeeCents)} />}
+          <Row label="Subtotal" value={formatCents(subtotalCents)} muted />
+          <Row label="Tax" value={formatCents(taxCents)} muted />
         </div>
 
-        {/* Payment plan card */}
-        <div className="lg:col-span-2">
-          <Card kicker="Payment plan" title="Two simple payments" className="h-full">
-            <PaymentTile
-              step="1 of 2"
-              label="Deposit"
-              amount={depositCents}
-              percent={35}
-              when="Due on signing"
-              note="Locks in your date."
-              accent="rose"
-            />
-            <div className="my-4 h-px bg-gradient-to-r from-transparent via-stone-200 to-transparent" />
-            <PaymentTile
-              step="2 of 2"
-              label="Final balance"
-              amount={balanceCents}
-              percent={65}
-              when={`Due ${balanceDueDate}`}
-              note="24 hours before your event."
-              accent="stone"
-            />
-          </Card>
+        <div className="mt-8 pt-6 border-t border-stone-200">
+          <div className="flex justify-between items-baseline">
+            <span className="text-xl text-stone-900 font-semibold">Total</span>
+            <span
+              className="font-serif text-5xl text-stone-900 tabular-nums"
+              style={{ fontVariationSettings: "'opsz' 144" }}
+              data-testid="text-total"
+            >
+              {formatCents(totalCents)}
+            </span>
+          </div>
+          {guests > 0 && (
+            <div className="text-right text-base text-stone-600 mt-2">
+              {formatCents(Math.round(totalCents / guests))} per guest, all-in
+            </div>
+          )}
         </div>
-      </div>
+      </Card>
+
+      {/* ═══════════════ PAYMENT PLAN CARD ═══════════════ */}
+      <Card kicker="Payment plan" title="Two simple payments">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <PaymentTile
+            step="1 of 2"
+            label="Deposit"
+            amount={depositCents}
+            percent={35}
+            when="Due on signing"
+            note="Locks in your date."
+          />
+          <PaymentTile
+            step="2 of 2"
+            label="Final balance"
+            amount={balanceCents}
+            percent={65}
+            when={`Due ${balanceDueDate}`}
+            note="24 hours before your event."
+          />
+        </div>
+      </Card>
 
       {/* ═══════════════ ACCEPT / DECLINE CARD ═══════════════ */}
       {effectiveStatus === "pending" && !showDeclineForm && (
-        <div className="mb-8 rounded-3xl bg-gradient-to-br from-rose-600 via-rose-600 to-rose-700 p-8 sm:p-10 text-center shadow-lg shadow-rose-200">
-          <p className="text-white text-xl font-medium mb-2">Ready to make it official?</p>
-          <p className="text-rose-50 text-base mb-6 max-w-sm mx-auto leading-relaxed">
+        <div className="mb-8 rounded-3xl bg-gradient-to-br from-[#8B7355] via-[#a67c5a] to-[#E28C0A] p-10 sm:p-12 text-center shadow-xl shadow-[#e0d0b3]">
+          <p className="text-white text-2xl font-semibold mb-3">Ready to make it official?</p>
+          <p className="text-[#fef9ed] text-base sm:text-lg mb-7 max-w-md mx-auto leading-relaxed">
             Accept the proposal and we&rsquo;ll send the contract and deposit instructions within 24 hours.
           </p>
           <Button
             size="lg"
             onClick={() => acceptMutation.mutate()}
             disabled={localStatus === "accepting"}
-            className="h-14 px-10 text-base bg-white text-rose-700 hover:bg-rose-50 rounded-full shadow-xl font-medium transition-all hover:scale-[1.02]"
+            className="h-16 px-12 text-lg bg-white text-[#8B7355] hover:bg-[#faf5e9] rounded-full shadow-xl font-semibold transition-all hover:scale-[1.02]"
             data-testid="button-accept"
           >
             {localStatus === "accepting" ? (
@@ -832,7 +824,7 @@ export default function PublicQuote() {
             <button
               type="button"
               onClick={() => setShowDeclineForm(true)}
-              className="text-rose-100/80 hover:text-white underline underline-offset-4"
+              className="text-[#fdf4e3]/80 hover:text-white underline underline-offset-4"
               data-testid="button-show-decline"
             >
               I need to pass on this
@@ -872,30 +864,30 @@ export default function PublicQuote() {
       )}
 
       {/* ═══════════════ SIGN-OFF ═══════════════ */}
-      <div className="mt-12 mb-6 text-center max-w-md mx-auto">
-        <p className="text-stone-700 text-base">
+      <div className="mt-14 mb-6 text-center max-w-lg mx-auto">
+        <p className="text-stone-700 text-lg">
           {isWedding ? <>Looking forward to celebrating with you,</> : <>Looking forward to working with you,</>}
         </p>
         <p
-          className="font-serif text-2xl text-stone-900 mt-2"
+          className="font-serif text-3xl text-stone-900 mt-3"
           style={{ fontVariationSettings: "'opsz' 144" }}
         >
           Mike &amp; the Homebites team
         </p>
-        <div className="mt-6 pt-6 border-t border-stone-200 flex flex-col sm:flex-row gap-4 justify-center text-sm text-stone-700">
-          <a href="tel:+12065550100" className="flex items-center gap-2 justify-center hover:text-rose-700 transition">
+        <div className="mt-7 pt-7 border-t border-[#e0d0b3] flex flex-col sm:flex-row gap-5 justify-center text-base text-stone-700">
+          <a href="tel:+12065550100" className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium">
             <Phone className="h-4 w-4" />
             (206) 555-0100
           </a>
           <a
             href="mailto:hello@homebitescatering.com"
-            className="flex items-center gap-2 justify-center hover:text-rose-700 transition"
+            className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
           >
             <Mail className="h-4 w-4" />
             hello@homebitescatering.com
           </a>
         </div>
-        <p className="text-sm text-stone-500 mt-6">
+        <p className="text-base text-stone-600 mt-7 leading-relaxed">
           Questions about anything in this proposal? Reply to our email or give us a call — we&rsquo;d love to hear from you.
         </p>
       </div>
@@ -907,23 +899,23 @@ export default function PublicQuote() {
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#fbf8f4] pb-16" style={{ fontFeatureSettings: '"ss01", "ss02"' }}>
+    <div className="min-h-screen bg-[#fbf6ea] pb-20" style={{ fontFeatureSettings: '"ss01", "ss02"' }}>
       {/* Header */}
-      <header className="w-full bg-white/80 backdrop-blur-sm border-b border-stone-200/60 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
-          <img src={homebitesLogo} alt="Homebites" className="h-9" />
+      <header className="w-full bg-white/85 backdrop-blur-sm border-b border-[#e8ddc8] sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
+          <img src={homebitesLogo} alt="Homebites" className="h-10" />
           <div>
             <p
-              className="font-serif font-medium text-base leading-tight text-stone-900"
+              className="font-serif font-semibold text-lg leading-tight text-stone-900"
               style={{ fontVariationSettings: "'opsz' 144" }}
             >
               Homebites Catering
             </p>
-            <p className="text-[11px] text-stone-500">Crafted for your celebration</p>
+            <p className="text-xs text-[#8B7355] font-medium">Crafted for your celebration</p>
           </div>
         </div>
       </header>
-      <main className="max-w-4xl mx-auto px-5 sm:px-6 py-10">{children}</main>
+      <main className="max-w-3xl mx-auto px-5 sm:px-8 py-10 sm:py-12">{children}</main>
     </div>
   );
 }
@@ -941,17 +933,17 @@ function Card({
   className?: string;
 }) {
   return (
-    <section className={`mb-8 bg-white rounded-3xl border border-stone-200/70 shadow-sm overflow-hidden ${className}`}>
-      <header className="px-7 pt-7 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.28em] text-rose-700/70 font-medium">{kicker}</div>
+    <section className={`mb-8 bg-white rounded-3xl border border-[#e8ddc8] shadow-sm overflow-hidden ${className}`}>
+      <header className="px-8 pt-8 pb-5">
+        <div className="text-xs uppercase tracking-[0.25em] text-[#8B7355] font-semibold">{kicker}</div>
         <h2
-          className="font-serif text-2xl sm:text-[28px] text-stone-900 mt-1 leading-tight"
+          className="font-serif text-[32px] sm:text-4xl text-stone-900 mt-2 leading-tight"
           style={{ fontVariationSettings: "'opsz' 144" }}
         >
           {title}
         </h2>
       </header>
-      <div className="px-7 pb-7">{children}</div>
+      <div className="px-8 pb-8">{children}</div>
     </section>
   );
 }
@@ -967,25 +959,25 @@ function MenuCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-8 rounded-3xl border-2 border-double border-rose-200/80 bg-gradient-to-b from-[#fbf5ef] to-white shadow-sm overflow-hidden">
-      <div className="px-7 pt-9 pb-2 text-center">
-        <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-[0.3em] text-rose-700/80 mb-3">
-          <span className="h-px w-10 bg-rose-300" />
+    <section className="mb-8 rounded-3xl border-2 border-double border-[#d4c09a] bg-gradient-to-b from-[#fbf5ea] via-[#fefaf0] to-white shadow-sm overflow-hidden">
+      <div className="px-8 pt-10 pb-2 text-center">
+        <div className="flex items-center justify-center gap-3 text-xs uppercase tracking-[0.3em] text-[#8B7355] mb-4 font-semibold">
+          <span className="h-px w-12 bg-[#c9b089]" />
           Menu
-          <span className="h-px w-10 bg-rose-300" />
+          <span className="h-px w-12 bg-[#c9b089]" />
         </div>
         <h2
-          className="font-serif text-4xl sm:text-5xl text-stone-900 leading-tight"
+          className="font-serif text-5xl sm:text-6xl text-stone-900 leading-tight"
           style={{ fontVariationSettings: "'opsz' 144" }}
         >
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-2 text-stone-600 text-base">{subtitle}</p>
+          <p className="mt-3 text-stone-600 text-lg">{subtitle}</p>
         )}
-        <div className="mx-auto mt-4 w-16 h-px bg-gradient-to-r from-transparent via-rose-300 to-transparent" />
+        <div className="mx-auto mt-6 w-24 h-px bg-gradient-to-r from-transparent via-[#c9b089] to-transparent" />
       </div>
-      <div className="px-8 pt-4 pb-9">{children}</div>
+      <div className="px-8 pt-6 pb-10">{children}</div>
     </section>
   );
 }
@@ -1003,21 +995,21 @@ function MenuCourse({
   return (
     <div>
       <h3
-        className="font-serif italic text-xl text-stone-900 mb-3 flex items-center gap-2"
+        className="font-serif italic text-2xl text-stone-900 mb-4 flex items-center gap-2"
         style={{ fontVariationSettings: "'opsz' 144" }}
       >
-        {icon && <span className="text-rose-400">{icon}</span>}
+        {icon && <span className="text-[#b8926a]">{icon}</span>}
         {title}
       </h3>
-      <ul className="space-y-2 text-stone-800 leading-relaxed">{children}</ul>
+      <ul className="space-y-2.5 text-stone-800 leading-relaxed">{children}</ul>
     </div>
   );
 }
 
 function MenuItem({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-baseline gap-2.5 text-base">
-      <span className="text-rose-300 select-none leading-none">·</span>
+    <li className="flex items-baseline gap-3 text-lg">
+      <span className="text-[#c9b089] select-none leading-none">·</span>
       <span className="flex-1">{children}</span>
     </li>
   );
@@ -1034,13 +1026,13 @@ function Fact({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-stone-50 border border-stone-100 px-4 py-4">
-      <div className="flex items-center gap-1.5 text-stone-500 text-[10px] uppercase tracking-[0.2em] mb-2 font-medium">
+    <div className="rounded-2xl bg-[#faf5e9]/60 border border-[#e8ddc8] px-5 py-5">
+      <div className="flex items-center gap-1.5 text-[#8B7355] text-xs uppercase tracking-[0.18em] mb-2 font-semibold">
         {icon}
         {label}
       </div>
       <div
-        className="text-stone-900 text-base font-semibold leading-snug truncate"
+        className="text-stone-900 text-lg font-semibold leading-snug truncate"
         title={value}
       >
         {value}
@@ -1060,9 +1052,9 @@ function TimelineBlock({
   end: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-rose-100 bg-rose-50/50 px-4 py-3">
-      <div className="text-[10px] uppercase tracking-[0.2em] text-rose-700 font-semibold">{label}</div>
-      <div className="mt-1 text-stone-900 text-base font-semibold tabular-nums">
+    <div className="rounded-2xl border border-[#e8ddc8] bg-[#faf5e9]/70 px-5 py-4">
+      <div className="text-xs uppercase tracking-[0.18em] text-[#8B7355] font-semibold">{label}</div>
+      <div className="mt-1.5 text-stone-900 text-lg font-semibold tabular-nums">
         {formatTime(start)}
         {end ? ` – ${formatTime(end)}` : ""}
       </div>
@@ -1098,7 +1090,6 @@ function PaymentTile({
   percent,
   when,
   note,
-  accent,
 }: {
   step: string;
   label: string;
@@ -1106,27 +1097,22 @@ function PaymentTile({
   percent: number;
   when: string;
   note: string;
-  accent: "rose" | "stone";
 }) {
-  const accentClasses =
-    accent === "rose" ? "text-rose-700" : "text-stone-600";
   return (
-    <div>
-      <div className={`flex items-center justify-between text-[10px] uppercase tracking-[0.22em] font-semibold ${accentClasses}`}>
+    <div className="rounded-2xl border border-[#e8ddc8] bg-[#faf5e9]/50 p-6">
+      <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] font-semibold text-[#8B7355]">
         <span>Step {step}</span>
         <span>{percent}%</span>
       </div>
-      <div className="mt-2 flex justify-between items-baseline gap-3">
-        <p className="text-lg text-stone-900 font-semibold">{label}</p>
-        <p
-          className="font-serif text-3xl text-stone-900 tabular-nums"
-          style={{ fontVariationSettings: "'opsz' 144" }}
-        >
-          {formatCentsWhole(amount)}
-        </p>
-      </div>
-      <p className="text-sm text-stone-700 mt-1 font-medium">{when}</p>
-      <p className="text-sm text-stone-600 mt-1">{note}</p>
+      <p className="mt-3 text-xl text-stone-900 font-semibold">{label}</p>
+      <p
+        className="mt-2 font-serif text-4xl text-stone-900 tabular-nums leading-none"
+        style={{ fontVariationSettings: "'opsz' 144" }}
+      >
+        {formatCentsWhole(amount)}
+      </p>
+      <p className="text-base text-stone-800 mt-4 font-medium">{when}</p>
+      <p className="text-base text-stone-600 mt-1">{note}</p>
     </div>
   );
 }
