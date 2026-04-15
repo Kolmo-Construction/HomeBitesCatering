@@ -8,18 +8,19 @@ import RecentOpportunitiesTable from "@/components/dashboard/RecentOpportunities
 import UpcomingEventsList from "@/components/dashboard/UpcomingEventsList";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentEstimatesTable from "@/components/dashboard/RecentEstimatesTable";
+import MenuMarginsCard from "@/components/dashboard/MenuMarginsCard";
 
 export default function Dashboard() {
   // Fetch data for stats
-  const { data: opportunities = [] } = useQuery({
+  const { data: opportunities = [] } = useQuery<any[]>({
     queryKey: ["/api/opportunities"],
   });
-  
-  const { data: estimates = [] } = useQuery({
+
+  const { data: estimates = [] } = useQuery<any[]>({
     queryKey: ["/api/estimates"],
   });
-  
-  const { data: events = [] } = useQuery({
+
+  const { data: events = [] } = useQuery<any[]>({
     queryKey: ["/api/events/upcoming"],
   });
   
@@ -117,9 +118,14 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Access & Recent Estimates */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <QuickActions />
         <RecentEstimatesTable />
+      </div>
+
+      {/* Menu Margins */}
+      <div className="mb-6">
+        <MenuMarginsCard />
       </div>
     </div>
   );

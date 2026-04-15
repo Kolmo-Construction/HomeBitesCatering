@@ -44,6 +44,27 @@ router.get("/menus/public", async (_req: Request, res: Response) => {
   }
 });
 
+// Batch: margin analysis for ALL menus (dashboard summary)
+router.get("/menus/margins", async (_req: Request, res: Response) => {
+  try {
+    const allMenus = await db
+      .select({ id: menus.id, name: menus.name })
+      .from(menus)
+      .orderBy(menus.displayOrder, menus.name);
+    const results = await Promise.all(
+      allMenus.map(async (m) => ({
+        menuId: m.id,
+        menuName: m.name,
+        tiers: await calculateMenuMargin(m.id),
+      })),
+    );
+    return res.json(results);
+  } catch (error) {
+    console.error("Error calculating all menu margins:", error);
+    return res.status(500).json({ message: "Failed to calculate menu margins" });
+  }
+});
+
 // Get margin analysis for a menu (admin — shows food cost percentages per tier)
 router.get("/menus/:id/margin", async (req: Request, res: Response) => {
   try {
