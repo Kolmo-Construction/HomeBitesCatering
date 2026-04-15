@@ -228,6 +228,10 @@ export interface MenuCategoryItem {
   recipeId?: number;                  // optional link to recipes table
   dietaryTags?: string[];             // vegan, vegetarian, gluten_free, contains_nuts, etc.
   notAvailableForStyles?: string[];   // e.g., ["plated"] for items that can't be plated
+  // Tier keys this item is available in (e.g., ["silver", "gold", "diamond"]).
+  // Empty/undefined = available in all tiers. Used to gate premium items like
+  // shrimp or ribeye to higher tiers, and to make margin math realistic.
+  availableInTiers?: string[];
 }
 
 // Menus (collection of recipes and packages)

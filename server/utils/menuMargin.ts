@@ -113,6 +113,20 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
   return breakdown ? breakdown.totalCostCents / 100 : 0;
 }
 
+/**
+ * Returns true if the item is available in the given tier. Items with no
+ * `availableInTiers` (or an empty array) are considered available in ALL
+ * tiers — this is the backwards-compatible default for legacy menu data.
+ */
+export function isItemAvailableInTier(
+  item: MenuCategoryItem,
+  tierKey: string,
+): boolean {
+  const tiers = item.availableInTiers;
+  if (!tiers || tiers.length === 0) return true;
+  return tiers.includes(tierKey);
+}
+
 export interface TierMarginAnalysis {
   tierKey: string;
   tierName: string;
@@ -166,7 +180,9 @@ export async function calculateMenuMargin(menuId: number): Promise<TierMarginAna
 
     // For each category in the tier's selection limits
     for (const [category, limit] of Object.entries(tier.selectionLimits)) {
-      const items = categoryItems[category] || [];
+      const allItems = categoryItems[category] || [];
+      // Only consider items that are actually available in this tier
+      const items = allItems.filter((it) => isItemAvailableInTier(it, tier.tierKey));
       if (items.length === 0) continue;
 
       // Average cost of items in this category (assuming customer picks a mix)
@@ -273,9 +289,12 @@ export async function calculateMenuMarginDetail(
   const categoryItems = (menu.categoryItems as Record<string, MenuCategoryItem[]>) || {};
 
   // Collect and batch-fetch every recipe referenced by this tier's categories
+  // (only items actually available in this tier — see isItemAvailableInTier)
   const recipeIds = new Set<number>();
   for (const category of Object.keys(tier.selectionLimits)) {
-    const items = categoryItems[category] || [];
+    const items = (categoryItems[category] || []).filter((it) =>
+      isItemAvailableInTier(it, tier.tierKey),
+    );
     for (const item of items) {
       if (item.recipeId) recipeIds.add(item.recipeId);
     }
@@ -293,7 +312,9 @@ export async function calculateMenuMarginDetail(
   let totalUnlinked = 0;
 
   for (const [category, limit] of Object.entries(tier.selectionLimits)) {
-    const items = categoryItems[category] || [];
+    const items = (categoryItems[category] || []).filter((it) =>
+      isItemAvailableInTier(it, tier.tierKey),
+    );
     const itemDetails: MarginItemDetail[] = [];
     let linkedSum = 0;
     let linkedCount = 0;

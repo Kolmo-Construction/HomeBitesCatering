@@ -107,6 +107,7 @@ interface MenuCategoryItem {
   upchargeCents?: number;
   recipeId?: number;
   dietaryTags?: string[];
+  availableInTiers?: string[];
 }
 
 interface MenuData {
@@ -674,6 +675,77 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
                                     </Button>
                                   )}
                                 </div>
+                                {/* Tier availability — if nothing checked, item is available in all tiers */}
+                                {packages.length > 0 && (
+                                  <div className="flex items-center gap-2 pl-1 flex-wrap">
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                                      Available in:
+                                    </span>
+                                    {packages.map((pkg) => {
+                                      const checked =
+                                        !!item.availableInTiers &&
+                                        item.availableInTiers.includes(pkg.tierKey);
+                                      const allTiers =
+                                        !item.availableInTiers ||
+                                        item.availableInTiers.length === 0;
+                                      return (
+                                        <label
+                                          key={pkg.tierKey}
+                                          className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded border cursor-pointer select-none ${
+                                            checked || allTiers
+                                              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                                              : "bg-gray-50 border-gray-200 text-gray-500"
+                                          }`}
+                                          title={
+                                            allTiers
+                                              ? "Available in all tiers (none explicitly selected)"
+                                              : checked
+                                              ? `Available in ${pkg.tierName}`
+                                              : `Hidden from ${pkg.tierName}`
+                                          }
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={checked || allTiers}
+                                            onChange={(e) => {
+                                              const current =
+                                                item.availableInTiers &&
+                                                item.availableInTiers.length > 0
+                                                  ? [...item.availableInTiers]
+                                                  : packages.map((p) => p.tierKey);
+                                              const next = e.target.checked
+                                                ? Array.from(
+                                                    new Set([...current, pkg.tierKey]),
+                                                  )
+                                                : current.filter(
+                                                    (k) => k !== pkg.tierKey,
+                                                  );
+                                              // If user checks every tier back, clear the field
+                                              // to revert to "all tiers (default)" state.
+                                              const allKeys = packages.map((p) => p.tierKey);
+                                              const normalized =
+                                                next.length === allKeys.length &&
+                                                allKeys.every((k) => next.includes(k))
+                                                  ? undefined
+                                                  : next;
+                                              updateItem(selectedCategory, idx, {
+                                                availableInTiers: normalized,
+                                              });
+                                            }}
+                                            className="h-3 w-3"
+                                          />
+                                          {pkg.tierName}
+                                        </label>
+                                      );
+                                    })}
+                                    {(!item.availableInTiers ||
+                                      item.availableInTiers.length === 0) && (
+                                      <span className="text-[10px] text-gray-400 italic">
+                                        (all tiers)
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ))}
                             {(categoryItems[selectedCategory] || []).length === 0 && (

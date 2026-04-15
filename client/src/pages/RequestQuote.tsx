@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -116,6 +116,7 @@ interface PublicMenuCategoryItem {
   description?: string;
   upchargeCents?: number;
   dietaryTags?: string[];
+  availableInTiers?: string[];
 }
 
 interface PublicMenu {
@@ -570,6 +571,35 @@ export default function RequestQuote() {
       null,
     [selectedMenu, form.packageTier],
   );
+
+  // When the tier changes, drop any selected items that aren't available in
+  // the new tier (e.g. user picked Shrimp in Gold, then downgraded to Bronze).
+  useEffect(() => {
+    if (!selectedTier || !selectedMenu?.categoryItems) return;
+    const categoryItems = selectedMenu.categoryItems;
+    setForm((prev) => {
+      let changed = false;
+      const next: Record<string, string[]> = { ...prev.menuItemSelections };
+      for (const [category, ids] of Object.entries(next)) {
+        const items = categoryItems[category] || [];
+        const validIds = new Set(
+          items
+            .filter((it) => {
+              const tiers = it.availableInTiers;
+              if (!tiers || tiers.length === 0) return true;
+              return tiers.includes(selectedTier.tierKey);
+            })
+            .map((it) => it.id),
+        );
+        const filtered = ids.filter((id) => validIds.has(id));
+        if (filtered.length !== ids.length) {
+          next[category] = filtered;
+          changed = true;
+        }
+      }
+      return changed ? { ...prev, menuItemSelections: next } : prev;
+    });
+  }, [selectedTier, selectedMenu]);
 
   // ---------- Form updater ----------
   const update = useCallback(
@@ -1873,7 +1903,13 @@ export default function RequestQuote() {
             </div>
             {Object.entries(selectedTier.selectionLimits).map(
               ([category, limit]) => {
-                const items = selectedMenu.categoryItems![category] || [];
+                const allItems = selectedMenu.categoryItems![category] || [];
+                // Items can be gated to specific tiers; empty/undefined = all tiers
+                const items = allItems.filter((it) => {
+                  const tiers = it.availableInTiers;
+                  if (!tiers || tiers.length === 0) return true;
+                  return tiers.includes(selectedTier.tierKey);
+                });
                 const selected = form.menuItemSelections[category] || [];
                 if (items.length === 0) return null;
                 return (
