@@ -331,7 +331,7 @@ Return this JSON structure:
 
 laborHours: realistic total kitchen hours to prep AND cook this recipe for ${yieldAmount} servings at $35/hour labor rate. Examples: a simple salad = 0.5 hours, braised short ribs = 4 hours, a quick sauté = 0.75 hours.
 
-Valid categories: appetizer, entree, side, salad, dessert, sauce, soup, beverage
+Valid categories: appetizer, entree, side, salad, dessert, sauce, salsa, condiment, soup, beverage
 Valid units: pound, ounce, gram, kilogram, cup, tablespoon, teaspoon, each, gallon, liter, milliliter
 Valid allergenWarnings: "Contains Gluten", "Contains Nuts", "Contains Dairy", "Contains Egg", "Contains Soy", "Contains Shellfish", "Contains Sesame"
 Valid manualDesignations: vegan, vegetarian, keto, paleo, low_carb, low_sodium, sugar_free, organic, kosher, halal`;

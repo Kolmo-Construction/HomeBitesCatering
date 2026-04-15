@@ -66,6 +66,8 @@ const RECIPE_CATEGORIES = [
   { value: "beverage", label: "Beverages" },
   { value: "sauce", label: "Sauces" },
   { value: "salad", label: "Salads" },
+  { value: "condiment", label: "Condiments" },
+  { value: "salsa", label: "Salsas" },
 ];
 
 const getCategoryLabel = (category: string | null): string => {

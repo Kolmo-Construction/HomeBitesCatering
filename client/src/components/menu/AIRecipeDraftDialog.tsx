@@ -225,6 +225,8 @@ const RECIPE_CATEGORIES = [
   "salad",
   "dessert",
   "sauce",
+  "salsa",
+  "condiment",
   "soup",
   "beverage",
 ];

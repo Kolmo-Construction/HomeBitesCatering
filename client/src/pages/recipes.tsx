@@ -129,6 +129,8 @@ const RECIPE_CATEGORIES = [
   { value: "dessert", label: "Dessert" },
   { value: "beverage", label: "Beverage" },
   { value: "sauce", label: "Sauce/Dressing" },
+  { value: "salsa", label: "Salsa" },
+  { value: "condiment", label: "Condiment" },
   { value: "component", label: "Component" },
   { value: "other", label: "Other" },
 ];
