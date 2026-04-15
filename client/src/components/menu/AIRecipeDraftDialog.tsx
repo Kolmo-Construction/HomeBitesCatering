@@ -239,6 +239,7 @@ const UNITS = [
   "teaspoon",
   "each",
   "gallon",
+  "quart",
   "liter",
   "milliliter",
   "fl oz",

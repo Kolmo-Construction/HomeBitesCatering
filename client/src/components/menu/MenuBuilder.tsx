@@ -13,6 +13,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -183,6 +184,7 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
   const [selectedRecipes, setSelectedRecipes] = useState<MenuRecipeItem[]>(getMenuRecipes());
   const [recipeSearch, setRecipeSearch] = useState("");
   const [showRecipeDropdown, setShowRecipeDropdown] = useState(false);
+  const [pendingRecipeIds, setPendingRecipeIds] = useState<Set<number>>(new Set());
   
   const { data: recipes = [], isLoading: isLoadingRecipes } = useQuery({
     queryKey: ["/api/ingredients/recipes"],
@@ -263,25 +265,53 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     }
   };
 
-  const handleAddRecipe = (recipe: RecipeForMenu) => {
-    if (selectedRecipes.some(r => r.recipeId === recipe.id)) {
-      toast({
-        title: "Recipe already added",
-        description: "This recipe is already in the menu.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const togglePendingRecipe = (recipeId: number) => {
+    setPendingRecipeIds(prev => {
+      const next = new Set(prev);
+      if (next.has(recipeId)) {
+        next.delete(recipeId);
+      } else {
+        next.add(recipeId);
+      }
+      return next;
+    });
+  };
 
-    setSelectedRecipes([
-      ...selectedRecipes,
-      {
+  const handleAddPendingRecipes = () => {
+    if (pendingRecipeIds.size === 0) return;
+
+    const toAdd: MenuRecipeItem[] = [];
+    pendingRecipeIds.forEach(id => {
+      if (selectedRecipes.some(r => r.recipeId === id)) return;
+      const recipe = recipes.find(r => r.id === id);
+      if (!recipe) return;
+      toAdd.push({
         recipeId: recipe.id,
         category: recipe.category || undefined,
-      },
-    ]);
+      });
+    });
+
+    if (toAdd.length === 0) return;
+
+    setSelectedRecipes([...selectedRecipes, ...toAdd]);
+    setPendingRecipeIds(new Set());
     setRecipeSearch("");
     setShowRecipeDropdown(false);
+    toast({
+      title: `${toAdd.length} recipe${toAdd.length === 1 ? "" : "s"} added`,
+    });
+  };
+
+  const handleSelectAllVisible = () => {
+    setPendingRecipeIds(prev => {
+      const next = new Set(prev);
+      visibleAvailableRecipes.forEach(r => next.add(r.id));
+      return next;
+    });
+  };
+
+  const handleClearPending = () => {
+    setPendingRecipeIds(new Set());
   };
 
   const handleRemoveRecipe = (recipeId: number) => {
@@ -306,10 +336,12 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
     }
   };
 
-  const availableRecipes = recipes.filter(recipe => 
+  const availableRecipes = recipes.filter(recipe =>
     !selectedRecipes.some(r => r.recipeId === recipe.id) &&
     recipe.name.toLowerCase().includes(recipeSearch.toLowerCase())
   );
+
+  const visibleAvailableRecipes = availableRecipes.slice(0, 10);
 
   const selectedRecipeDetails = selectedRecipes.map(menuRecipe => ({
     menuRecipe,
@@ -482,41 +514,104 @@ export default function MenuBuilder({ menu, isEditing = false }: MenuBuilderProp
                   />
                   <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 </div>
-                
+
                 {showRecipeDropdown && (
-                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-input rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-input rounded-md shadow-lg z-10 max-h-80 overflow-hidden flex flex-col">
                     {isLoadingRecipes ? (
                       <div className="p-4 text-sm text-muted-foreground text-center">
                         Loading recipes...
                       </div>
                     ) : availableRecipes.length === 0 ? (
                       <div className="p-4 text-sm text-muted-foreground text-center">
-                        {recipes.length === 0 
+                        {recipes.length === 0
                           ? "No recipes available. Create recipes first."
                           : "All recipes added or no matches"}
                       </div>
                     ) : (
-                      availableRecipes.slice(0, 10).map((recipe) => (
-                        <div
-                          key={recipe.id}
-                          className="p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
-                          onClick={() => handleAddRecipe(recipe)}
-                          data-testid={`dropdown-recipe-${recipe.id}`}
-                        >
-                          <div className="font-medium flex items-center gap-2">
-                            <ChefHat className="h-4 w-4 text-orange-500" />
-                            {recipe.name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {getCategoryLabel(recipe.category)}
-                            {recipe.totalCost !== undefined && (
-                              <span className="ml-2 text-green-600">
-                                {formatCurrency(recipe.totalCost)}
-                              </span>
-                            )}
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40 text-xs">
+                          <button
+                            type="button"
+                            className="text-primary hover:underline"
+                            onClick={handleSelectAllVisible}
+                            data-testid="button-select-all-recipes"
+                          >
+                            Select all ({visibleAvailableRecipes.length})
+                          </button>
+                          {pendingRecipeIds.size > 0 && (
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:underline"
+                              onClick={handleClearPending}
+                              data-testid="button-clear-pending-recipes"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="overflow-y-auto flex-1">
+                          {visibleAvailableRecipes.map((recipe) => {
+                            const checked = pendingRecipeIds.has(recipe.id);
+                            return (
+                              <label
+                                key={recipe.id}
+                                className="flex items-start gap-3 p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                                data-testid={`dropdown-recipe-${recipe.id}`}
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => togglePendingRecipe(recipe.id)}
+                                  className="mt-1"
+                                  data-testid={`checkbox-recipe-${recipe.id}`}
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium flex items-center gap-2">
+                                    <ChefHat className="h-4 w-4 text-orange-500" />
+                                    {recipe.name}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {getCategoryLabel(recipe.category)}
+                                    {recipe.totalCost !== undefined && (
+                                      <span className="ml-2 text-green-600">
+                                        {formatCurrency(recipe.totalCost)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 border-t bg-muted/20">
+                          <span className="text-xs text-muted-foreground">
+                            {pendingRecipeIds.size} selected
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setShowRecipeDropdown(false);
+                                setPendingRecipeIds(new Set());
+                              }}
+                              data-testid="button-cancel-add-recipes"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={pendingRecipeIds.size === 0}
+                              onClick={handleAddPendingRecipes}
+                              data-testid="button-add-selected-recipes"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add {pendingRecipeIds.size > 0 ? pendingRecipeIds.size : ""}
+                            </Button>
                           </div>
                         </div>
-                      ))
+                      </>
                     )}
                   </div>
                 )}
