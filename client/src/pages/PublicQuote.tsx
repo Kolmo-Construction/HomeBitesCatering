@@ -394,7 +394,7 @@ export default function PublicQuote() {
       <PageShell>
         <div className="flex flex-col items-center justify-center py-32 text-stone-500">
           <Loader2 className="h-10 w-10 animate-spin mb-3" />
-          <p className="font-serif italic">Loading your proposal…</p>
+          <p>Loading your proposal…</p>
         </div>
       </PageShell>
     );
@@ -488,7 +488,7 @@ export default function PublicQuote() {
 
       {effectiveStatus === "declined" && (
         <div className="mb-8 rounded-3xl border border-stone-200 bg-stone-50 p-8 text-center">
-          <p className="text-stone-700 font-serif italic leading-relaxed">
+          <p className="text-stone-700 leading-relaxed">
             We&rsquo;ve recorded that this proposal isn&rsquo;t the right fit. If
             anything changes — new date, different headcount, a tweak to the
             menu — just reply to our email and we&rsquo;ll start fresh.
@@ -523,16 +523,16 @@ export default function PublicQuote() {
           </h1>
           <div className="flex items-center justify-center gap-4 mt-6">
             <span className="h-px w-12 bg-stone-300" />
-            <p className="font-serif italic text-stone-700 text-lg sm:text-xl">{longDate}</p>
+            <p className="text-stone-800 text-lg sm:text-xl font-medium">{longDate}</p>
             <span className="h-px w-12 bg-stone-300" />
           </div>
           {venueName && (
-            <p className="mt-3 text-stone-500 text-sm tracking-wide">
+            <p className="mt-3 text-stone-600 text-base">
               {venueName}
-              {venueLine && <span className="text-stone-400"> · {venueLine}</span>}
+              {venueLine && <span className="text-stone-500"> · {venueLine}</span>}
             </p>
           )}
-          <p className="mt-8 max-w-lg mx-auto text-stone-700 leading-relaxed font-serif text-[15px]">
+          <p className="mt-8 max-w-lg mx-auto text-stone-700 leading-relaxed text-base">
             {isWedding ? (
               <>
                 Congratulations on your engagement. It would be our honor to feed
@@ -675,7 +675,7 @@ export default function PublicQuote() {
           )}
 
           {menuCategories.length === 0 && !wedding?.appetizers?.selections?.length && (
-            <p className="text-stone-500 italic text-sm font-serif">
+            <p className="text-stone-600 text-base">
               Menu details will be confirmed during your tasting.
             </p>
           )}
@@ -708,7 +708,7 @@ export default function PublicQuote() {
                   ))}
                 </div>
                 {wedding.dietary.specialNotes && (
-                  <p className="text-sm text-stone-600 italic font-serif">
+                  <p className="text-sm text-stone-700">
                     &ldquo;{wedding.dietary.specialNotes}&rdquo;
                   </p>
                 )}
@@ -724,10 +724,10 @@ export default function PublicQuote() {
             <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
             Your special requests
           </div>
-          <p className="text-stone-700 italic leading-relaxed whitespace-pre-wrap font-serif text-[15px]">
+          <p className="text-stone-800 leading-relaxed whitespace-pre-wrap text-base">
             &ldquo;{wedding.specialRequests}&rdquo;
           </p>
-          <p className="mt-3 text-xs text-stone-500">We&rsquo;ve noted these — they&rsquo;re part of the plan.</p>
+          <p className="mt-3 text-sm text-stone-600">We&rsquo;ve noted these — they&rsquo;re part of the plan.</p>
         </div>
       )}
 
@@ -736,7 +736,7 @@ export default function PublicQuote() {
         {/* Investment card */}
         <div className="lg:col-span-3">
           <Card kicker="Your investment" title="What it comes to">
-            <div className="space-y-2.5 text-sm">
+            <div className="space-y-3 text-base">
               {perPersonCents > 0 && guests > 0 && (
                 <Row
                   label={`Catering · ${formatCents(perPersonCents)} × ${guests}`}
@@ -768,7 +768,7 @@ export default function PublicQuote() {
                 </span>
               </div>
               {guests > 0 && (
-                <div className="text-right text-xs text-stone-500 mt-1 italic font-serif">
+                <div className="text-right text-sm text-stone-600 mt-1.5">
                   {formatCents(Math.round(totalCents / guests))} per guest, all-in
                 </div>
               )}
@@ -805,8 +805,8 @@ export default function PublicQuote() {
       {/* ═══════════════ ACCEPT / DECLINE CARD ═══════════════ */}
       {effectiveStatus === "pending" && !showDeclineForm && (
         <div className="mb-8 rounded-3xl bg-gradient-to-br from-rose-600 via-rose-600 to-rose-700 p-8 sm:p-10 text-center shadow-lg shadow-rose-200">
-          <p className="font-serif italic text-rose-100 text-lg mb-2">Ready to make it official?</p>
-          <p className="text-rose-50/90 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
+          <p className="text-white text-xl font-medium mb-2">Ready to make it official?</p>
+          <p className="text-rose-50 text-base mb-6 max-w-sm mx-auto leading-relaxed">
             Accept the proposal and we&rsquo;ll send the contract and deposit instructions within 24 hours.
           </p>
           <Button
@@ -843,7 +843,7 @@ export default function PublicQuote() {
 
       {effectiveStatus === "pending" && showDeclineForm && (
         <div className="mb-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-serif text-stone-700 mb-3 italic">
+          <p className="text-base text-stone-700 mb-3">
             We&rsquo;re sorry to hear this isn&rsquo;t the right fit. If you don&rsquo;t
             mind sharing why, it helps us improve.
           </p>
@@ -873,7 +873,7 @@ export default function PublicQuote() {
 
       {/* ═══════════════ SIGN-OFF ═══════════════ */}
       <div className="mt-12 mb-6 text-center max-w-md mx-auto">
-        <p className="font-serif italic text-stone-700 text-lg">
+        <p className="text-stone-700 text-base">
           {isWedding ? <>Looking forward to celebrating with you,</> : <>Looking forward to working with you,</>}
         </p>
         <p
@@ -882,7 +882,7 @@ export default function PublicQuote() {
         >
           Mike &amp; the Homebites team
         </p>
-        <div className="mt-6 pt-6 border-t border-stone-200 flex flex-col sm:flex-row gap-4 justify-center text-sm text-stone-600">
+        <div className="mt-6 pt-6 border-t border-stone-200 flex flex-col sm:flex-row gap-4 justify-center text-sm text-stone-700">
           <a href="tel:+12065550100" className="flex items-center gap-2 justify-center hover:text-rose-700 transition">
             <Phone className="h-4 w-4" />
             (206) 555-0100
@@ -895,7 +895,7 @@ export default function PublicQuote() {
             hello@homebitescatering.com
           </a>
         </div>
-        <p className="text-xs text-stone-400 mt-6 italic font-serif">
+        <p className="text-sm text-stone-500 mt-6">
           Questions about anything in this proposal? Reply to our email or give us a call — we&rsquo;d love to hear from you.
         </p>
       </div>
@@ -919,7 +919,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
             >
               Homebites Catering
             </p>
-            <p className="text-[11px] text-stone-500 italic font-serif">Crafted for your celebration</p>
+            <p className="text-[11px] text-stone-500">Crafted for your celebration</p>
           </div>
         </div>
       </header>
@@ -981,7 +981,7 @@ function MenuCard({
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-2 text-stone-600 italic font-serif text-sm">{subtitle}</p>
+          <p className="mt-2 text-stone-600 text-base">{subtitle}</p>
         )}
         <div className="mx-auto mt-4 w-16 h-px bg-gradient-to-r from-transparent via-rose-300 to-transparent" />
       </div>
@@ -1009,14 +1009,14 @@ function MenuCourse({
         {icon && <span className="text-rose-400">{icon}</span>}
         {title}
       </h3>
-      <ul className="space-y-1.5 font-serif text-stone-700 leading-snug">{children}</ul>
+      <ul className="space-y-2 text-stone-800 leading-relaxed">{children}</ul>
     </div>
   );
 }
 
 function MenuItem({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-baseline gap-2.5 text-[15px]">
+    <li className="flex items-baseline gap-2.5 text-base">
       <span className="text-rose-300 select-none leading-none">·</span>
       <span className="flex-1">{children}</span>
     </li>
@@ -1034,14 +1034,13 @@ function Fact({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-stone-50/70 border border-stone-100 px-4 py-3.5">
-      <div className="flex items-center gap-1.5 text-stone-400 text-[10px] uppercase tracking-[0.2em] mb-1.5">
+    <div className="rounded-2xl bg-stone-50 border border-stone-100 px-4 py-4">
+      <div className="flex items-center gap-1.5 text-stone-500 text-[10px] uppercase tracking-[0.2em] mb-2 font-medium">
         {icon}
         {label}
       </div>
       <div
-        className="font-serif text-stone-900 text-[15px] leading-tight truncate"
-        style={{ fontVariationSettings: "'opsz' 144" }}
+        className="text-stone-900 text-base font-semibold leading-snug truncate"
         title={value}
       >
         {value}
@@ -1061,9 +1060,9 @@ function TimelineBlock({
   end: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-rose-100 bg-rose-50/30 px-4 py-3">
-      <div className="text-[10px] uppercase tracking-[0.2em] text-rose-700/70 font-medium">{label}</div>
-      <div className="mt-1 font-serif text-stone-900 text-sm tabular-nums">
+    <div className="rounded-2xl border border-rose-100 bg-rose-50/50 px-4 py-3">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-rose-700 font-semibold">{label}</div>
+      <div className="mt-1 text-stone-900 text-base font-semibold tabular-nums">
         {formatTime(start)}
         {end ? ` – ${formatTime(end)}` : ""}
       </div>
@@ -1083,10 +1082,10 @@ function Row({
 }) {
   return (
     <div
-      className={`flex justify-between items-baseline gap-4 ${muted ? "text-stone-500" : "text-stone-700"}`}
+      className={`flex justify-between items-baseline gap-4 ${muted ? "text-stone-500" : "text-stone-800"}`}
     >
       <span className="truncate">{label}</span>
-      <span className="tabular-nums shrink-0">{value}</span>
+      <span className="tabular-nums shrink-0 font-medium">{value}</span>
     </div>
   );
 }
@@ -1110,22 +1109,15 @@ function PaymentTile({
   accent: "rose" | "stone";
 }) {
   const accentClasses =
-    accent === "rose"
-      ? "text-rose-700/80"
-      : "text-stone-500";
+    accent === "rose" ? "text-rose-700" : "text-stone-600";
   return (
     <div>
-      <div className={`flex items-center justify-between text-[10px] uppercase tracking-[0.22em] font-medium ${accentClasses}`}>
+      <div className={`flex items-center justify-between text-[10px] uppercase tracking-[0.22em] font-semibold ${accentClasses}`}>
         <span>Step {step}</span>
         <span>{percent}%</span>
       </div>
-      <div className="mt-1 flex justify-between items-baseline gap-3">
-        <p
-          className="font-serif text-xl text-stone-900"
-          style={{ fontVariationSettings: "'opsz' 144" }}
-        >
-          {label}
-        </p>
+      <div className="mt-2 flex justify-between items-baseline gap-3">
+        <p className="text-lg text-stone-900 font-semibold">{label}</p>
         <p
           className="font-serif text-3xl text-stone-900 tabular-nums"
           style={{ fontVariationSettings: "'opsz' 144" }}
@@ -1133,8 +1125,8 @@ function PaymentTile({
           {formatCentsWhole(amount)}
         </p>
       </div>
-      <p className="text-xs text-stone-500 mt-1">{when}</p>
-      <p className="text-sm text-stone-600 italic font-serif mt-1.5">{note}</p>
+      <p className="text-sm text-stone-700 mt-1 font-medium">{when}</p>
+      <p className="text-sm text-stone-600 mt-1">{note}</p>
     </div>
   );
 }
