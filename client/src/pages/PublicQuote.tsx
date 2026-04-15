@@ -16,14 +16,11 @@ import {
   Heart,
   Wine,
   Utensils,
-  CreditCard,
   Phone,
   Mail,
   Clock,
-  Sparkles,
   Cake,
   Coffee,
-  ChevronRight,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -147,10 +144,10 @@ function formatLongDate(iso: string | null): string {
   });
 }
 
-function formatShortDate(iso: string | null): string {
+function formatMediumDate(iso: string | null): string {
   if (!iso) return "TBD";
   return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
+    month: "long",
     day: "numeric",
     year: "numeric",
   });
@@ -162,7 +159,6 @@ function dayBefore(iso: string | null): string {
   const d = new Date(iso);
   d.setDate(d.getDate() - 1);
   return d.toLocaleDateString("en-US", {
-    weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -194,7 +190,7 @@ function serviceStyleLabel(s: string | null): string {
     case "buffet": return "Buffet";
     case "plated": return "Plated dinner";
     case "family_style": return "Family-style";
-    case "cocktail_party": return "Cocktail-style reception";
+    case "cocktail_party": return "Cocktail reception";
     case "stations": return "Food stations";
     default: return s ? titleCase(s) : "";
   }
@@ -269,8 +265,37 @@ const CATEGORY_LABELS: Record<string, string> = {
   beverages: "To Drink",
 };
 
+// Display order for menu categories
+const CATEGORY_ORDER = [
+  "appetizer",
+  "appetizers",
+  "starters",
+  "cocktail",
+  "entree",
+  "main",
+  "mains",
+  "protein",
+  "side",
+  "sides",
+  "dessert",
+  "desserts",
+  "beverage",
+  "beverages",
+];
+
 function categoryLabel(c: string): string {
   return CATEGORY_LABELS[c.toLowerCase()] ?? titleCase(c);
+}
+
+function sortCategories(cats: string[]): string[] {
+  return [...cats].sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a.toLowerCase());
+    const ib = CATEGORY_ORDER.indexOf(b.toLowerCase());
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
@@ -367,9 +392,9 @@ export default function PublicQuote() {
   if (isLoading) {
     return (
       <PageShell>
-        <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-32 text-stone-500">
           <Loader2 className="h-10 w-10 animate-spin mb-3" />
-          <p>Loading your proposal…</p>
+          <p className="font-serif italic">Loading your proposal…</p>
         </div>
       </PageShell>
     );
@@ -381,7 +406,7 @@ export default function PublicQuote() {
         <div className="bg-white rounded-2xl border border-rose-200 p-12 text-center shadow-sm">
           <XCircle className="h-12 w-12 text-rose-400 mx-auto mb-3" />
           <h2 className="text-xl font-serif font-semibold mb-1">Proposal not found</h2>
-          <p className="text-muted-foreground">
+          <p className="text-stone-600">
             This link may have expired. Please reach out to us directly and we&rsquo;ll send you a fresh one.
           </p>
         </div>
@@ -414,8 +439,22 @@ export default function PublicQuote() {
   const balanceDueDate = dayBefore(eventDate);
 
   const groupedMenu = groupMenuSelections(wedding?.menuSelections ?? null);
-  const menuCategories = Object.keys(groupedMenu);
+  const menuCategories = sortCategories(Object.keys(groupedMenu));
   const isWedding = (wedding?.eventType ?? estimate.eventType ?? "").toLowerCase().includes("wedding");
+  const venueName = wedding?.venueName || estimate.venue || "";
+  const venueLine = wedding?.venueAddress
+    ? [wedding.venueAddress.street, wedding.venueAddress.city, wedding.venueAddress.state].filter(Boolean).join(", ")
+    : [estimate.venueAddress, estimate.venueCity].filter(Boolean).join(", ");
+
+  const hasMenu =
+    menuCategories.length > 0 ||
+    (wedding?.appetizers?.selections?.length ?? 0) > 0 ||
+    (wedding?.desserts?.length ?? 0) > 0 ||
+    !!wedding?.menuTheme;
+
+  const hasTimeline =
+    !!wedding &&
+    !!(wedding.hasCeremony || wedding.hasCocktailHour || wedding.hasMainMeal);
 
   return (
     <PageShell>
@@ -425,12 +464,12 @@ export default function PublicQuote() {
 
       {/* ═══════════════ STATUS BANNERS ═══════════════ */}
       {effectiveStatus === "accepted" && (
-        <div className="mb-8 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-8 text-center shadow-sm">
+        <div className="mb-8 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-8 text-center shadow-sm">
           <CheckCircle2 className="h-14 w-14 text-emerald-600 mx-auto mb-3" />
-          <h2 className="text-2xl font-serif font-bold text-emerald-900">
+          <h2 className="font-serif text-3xl font-medium text-emerald-900">
             We&rsquo;re officially booked!
           </h2>
-          <p className="text-emerald-800 mt-2 max-w-md mx-auto">
+          <p className="text-emerald-800 mt-3 max-w-md mx-auto leading-relaxed">
             Thank you for choosing Homebites to be part of your day. We&rsquo;ll
             be in touch within 24 hours with the contract and deposit
             instructions.
@@ -438,9 +477,9 @@ export default function PublicQuote() {
           {eventPublicUrl && (
             <a
               href={eventPublicUrl}
-              className="inline-flex items-center gap-2 mt-5 px-6 py-3 bg-emerald-700 text-white text-sm font-semibold rounded-full hover:bg-emerald-800 transition shadow-md"
+              className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-emerald-700 text-white text-sm font-medium rounded-full hover:bg-emerald-800 transition shadow-md"
             >
-              <Heart className="h-4 w-4" />
+              <Heart className="h-4 w-4 fill-current" />
               Open your event page
             </a>
           )}
@@ -448,8 +487,8 @@ export default function PublicQuote() {
       )}
 
       {effectiveStatus === "declined" && (
-        <div className="mb-8 rounded-2xl border border-stone-200 bg-stone-50 p-8 text-center">
-          <p className="text-stone-700">
+        <div className="mb-8 rounded-3xl border border-stone-200 bg-stone-50 p-8 text-center">
+          <p className="text-stone-700 font-serif italic leading-relaxed">
             We&rsquo;ve recorded that this proposal isn&rsquo;t the right fit. If
             anything changes — new date, different headcount, a tweak to the
             menu — just reply to our email and we&rsquo;ll start fresh.
@@ -457,425 +496,324 @@ export default function PublicQuote() {
         </div>
       )}
 
-      {/* ═══════════════ HERO ═══════════════ */}
-      <div className="text-center mb-12 pt-4">
-        {isWedding && (
-          <div className="inline-flex items-center gap-2 text-rose-700/80 text-xs uppercase tracking-[0.3em] mb-4 font-medium">
-            <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
-            Wedding Proposal
-            <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+      {/* ═══════════════ HERO CARD ═══════════════ */}
+      <div className="relative mb-8 overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-amber-50/40 to-rose-50/60 shadow-sm">
+        {/* Decorative corner ornaments */}
+        <div className="absolute top-0 left-0 w-24 h-24 border-t border-l border-rose-200/70 rounded-tl-3xl" />
+        <div className="absolute top-0 right-0 w-24 h-24 border-t border-r border-rose-200/70 rounded-tr-3xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 border-b border-l border-rose-200/70 rounded-bl-3xl" />
+        <div className="absolute bottom-0 right-0 w-24 h-24 border-b border-r border-rose-200/70 rounded-br-3xl" />
+
+        <div className="relative px-8 py-14 sm:py-16 text-center">
+          {isWedding && (
+            <div className="inline-flex items-center gap-3 text-rose-700/80 text-[10px] uppercase tracking-[0.35em] mb-5 font-medium">
+              <span className="h-px w-8 bg-rose-300" />
+              <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+              A Wedding Proposal
+              <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+              <span className="h-px w-8 bg-rose-300" />
+            </div>
+          )}
+          <h1
+            className="font-serif text-5xl sm:text-6xl md:text-7xl text-stone-900 leading-[1.05] tracking-tight"
+            style={{ fontOpticalSizing: "auto", fontVariationSettings: "'opsz' 144" }}
+            data-testid="text-couple-title"
+          >
+            {coupleTitle(wedding, client)}
+          </h1>
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <span className="h-px w-12 bg-stone-300" />
+            <p className="font-serif italic text-stone-700 text-lg sm:text-xl">{longDate}</p>
+            <span className="h-px w-12 bg-stone-300" />
           </div>
-        )}
-        <h1 className="font-serif text-5xl md:text-6xl text-stone-900 mb-3 leading-tight" data-testid="text-couple-title">
-          {coupleTitle(wedding, client)}
-        </h1>
-        <p className="text-stone-600 text-lg italic font-serif">{longDate}</p>
-        {wedding?.venueName && (
-          <p className="text-stone-500 text-sm mt-1">at {wedding.venueName}</p>
-        )}
-        <div className="mt-8 max-w-xl mx-auto">
-          <p className="text-stone-700 leading-relaxed">
+          {venueName && (
+            <p className="mt-3 text-stone-500 text-sm tracking-wide">
+              {venueName}
+              {venueLine && <span className="text-stone-400"> · {venueLine}</span>}
+            </p>
+          )}
+          <p className="mt-8 max-w-lg mx-auto text-stone-700 leading-relaxed font-serif text-[15px]">
             {isWedding ? (
               <>
-                Congratulations on your engagement! It would be our honor to
-                feed your guests on the day you say <em>I do</em>. Here&rsquo;s
-                what we&rsquo;ve put together for you.
+                Congratulations on your engagement. It would be our honor to feed
+                your guests on the day you say <em>I do</em>. Here&rsquo;s what
+                we&rsquo;ve put together for you.
               </>
             ) : (
-              <>
-                Thank you for thinking of us. Here&rsquo;s the proposal we&rsquo;ve
-                put together for your event.
-              </>
+              <>Thank you for thinking of us. Here&rsquo;s the proposal we&rsquo;ve put together for your event.</>
             )}
           </p>
         </div>
       </div>
 
-      {/* ═══════════════ YOUR DAY AT A GLANCE ═══════════════ */}
-      <Section title="Your day at a glance" icon={<Sparkles className="h-4 w-4" />}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <DetailCell
-            icon={<Calendar className="h-4 w-4" />}
-            label="Date"
-            value={longDate}
-          />
-          <DetailCell
-            icon={<Users className="h-4 w-4" />}
-            label="Guests"
-            value={`${guests} guests`}
-          />
-          <DetailCell
+      {/* ═══════════════ AT A GLANCE CARD ═══════════════ */}
+      <Card kicker="The essentials" title="Your day at a glance">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Fact icon={<Calendar className="h-4 w-4" />} label="Date" value={formatMediumDate(eventDate)} />
+          <Fact icon={<Users className="h-4 w-4" />} label="Guests" value={`${guests}`} />
+          <Fact
             icon={<Utensils className="h-4 w-4" />}
             label="Service"
             value={serviceStyleLabel(wedding?.serviceStyle ?? wedding?.serviceType ?? null) || "Custom"}
           />
+          <Fact
+            icon={<MapPin className="h-4 w-4" />}
+            label="Venue"
+            value={venueName || "TBD"}
+          />
         </div>
 
-        {(wedding?.venueName || estimate.venue) && (
-          <div className="mt-6 pt-6 border-t border-stone-100 flex items-start gap-3">
-            <MapPin className="h-5 w-5 mt-0.5 text-stone-400 shrink-0" />
-            <div>
-              <p className="font-medium text-stone-900">
-                {wedding?.venueName || estimate.venue}
-              </p>
-              {wedding?.venueAddress && (
-                <p className="text-sm text-stone-500">
-                  {[
-                    wedding.venueAddress.street,
-                    wedding.venueAddress.city,
-                    wedding.venueAddress.state,
-                    wedding.venueAddress.zip,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
+        {hasTimeline && (
+          <div className="mt-6 pt-6 border-t border-dashed border-stone-200">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-4">
+              <Clock className="h-3 w-3" />
+              Timeline
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {wedding!.hasCeremony && wedding!.ceremonyStartTime && (
+                <TimelineBlock
+                  label="Ceremony"
+                  start={wedding!.ceremonyStartTime}
+                  end={wedding!.ceremonyEndTime}
+                />
               )}
-              {!wedding?.venueAddress && estimate.venueAddress && (
-                <p className="text-sm text-stone-500">
-                  {[estimate.venueAddress, estimate.venueCity, estimate.venueZip]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
+              {wedding!.hasCocktailHour && wedding!.cocktailStartTime && (
+                <TimelineBlock
+                  label="Cocktail hour"
+                  start={wedding!.cocktailStartTime}
+                  end={wedding!.cocktailEndTime}
+                />
+              )}
+              {wedding!.hasMainMeal && wedding!.mainMealStartTime && (
+                <TimelineBlock
+                  label="Reception"
+                  start={wedding!.mainMealStartTime}
+                  end={wedding!.mainMealEndTime}
+                />
               )}
             </div>
           </div>
         )}
+      </Card>
 
-        {/* Timeline of the day */}
-        {wedding && (wedding.hasCeremony || wedding.hasCocktailHour || wedding.hasMainMeal) && (
-          <div className="mt-6 pt-6 border-t border-stone-100">
-            <p className="text-xs uppercase tracking-wide text-stone-500 mb-3 font-medium">
-              <Clock className="h-3 w-3 inline mr-1.5" />
-              Timeline
-            </p>
-            <ul className="space-y-2">
-              {wedding.hasCeremony && wedding.ceremonyStartTime && (
-                <TimelineRow
-                  label="Ceremony"
-                  start={wedding.ceremonyStartTime}
-                  end={wedding.ceremonyEndTime}
-                />
-              )}
-              {wedding.hasCocktailHour && wedding.cocktailStartTime && (
-                <TimelineRow
-                  label="Cocktail hour"
-                  start={wedding.cocktailStartTime}
-                  end={wedding.cocktailEndTime}
-                />
-              )}
-              {wedding.hasMainMeal && wedding.mainMealStartTime && (
-                <TimelineRow
-                  label="Reception dinner"
-                  start={wedding.mainMealStartTime}
-                  end={wedding.mainMealEndTime}
-                />
-              )}
-            </ul>
-          </div>
-        )}
-      </Section>
-
-      {/* ═══════════════ THE MENU ═══════════════ */}
-      {(menuCategories.length > 0 || wedding?.menuTheme) && (
-        <Section
+      {/* ═══════════════ MENU CARD ═══════════════ */}
+      {hasMenu && (
+        <MenuCard
           title="The menu"
           subtitle={
             wedding?.menuTheme
               ? `${menuThemeLabel(wedding.menuTheme)}${wedding.menuTier ? ` · ${titleCase(wedding.menuTier)} package` : ""}`
               : undefined
           }
-          icon={<Utensils className="h-4 w-4" />}
         >
-          {menuCategories.length === 0 ? (
-            <p className="text-stone-500 italic text-sm">
-              Menu details will be confirmed during your tasting.
-            </p>
-          ) : (
-            <div className="space-y-6">
+          {menuCategories.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
               {menuCategories.map((cat) => (
-                <div key={cat}>
-                  <h3 className="font-serif text-lg text-stone-800 mb-2 italic">
-                    {categoryLabel(cat)}
-                  </h3>
-                  <ul className="space-y-1.5">
-                    {groupedMenu[cat].map((name, i) => (
-                      <li
-                        key={`${cat}-${i}`}
-                        className="text-stone-700 flex items-start gap-2"
-                      >
-                        <span className="text-rose-300 mt-1.5 leading-none">·</span>
-                        <span>{name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <MenuCourse key={cat} title={categoryLabel(cat)}>
+                  {groupedMenu[cat].map((name, i) => (
+                    <MenuItem key={`${cat}-${i}`}>{name}</MenuItem>
+                  ))}
+                </MenuCourse>
               ))}
-            </div>
-          )}
 
-          {/* Appetizers / Cocktail Hour */}
-          {wedding?.appetizers?.selections && wedding.appetizers.selections.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-stone-100">
-              <h3 className="font-serif text-lg text-stone-800 mb-2 italic">
-                Cocktail Hour Bites
-              </h3>
-              <ul className="space-y-1.5">
-                {wedding.appetizers.selections.map((a, i) => (
-                  <li key={i} className="text-stone-700 flex items-start gap-2">
-                    <span className="text-rose-300 mt-1.5 leading-none">·</span>
-                    <span>
+              {wedding?.appetizers?.selections && wedding.appetizers.selections.length > 0 && (
+                <MenuCourse title="Cocktail Hour Bites">
+                  {wedding.appetizers.selections.map((a, i) => (
+                    <MenuItem key={`app-${i}`}>
                       {a.itemName}
                       {a.quantity > 0 && (
-                        <span className="text-stone-400 text-sm ml-1.5">
-                          ({a.quantity} pieces)
-                        </span>
+                        <span className="text-stone-400 text-xs ml-1.5">({a.quantity} pieces)</span>
                       )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                    </MenuItem>
+                  ))}
+                </MenuCourse>
+              )}
 
-          {/* Desserts */}
-          {wedding?.desserts && wedding.desserts.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-stone-100">
-              <h3 className="font-serif text-lg text-stone-800 mb-2 italic flex items-center gap-2">
-                <Cake className="h-4 w-4 text-rose-400" />
-                Sweet Endings
-              </h3>
-              <ul className="space-y-1.5">
-                {wedding.desserts.map((d, i) => (
-                  <li key={i} className="text-stone-700 flex items-start gap-2">
-                    <span className="text-rose-300 mt-1.5 leading-none">·</span>
-                    <span>
+              {wedding?.desserts && wedding.desserts.length > 0 && (
+                <MenuCourse title="Sweet Endings" icon={<Cake className="h-3.5 w-3.5" />}>
+                  {wedding.desserts.map((d, i) => (
+                    <MenuItem key={`d-${i}`}>
                       {d.itemName}
                       {d.quantity > 0 && (
-                        <span className="text-stone-400 text-sm ml-1.5">
-                          ({d.quantity})
-                        </span>
+                        <span className="text-stone-400 text-xs ml-1.5">({d.quantity})</span>
                       )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                    </MenuItem>
+                  ))}
+                </MenuCourse>
+              )}
+
+              {wedding?.beverages &&
+                (wedding.beverages.hasNonAlcoholic || wedding.beverages.hasAlcoholic) && (
+                  <MenuCourse title="The Bar" icon={<Wine className="h-3.5 w-3.5" />}>
+                    {wedding.beverages.hasAlcoholic && wedding.beverages.bartendingType && (
+                      <MenuItem>
+                        {wedding.beverages.liquorQuality && (
+                          <strong className="font-medium">
+                            {titleCase(wedding.beverages.liquorQuality)}{" "}
+                          </strong>
+                        )}
+                        bar service
+                      </MenuItem>
+                    )}
+                    {wedding.beverages.nonAlcoholicSelections?.map((n, i) => (
+                      <MenuItem key={`na-${i}`}>{titleCase(n)}</MenuItem>
+                    ))}
+                    {wedding.beverages.mocktails?.map((n, i) => (
+                      <MenuItem key={`mt-${i}`}>Mocktail: {titleCase(n)}</MenuItem>
+                    ))}
+                    {wedding.beverages.coffeeTeaService && (
+                      <MenuItem>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Coffee className="h-3.5 w-3.5 text-stone-400" />
+                          Coffee &amp; tea service
+                        </span>
+                      </MenuItem>
+                    )}
+                  </MenuCourse>
+                )}
             </div>
           )}
 
-          {/* Beverages */}
-          {wedding?.beverages && (wedding.beverages.hasNonAlcoholic || wedding.beverages.hasAlcoholic) && (
-            <div className="mt-6 pt-6 border-t border-stone-100">
-              <h3 className="font-serif text-lg text-stone-800 mb-2 italic flex items-center gap-2">
-                <Wine className="h-4 w-4 text-rose-400" />
-                The Bar
-              </h3>
-              <ul className="space-y-1.5 text-stone-700 text-sm">
-                {wedding.beverages.hasAlcoholic && wedding.beverages.bartendingType && (
-                  <li>
-                    {wedding.beverages.liquorQuality && (
-                      <strong>{titleCase(wedding.beverages.liquorQuality)} </strong>
-                    )}
-                    bar service
-                  </li>
-                )}
-                {wedding.beverages.nonAlcoholicSelections?.map((n, i) => (
-                  <li key={`na-${i}`} className="flex items-start gap-2">
-                    <span className="text-rose-300 mt-1.5 leading-none">·</span>
-                    <span>{titleCase(n)}</span>
-                  </li>
-                ))}
-                {wedding.beverages.mocktails?.map((n, i) => (
-                  <li key={`mt-${i}`} className="flex items-start gap-2">
-                    <span className="text-rose-300 mt-1.5 leading-none">·</span>
-                    <span>Mocktail: {titleCase(n)}</span>
-                  </li>
-                ))}
-                {wedding.beverages.coffeeTeaService && (
-                  <li className="flex items-center gap-2">
-                    <Coffee className="h-3.5 w-3.5 text-stone-400" />
-                    Coffee &amp; tea service
-                  </li>
-                )}
-              </ul>
-            </div>
+          {menuCategories.length === 0 && !wedding?.appetizers?.selections?.length && (
+            <p className="text-stone-500 italic text-sm font-serif">
+              Menu details will be confirmed during your tasting.
+            </p>
           )}
 
           {/* Dietary callouts */}
-          {wedding?.dietary && (
+          {wedding?.dietary &&
             ((wedding.dietary.restrictions?.length ?? 0) > 0 ||
               (wedding.dietary.allergies?.length ?? 0) > 0 ||
               wedding.dietary.specialNotes) && (
-              <div className="mt-6 pt-6 border-t border-stone-100">
-                <p className="text-xs uppercase tracking-wide text-stone-500 mb-2 font-medium">
+              <div className="mt-8 pt-6 border-t border-dashed border-rose-200/60">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-rose-700/70 mb-3 font-medium">
                   Dietary accommodations
                 </p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {wedding.dietary.restrictions?.map((r) => (
-                    <Badge key={r} className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0 font-normal">
+                    <Badge
+                      key={r}
+                      className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0 font-normal"
+                    >
                       {titleCase(r)}
                     </Badge>
                   ))}
                   {wedding.dietary.allergies?.map((a) => (
-                    <Badge key={a} className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-0 font-normal">
-                      {titleCase(a)}-free needed
+                    <Badge
+                      key={a}
+                      className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-0 font-normal"
+                    >
+                      {titleCase(a)}-free
                     </Badge>
                   ))}
                 </div>
                 {wedding.dietary.specialNotes && (
-                  <p className="text-sm text-stone-600 italic">
+                  <p className="text-sm text-stone-600 italic font-serif">
                     &ldquo;{wedding.dietary.specialNotes}&rdquo;
                   </p>
                 )}
               </div>
-            )
-          )}
-        </Section>
-      )}
-
-      {/* ═══════════════ EQUIPMENT & RENTALS ═══════════════ */}
-      {wedding?.equipment?.items && wedding.equipment.items.length > 0 && (
-        <Section title="Equipment & rentals" icon={<Sparkles className="h-4 w-4" />}>
-          <ul className="space-y-1.5">
-            {wedding.equipment.items.map((e, i) => (
-              <li key={i} className="text-stone-700 flex items-start gap-2">
-                <span className="text-rose-300 mt-1.5 leading-none">·</span>
-                <span>
-                  {e.item}
-                  {e.quantity > 1 && (
-                    <span className="text-stone-400 text-sm ml-1.5">×{e.quantity}</span>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {wedding.equipment.otherNotes && (
-            <p className="mt-3 text-sm text-stone-500 italic">
-              {wedding.equipment.otherNotes}
-            </p>
-          )}
-        </Section>
+            )}
+        </MenuCard>
       )}
 
       {/* ═══════════════ SPECIAL REQUESTS ═══════════════ */}
       {wedding?.specialRequests && (
-        <Section title="Your special requests" icon={<Heart className="h-4 w-4 text-rose-400" />}>
-          <p className="text-stone-700 italic leading-relaxed whitespace-pre-wrap">
+        <div className="mb-8 rounded-3xl border border-rose-200/70 bg-rose-50/40 p-7 shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-rose-700/80 mb-3">
+            <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+            Your special requests
+          </div>
+          <p className="text-stone-700 italic leading-relaxed whitespace-pre-wrap font-serif text-[15px]">
             &ldquo;{wedding.specialRequests}&rdquo;
           </p>
-          <p className="mt-3 text-sm text-stone-500">
-            We&rsquo;ve noted these and they&rsquo;re part of the plan.
-          </p>
-        </Section>
+          <p className="mt-3 text-xs text-stone-500">We&rsquo;ve noted these — they&rsquo;re part of the plan.</p>
+        </div>
       )}
 
-      {/* ═══════════════ INVESTMENT ═══════════════ */}
-      <Section title="Your investment" icon={<CreditCard className="h-4 w-4" />}>
-        <div className="space-y-3 text-sm">
-          {perPersonCents > 0 && guests > 0 && (
-            <Row
-              label={`Catering (${formatCents(perPersonCents)} × ${guests} guests)`}
-              value={formatCents(perPersonCents * guests)}
-            />
-          )}
-          {perPersonCents === 0 && lineItems.length > 0 && (
-            <>
-              {lineItems.map((it, i) => (
+      {/* ═══════════════ TWO-COLUMN: INVESTMENT + PAYMENT PLAN ═══════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+        {/* Investment card */}
+        <div className="lg:col-span-3">
+          <Card kicker="Your investment" title="What it comes to">
+            <div className="space-y-2.5 text-sm">
+              {perPersonCents > 0 && guests > 0 && (
                 <Row
-                  key={it.id ?? i}
-                  label={`${it.name}${it.quantity > 1 ? ` × ${it.quantity}` : ""}`}
-                  value={formatCents(it.price * it.quantity)}
+                  label={`Catering · ${formatCents(perPersonCents)} × ${guests}`}
+                  value={formatCents(perPersonCents * guests)}
                 />
-              ))}
-            </>
-          )}
-          {serviceFeeCents > 0 && (
-            <Row label="Service fee" value={formatCents(serviceFeeCents)} />
-          )}
-          <Row label="Subtotal" value={formatCents(subtotalCents)} muted />
-          <Row label="Tax" value={formatCents(taxCents)} muted />
-
-          <div className="pt-4 mt-2 border-t border-stone-200">
-            <div className="flex justify-between items-baseline">
-              <span className="font-serif text-lg text-stone-900">Total</span>
-              <span className="font-serif text-3xl text-stone-900" data-testid="text-total">
-                {formatCents(totalCents)}
-              </span>
+              )}
+              {perPersonCents === 0 &&
+                lineItems.map((it, i) => (
+                  <Row
+                    key={it.id ?? i}
+                    label={`${it.name}${it.quantity > 1 ? ` × ${it.quantity}` : ""}`}
+                    value={formatCents(it.price * it.quantity)}
+                  />
+                ))}
+              {serviceFeeCents > 0 && <Row label="Service fee" value={formatCents(serviceFeeCents)} />}
+              <Row label="Subtotal" value={formatCents(subtotalCents)} muted />
+              <Row label="Tax" value={formatCents(taxCents)} muted />
             </div>
-            {guests > 0 && (
-              <div className="text-right text-xs text-stone-500 mt-1">
-                That&rsquo;s {formatCents(Math.round(totalCents / guests))} per
-                guest, all-in.
+
+            <div className="mt-6 pt-5 border-t border-stone-200">
+              <div className="flex justify-between items-baseline">
+                <span className="font-serif text-lg text-stone-900">Total</span>
+                <span
+                  className="font-serif text-4xl text-stone-900 tabular-nums"
+                  style={{ fontVariationSettings: "'opsz' 144" }}
+                  data-testid="text-total"
+                >
+                  {formatCents(totalCents)}
+                </span>
               </div>
-            )}
-          </div>
+              {guests > 0 && (
+                <div className="text-right text-xs text-stone-500 mt-1 italic font-serif">
+                  {formatCents(Math.round(totalCents / guests))} per guest, all-in
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
-      </Section>
 
-      {/* ═══════════════ PAYMENT SCHEDULE ═══════════════ */}
-      <Section title="Payment schedule" icon={<CreditCard className="h-4 w-4" />}>
-        <p className="text-sm text-stone-600 mb-5">
-          Two simple payments — one to lock in your date, one before the big day.
-        </p>
-        <div className="space-y-4">
-          <PaymentStage
-            number={1}
-            label="To book your date"
-            amount={depositCents}
-            percent={35}
-            when="Due on signing"
-            description="This deposit reserves your date and starts our planning. Non-refundable but transferable if you need to reschedule."
-          />
-          <PaymentStage
-            number={2}
-            label="Final balance"
-            amount={balanceCents}
-            percent={65}
-            when={`Due ${balanceDueDate}`}
-            description="Paid 24 hours before your event. We'll send a reminder a week out."
-            isLast
-          />
+        {/* Payment plan card */}
+        <div className="lg:col-span-2">
+          <Card kicker="Payment plan" title="Two simple payments" className="h-full">
+            <PaymentTile
+              step="1 of 2"
+              label="Deposit"
+              amount={depositCents}
+              percent={35}
+              when="Due on signing"
+              note="Locks in your date."
+              accent="rose"
+            />
+            <div className="my-4 h-px bg-gradient-to-r from-transparent via-stone-200 to-transparent" />
+            <PaymentTile
+              step="2 of 2"
+              label="Final balance"
+              amount={balanceCents}
+              percent={65}
+              when={`Due ${balanceDueDate}`}
+              note="24 hours before your event."
+              accent="stone"
+            />
+          </Card>
         </div>
-      </Section>
+      </div>
 
-      {/* ═══════════════ WHAT HAPPENS NEXT ═══════════════ */}
-      <Section title="What happens next" icon={<ChevronRight className="h-4 w-4" />}>
-        <ol className="space-y-4">
-          <NextStep
-            num={1}
-            title="You accept this proposal"
-            body="Click the button below. Takes 10 seconds."
-          />
-          <NextStep
-            num={2}
-            title="We send the contract"
-            body="Within 24 hours, you'll get the signing link and instructions for the deposit."
-          />
-          <NextStep
-            num={3}
-            title="Your date is locked"
-            body="As soon as the deposit clears, your date is officially ours. We start coordinating with your venue and other vendors."
-          />
-          <NextStep
-            num={4}
-            title="Tasting & menu confirmation"
-            body="About 2 months out, we'll schedule a tasting (if you'd like one) and lock in the final menu."
-          />
-          <NextStep
-            num={5}
-            title="The big day"
-            body="We arrive, set up, serve, and clean up. You enjoy your wedding."
-          />
-        </ol>
-      </Section>
-
-      {/* ═══════════════ ACCEPT / DECLINE ═══════════════ */}
+      {/* ═══════════════ ACCEPT / DECLINE CARD ═══════════════ */}
       {effectiveStatus === "pending" && !showDeclineForm && (
-        <div className="mt-10 mb-6 text-center">
+        <div className="mb-8 rounded-3xl bg-gradient-to-br from-rose-600 via-rose-600 to-rose-700 p-8 sm:p-10 text-center shadow-lg shadow-rose-200">
+          <p className="font-serif italic text-rose-100 text-lg mb-2">Ready to make it official?</p>
+          <p className="text-rose-50/90 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
+            Accept the proposal and we&rsquo;ll send the contract and deposit instructions within 24 hours.
+          </p>
           <Button
             size="lg"
             onClick={() => acceptMutation.mutate()}
             disabled={localStatus === "accepting"}
-            className="h-16 px-12 text-base bg-rose-600 hover:bg-rose-700 text-white rounded-full shadow-lg shadow-rose-200 transition-all hover:shadow-xl hover:shadow-rose-300"
+            className="h-14 px-10 text-base bg-white text-rose-700 hover:bg-rose-50 rounded-full shadow-xl font-medium transition-all hover:scale-[1.02]"
             data-testid="button-accept"
           >
             {localStatus === "accepting" ? (
@@ -890,11 +828,11 @@ export default function PublicQuote() {
               </>
             )}
           </Button>
-          <p className="mt-4 text-sm">
+          <p className="mt-5 text-sm">
             <button
               type="button"
               onClick={() => setShowDeclineForm(true)}
-              className="text-stone-500 hover:text-stone-700 underline underline-offset-2"
+              className="text-rose-100/80 hover:text-white underline underline-offset-4"
               data-testid="button-show-decline"
             >
               I need to pass on this
@@ -904,10 +842,10 @@ export default function PublicQuote() {
       )}
 
       {effectiveStatus === "pending" && showDeclineForm && (
-        <div className="mt-10 mb-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-serif text-stone-700 mb-2">
-            We&rsquo;re sorry to hear this isn&rsquo;t the right fit. If you
-            don&rsquo;t mind sharing why, it helps us improve.
+        <div className="mb-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-serif text-stone-700 mb-3 italic">
+            We&rsquo;re sorry to hear this isn&rsquo;t the right fit. If you don&rsquo;t
+            mind sharing why, it helps us improve.
           </p>
           <Textarea
             value={declineReason}
@@ -917,11 +855,7 @@ export default function PublicQuote() {
             className="border-stone-300"
           />
           <div className="flex gap-2 mt-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setShowDeclineForm(false)}
-            >
+            <Button variant="outline" className="flex-1" onClick={() => setShowDeclineForm(false)}>
               Back
             </Button>
             <Button
@@ -939,19 +873,17 @@ export default function PublicQuote() {
 
       {/* ═══════════════ SIGN-OFF ═══════════════ */}
       <div className="mt-12 mb-6 text-center max-w-md mx-auto">
-        <p className="font-serif text-lg text-stone-800 italic">
-          {isWedding ? (
-            <>Looking forward to celebrating with you,</>
-          ) : (
-            <>Looking forward to working with you,</>
-          )}
+        <p className="font-serif italic text-stone-700 text-lg">
+          {isWedding ? <>Looking forward to celebrating with you,</> : <>Looking forward to working with you,</>}
         </p>
-        <p className="font-serif text-2xl text-stone-900 mt-2">— Mike &amp; the Homebites team</p>
+        <p
+          className="font-serif text-2xl text-stone-900 mt-2"
+          style={{ fontVariationSettings: "'opsz' 144" }}
+        >
+          Mike &amp; the Homebites team
+        </p>
         <div className="mt-6 pt-6 border-t border-stone-200 flex flex-col sm:flex-row gap-4 justify-center text-sm text-stone-600">
-          <a
-            href="tel:+12065550100"
-            className="flex items-center gap-2 justify-center hover:text-rose-700 transition"
-          >
+          <a href="tel:+12065550100" className="flex items-center gap-2 justify-center hover:text-rose-700 transition">
             <Phone className="h-4 w-4" />
             (206) 555-0100
           </a>
@@ -963,9 +895,8 @@ export default function PublicQuote() {
             hello@homebitescatering.com
           </a>
         </div>
-        <p className="text-xs text-stone-400 mt-6 italic">
-          Questions about anything in this proposal? Reply to the email we sent
-          you, or call us — we&rsquo;d love to hear from you.
+        <p className="text-xs text-stone-400 mt-6 italic font-serif">
+          Questions about anything in this proposal? Reply to our email or give us a call — we&rsquo;d love to hear from you.
         </p>
       </div>
     </PageShell>
@@ -976,54 +907,124 @@ export default function PublicQuote() {
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/40 via-stone-50 to-stone-50 pb-16">
+    <div className="min-h-screen bg-[#fbf8f4] pb-16" style={{ fontFeatureSettings: '"ss01", "ss02"' }}>
       {/* Header */}
-      <header className="w-full bg-white/70 backdrop-blur-sm border-b border-stone-200/60 sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
+      <header className="w-full bg-white/80 backdrop-blur-sm border-b border-stone-200/60 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
           <img src={homebitesLogo} alt="Homebites" className="h-9" />
           <div>
-            <p className="font-serif font-bold text-base leading-tight text-stone-900">
+            <p
+              className="font-serif font-medium text-base leading-tight text-stone-900"
+              style={{ fontVariationSettings: "'opsz' 144" }}
+            >
               Homebites Catering
             </p>
-            <p className="text-[11px] text-stone-500 italic">
-              Crafted for your celebration
-            </p>
+            <p className="text-[11px] text-stone-500 italic font-serif">Crafted for your celebration</p>
           </div>
         </div>
       </header>
-      <main className="max-w-3xl mx-auto px-6 py-10">{children}</main>
+      <main className="max-w-4xl mx-auto px-5 sm:px-6 py-10">{children}</main>
     </div>
   );
 }
 
-function Section({
+/** Standard content card with kicker + title header */
+function Card({
+  kicker,
   title,
-  subtitle,
-  icon,
   children,
+  className = "",
 }: {
+  kicker: string;
   title: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="mb-8 bg-white rounded-2xl border border-stone-200/60 shadow-sm overflow-hidden">
-      <header className="px-6 pt-6 pb-2">
-        <div className="flex items-center gap-2 text-rose-700/70 text-[10px] uppercase tracking-[0.2em] font-medium">
-          {icon}
+    <section className={`mb-8 bg-white rounded-3xl border border-stone-200/70 shadow-sm overflow-hidden ${className}`}>
+      <header className="px-7 pt-7 pb-4">
+        <div className="text-[10px] uppercase tracking-[0.28em] text-rose-700/70 font-medium">{kicker}</div>
+        <h2
+          className="font-serif text-2xl sm:text-[28px] text-stone-900 mt-1 leading-tight"
+          style={{ fontVariationSettings: "'opsz' 144" }}
+        >
           {title}
-        </div>
-        {subtitle && (
-          <p className="text-stone-500 text-sm italic mt-0.5">{subtitle}</p>
-        )}
+        </h2>
       </header>
-      <div className="px-6 pb-6">{children}</div>
+      <div className="px-7 pb-7">{children}</div>
     </section>
   );
 }
 
-function DetailCell({
+/** Special ornate card specifically for the menu — looks like a keepsake menu */
+function MenuCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-8 rounded-3xl border-2 border-double border-rose-200/80 bg-gradient-to-b from-[#fbf5ef] to-white shadow-sm overflow-hidden">
+      <div className="px-7 pt-9 pb-2 text-center">
+        <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-[0.3em] text-rose-700/80 mb-3">
+          <span className="h-px w-10 bg-rose-300" />
+          Menu
+          <span className="h-px w-10 bg-rose-300" />
+        </div>
+        <h2
+          className="font-serif text-4xl sm:text-5xl text-stone-900 leading-tight"
+          style={{ fontVariationSettings: "'opsz' 144" }}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="mt-2 text-stone-600 italic font-serif text-sm">{subtitle}</p>
+        )}
+        <div className="mx-auto mt-4 w-16 h-px bg-gradient-to-r from-transparent via-rose-300 to-transparent" />
+      </div>
+      <div className="px-8 pt-4 pb-9">{children}</div>
+    </section>
+  );
+}
+
+/** A single course/section inside the menu card */
+function MenuCourse({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3
+        className="font-serif italic text-xl text-stone-900 mb-3 flex items-center gap-2"
+        style={{ fontVariationSettings: "'opsz' 144" }}
+      >
+        {icon && <span className="text-rose-400">{icon}</span>}
+        {title}
+      </h3>
+      <ul className="space-y-1.5 font-serif text-stone-700 leading-snug">{children}</ul>
+    </div>
+  );
+}
+
+function MenuItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-baseline gap-2.5 text-[15px]">
+      <span className="text-rose-300 select-none leading-none">·</span>
+      <span className="flex-1">{children}</span>
+    </li>
+  );
+}
+
+/** Compact key/value stat used in the at-a-glance card */
+function Fact({
   icon,
   label,
   value,
@@ -1033,17 +1034,24 @@ function DetailCell({
   value: string;
 }) {
   return (
-    <div>
-      <div className="flex items-center gap-1.5 text-stone-400 text-[10px] uppercase tracking-wide mb-1">
+    <div className="rounded-2xl bg-stone-50/70 border border-stone-100 px-4 py-3.5">
+      <div className="flex items-center gap-1.5 text-stone-400 text-[10px] uppercase tracking-[0.2em] mb-1.5">
         {icon}
         {label}
       </div>
-      <div className="font-serif text-stone-900">{value}</div>
+      <div
+        className="font-serif text-stone-900 text-[15px] leading-tight truncate"
+        style={{ fontVariationSettings: "'opsz' 144" }}
+        title={value}
+      >
+        {value}
+      </div>
     </div>
   );
 }
 
-function TimelineRow({
+/** Horizontal timeline block used in the at-a-glance card */
+function TimelineBlock({
   label,
   start,
   end,
@@ -1053,16 +1061,17 @@ function TimelineRow({
   end: string | null;
 }) {
   return (
-    <li className="flex items-baseline gap-3 text-sm">
-      <span className="text-stone-400 font-mono text-xs shrink-0 w-28 tabular-nums">
+    <div className="rounded-2xl border border-rose-100 bg-rose-50/30 px-4 py-3">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-rose-700/70 font-medium">{label}</div>
+      <div className="mt-1 font-serif text-stone-900 text-sm tabular-nums">
         {formatTime(start)}
         {end ? ` – ${formatTime(end)}` : ""}
-      </span>
-      <span className="text-stone-700">{label}</span>
-    </li>
+      </div>
+    </div>
   );
 }
 
+/** A single line-item row in the investment breakdown */
 function Row({
   label,
   value,
@@ -1074,76 +1083,58 @@ function Row({
 }) {
   return (
     <div
-      className={`flex justify-between items-baseline ${muted ? "text-stone-500" : "text-stone-700"}`}
+      className={`flex justify-between items-baseline gap-4 ${muted ? "text-stone-500" : "text-stone-700"}`}
     >
-      <span>{label}</span>
-      <span className="tabular-nums">{value}</span>
+      <span className="truncate">{label}</span>
+      <span className="tabular-nums shrink-0">{value}</span>
     </div>
   );
 }
 
-function PaymentStage({
-  number,
+/** One of the two payment stages — rich card-like presentation */
+function PaymentTile({
+  step,
   label,
   amount,
   percent,
   when,
-  description,
-  isLast,
+  note,
+  accent,
 }: {
-  number: number;
+  step: string;
   label: string;
   amount: number;
   percent: number;
   when: string;
-  description: string;
-  isLast?: boolean;
+  note: string;
+  accent: "rose" | "stone";
 }) {
+  const accentClasses =
+    accent === "rose"
+      ? "text-rose-700/80"
+      : "text-stone-500";
   return (
-    <div className="flex gap-4">
-      <div className="flex flex-col items-center shrink-0">
-        <div className="w-9 h-9 rounded-full bg-rose-100 border-2 border-rose-200 text-rose-700 font-serif text-base flex items-center justify-center">
-          {number}
-        </div>
-        {!isLast && (
-          <div className="flex-1 w-0.5 bg-rose-100 mt-1" style={{ minHeight: 24 }} />
-        )}
+    <div>
+      <div className={`flex items-center justify-between text-[10px] uppercase tracking-[0.22em] font-medium ${accentClasses}`}>
+        <span>Step {step}</span>
+        <span>{percent}%</span>
       </div>
-      <div className="flex-1 pb-2">
-        <div className="flex justify-between items-baseline gap-3">
-          <p className="font-serif text-base text-stone-900">{label}</p>
-          <p className="font-serif text-xl text-stone-900 tabular-nums">
-            {formatCentsWhole(amount)}
-          </p>
-        </div>
-        <div className="flex justify-between items-baseline gap-3 text-xs text-stone-500">
-          <p>{when}</p>
-          <p>{percent}% of total</p>
-        </div>
-        <p className="text-sm text-stone-600 mt-1.5">{description}</p>
+      <div className="mt-1 flex justify-between items-baseline gap-3">
+        <p
+          className="font-serif text-xl text-stone-900"
+          style={{ fontVariationSettings: "'opsz' 144" }}
+        >
+          {label}
+        </p>
+        <p
+          className="font-serif text-3xl text-stone-900 tabular-nums"
+          style={{ fontVariationSettings: "'opsz' 144" }}
+        >
+          {formatCentsWhole(amount)}
+        </p>
       </div>
+      <p className="text-xs text-stone-500 mt-1">{when}</p>
+      <p className="text-sm text-stone-600 italic font-serif mt-1.5">{note}</p>
     </div>
-  );
-}
-
-function NextStep({
-  num,
-  title,
-  body,
-}: {
-  num: number;
-  title: string;
-  body: string;
-}) {
-  return (
-    <li className="flex gap-4">
-      <div className="w-8 h-8 rounded-full bg-stone-100 text-stone-600 text-sm font-serif flex items-center justify-center shrink-0 mt-0.5">
-        {num}
-      </div>
-      <div className="flex-1">
-        <p className="font-medium text-stone-900">{title}</p>
-        <p className="text-sm text-stone-600 mt-0.5">{body}</p>
-      </div>
-    </li>
   );
 }
