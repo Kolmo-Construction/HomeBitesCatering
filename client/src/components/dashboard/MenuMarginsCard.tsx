@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp } from "lucide-react";
+import MenuMarginDetailDialog from "./MenuMarginDetailDialog";
 
 type TierStatus = "excellent" | "healthy" | "tight" | "unhealthy";
 
@@ -46,6 +48,11 @@ export default function MenuMarginsCard() {
   const { data, isLoading, error } = useQuery<MenuMarginSummary[]>({
     queryKey: ["/api/quotes/menus/margins"],
   });
+
+  const [detailTarget, setDetailTarget] = useState<{
+    menuId: number;
+    tierKey: string;
+  } | null>(null);
 
   return (
     <Card>
@@ -113,9 +120,16 @@ export default function MenuMarginsCard() {
                           return (
                             <tr
                               key={tier.tierKey}
-                              className="border-b border-neutral-100 last:border-0"
+                              onClick={() =>
+                                setDetailTarget({
+                                  menuId: menu.menuId,
+                                  tierKey: tier.tierKey,
+                                })
+                              }
+                              className="border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50 transition-colors"
+                              title="Click to see cost breakdown"
                             >
-                              <td className="py-2 pr-3 text-neutral-800">
+                              <td className="py-2 pr-3 text-neutral-800 underline decoration-dotted decoration-neutral-400 underline-offset-4">
                                 {tier.tierName}
                               </td>
                               <td className="py-2 pr-3 text-right tabular-nums text-neutral-800">
@@ -166,6 +180,15 @@ export default function MenuMarginsCard() {
           </div>
         )}
       </CardContent>
+
+      <MenuMarginDetailDialog
+        menuId={detailTarget?.menuId ?? null}
+        tierKey={detailTarget?.tierKey ?? null}
+        open={detailTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailTarget(null);
+        }}
+      />
     </Card>
   );
 }

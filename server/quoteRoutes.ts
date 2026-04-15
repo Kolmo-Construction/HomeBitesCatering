@@ -12,7 +12,7 @@ import {
 import { eq, desc, sql, and, ilike } from "drizzle-orm";
 import { analyzeQuoteRequest } from "./services/quoteAiService";
 import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
-import { calculateMenuMargin } from "./utils/menuMargin";
+import { calculateMenuMargin, calculateMenuMarginDetail } from "./utils/menuMargin";
 import { calculateShoppingListForQuoteRequest } from "./utils/shoppingList";
 import { getEmailConfig } from "./utils/siteConfig";
 import { sendEmailInBackground } from "./utils/email";
@@ -62,6 +62,20 @@ router.get("/menus/margins", async (_req: Request, res: Response) => {
   } catch (error) {
     console.error("Error calculating all menu margins:", error);
     return res.status(500).json({ message: "Failed to calculate menu margins" });
+  }
+});
+
+// Drill-down: full breakdown for a single tier (categories + per-item recipe cost)
+router.get("/menus/:id/margin/:tierKey", async (req: Request, res: Response) => {
+  try {
+    const menuId = parseInt(req.params.id);
+    if (isNaN(menuId)) return res.status(400).json({ message: "Invalid menu ID" });
+    const detail = await calculateMenuMarginDetail(menuId, req.params.tierKey);
+    if (!detail) return res.status(404).json({ message: "Menu or tier not found" });
+    return res.json(detail);
+  } catch (error) {
+    console.error("Error calculating menu margin detail:", error);
+    return res.status(500).json({ message: "Failed to calculate menu margin detail" });
   }
 });
 

@@ -41,12 +41,27 @@ function safeCalculateIngredientCost(
   }
 }
 
+export interface RecipeCostBreakdown {
+  recipeId: number;
+  recipeName: string;
+  yieldAmount: number;
+  yieldUnit: string;
+  laborHours: number;
+  // Per-serving values, all in cents
+  ingredientCostCents: number;
+  laborCostCents: number;
+  totalCostCents: number;
+}
+
 /**
  * Calculate the cost-per-serving for a single recipe based on its ingredients.
+ * Returns a full breakdown (ingredient vs labor) for drill-down display.
  */
-async function getRecipeCostPerServing(recipeId: number): Promise<number> {
+async function getRecipeCostBreakdown(
+  recipeId: number,
+): Promise<RecipeCostBreakdown | null> {
   const [recipe] = await db.select().from(recipes).where(eq(recipes.id, recipeId));
-  if (!recipe) return 0;
+  if (!recipe) return null;
 
   const components = await db
     .select({
@@ -61,9 +76,9 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
     .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
     .where(eq(recipeComponents.recipeId, recipeId));
 
-  let ingredientCost = 0;
+  let ingredientCostTotal = 0;
   for (const comp of components) {
-    ingredientCost += safeCalculateIngredientCost(
+    ingredientCostTotal += safeCalculateIngredientCost(
       comp.purchasePrice,
       comp.purchaseQuantity,
       comp.purchaseUnit,
@@ -73,13 +88,29 @@ async function getRecipeCostPerServing(recipeId: number): Promise<number> {
     );
   }
 
-  // Labor cost: recipe.laborHours × $35/hour
   const laborHours = parseFloat(String(recipe.laborHours || "0")) || 0;
-  const laborCost = (laborHours * LABOR_RATE_PER_HOUR_CENTS) / 100;
-  const totalCost = ingredientCost + laborCost;
-
+  const laborCostTotal = (laborHours * LABOR_RATE_PER_HOUR_CENTS) / 100;
   const yieldAmount = parseFloat(recipe.yield || "1") || 1;
-  return yieldAmount > 0 ? totalCost / yieldAmount : totalCost;
+  const perServing = yieldAmount > 0 ? 1 / yieldAmount : 1;
+
+  const ingredientCostCents = Math.round(ingredientCostTotal * perServing * 100);
+  const laborCostCents = Math.round(laborCostTotal * perServing * 100);
+
+  return {
+    recipeId,
+    recipeName: recipe.name,
+    yieldAmount,
+    yieldUnit: recipe.yieldUnit || "serving",
+    laborHours,
+    ingredientCostCents,
+    laborCostCents,
+    totalCostCents: ingredientCostCents + laborCostCents,
+  };
+}
+
+async function getRecipeCostPerServing(recipeId: number): Promise<number> {
+  const breakdown = await getRecipeCostBreakdown(recipeId);
+  return breakdown ? breakdown.totalCostCents / 100 : 0;
 }
 
 export interface TierMarginAnalysis {
@@ -185,4 +216,169 @@ export async function calculateMenuMargin(menuId: number): Promise<TierMarginAna
   }
 
   return results;
+}
+
+// ============================================
+// DETAIL / DRILL-DOWN
+// ============================================
+
+export interface MarginItemDetail {
+  itemId: string;
+  itemName: string;
+  recipeId: number | null;
+  linked: boolean;
+  // per-serving, all in cents; null for unlinked items
+  ingredientCostCents: number | null;
+  laborCostCents: number | null;
+  laborHours: number | null;
+  totalCostCents: number | null;
+  yieldAmount: number | null;
+  yieldUnit: string | null;
+  upchargeCents: number;
+}
+
+export interface MarginCategoryDetail {
+  category: string;
+  selectionLimit: number;
+  itemCount: number;
+  linkedCount: number;
+  unlinkedCount: number;
+  averageItemCostCents: number; // avg across linked items only, per serving
+  contributionCents: number;    // averageItemCostCents × selectionLimit
+  items: MarginItemDetail[];
+}
+
+export interface TierMarginDetail extends TierMarginAnalysis {
+  menuId: number;
+  menuName: string;
+  laborRateCentsPerHour: number;
+  categories: MarginCategoryDetail[];
+}
+
+/**
+ * Full drill-down for a single tier: every selection category with every
+ * item's ingredient/labor cost breakdown. Used by the dashboard detail dialog.
+ */
+export async function calculateMenuMarginDetail(
+  menuId: number,
+  tierKey: string,
+): Promise<TierMarginDetail | null> {
+  const [menu] = await db.select().from(menus).where(eq(menus.id, menuId));
+  if (!menu) return null;
+
+  const packages = (menu.packages as MenuPackageTier[]) || [];
+  const tier = packages.find((t) => t.tierKey === tierKey);
+  if (!tier) return null;
+
+  const categoryItems = (menu.categoryItems as Record<string, MenuCategoryItem[]>) || {};
+
+  // Collect and batch-fetch every recipe referenced by this tier's categories
+  const recipeIds = new Set<number>();
+  for (const category of Object.keys(tier.selectionLimits)) {
+    const items = categoryItems[category] || [];
+    for (const item of items) {
+      if (item.recipeId) recipeIds.add(item.recipeId);
+    }
+  }
+
+  const breakdowns = new Map<number, RecipeCostBreakdown>();
+  for (const rid of Array.from(recipeIds)) {
+    const bd = await getRecipeCostBreakdown(rid);
+    if (bd) breakdowns.set(rid, bd);
+  }
+
+  const categories: MarginCategoryDetail[] = [];
+  let totalCostPerPersonCents = 0;
+  let totalLinked = 0;
+  let totalUnlinked = 0;
+
+  for (const [category, limit] of Object.entries(tier.selectionLimits)) {
+    const items = categoryItems[category] || [];
+    const itemDetails: MarginItemDetail[] = [];
+    let linkedSum = 0;
+    let linkedCount = 0;
+    let unlinkedCount = 0;
+
+    for (const item of items) {
+      const bd = item.recipeId ? breakdowns.get(item.recipeId) : undefined;
+      if (bd) {
+        itemDetails.push({
+          itemId: item.id,
+          itemName: item.name,
+          recipeId: item.recipeId ?? null,
+          linked: true,
+          ingredientCostCents: bd.ingredientCostCents,
+          laborCostCents: bd.laborCostCents,
+          laborHours: bd.laborHours,
+          totalCostCents: bd.totalCostCents,
+          yieldAmount: bd.yieldAmount,
+          yieldUnit: bd.yieldUnit,
+          upchargeCents: item.upchargeCents ?? 0,
+        });
+        linkedSum += bd.totalCostCents;
+        linkedCount++;
+      } else {
+        itemDetails.push({
+          itemId: item.id,
+          itemName: item.name,
+          recipeId: item.recipeId ?? null,
+          linked: false,
+          ingredientCostCents: null,
+          laborCostCents: null,
+          laborHours: null,
+          totalCostCents: null,
+          yieldAmount: null,
+          yieldUnit: null,
+          upchargeCents: item.upchargeCents ?? 0,
+        });
+        unlinkedCount++;
+      }
+    }
+
+    const averageItemCostCents =
+      linkedCount > 0 ? Math.round(linkedSum / linkedCount) : 0;
+    const contributionCents = averageItemCostCents * limit;
+    totalCostPerPersonCents += contributionCents;
+    totalLinked += linkedCount;
+    totalUnlinked += unlinkedCount;
+
+    categories.push({
+      category,
+      selectionLimit: limit,
+      itemCount: items.length,
+      linkedCount,
+      unlinkedCount,
+      averageItemCostCents,
+      contributionCents,
+      items: itemDetails,
+    });
+  }
+
+  const estimatedFoodCostCents = totalCostPerPersonCents;
+  const foodCostPercent =
+    tier.pricePerPersonCents > 0
+      ? (estimatedFoodCostCents / tier.pricePerPersonCents) * 100
+      : 0;
+  const marginPerPersonCents = tier.pricePerPersonCents - estimatedFoodCostCents;
+
+  let status: TierMarginAnalysis["status"] = "excellent";
+  if (foodCostPercent > 40) status = "unhealthy";
+  else if (foodCostPercent > 32) status = "tight";
+  else if (foodCostPercent > 25) status = "healthy";
+
+  return {
+    menuId,
+    menuName: menu.name,
+    laborRateCentsPerHour: LABOR_RATE_PER_HOUR_CENTS,
+    tierKey: tier.tierKey,
+    tierName: tier.tierName,
+    pricePerPersonCents: tier.pricePerPersonCents,
+    estimatedFoodCostCents,
+    foodCostPercent,
+    marginPerPersonCents,
+    status,
+    linkedItemCount: totalLinked,
+    unlinkedItemCount: totalUnlinked,
+    categories,
+  };
 }
