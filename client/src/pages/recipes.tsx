@@ -140,6 +140,8 @@ const YIELD_UNITS = [
   { value: "cup", label: "Cup(s)" },
   { value: "quart", label: "Quart(s)" },
   { value: "gallon", label: "Gallon(s)" },
+  { value: "pound", label: "Pound (lb)" },
+  { value: "ounce", label: "Ounce (oz)" },
   { value: "piece", label: "Piece(s)" },
   { value: "dozen", label: "Dozen" },
 ];
