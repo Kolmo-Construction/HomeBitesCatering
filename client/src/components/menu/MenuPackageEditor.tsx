@@ -40,6 +40,55 @@ import {
 } from "lucide-react";
 import AIRecipeDraftDialog from "./AIRecipeDraftDialog";
 
+// Controlled price input that keeps its own text buffer while editing.
+// Forcing `.toFixed(2)` on every keystroke fights the user's cursor; instead
+// we mirror the raw typed string locally and only push parsed cents upward
+// when the value is a valid non-negative number. On blur we reformat.
+function PriceInput({
+  cents,
+  onChangeCents,
+}: {
+  cents: number;
+  onChangeCents: (cents: number) => void;
+}) {
+  const [text, setText] = useState<string>((cents / 100).toFixed(2));
+
+  // Sync when the underlying value changes from outside (e.g. adding a new tier)
+  useEffect(() => {
+    const parsed = parseFloat(text);
+    if (isNaN(parsed) || Math.round(parsed * 100) !== cents) {
+      setText((cents / 100).toFixed(2));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cents]);
+
+  return (
+    <Input
+      type="number"
+      step="0.01"
+      min="0"
+      inputMode="decimal"
+      value={text}
+      onChange={(e) => {
+        const next = e.target.value;
+        setText(next);
+        const parsed = parseFloat(next);
+        if (!isNaN(parsed) && parsed >= 0) {
+          onChangeCents(Math.round(parsed * 100));
+        }
+      }}
+      onBlur={() => {
+        const parsed = parseFloat(text);
+        if (isNaN(parsed) || parsed < 0) {
+          setText((cents / 100).toFixed(2));
+        } else {
+          setText(parsed.toFixed(2));
+        }
+      }}
+    />
+  );
+}
+
 interface MenuPackageTier {
   tierKey: string;
   tierName: string;
@@ -387,14 +436,10 @@ export default function MenuPackageEditor({ menuId, onClose }: MenuPackageEditor
                                   <DollarSign className="h-3 w-3" />
                                   Price / Person
                                 </Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={(pkg.pricePerPersonCents / 100).toFixed(2)}
-                                  onChange={(e) =>
-                                    updatePackage(idx, {
-                                      pricePerPersonCents: Math.round(parseFloat(e.target.value || "0") * 100),
-                                    })
+                                <PriceInput
+                                  cents={pkg.pricePerPersonCents}
+                                  onChangeCents={(cents) =>
+                                    updatePackage(idx, { pricePerPersonCents: cents })
                                   }
                                 />
                               </div>
