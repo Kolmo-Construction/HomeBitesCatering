@@ -1,0 +1,81 @@
+# Version control / editor
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Build artifacts (regenerated inside the image)
+node_modules
+dist
+server/public
+
+# Secrets (runtime env comes from Railway)
+.env
+.env.*
+.DeepSeek
+.Deepseek
+cookie.txt
+
+# Database dumps / backups — huge and unused at runtime
+*.sql
+*.sql.gz
+*.tar.gz
+database-backup-*
+database-dump-*
+my-database-backup.sql
+database_backup.sql
+wedding-backup.json
+temp_wedding.json
+
+# One-off migration / seed / import scripts at repo root
+add-test-question.cjs
+calculator-test.js
+comprehensive-migrate-phase1.cjs
+create-contact-identifier.js
+create-radio-options.sh
+create-radio-question.sh
+custom-dump.cjs
+custom-menu-fix.js
+custom-menu-section.txt
+db-dump.js
+debug-login.html
+delete-form-page.sh
+direct-test.js
+fix-json.js
+generate-menu-sql*.cjs
+generateMenuData.js
+import-menu-items*.js
+import-menu-items*.cjs
+import-sandwich-*.js
+import-wedding-*.cjs
+insert-menu-items*.js
+manage-form-pages.sh
+menu-data.json
+menu-import-manual.txt
+menu-import.js
+menu-items-chunk1.sql
+menu-items-id-name-list.json
+menu-items-insert*.sql
+menu_item_ids.txt
+migrate-data.cjs
+migrate-wedding-data.js
+reset-admin-password.js
+seed-question-types.cjs
+seed-test-form.cjs
+seed-test-form.js
+theme-menu-data.txt
+update-form-page.sh
+wedding.text
+example-combined-questionnaire.json
+
+# Replit-specific
+.replit
+replit.md
+
+# Docs not needed in image
+docs
+
+# Claude / dev tooling
+.claude
