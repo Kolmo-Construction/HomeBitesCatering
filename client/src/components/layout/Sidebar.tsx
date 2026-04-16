@@ -44,18 +44,27 @@ export default function Sidebar() {
   };
 
   const allNav: NavItem[] = [
+    // Overview
     { name: "Dashboard", href: "/", icon: LayoutDashboard, chef: true },
+
+    // Sales funnel (top → bottom)
     { name: "Leads", href: "/raw-leads", icon: Inbox },
     { name: "Opportunities", href: "/opportunities", icon: Filter },
-    { name: "Clients", href: "/clients", icon: Users },
-    { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket, chef: true },
-    { name: "Recipes", href: "/recipes", icon: ChefHat, chef: true },
-    { name: "Help", href: "/help", icon: BookOpen, chef: true },
-    { name: "Menus", href: "/menus", icon: ClipboardList, chef: true },
     { name: "Inquiries", href: "/quote-requests", icon: MessageSquareQuote },
     { name: "Quotes", href: "/estimates", icon: FileText },
+    { name: "Clients", href: "/clients", icon: Users },
+
+    // Execution
     { name: "Events", href: "/events", icon: CalendarCheck, chef: true },
     { name: "Calendar", href: "/calendar", icon: Calendar, chef: true },
+
+    // Kitchen
+    { name: "Menus", href: "/menus", icon: ClipboardList, chef: true },
+    { name: "Recipes", href: "/recipes", icon: ChefHat, chef: true },
+    { name: "Base Ingredients", href: "/base-ingredients", icon: ShoppingBasket, chef: true },
+    { name: "Help", href: "/help", icon: BookOpen, chef: true },
+
+    // Admin
     { name: "Reports", href: "/reports", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
     { name: "Users", href: "/users", icon: UserCog, adminOnly: true },
