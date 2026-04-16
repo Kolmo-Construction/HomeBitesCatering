@@ -190,6 +190,7 @@ export default function RecipesPage() {
   const [newStepInstruction, setNewStepInstruction] = useState("");
   const [newStepDuration, setNewStepDuration] = useState("");
   const [newStepTips, setNewStepTips] = useState("");
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
 
   // Inline conversion fix dialog — opened by clicking "Needs conversion"
   // on a recipe ingredient row. Lets the chef teach the system how this
@@ -443,6 +444,12 @@ export default function RecipesPage() {
     setPreparationSteps(updated.map((step, idx) => ({ ...step, stepNumber: idx + 1 })));
   };
   
+  const handleUpdateStep = (index: number, field: keyof PreparationStep, value: string | number | undefined) => {
+    const updated = [...preparationSteps];
+    updated[index] = { ...updated[index], [field]: value };
+    setPreparationSteps(updated);
+  };
+
   const handleRemoveImage = (imageUrl: string) => {
     setRecipeImages(recipeImages.filter(img => img !== imageUrl));
   };
@@ -1724,34 +1731,95 @@ export default function RecipesPage() {
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
                           {step.stepNumber}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium">{step.title}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">{step.instruction}</p>
-                          <div className="flex gap-2 mt-2">
-                            {step.duration && (
-                              <Badge variant="outline" className="text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {step.duration}s
-                              </Badge>
-                            )}
-                            {step.tips && (
-                              <Badge variant="outline" className="text-xs">
-                                <Lightbulb className="h-3 w-3 mr-1" />
-                                Tip included
-                              </Badge>
-                            )}
+                        {editingStepIndex === index ? (
+                          <div className="flex-1 min-w-0 space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Step Title *</Label>
+                                <Input
+                                  value={step.title}
+                                  onChange={(e) => handleUpdateStep(index, 'title', e.target.value)}
+                                  data-testid={`input-edit-step-title-${index}`}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Duration (seconds)</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={step.duration ?? ""}
+                                  onChange={(e) => handleUpdateStep(index, 'duration', e.target.value ? parseInt(e.target.value) : undefined)}
+                                  data-testid={`input-edit-step-duration-${index}`}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Instruction *</Label>
+                              <Textarea
+                                value={step.instruction}
+                                onChange={(e) => handleUpdateStep(index, 'instruction', e.target.value)}
+                                data-testid={`input-edit-step-instruction-${index}`}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Tips (Optional)</Label>
+                              <Input
+                                value={step.tips ?? ""}
+                                onChange={(e) => handleUpdateStep(index, 'tips', e.target.value || undefined)}
+                                data-testid={`input-edit-step-tips-${index}`}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setEditingStepIndex(null)}
+                            >
+                              Done
+                            </Button>
                           </div>
+                        ) : (
+                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingStepIndex(index)}>
+                            <h4 className="font-medium">{step.title}</h4>
+                            <p className="text-sm text-muted-foreground mt-1">{step.instruction}</p>
+                            <div className="flex gap-2 mt-2">
+                              {step.duration && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {step.duration}s
+                                </Badge>
+                              )}
+                              {step.tips && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Lightbulb className="h-3 w-3 mr-1" />
+                                  Tip included
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => setEditingStepIndex(editingStepIndex === index ? null : index)}
+                            data-testid={`button-edit-step-${index}`}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleRemoveStep(index)}
+                            data-testid={`button-remove-step-${index}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveStep(index)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          data-testid={`button-remove-step-${index}`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                       </div>
                     ))}
                   </div>
