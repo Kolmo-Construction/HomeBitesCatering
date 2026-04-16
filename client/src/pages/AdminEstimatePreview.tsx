@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, XCircle, CheckIcon, CopyIcon, LinkIcon, MailIcon } from "lucide-react";
+import { Loader2, XCircle, CheckIcon, CopyIcon, LinkIcon, MailIcon, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import QuoteProposalView from "@/components/quote/QuoteProposalView";
 import ProposalEditDrawer from "@/components/quote/ProposalEditDrawer";
+import VersionHistory from "@/components/estimates/VersionHistory";
 import type { Proposal } from "@shared/proposal";
 
 interface PreviewPayload {
@@ -209,6 +210,21 @@ export default function AdminEstimatePreview({ id }: Props) {
         sendLabel={sendLabel}
         sendDisabled={sendMutation.isPending}
       />
+
+      {/* Tier 3: PDF Download + Version history */}
+      <div className="max-w-3xl mx-auto px-6 pb-6 space-y-4">
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/api/estimates/${id}/pdf`, '_blank')}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+        </div>
+        <VersionHistory estimateId={id} currentTotal={data.proposal?.pricing?.totalCents} />
+      </div>
 
       <ProposalEditDrawer
         open={drawerOpen}

@@ -3,7 +3,7 @@ import { Pool } from '@neondatabase/serverless';
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, gmailSyncState, processedEmails,
-  opportunityEmailThreads, followUpDrafts,
+  opportunityEmailThreads, followUpDrafts, estimateVersions,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem,
@@ -18,6 +18,7 @@ import {
   type ProcessedEmail, type InsertProcessedEmail,
   type OpportunityEmailThread, type InsertOpportunityEmailThread,
   type FollowUpDraft, type InsertFollowUpDraft,
+  type EstimateVersion, type InsertEstimateVersion,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, lte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added lte for date range query
@@ -132,6 +133,11 @@ export interface IStorage {
   deleteFollowUpDraft(id: number): Promise<boolean>;
   getFollowUpDraftsForOpportunity(opportunityId: number): Promise<FollowUpDraft[]>;
   getFollowUpDraftsForEstimate(estimateId: number): Promise<FollowUpDraft[]>;
+
+  // Estimate Versions (Tier 3)
+  createEstimateVersion(version: InsertEstimateVersion): Promise<EstimateVersion>;
+  getEstimateVersions(estimateId: number): Promise<EstimateVersion[]>;
+  getEstimateVersion(id: number): Promise<EstimateVersion | undefined>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -906,6 +912,24 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(followUpDrafts)
       .where(eq(followUpDrafts.estimateId, estimateId))
       .orderBy(desc(followUpDrafts.createdAt));
+  }
+
+  // ─── Estimate Versions (Tier 3) ────────────────────────────────────────────
+
+  async createEstimateVersion(version: InsertEstimateVersion): Promise<EstimateVersion> {
+    const [created] = await db.insert(estimateVersions).values(version).returning();
+    return created;
+  }
+
+  async getEstimateVersions(estimateId: number): Promise<EstimateVersion[]> {
+    return await db.select().from(estimateVersions)
+      .where(eq(estimateVersions.estimateId, estimateId))
+      .orderBy(desc(estimateVersions.version));
+  }
+
+  async getEstimateVersion(id: number): Promise<EstimateVersion | undefined> {
+    const [version] = await db.select().from(estimateVersions).where(eq(estimateVersions.id, id));
+    return version;
   }
 
 }

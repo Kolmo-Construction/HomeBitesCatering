@@ -29,6 +29,7 @@ import {
   rawLeads,                      // for promote-to-quote-request endpoint
   estimates,                     // for accept-estimate endpoint
   followUpDrafts,                // for follow-up engine
+  estimateVersions,              // for quote versioning
   clients,                       // for accept-estimate endpoint (prospect→customer graduation)
   events,                        // for auto-create event on accept and /full endpoint
   menus,                         // for /api/events/:id/full aggregate endpoint
@@ -1426,6 +1427,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tier 3: Admin PDF download
+  app.get('/api/estimates/:id/pdf', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (!estimate) return res.status(404).json({ message: 'Estimate not found' });
+      if (!estimate.proposal) return res.status(400).json({ message: 'No proposal to generate PDF from' });
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const { generateQuotePDF } = await import('./services/pdfGenerator');
+      const pdf = await generateQuotePDF(estimate.proposal as any, estimate, client);
+
+      const lastName = client?.lastName || 'Quote';
+      const dateStr = estimate.eventDate ? new Date(estimate.eventDate).toISOString().split('T')[0] : 'undated';
+      const filename = `HomeBites-Quote-${lastName}-${dateStr}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdf);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  });
+
   // Admin: save just the proposal blob for an estimate. Used by the customize
   // drawer. Separate from the generic PATCH to avoid tangling with the legacy
   // EstimateForm's line-item-focused save path.
@@ -1436,14 +1464,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid estimate ID' });
       }
 
-      const proposal = req.body as Proposal;
+      const proposal = req.body.proposal ?? req.body;
+      const changeNote = req.body.changeNote as string | undefined;
+
       if (!proposal || typeof proposal !== 'object' || proposal.version !== 1) {
         return res.status(400).json({ message: 'Invalid proposal payload' });
       }
 
-      // Mirror the proposal's computed totals onto the estimate columns so
-      // the rest of the admin UI (list view, email templates, reports) stays
-      // in sync with what the customer will see.
+      // Tier 3: Snapshot current version before overwriting
+      const [existing] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (!existing) {
+        return res.status(404).json({ message: 'Estimate not found' });
+      }
+
+      if (existing.proposal) {
+        await storage.createEstimateVersion({
+          estimateId,
+          version: existing.currentVersion,
+          proposal: existing.proposal,
+          subtotalCents: existing.subtotal,
+          taxCents: existing.tax,
+          totalCents: existing.total,
+          changeNote: changeNote || null,
+          changedBy: req.session.userId || null,
+        });
+      }
+
+      const nextVersion = (existing.currentVersion || 1) + 1;
+
       const [updated] = await db
         .update(estimates)
         .set({
@@ -1458,22 +1506,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           venueCity: proposal.venue?.city ?? null,
           venueZip: proposal.venue?.zip ?? null,
           notes: proposal.customerNotes ?? null,
+          currentVersion: nextVersion,
           updatedAt: new Date(),
         })
         .where(eq(estimates.id, estimateId))
         .returning();
 
-      if (!updated) {
-        return res.status(404).json({ message: 'Estimate not found' });
-      }
-
       return res.status(200).json({
         estimate: sanitizeEstimateForPublic(updated),
         proposal: updated.proposal,
+        version: nextVersion,
       });
     } catch (error) {
       console.error('Error updating proposal:', error);
       return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Tier 3: Get version history for an estimate
+  app.get('/api/estimates/:id/versions', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+
+      const versions = await storage.getEstimateVersions(estimateId);
+      const estimate = await storage.getEstimate(estimateId);
+
+      res.status(200).json({
+        currentVersion: estimate?.currentVersion || 1,
+        versions,
+      });
+    } catch (error) {
+      console.error('Error getting estimate versions:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
 
@@ -1815,11 +1880,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Public: fetch a quote by its view token.
   //
+  // Tier 3: Public PDF download by token (no auth — customer can download their quote)
+  app.get('/api/public/quote/:token/pdf', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      if (!token || token.length < 10) return res.status(400).json({ message: 'Invalid token' });
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) return res.status(404).json({ message: 'Quote not found' });
+      if (!estimate.proposal) return res.status(400).json({ message: 'No proposal available' });
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const { generateQuotePDF } = await import('./services/pdfGenerator');
+      const pdf = await generateQuotePDF(estimate.proposal as any, estimate, client);
+
+      const lastName = client?.lastName || 'Quote';
+      const dateStr = estimate.eventDate ? new Date(estimate.eventDate).toISOString().split('T')[0] : 'undated';
+      const filename = `HomeBites-Quote-${lastName}-${dateStr}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdf);
+    } catch (error) {
+      console.error('Error generating public PDF:', error);
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  });
+
   // Returns the Proposal blob stored on estimate.proposal — this is the
-  // single source of truth for the customer-facing page. If the estimate
-  // was created before the proposal column existed, it's lazily hydrated
-  // from the originating quote_request (or from the estimate alone) and
-  // persisted so subsequent reads are cheap.
+  // single source of truth for the customer-facing page.
   app.get('/api/public/quote/:token', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
@@ -2612,6 +2701,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error in find-my-event:', error);
       return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ─── Tier 3: Client Portal Auth (magic-link) ────────────────────────────
+
+  // Step 1: Customer requests a magic link. We find their client record by email
+  // and send a login link. Same privacy pattern as find-my-event: same response
+  // regardless of whether the email exists to prevent enumeration.
+  app.post('/api/public/portal/request-link', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const allClients = await storage.listClients();
+      const client = allClients.find(c => c.email.toLowerCase() === email.toLowerCase());
+
+      if (client) {
+        const { clientMagicLinks } = await import("@shared/schema");
+        const token = randomBytes(32).toString('base64url');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+
+        await db.insert(clientMagicLinks).values({
+          clientId: client.id,
+          token,
+          expiresAt,
+        });
+
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+        const host = req.get('host') || 'localhost:5000';
+        const portalUrl = `${protocol}://${host}/my-events?token=${token}`;
+
+        // Send magic link email
+        const config = getSiteConfig();
+        sendEmailInBackground({
+          to: client.email,
+          subject: `Your ${config.businessName} event portal`,
+          html: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:24px;">
+            <h2>Hi ${client.firstName},</h2>
+            <p>Click below to access your event portal:</p>
+            <p style="margin:24px 0;text-align:center;">
+              <a href="${portalUrl}" style="display:inline-block;padding:12px 28px;background:#8B7355;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">View My Events</a>
+            </p>
+            <p style="color:#666;font-size:13px;">This link expires in 30 minutes. If you didn't request this, you can safely ignore it.</p>
+            <p style="color:#999;font-size:12px;">— ${config.businessName}</p>
+          </div>`,
+          text: `Hi ${client.firstName}, access your event portal: ${portalUrl} (expires in 30 min)`,
+          templateKey: 'client_portal_magic_link',
+        });
+      }
+
+      // Always same response
+      res.status(200).json({ message: "If we found your account, we've sent a login link to your email." });
+    } catch (error) {
+      console.error('Error requesting portal link:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Step 2: Verify magic link token and issue a session
+  app.post('/api/public/portal/verify', async (req: Request, res: Response) => {
+    try {
+      const { token } = req.body;
+      if (!token) return res.status(400).json({ message: 'Token is required' });
+
+      const { clientMagicLinks, clientSessions } = await import("@shared/schema");
+
+      const [link] = await db.select().from(clientMagicLinks).where(eq(clientMagicLinks.token, token));
+      if (!link) return res.status(401).json({ message: 'Invalid or expired link' });
+      if (link.usedAt) return res.status(401).json({ message: 'This link has already been used' });
+      if (new Date() > new Date(link.expiresAt)) return res.status(401).json({ message: 'Link has expired' });
+
+      // Mark link as used
+      await db.update(clientMagicLinks).set({ usedAt: new Date() }).where(eq(clientMagicLinks.id, link.id));
+
+      // Issue session token (valid 7 days)
+      const sessionToken = randomBytes(32).toString('base64url');
+      const sessionExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await db.insert(clientSessions).values({
+        clientId: link.clientId,
+        token: sessionToken,
+        expiresAt: sessionExpires,
+      });
+
+      const client = await storage.getClient(link.clientId);
+
+      res.status(200).json({
+        sessionToken,
+        client: client ? { id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email } : null,
+      });
+    } catch (error) {
+      console.error('Error verifying portal token:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Step 3: Get portal data (all events, estimates, preferences for the logged-in client)
+  app.get('/api/public/portal/data', async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
+
+      const sessionToken = authHeader.slice(7);
+      const { clientSessions } = await import("@shared/schema");
+
+      const [session] = await db.select().from(clientSessions).where(eq(clientSessions.token, sessionToken));
+      if (!session) return res.status(401).json({ message: 'Invalid session' });
+      if (new Date() > new Date(session.expiresAt)) return res.status(401).json({ message: 'Session expired' });
+
+      const client = await storage.getClient(session.clientId);
+      if (!client) return res.status(404).json({ message: 'Client not found' });
+
+      // Get all events for this client
+      const allEvents = await storage.listEvents();
+      const clientEvents = allEvents
+        .filter(e => e.clientId === client.id && e.status !== 'cancelled')
+        .map(e => ({
+          id: e.id,
+          eventType: e.eventType,
+          eventDate: e.eventDate,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          guestCount: e.guestCount,
+          venue: e.venue,
+          status: e.status,
+          viewToken: e.viewToken,
+        }));
+
+      // Get all estimates for this client
+      const allEstimates = await storage.listEstimates();
+      const clientEstimates = allEstimates
+        .filter(e => e.clientId === client.id)
+        .map(e => ({
+          id: e.id,
+          eventType: e.eventType,
+          eventDate: e.eventDate,
+          guestCount: e.guestCount,
+          venue: e.venue,
+          status: e.status,
+          total: e.total,
+          viewToken: e.viewToken,
+          sentAt: e.sentAt,
+          acceptedAt: e.acceptedAt,
+        }));
+
+      res.status(200).json({
+        client: {
+          id: client.id,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          phone: client.phone,
+          company: client.company,
+          type: client.type,
+        },
+        events: clientEvents,
+        estimates: clientEstimates,
+      });
+    } catch (error) {
+      console.error('Error fetching portal data:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   });
 

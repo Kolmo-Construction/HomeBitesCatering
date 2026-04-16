@@ -3,6 +3,7 @@ import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import homebitesLogo from "@assets/homebites-logo.avif";
+import { getEventTheme, applyThemeCSS } from "@/lib/eventThemes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -234,6 +235,10 @@ export default function PublicEventPage() {
   const isCompleted = event.status === "completed";
   const isCancelled = event.status === "cancelled";
 
+  // Tier 3: Event-type theme
+  const theme = getEventTheme(event.eventType);
+  const themeStyles = applyThemeCSS(theme);
+
   // Build the personalized title
   const personTitle = buildPersonTitle(client, quoteRequest);
   const eventTitle = personTitle
@@ -250,18 +255,27 @@ export default function PublicEventPage() {
         <title>{eventTitle} · {siteConfig.businessName}</title>
       </Helmet>
 
-      {/* ─── Hero ─────────────────────────────────────────────────────── */}
-      <div className="text-center py-8 px-4">
-        <p className="font-serif italic text-stone-500 text-sm mb-2">
+      {/* ─── Themed Hero ──────────────────────────────────────────────── */}
+      <div className="text-center py-8 px-4" style={themeStyles}>
+        <div
+          className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center text-3xl"
+          style={{ background: theme.gradient }}
+        >
+          {theme.icon}
+        </div>
+        <p className="italic text-sm mb-2" style={{ color: theme.textSecondary, fontFamily: theme.fontBody }}>
           A celebration prepared with care
         </p>
-        <h1 className="font-serif text-4xl md:text-5xl font-semibold text-stone-900 leading-tight">
+        <h1
+          className="text-4xl md:text-5xl font-semibold leading-tight"
+          style={{ color: theme.textPrimary, fontFamily: theme.fontHeading }}
+        >
           {eventTitle}
         </h1>
-        <p className="font-serif text-lg text-stone-600 mt-3">
+        <p className="text-lg mt-3" style={{ color: theme.textSecondary, fontFamily: theme.fontBody }}>
           {formatDate(event.eventDate)}
         </p>
-        <p className="font-serif text-stone-500 mt-1 italic">
+        <p className="mt-1 italic" style={{ color: theme.textSecondary, fontFamily: theme.fontBody }}>
           We can't wait to cook for you.
         </p>
       </div>

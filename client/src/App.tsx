@@ -35,6 +35,9 @@ import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 // Tier 1: Unified inquiry form (consolidates PublicInquiryForm, PublicEventInquiryPage, WeddingInquiry)
 import UnifiedInquiryForm from "@/pages/UnifiedInquiryForm";
 
+// Tier 3: Client portal (magic-link authenticated)
+import ClientPortal from "@/pages/ClientPortal";
+
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
 
@@ -127,7 +130,8 @@ function AppContent() {
   const isPublicEventPage = location.startsWith("/event/");
   const isFindMyEventPage = location === "/find-my-event";
   const isGetStartedPage = location === "/get-started";
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isGetStartedPage || location === "/inquiry" || location === "/event-selection";
+  const isClientPortalPage = location.startsWith("/my-events");
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isGetStartedPage || isClientPortalPage || location === "/inquiry" || location === "/event-selection";
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -137,6 +141,8 @@ function AppContent() {
         <Switch>
           {/* Tier 1: Unified inquiry form — new canonical URL */}
           <Route path="/get-started" component={UnifiedInquiryForm} />
+          {/* Tier 3: Client portal (magic-link auth) */}
+          <Route path="/my-events" component={ClientPortal} />
           {/* Legacy inquiry forms — redirect to unified form */}
           <Route path="/wedding-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
           <Route path="/event-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>

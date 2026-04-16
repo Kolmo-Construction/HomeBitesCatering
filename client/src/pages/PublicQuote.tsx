@@ -134,14 +134,27 @@ export default function PublicQuote() {
   }
 
   return (
-    <QuoteProposalView
-      proposal={data.proposal}
-      estimateStatus={data.estimate.status}
-      mode="public"
-      acceptFlowState={localStatus}
-      acceptedEventUrl={eventPublicUrl}
-      onAccept={() => acceptMutation.mutate()}
-      onDecline={(reason) => declineMutation.mutate(reason)}
-    />
+    <>
+      <QuoteProposalView
+        proposal={data.proposal}
+        estimateStatus={data.estimate.status}
+        mode="public"
+        acceptFlowState={localStatus}
+        acceptedEventUrl={eventPublicUrl}
+        onAccept={() => acceptMutation.mutate()}
+        onDecline={(reason) => declineMutation.mutate(reason)}
+      />
+      {/* Tier 3: PDF download for customer */}
+      <div className="max-w-3xl mx-auto px-6 pb-8 text-center">
+        <a
+          href={`/api/public/quote/${token}/pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700 underline"
+        >
+          Download as PDF
+        </a>
+      </div>
+    </>
   );
 }
