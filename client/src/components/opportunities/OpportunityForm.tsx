@@ -48,6 +48,7 @@ const formSchema = insertOpportunitySchema.extend({
   notes: z.string().optional(),
   opportunitySource: z.string().optional(),
   priority: z.enum(['hot', 'high', 'medium', 'low']).default('medium'),
+  lostReason: z.string().optional().nullable(),
   // Additional fields for client association - these won't be part of the API schema
   assignToExistingClient: z.boolean().default(false),
   clientId: z.string().optional(),
@@ -688,6 +689,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                           <SelectItem value="qualified">Qualified</SelectItem>
                           <SelectItem value="proposal">Proposal</SelectItem>
                           <SelectItem value="booked">Booked</SelectItem>
+                          <SelectItem value="lost">Lost</SelectItem>
                           <SelectItem value="archived">Archived</SelectItem>
                         </SelectContent>
                       </Select>
@@ -695,6 +697,28 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                     </FormItem>
                   )}
                 />
+
+                {form.watch("status") === "lost" && (
+                  <FormField
+                    control={form.control}
+                    name="lostReason"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium">Lost Reason</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Why was this deal lost?"
+                            {...field}
+                            value={field.value || ""}
+                            className="resize-none"
+                            rows={2}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

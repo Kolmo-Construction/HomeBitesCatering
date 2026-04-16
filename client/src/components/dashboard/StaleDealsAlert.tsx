@@ -49,7 +49,7 @@ export default function StaleDealsAlert() {
 
     // Check opportunities
     for (const opp of opportunities) {
-      if (opp.status === "archived" || opp.status === "booked") continue;
+      if (opp.status === "archived" || opp.status === "booked" || opp.status === "lost") continue;
       const threshold = STAGE_THRESHOLDS[opp.status];
       if (!threshold) continue;
 

@@ -16,6 +16,7 @@ export default function BadgeStatus({ status, children }: BadgeStatusProps) {
     "in-contact": { color: "bg-blue-100 text-blue-800", label: "In Contact" },
     proposal: { color: "bg-purple-100 text-purple-800", label: "Proposal" },
     booked: { color: "bg-green-100 text-green-800", label: "Booked" },
+    lost: { color: "bg-red-100 text-red-800", label: "Lost" },
     archived: { color: "bg-neutral-100 text-neutral-800", label: "Archived" },
     
     // Estimate statuses

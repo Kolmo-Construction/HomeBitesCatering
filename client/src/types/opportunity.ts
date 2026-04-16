@@ -39,6 +39,7 @@ export interface Opportunity {
   // Tier 1: Merged lead data
   rawLeadId?: number | null;
   leadData?: LeadData | null;
+  lostReason?: string | null;
   statusChangedAt?: string | null;
   lastFollowUpAt?: string | null;
   // Inquiry tracking

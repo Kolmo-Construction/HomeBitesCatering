@@ -39,6 +39,61 @@ const communicationSchema = z.object({
   date: z.date(),
 });
 
+function LinkedEstimates({ opportunityId }: { opportunityId: number }) {
+  const { data: estimates = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/estimates", { opportunityId }],
+    queryFn: async () => {
+      const res = await fetch(`/api/estimates?opportunityId=${opportunityId}`);
+      if (!res.ok) return [];
+      const all = await res.json();
+      return Array.isArray(all) ? all.filter((e: any) => e.opportunityId === opportunityId) : [];
+    },
+  });
+
+  if (isLoading) return <p className="text-sm text-gray-500">Loading quotes...</p>;
+
+  if (estimates.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-sm text-gray-500">
+          No quotes linked to this opportunity yet.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {estimates.map((est: any) => (
+        <Card key={est.id}>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Quote #{est.id}</p>
+                <p className="text-sm text-gray-500">
+                  {est.eventType} &middot; {est.guestCount} guests &middot; ${((est.total || 0) / 100).toLocaleString()}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className={cn(
+                  est.status === "accepted" && "bg-green-100 text-green-700",
+                  est.status === "declined" && "bg-red-100 text-red-700",
+                  est.status === "sent" && "bg-blue-100 text-blue-700",
+                )}>
+                  {est.status}
+                </Badge>
+                <a href={`/estimates/${est.id}/view`} className="text-sm text-blue-600 hover:underline">
+                  View
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
   const opportunityId = parseInt(id);
@@ -462,10 +517,16 @@ export default function OpportunityDetailPage() {
               <div>
                 <Label>Status</Label>
                 <div>
-                  <Badge variant={opportunity.status === "new" ? "default" : opportunity.status === "contacted" ? "outline" : "secondary"}>
+                  <Badge
+                    variant={opportunity.status === "new" ? "default" : opportunity.status === "contacted" ? "outline" : "secondary"}
+                    className={cn(opportunity.status === "lost" && "bg-red-100 text-red-700")}
+                  >
                     {opportunity.status.charAt(0).toUpperCase() + opportunity.status.slice(1)}
                   </Badge>
                 </div>
+                {opportunity.status === "lost" && opportunity.lostReason && (
+                  <p className="text-sm text-red-600 mt-1">{opportunity.lostReason}</p>
+                )}
               </div>
               
               <div>
@@ -652,6 +713,7 @@ export default function OpportunityDetailPage() {
       <Tabs defaultValue="contacts" className="w-full">
         <TabsList>
           <TabsTrigger value="contacts">Contact Information</TabsTrigger>
+          <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="communications">Communications</TabsTrigger>
           <TabsTrigger value="timeline">Full Timeline</TabsTrigger>
         </TabsList>
@@ -851,7 +913,12 @@ export default function OpportunityDetailPage() {
             </Card>
           </div>
         </TabsContent>
-        
+
+        {/* Quotes Tab */}
+        <TabsContent value="quotes" className="space-y-4">
+          <LinkedEstimates opportunityId={opportunityId} />
+        </TabsContent>
+
         {/* Communications Tab */}
         <TabsContent value="communications" className="space-y-4">
           <div className="flex justify-between items-center">

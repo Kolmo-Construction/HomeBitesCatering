@@ -24,7 +24,9 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Users, MapPin, DollarSign, Clock, GripVertical } from "lucide-react";
+import { Calendar, Users, MapPin, DollarSign, Clock, GripVertical, Columns3, List } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import OpportunityList from "@/components/opportunities/OpportunityList";
 import type { Opportunity } from "@/types/opportunity";
 
 const PIPELINE_COLUMNS = [
@@ -33,6 +35,7 @@ const PIPELINE_COLUMNS = [
   { id: "qualified", label: "Qualified", color: "bg-purple-500" },
   { id: "proposal", label: "Proposal", color: "bg-orange-500" },
   { id: "booked", label: "Booked", color: "bg-green-500" },
+  { id: "lost", label: "Lost", color: "bg-red-500" },
 ];
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -164,6 +167,7 @@ function PipelineColumn({
 export default function Pipeline() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
   const [activeOpp, setActiveOpp] = useState<Opportunity | null>(null);
@@ -250,6 +254,40 @@ export default function Pipeline() {
   const totalValue = filtered.length;
   const hotCount = filtered.filter((o) => o.priority === "hot").length;
 
+  if (viewMode === "list") {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="font-poppins text-2xl font-bold text-neutral-900">Pipeline</h1>
+            <p className="text-sm text-gray-500">
+              {totalValue} opportunities{hotCount > 0 && ` · ${hotCount} hot`}
+            </p>
+          </div>
+          <div className="flex gap-1 border rounded-md p-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("kanban")}
+            >
+              <Columns3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <OpportunityList />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -260,6 +298,24 @@ export default function Pipeline() {
           </p>
         </div>
         <div className="flex gap-2">
+          <div className="flex gap-1 border rounded-md p-0.5">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("kanban")}
+            >
+              <Columns3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Priority" />
@@ -295,7 +351,7 @@ export default function Pipeline() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-3 min-w-[1100px] pb-4">
+          <div className="flex gap-3 min-w-[1300px] pb-4">
             {PIPELINE_COLUMNS.map((col) => (
               <PipelineColumn key={col.id} column={col} opps={columnData[col.id] || []} />
             ))}

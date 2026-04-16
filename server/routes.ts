@@ -2654,7 +2654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 1. Inquiry sent but not opened (48h+ since sent, inquiryViewedAt null)
       const allOpps = await storage.listOpportunities();
       for (const opp of allOpps) {
-        if (opp.status === 'archived' || opp.status === 'booked') continue;
+        if (opp.status === 'archived' || opp.status === 'booked' || opp.status === 'lost') continue;
         if (!opp.inquirySentAt || opp.inquiryViewedAt) continue;
         if (now.getTime() - new Date(opp.inquirySentAt).getTime() < TWO_DAYS_MS) continue;
         // Respect minimum follow-up gap
@@ -2688,7 +2688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 2. Inquiry opened but not submitted (72h+ since viewed, no linked quoteRequest)
       for (const opp of allOpps) {
-        if (opp.status === 'archived' || opp.status === 'booked') continue;
+        if (opp.status === 'archived' || opp.status === 'booked' || opp.status === 'lost') continue;
         if (!opp.inquiryViewedAt) continue;
         if (now.getTime() - new Date(opp.inquiryViewedAt).getTime() < THREE_DAYS_MS) continue;
         if (opp.lastFollowUpAt && now.getTime() - new Date(opp.lastFollowUpAt).getTime() < MIN_FOLLOW_UP_GAP_MS) continue;

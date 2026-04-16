@@ -27,6 +27,7 @@ const STAGE_GROUPS: Record<string, string[]> = {
   new: ["new"],
   active: ["contacted", "qualified", "proposal"],
   won: ["booked"],
+  lost: ["lost"],
   archived: ["archived"],
 };
 
@@ -72,11 +73,12 @@ export default function OpportunityList() {
 
   // Count per stage for tab badges
   const stageCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: allOpportunities.length, new: 0, active: 0, won: 0, archived: 0 };
+    const counts: Record<string, number> = { all: allOpportunities.length, new: 0, active: 0, won: 0, lost: 0, archived: 0 };
     allOpportunities.forEach((opp: Opportunity) => {
       if (STAGE_GROUPS.new.includes(opp.status)) counts.new++;
       else if (STAGE_GROUPS.active.includes(opp.status)) counts.active++;
       else if (STAGE_GROUPS.won.includes(opp.status)) counts.won++;
+      else if (STAGE_GROUPS.lost.includes(opp.status)) counts.lost++;
       else if (STAGE_GROUPS.archived.includes(opp.status)) counts.archived++;
     });
     return counts;
@@ -236,6 +238,9 @@ export default function OpportunityList() {
           </TabsTrigger>
           <TabsTrigger value="won" className="gap-1.5">
             Won <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">{stageCounts.won}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="lost" className="gap-1.5">
+            Lost <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">{stageCounts.lost}</Badge>
           </TabsTrigger>
           <TabsTrigger value="archived" className="gap-1.5">
             Archived <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">{stageCounts.archived}</Badge>

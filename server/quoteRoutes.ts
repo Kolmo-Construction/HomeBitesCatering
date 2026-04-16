@@ -9,7 +9,7 @@ import {
   insertPromoCodeSchema,
   insertQuoteRequestSchema,
 } from "@shared/schema";
-import { eq, desc, sql, and, ilike } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, isNull } from "drizzle-orm";
 import { analyzeQuoteRequest } from "./services/quoteAiService";
 import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
 import { calculateMenuMargin, calculateMenuMarginDetail } from "./utils/menuMargin";
@@ -594,9 +594,15 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
 
     const { opportunities, clients, estimates } = await import("@shared/schema");
 
-    // 1. Create client as PROSPECT (graduates to 'customer' when they accept the estimate)
+    // 1. Create or reuse client (dedup by email)
     const billingAddr = request.billingAddress as any;
-    const [client] = await db.insert(clients).values({
+    const [existingClient] = await db
+      .select()
+      .from(clients)
+      .where(and(eq(clients.email, request.email), isNull(clients.deletedAt)))
+      .limit(1);
+
+    const client = existingClient ?? (await db.insert(clients).values({
       firstName: request.firstName,
       lastName: request.lastName,
       email: request.email,
@@ -607,7 +613,7 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       state: billingAddr?.state || undefined,
       zip: billingAddr?.zip || undefined,
       type: 'prospect',
-    }).returning();
+    }).returning())[0];
 
     // 2. Create opportunity
     const [opportunity] = await db.insert(opportunities).values({
@@ -725,6 +731,7 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
     const venueAddr = request.venueAddress as any;
     const [estimate] = await db.insert(estimates).values({
       clientId: client.id,
+      opportunityId: opportunity.id,
       eventType: request.eventType,
       eventDate: request.eventDate,
       guestCount: request.guestCount,
@@ -838,9 +845,15 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
 
   const { opportunities, clients, estimates } = await import("@shared/schema");
 
-  // 1. Create client (prospect)
+  // 1. Create or reuse client (dedup by email)
   const billingAddr = request.billingAddress as any;
-  const [client] = await db.insert(clients).values({
+  const [existingAutoClient] = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.email, request.email), isNull(clients.deletedAt)))
+    .limit(1);
+
+  const client = existingAutoClient ?? (await db.insert(clients).values({
     firstName: request.firstName,
     lastName: request.lastName,
     email: request.email,
@@ -851,7 +864,7 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
     state: billingAddr?.state || undefined,
     zip: billingAddr?.zip || undefined,
     type: 'prospect',
-  }).returning();
+  }).returning())[0];
 
   // 2. Create opportunity
   const [opportunity] = await db.insert(opportunities).values({
@@ -942,6 +955,7 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
   const venueAddr = request.venueAddress as any;
   const [estimate] = await db.insert(estimates).values({
     clientId: client.id,
+    opportunityId: opportunity.id,
     eventType: request.eventType,
     eventDate: request.eventDate,
     guestCount: request.guestCount,
