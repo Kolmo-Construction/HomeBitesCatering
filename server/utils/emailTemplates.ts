@@ -446,3 +446,114 @@ Questions? Reply to this email or call ${config.chef.firstName} at ${config.chef
 
   return { subject, html, text };
 }
+
+// ─── Follow-Up Draft Templates (Tier 1) ──────────────────────────────────────
+// Generate initial draft content. Admin reviews & edits before sending.
+
+export function followUpInquiryNotOpened(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  inquiryUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const dateStr = formatDate(args.eventDate);
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Still interested in catering for your ${eventTypeLabel}?`;
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`A few days ago we sent you a link to plan the menu for your ${eventTypeLabel}${args.eventDate ? ` on ${dateStr}` : ""}. We wanted to make sure it didn't get lost in your inbox!`)}
+     ${btn("Plan Your Menu", args.inquiryUrl)}
+     ${paragraph("It only takes a few minutes, and we'll send you a personalized quote based on your selections.")}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Quick reminder about your ${eventTypeLabel} catering`
+  );
+  const text = `Hi ${args.customerFirstName}, A few days ago we sent you a link to plan the menu for your ${eventTypeLabel}. Plan your menu here: ${args.inquiryUrl} — ${config.chef.firstName} and the ${config.businessName} team`;
+  return { subject, html, text };
+}
+
+export function followUpInquiryNotSubmitted(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  inquiryUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const dateStr = formatDate(args.eventDate);
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Need help with your ${eventTypeLabel} menu?`;
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`We noticed you started looking at menu options for your ${eventTypeLabel}${args.eventDate ? ` on ${dateStr}` : ""} but didn't finish. No worries — you can pick up right where you left off!`)}
+     ${btn("Continue Planning", args.inquiryUrl)}
+     ${paragraph("If you have any questions about the menu, we're happy to chat.")}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Pick up where you left off on your ${eventTypeLabel} menu`
+  );
+  const text = `Hi ${args.customerFirstName}, We noticed you started planning your ${eventTypeLabel} menu but didn't finish. Continue here: ${args.inquiryUrl} — ${config.chef.firstName} and the ${config.businessName} team`;
+  return { subject, html, text };
+}
+
+export function followUpQuoteNotViewed(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  quoteUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Your ${eventTypeLabel} quote is ready`;
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Just a friendly reminder — your personalized quote for your ${eventTypeLabel} is waiting for you.`)}
+     ${btn("View Your Quote", args.quoteUrl)}
+     ${paragraph("Take a look and let us know if you have any questions!")}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Your ${eventTypeLabel} quote is ready to review`
+  );
+  const text = `Hi ${args.customerFirstName}, Your personalized quote for your ${eventTypeLabel} is ready: ${args.quoteUrl} — ${config.chef.firstName} and the ${config.businessName} team`;
+  return { subject, html, text };
+}
+
+export function followUpQuoteNoAction(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  quoteUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Any questions about your ${eventTypeLabel} quote?`;
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`We wanted to check in — do you have any questions about the quote for your ${eventTypeLabel}?`)}
+     ${btn("Review Your Quote", args.quoteUrl)}
+     ${paragraph(`We're happy to adjust the menu, pricing, or any details. Just reply to this email or give ${config.chef.firstName} a call.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Checking in on your ${eventTypeLabel} quote`
+  );
+  const text = `Hi ${args.customerFirstName}, Do you have any questions about the quote for your ${eventTypeLabel}? ${args.quoteUrl} — ${config.chef.firstName} and the ${config.businessName} team`;
+  return { subject, html, text };
+}
+
+export function followUpQuoteExpiringSoon(args: {
+  customerFirstName: string;
+  eventType: string;
+  quoteUrl: string;
+  expiresAt: string | Date;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const expiryDate = formatDate(args.expiresAt);
+  const subject = `Your ${eventTypeLabel} quote expires soon`;
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Quick heads-up — your quote for your ${eventTypeLabel} expires on ${expiryDate}. After that, pricing may change based on availability.`)}
+     ${btn("Accept Your Quote", args.quoteUrl)}
+     ${paragraph("If you need more time or want to discuss changes, just let us know!")}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Your ${eventTypeLabel} quote expires on ${expiryDate}`
+  );
+  const text = `Hi ${args.customerFirstName}, Your quote for your ${eventTypeLabel} expires on ${expiryDate}. Review: ${args.quoteUrl} — ${config.chef.firstName} and the ${config.businessName} team`;
+  return { subject, html, text };
+}

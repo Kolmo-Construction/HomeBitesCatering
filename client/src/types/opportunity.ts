@@ -1,3 +1,24 @@
+export interface LeadData {
+  overallQuality?: string;
+  urgencyScore?: string;
+  urgencyReason?: string;
+  budgetIndication?: string;
+  budgetValue?: number;
+  budgetReason?: string;
+  clarityScore?: string;
+  clarityReason?: string;
+  decisionMakerLikelihood?: string;
+  keyRequirements?: string[] | string;
+  redFlags?: string[] | string;
+  suggestedNextStep?: string;
+  sentiment?: string;
+  confidenceScore?: number;
+  messageSummary?: string;
+  sourcePlatform?: string;
+  rawLeadSource?: string;
+  processedAt?: string;
+}
+
 export interface Opportunity {
   id: number;
   firstName: string;
@@ -11,9 +32,19 @@ export interface Opportunity {
   notes?: string | null;
   status: string;
   priority?: 'hot' | 'high' | 'medium' | 'low';
-  opportunitySource?: string; // Renamed from leadSource
+  opportunitySource?: string;
   assignedTo?: number | null;
   clientId?: number | null;
+  createdBy?: number | null;
+  // Tier 1: Merged lead data
+  rawLeadId?: number | null;
+  leadData?: LeadData | null;
+  statusChangedAt?: string | null;
+  lastFollowUpAt?: string | null;
+  // Inquiry tracking
+  inquiryToken?: string | null;
+  inquirySentAt?: string | null;
+  inquiryViewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

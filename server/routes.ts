@@ -28,6 +28,7 @@ import {
   quoteRequests,                 // for promote-to-quote-request endpoint
   rawLeads,                      // for promote-to-quote-request endpoint
   estimates,                     // for accept-estimate endpoint
+  followUpDrafts,                // for follow-up engine
   clients,                       // for accept-estimate endpoint (prospect→customer graduation)
   events,                        // for auto-create event on accept and /full endpoint
   menus,                         // for /api/events/:id/full aggregate endpoint
@@ -55,6 +56,11 @@ import {
   findMyEventEmail,
   eventReminderEmail,
   inquiryInvitationEmail,
+  followUpInquiryNotOpened,
+  followUpInquiryNotSubmitted,
+  followUpQuoteNotViewed,
+  followUpQuoteNoAction,
+  followUpQuoteExpiringSoon,
   type ReminderKind,
 } from './utils/emailTemplates';
 
@@ -646,24 +652,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updateData = req.body;
 
+      // Tier 1: Track statusChangedAt when status actually changes
+      if (updateData.status) {
+        const existing = await storage.getOpportunity(opportunityId);
+        if (existing && existing.status !== updateData.status) {
+          updateData.statusChangedAt = new Date();
+        }
+      }
+
       const updatedOpportunity = await storage.updateOpportunity(opportunityId, updateData);
-      
+
       if (!updatedOpportunity) {
         return res.status(404).json({ message: 'Opportunity not found' });
       }
-      
+
       res.status(200).json(updatedOpportunity);
     } catch (error) {
       console.error('Error updating opportunity:', error);
-      
+
       if (error instanceof ZodError) {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
-      
+
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
+
   // Delete an opportunity
   app.delete('/api/opportunities/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
@@ -2094,6 +2108,345 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── Tier 1: Follow-Up Engine (creates DRAFTS only — never auto-sends) ──────
+  // Scans for stalled opportunities and estimates, creates follow-up email drafts
+  // in the follow_up_drafts table. Admin reviews and sends each draft manually.
+  // Intended to run daily via Railway cron or external scheduler.
+  app.post('/api/cron/follow-up-engine', async (req: Request, res: Response) => {
+    try {
+      const emailCfg = getEmailConfig();
+      if (!emailCfg.cronSecret) {
+        return res.status(503).json({ message: 'CRON_SECRET not configured' });
+      }
+      const supplied = req.get('x-cron-secret');
+      if (supplied !== emailCfg.cronSecret) {
+        return res.status(401).json({ message: 'Invalid cron secret' });
+      }
+
+      const now = new Date();
+      const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+      const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      const MIN_FOLLOW_UP_GAP_MS = TWO_DAYS_MS; // Don't ping same person more than once per 48h
+      const created: number[] = [];
+
+      const config = getSiteConfig();
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+      const host = req.get('host') || 'localhost:5000';
+      const baseUrl = `${protocol}://${host}`;
+
+      // 1. Inquiry sent but not opened (48h+ since sent, inquiryViewedAt null)
+      const allOpps = await storage.listOpportunities();
+      for (const opp of allOpps) {
+        if (opp.status === 'archived' || opp.status === 'booked') continue;
+        if (!opp.inquirySentAt || opp.inquiryViewedAt) continue;
+        if (now.getTime() - new Date(opp.inquirySentAt).getTime() < TWO_DAYS_MS) continue;
+        // Respect minimum follow-up gap
+        if (opp.lastFollowUpAt && now.getTime() - new Date(opp.lastFollowUpAt).getTime() < MIN_FOLLOW_UP_GAP_MS) continue;
+
+        // Check if we already have a pending draft for this type+opportunity
+        const existingDrafts = await storage.getFollowUpDraftsForOpportunity(opp.id);
+        if (existingDrafts.some(d => d.type === 'inquiry_not_opened' && (d.status === 'pending' || d.status === 'edited'))) continue;
+
+        const inquiryUrl = `${baseUrl}/request-quote?opp=${opp.inquiryToken}`;
+        const email = followUpInquiryNotOpened({
+          customerFirstName: opp.firstName,
+          eventType: opp.eventType,
+          eventDate: opp.eventDate,
+          inquiryUrl,
+        });
+
+        const draft = await storage.createFollowUpDraft({
+          type: 'inquiry_not_opened',
+          opportunityId: opp.id,
+          recipientEmail: opp.email,
+          recipientName: `${opp.firstName} ${opp.lastName}`,
+          subject: email.subject,
+          bodyHtml: email.html,
+          bodyText: email.text,
+          status: 'pending',
+          triggerReason: `Inquiry sent ${Math.round((now.getTime() - new Date(opp.inquirySentAt).getTime()) / (24*60*60*1000))}d ago, not opened`,
+        });
+        created.push(draft.id);
+      }
+
+      // 2. Inquiry opened but not submitted (72h+ since viewed, no linked quoteRequest)
+      for (const opp of allOpps) {
+        if (opp.status === 'archived' || opp.status === 'booked') continue;
+        if (!opp.inquiryViewedAt) continue;
+        if (now.getTime() - new Date(opp.inquiryViewedAt).getTime() < THREE_DAYS_MS) continue;
+        if (opp.lastFollowUpAt && now.getTime() - new Date(opp.lastFollowUpAt).getTime() < MIN_FOLLOW_UP_GAP_MS) continue;
+
+        // Check if they actually submitted a quote request
+        const linkedQR = await db.select().from(quoteRequests).where(eq(quoteRequests.opportunityId, opp.id));
+        if (linkedQR.length > 0) continue;
+
+        const existingDrafts = await storage.getFollowUpDraftsForOpportunity(opp.id);
+        if (existingDrafts.some(d => d.type === 'inquiry_not_submitted' && (d.status === 'pending' || d.status === 'edited'))) continue;
+
+        const inquiryUrl = `${baseUrl}/request-quote?opp=${opp.inquiryToken}`;
+        const email = followUpInquiryNotSubmitted({
+          customerFirstName: opp.firstName,
+          eventType: opp.eventType,
+          eventDate: opp.eventDate,
+          inquiryUrl,
+        });
+
+        const draft = await storage.createFollowUpDraft({
+          type: 'inquiry_not_submitted',
+          opportunityId: opp.id,
+          recipientEmail: opp.email,
+          recipientName: `${opp.firstName} ${opp.lastName}`,
+          subject: email.subject,
+          bodyHtml: email.html,
+          bodyText: email.text,
+          status: 'pending',
+          triggerReason: `Inquiry opened ${Math.round((now.getTime() - new Date(opp.inquiryViewedAt).getTime()) / (24*60*60*1000))}d ago, not submitted`,
+        });
+        created.push(draft.id);
+      }
+
+      // 3. Quote sent but not viewed (48h+ since sentAt, viewedAt null)
+      const allEstimates = await storage.listEstimates();
+      for (const est of allEstimates) {
+        if (est.status !== 'sent') continue;
+        if (!est.sentAt || est.viewedAt) continue;
+        if (now.getTime() - new Date(est.sentAt).getTime() < TWO_DAYS_MS) continue;
+        if (!est.viewToken) continue;
+
+        const existingDrafts = await storage.getFollowUpDraftsForEstimate(est.id);
+        if (existingDrafts.some(d => d.type === 'quote_not_viewed' && (d.status === 'pending' || d.status === 'edited'))) continue;
+
+        const client = await storage.getClient(est.clientId);
+        if (!client) continue;
+
+        const quoteUrl = `${baseUrl}/quote/${est.viewToken}`;
+        const email = followUpQuoteNotViewed({
+          customerFirstName: client.firstName,
+          eventType: est.eventType,
+          eventDate: est.eventDate,
+          quoteUrl,
+        });
+
+        const draft = await storage.createFollowUpDraft({
+          type: 'quote_not_viewed',
+          estimateId: est.id,
+          recipientEmail: client.email,
+          recipientName: `${client.firstName} ${client.lastName}`,
+          subject: email.subject,
+          bodyHtml: email.html,
+          bodyText: email.text,
+          status: 'pending',
+          triggerReason: `Quote sent ${Math.round((now.getTime() - new Date(est.sentAt).getTime()) / (24*60*60*1000))}d ago, not viewed`,
+        });
+        created.push(draft.id);
+      }
+
+      // 4. Quote viewed but no action (5d+ since viewedAt, status still 'viewed')
+      for (const est of allEstimates) {
+        if (est.status !== 'viewed') continue;
+        if (!est.viewedAt) continue;
+        if (now.getTime() - new Date(est.viewedAt).getTime() < FIVE_DAYS_MS) continue;
+        if (!est.viewToken) continue;
+
+        const existingDrafts = await storage.getFollowUpDraftsForEstimate(est.id);
+        if (existingDrafts.some(d => d.type === 'quote_no_action' && (d.status === 'pending' || d.status === 'edited'))) continue;
+
+        const client = await storage.getClient(est.clientId);
+        if (!client) continue;
+
+        const quoteUrl = `${baseUrl}/quote/${est.viewToken}`;
+        const email = followUpQuoteNoAction({
+          customerFirstName: client.firstName,
+          eventType: est.eventType,
+          eventDate: est.eventDate,
+          quoteUrl,
+        });
+
+        const draft = await storage.createFollowUpDraft({
+          type: 'quote_no_action',
+          estimateId: est.id,
+          recipientEmail: client.email,
+          recipientName: `${client.firstName} ${client.lastName}`,
+          subject: email.subject,
+          bodyHtml: email.html,
+          bodyText: email.text,
+          status: 'pending',
+          triggerReason: `Quote viewed ${Math.round((now.getTime() - new Date(est.viewedAt).getTime()) / (24*60*60*1000))}d ago, no action`,
+        });
+        created.push(draft.id);
+      }
+
+      // 5. Quote expiring within 3 days
+      for (const est of allEstimates) {
+        if (est.status === 'accepted' || est.status === 'declined') continue;
+        if (!est.expiresAt || !est.viewToken) continue;
+        const daysUntilExpiry = (new Date(est.expiresAt).getTime() - now.getTime()) / (24*60*60*1000);
+        if (daysUntilExpiry < 0 || daysUntilExpiry > 3) continue;
+
+        const existingDrafts = await storage.getFollowUpDraftsForEstimate(est.id);
+        if (existingDrafts.some(d => d.type === 'quote_expiring_soon' && (d.status === 'pending' || d.status === 'edited'))) continue;
+
+        const client = await storage.getClient(est.clientId);
+        if (!client) continue;
+
+        const quoteUrl = `${baseUrl}/quote/${est.viewToken}`;
+        const email = followUpQuoteExpiringSoon({
+          customerFirstName: client.firstName,
+          eventType: est.eventType,
+          quoteUrl,
+          expiresAt: est.expiresAt,
+        });
+
+        const draft = await storage.createFollowUpDraft({
+          type: 'quote_expiring_soon',
+          estimateId: est.id,
+          recipientEmail: client.email,
+          recipientName: `${client.firstName} ${client.lastName}`,
+          subject: email.subject,
+          bodyHtml: email.html,
+          bodyText: email.text,
+          status: 'pending',
+          triggerReason: `Quote expires in ${Math.round(daysUntilExpiry)} day(s)`,
+        });
+        created.push(draft.id);
+      }
+
+      return res.status(200).json({
+        ok: true,
+        draftsCreated: created.length,
+        draftIds: created,
+        processedAt: now.toISOString(),
+      });
+    } catch (error) {
+      console.error('Error running follow-up engine cron:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ─── Tier 1: Follow-Up Draft Management (CRUD) ────────────────────────────
+
+  // List follow-up drafts (optionally filter by status)
+  app.get('/api/follow-up-drafts', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const drafts = status ? await storage.listFollowUpDrafts(status) : await storage.listFollowUpDrafts();
+      res.status(200).json(drafts);
+    } catch (error) {
+      console.error('Error listing follow-up drafts:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Get a single follow-up draft
+  app.get('/api/follow-up-drafts/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const draft = await storage.getFollowUpDraft(parseInt(req.params.id));
+      if (!draft) return res.status(404).json({ message: 'Draft not found' });
+      res.status(200).json(draft);
+    } catch (error) {
+      console.error('Error getting follow-up draft:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Update a follow-up draft (edit subject/body before sending)
+  app.patch('/api/follow-up-drafts/:id', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const draftId = parseInt(req.params.id);
+      const { subject, bodyHtml, bodyText, status } = req.body;
+
+      const existing = await storage.getFollowUpDraft(draftId);
+      if (!existing) return res.status(404).json({ message: 'Draft not found' });
+
+      const updateData: Record<string, any> = {};
+      if (subject !== undefined) updateData.subject = subject;
+      if (bodyHtml !== undefined) updateData.bodyHtml = bodyHtml;
+      if (bodyText !== undefined) updateData.bodyText = bodyText;
+      if (status !== undefined) {
+        updateData.status = status;
+        if (status === 'edited') updateData.reviewedBy = req.session.userId;
+      }
+
+      const updated = await storage.updateFollowUpDraft(draftId, updateData);
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error('Error updating follow-up draft:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Send a follow-up draft (admin has reviewed and approved)
+  app.post('/api/follow-up-drafts/:id/send', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const draftId = parseInt(req.params.id);
+      const draft = await storage.getFollowUpDraft(draftId);
+      if (!draft) return res.status(404).json({ message: 'Draft not found' });
+      if (draft.status === 'sent') return res.status(400).json({ message: 'Draft already sent' });
+      if (draft.status === 'cancelled') return res.status(400).json({ message: 'Draft was cancelled' });
+
+      // Send the email
+      const emailResult = await sendEmail({
+        to: draft.recipientEmail,
+        subject: draft.subject,
+        html: draft.bodyHtml,
+        text: draft.bodyText,
+      });
+
+      if (!emailResult.success) {
+        return res.status(500).json({ message: 'Failed to send email', error: emailResult.error });
+      }
+
+      // Mark draft as sent
+      await storage.updateFollowUpDraft(draftId, {
+        status: 'sent',
+        sentAt: new Date(),
+        reviewedBy: req.session.userId,
+      });
+
+      // Update lastFollowUpAt on the parent entity
+      if (draft.opportunityId) {
+        await storage.updateOpportunity(draft.opportunityId, { lastFollowUpAt: new Date() });
+      }
+
+      res.status(200).json({ message: 'Follow-up sent successfully' });
+    } catch (error) {
+      console.error('Error sending follow-up draft:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Cancel a follow-up draft
+  app.post('/api/follow-up-drafts/:id/cancel', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const draftId = parseInt(req.params.id);
+      const draft = await storage.getFollowUpDraft(draftId);
+      if (!draft) return res.status(404).json({ message: 'Draft not found' });
+
+      await storage.updateFollowUpDraft(draftId, {
+        status: 'cancelled',
+        reviewedBy: req.session.userId,
+      });
+
+      res.status(200).json({ message: 'Draft cancelled' });
+    } catch (error) {
+      console.error('Error cancelling follow-up draft:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Delete a follow-up draft
+  app.delete('/api/follow-up-drafts/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteFollowUpDraft(parseInt(req.params.id));
+      if (!deleted) return res.status(404).json({ message: 'Draft not found' });
+      res.status(200).json({ message: 'Draft deleted' });
+    } catch (error) {
+      console.error('Error deleting follow-up draft:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Public: self-serve "find my event" — customer enters their email, we email
   // them the event page link for any accepted event we find. Always responds
   // with the same "if we found an event, we've sent the link" message to prevent
@@ -2834,25 +3187,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Build leadData JSONB carrying AI scoring & parsed data forward to the opportunity.
+      // This data is preserved so the opportunity detail page can show AI insights
+      // without needing to look up the raw lead.
+      const leadData: Record<string, any> = {};
+      if (lead.aiOverallLeadQuality) leadData.overallQuality = lead.aiOverallLeadQuality;
+      if (lead.aiUrgencyScore) leadData.urgencyScore = lead.aiUrgencyScore;
+      if (lead.aiUrgencyReason) leadData.urgencyReason = lead.aiUrgencyReason;
+      if (lead.aiBudgetIndication) leadData.budgetIndication = lead.aiBudgetIndication;
+      if (lead.aiBudgetValue) leadData.budgetValue = lead.aiBudgetValue;
+      if (lead.aiBudgetReason) leadData.budgetReason = lead.aiBudgetReason;
+      if (lead.aiClarityOfRequestScore) leadData.clarityScore = lead.aiClarityOfRequestScore;
+      if (lead.aiClarityReason) leadData.clarityReason = lead.aiClarityReason;
+      if (lead.aiDecisionMakerLikelihood) leadData.decisionMakerLikelihood = lead.aiDecisionMakerLikelihood;
+      if (lead.aiKeyRequirements) leadData.keyRequirements = lead.aiKeyRequirements;
+      if (lead.aiPotentialRedFlags) leadData.redFlags = lead.aiPotentialRedFlags;
+      if (lead.aiSuggestedNextStep) leadData.suggestedNextStep = lead.aiSuggestedNextStep;
+      if (lead.aiSentiment) leadData.sentiment = lead.aiSentiment;
+      if (lead.aiConfidenceScore) leadData.confidenceScore = lead.aiConfidenceScore;
+      if (lead.extractedMessageSummary) leadData.messageSummary = lead.extractedMessageSummary;
+      if (lead.leadSourcePlatform) leadData.sourcePlatform = lead.leadSourcePlatform;
+      leadData.rawLeadSource = lead.source;
+      leadData.processedAt = new Date().toISOString();
+
       // Map AI-enriched fields to opportunity data
       const opportunityData = {
-        // Ensure NOT NULL fields are always populated with at least empty strings
         firstName: firstName || 'Unknown',
         lastName: lastName || 'Contact',
         email: lead.extractedProspectEmail || 'unknown@example.com',
         phone: lead.extractedProspectPhone || null,
         eventType: lead.extractedEventType || 'Unspecified Event',
-        // Handle different date formats
         eventDate: lead.extractedEventDate ? new Date(lead.extractedEventDate) : null,
         guestCount: lead.extractedGuestCount || null,
         venue: lead.extractedVenue || null,
-        // Use leadSourcePlatform if available, otherwise use source or default
         opportunitySource: lead.leadSourcePlatform || lead.source || 'raw_lead',
         status: 'new',
-        // Combine AI message summary with internal notes if both exist
         notes: formatNotes(lead),
-        // Priority derived from AI lead quality (defaults to 'medium')
         priority: mapLeadQualityToPriority(lead.aiOverallLeadQuality ?? undefined),
+        // Tier 1: Link back to source raw lead and carry AI data forward
+        rawLeadId: leadId,
+        leadData: Object.keys(leadData).length > 0 ? leadData : null,
+        statusChangedAt: new Date(),
       };
 
       const opportunity = await storage.createOpportunity(opportunityData);
@@ -2862,8 +3237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'qualified',
         createdOpportunityId: opportunity.id,
       });
-      
-      // Return the created opportunity
+
       res.status(200).json({
         message: 'Raw lead processed successfully',
         opportunity

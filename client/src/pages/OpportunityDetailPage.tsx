@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X, Send, Loader2, ExternalLink, Check } from "lucide-react";
+import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X, Send, Loader2, ExternalLink, Check, Brain, TrendingUp, AlertTriangle, Target, ThermometerSun, DollarSign, Lightbulb } from "lucide-react";
 import { z } from "zod";
 // Import types directly with relative path since the alias isn't working
 import { Opportunity, ContactIdentifier, Communication } from "../types/opportunity";
@@ -548,6 +548,105 @@ export default function OpportunityDetailPage() {
         </CardContent>
       </Card>
       
+      {/* AI Lead Insights — shown when this opportunity was created from a raw lead */}
+      {opportunity.leadData && Object.keys(opportunity.leadData).length > 0 && (
+        <Card className="border-purple-200 bg-purple-50/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Brain className="h-4 w-4 text-purple-600" />
+              AI Lead Insights
+            </CardTitle>
+            <CardDescription>Scoring and analysis from when this lead was processed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {opportunity.leadData.overallQuality && (
+                <div className="flex items-start gap-2">
+                  <Target className="h-4 w-4 mt-0.5 text-purple-500" />
+                  <div>
+                    <div className="text-xs text-gray-500">Lead Quality</div>
+                    <div className="font-semibold capitalize">{opportunity.leadData.overallQuality}</div>
+                  </div>
+                </div>
+              )}
+              {opportunity.leadData.urgencyScore && (
+                <div className="flex items-start gap-2">
+                  <ThermometerSun className="h-4 w-4 mt-0.5 text-orange-500" />
+                  <div>
+                    <div className="text-xs text-gray-500">Urgency</div>
+                    <div className="font-semibold">{opportunity.leadData.urgencyScore}/5</div>
+                    {opportunity.leadData.urgencyReason && (
+                      <div className="text-xs text-gray-400">{opportunity.leadData.urgencyReason}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {opportunity.leadData.budgetIndication && (
+                <div className="flex items-start gap-2">
+                  <DollarSign className="h-4 w-4 mt-0.5 text-green-500" />
+                  <div>
+                    <div className="text-xs text-gray-500">Budget</div>
+                    <div className="font-semibold capitalize">{opportunity.leadData.budgetIndication.replace('_', ' ')}</div>
+                    {opportunity.leadData.budgetValue && (
+                      <div className="text-xs text-gray-400">${opportunity.leadData.budgetValue.toLocaleString()}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {opportunity.leadData.sentiment && (
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-4 w-4 mt-0.5 text-blue-500" />
+                  <div>
+                    <div className="text-xs text-gray-500">Sentiment</div>
+                    <div className="font-semibold capitalize">{opportunity.leadData.sentiment}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Key requirements & red flags */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {opportunity.leadData.keyRequirements && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                    <Lightbulb className="h-3 w-3" /> Key Requirements
+                  </div>
+                  <ul className="text-sm space-y-0.5">
+                    {(Array.isArray(opportunity.leadData.keyRequirements)
+                      ? opportunity.leadData.keyRequirements
+                      : [opportunity.leadData.keyRequirements]
+                    ).map((req: string, i: number) => (
+                      <li key={i} className="text-gray-600">- {req}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {opportunity.leadData.redFlags && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-amber-500" /> Red Flags
+                  </div>
+                  <ul className="text-sm space-y-0.5">
+                    {(Array.isArray(opportunity.leadData.redFlags)
+                      ? opportunity.leadData.redFlags
+                      : [opportunity.leadData.redFlags]
+                    ).map((flag: string, i: number) => (
+                      <li key={i} className="text-amber-600">- {flag}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {opportunity.leadData.suggestedNextStep && (
+              <div className="mt-3 p-2 bg-purple-100 rounded text-sm">
+                <span className="font-medium">Suggested next step:</span> {opportunity.leadData.suggestedNextStep}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs for contact info and communications */}
       <Tabs defaultValue="contacts" className="w-full">
         <TabsList>

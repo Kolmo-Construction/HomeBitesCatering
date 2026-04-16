@@ -3,11 +3,11 @@ import { Pool } from '@neondatabase/serverless';
 import {
   users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, gmailSyncState, processedEmails,
-  opportunityEmailThreads,
+  opportunityEmailThreads, followUpDrafts,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
-  type MenuItem, type InsertMenuItem, // Ensure MenuItem type is imported
-  type Menu as DrizzleMenu, type InsertMenu, // Alias original Menu to DrizzleMenu to avoid naming conflict
+  type MenuItem, type InsertMenuItem,
+  type Menu as DrizzleMenu, type InsertMenu,
   type Client, type InsertClient,
   type Estimate, type InsertEstimate,
   type Event, type InsertEvent,
@@ -16,7 +16,8 @@ import {
   type RawLead, type InsertRawLead,
   type GmailSyncState, type InsertGmailSyncState,
   type ProcessedEmail, type InsertProcessedEmail,
-  type OpportunityEmailThread, type InsertOpportunityEmailThread
+  type OpportunityEmailThread, type InsertOpportunityEmailThread,
+  type FollowUpDraft, type InsertFollowUpDraft,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, lte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added lte for date range query
@@ -121,6 +122,16 @@ export interface IStorage {
   deleteManyRawLeads(ids: number[]): Promise<{ deleted: number, failed: number }>;
   findContactsByIdentifier(identifier: string, type?: string): Promise<any[]>;
   getLeadSystemSettings(): Promise<any>;
+
+  // Follow-Up Drafts (Tier 1)
+  createFollowUpDraft(draft: InsertFollowUpDraft): Promise<FollowUpDraft>;
+  getFollowUpDraft(id: number): Promise<FollowUpDraft | undefined>;
+  listFollowUpDrafts(status?: string): Promise<FollowUpDraft[]>;
+  listPendingFollowUpDrafts(): Promise<FollowUpDraft[]>;
+  updateFollowUpDraft(id: number, data: Partial<FollowUpDraft>): Promise<FollowUpDraft | undefined>;
+  deleteFollowUpDraft(id: number): Promise<boolean>;
+  getFollowUpDraftsForOpportunity(opportunityId: number): Promise<FollowUpDraft[]>;
+  getFollowUpDraftsForEstimate(estimateId: number): Promise<FollowUpDraft[]>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -833,15 +844,68 @@ export class DatabaseStorage implements IStorage {
 
   // Lead system settings
   async getLeadSystemSettings(): Promise<any> {
-    // This is a placeholder for future implementation
     return {
       autoProcessing: true,
       aiIntegration: hasLlmProvider(),
       emailSync: {
         enabled: !!process.env.GMAIL_API_KEY,
-        interval: 5, // minutes
+        interval: 5,
       }
     };
+  }
+
+  // ─── Follow-Up Drafts (Tier 1) ─────────────────────────────────────────────
+
+  async createFollowUpDraft(draft: InsertFollowUpDraft): Promise<FollowUpDraft> {
+    const [created] = await db.insert(followUpDrafts).values(draft).returning();
+    return created;
+  }
+
+  async getFollowUpDraft(id: number): Promise<FollowUpDraft | undefined> {
+    const [draft] = await db.select().from(followUpDrafts).where(eq(followUpDrafts.id, id));
+    return draft;
+  }
+
+  async listFollowUpDrafts(status?: string): Promise<FollowUpDraft[]> {
+    if (status) {
+      return await db.select().from(followUpDrafts)
+        .where(eq(followUpDrafts.status, status as any))
+        .orderBy(desc(followUpDrafts.createdAt));
+    }
+    return await db.select().from(followUpDrafts).orderBy(desc(followUpDrafts.createdAt));
+  }
+
+  async listPendingFollowUpDrafts(): Promise<FollowUpDraft[]> {
+    return await db.select().from(followUpDrafts)
+      .where(eq(followUpDrafts.status, 'pending'))
+      .orderBy(desc(followUpDrafts.createdAt));
+  }
+
+  async updateFollowUpDraft(id: number, data: Partial<FollowUpDraft>): Promise<FollowUpDraft | undefined> {
+    const [updated] = await db.update(followUpDrafts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(followUpDrafts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteFollowUpDraft(id: number): Promise<boolean> {
+    const [deleted] = await db.delete(followUpDrafts)
+      .where(eq(followUpDrafts.id, id))
+      .returning({ id: followUpDrafts.id });
+    return !!deleted;
+  }
+
+  async getFollowUpDraftsForOpportunity(opportunityId: number): Promise<FollowUpDraft[]> {
+    return await db.select().from(followUpDrafts)
+      .where(eq(followUpDrafts.opportunityId, opportunityId))
+      .orderBy(desc(followUpDrafts.createdAt));
+  }
+
+  async getFollowUpDraftsForEstimate(estimateId: number): Promise<FollowUpDraft[]> {
+    return await db.select().from(followUpDrafts)
+      .where(eq(followUpDrafts.estimateId, estimateId))
+      .orderBy(desc(followUpDrafts.createdAt));
   }
 
 }

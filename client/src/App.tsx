@@ -31,6 +31,9 @@ import { EventType } from "@/pages/wedding/types/weddingFormTypes"; // Get Event
 // Import the new Public Event Inquiry page
 import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 
+// Tier 1: Unified inquiry form (consolidates PublicInquiryForm, PublicEventInquiryPage, WeddingInquiry)
+import UnifiedInquiryForm from "@/pages/UnifiedInquiryForm";
+
 // Import the Dietary Demo page
 import DietaryDemo from "@/pages/DietaryDemo";
 
@@ -122,7 +125,8 @@ function AppContent() {
   const isPublicQuotePage = location.startsWith("/quote/");
   const isPublicEventPage = location.startsWith("/event/");
   const isFindMyEventPage = location === "/find-my-event";
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || location === "/inquiry" || location === "/event-selection";
+  const isGetStartedPage = location === "/get-started";
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isGetStartedPage || location === "/inquiry" || location === "/event-selection";
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -130,16 +134,18 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <Toaster />
         <Switch>
-          <Route path="/wedding-inquiry" component={ComprehensiveWeddingInquiry} />
-          <Route path="/event-inquiry" component={PublicEventInquiryPage} />
+          {/* Tier 1: Unified inquiry form — new canonical URL */}
+          <Route path="/get-started" component={UnifiedInquiryForm} />
+          {/* Legacy inquiry forms — redirect to unified form */}
+          <Route path="/wedding-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          <Route path="/event-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          <Route path="/inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          <Route path="/event-selection">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          {/* These remain as-is (they serve different purposes) */}
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/find-my-event" component={FindMyEvent} />
-          {/* Route for the generic event selection page */}
-          <Route path="/inquiry" component={PublicRoutes} />
-          <Route path="/event-selection" component={PublicRoutes} />
-          {/* Fallback for public routes if needed, or redirect */}
           <Route>
             <div className="flex items-center justify-center h-screen text-xl">404 - Page Not Found</div>
           </Route>
@@ -224,15 +230,16 @@ function AppContent() {
           <Route path="/events/:id" component={Events} />
           <Route path="/dietary-demo" component={DietaryDemo} />
 
-          {/* Public forms accessible even when logged in, if desired, or redirect from here */}
-          <Route path="/wedding-inquiry" component={ComprehensiveWeddingInquiry} />
-          <Route path="/event-inquiry" component={PublicEventInquiryPage} />
+          {/* Public forms accessible when logged in */}
+          <Route path="/get-started" component={UnifiedInquiryForm} />
+          <Route path="/wedding-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          <Route path="/event-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          <Route path="/inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
+          <Route path="/event-selection">{() => { window.location.replace("/get-started"); return null; }}</Route>
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/find-my-event" component={FindMyEvent} />
-          <Route path="/inquiry" component={PublicRoutes} />
-          <Route path="/event-selection" component={PublicRoutes} />
 
           {/* Fallback Route for authenticated users */}
           <Route>

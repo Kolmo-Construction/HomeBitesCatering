@@ -9,6 +9,7 @@ import UpcomingEventsList from "@/components/dashboard/UpcomingEventsList";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentEstimatesTable from "@/components/dashboard/RecentEstimatesTable";
 import MenuMarginsCard from "@/components/dashboard/MenuMarginsCard";
+import PendingFollowUps from "@/components/dashboard/PendingFollowUps";
 
 export default function Dashboard() {
   // Fetch data for stats
@@ -109,6 +110,11 @@ export default function Dashboard() {
           iconBgColor="bg-green-500"
           changePercent={18}
         />
+      </div>
+
+      {/* Pending Follow-Ups (only renders if there are drafts) */}
+      <div className="mb-6">
+        <PendingFollowUps />
       </div>
 
       {/* Recent Activity & Upcoming Events */}
