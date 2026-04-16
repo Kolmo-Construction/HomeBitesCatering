@@ -88,17 +88,17 @@ const Calendar = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Fetch leads
-  const { data: leads = [] } = useQuery({
+  const { data: leads = [] } = useQuery<any[]>({
     queryKey: ['/api/leads'],
   });
 
   // Fetch confirmed events
-  const { data: events = [] } = useQuery({
+  const { data: events = [] } = useQuery<any[]>({
     queryKey: ['/api/events'],
   });
 
   // Fetch estimates
-  const { data: estimates = [] } = useQuery({
+  const { data: estimates = [] } = useQuery<any[]>({
     queryKey: ['/api/estimates'],
   });
 
@@ -244,7 +244,7 @@ const Calendar = () => {
                     agenda: true,
                   }}
                   view={viewMode as any}
-                  onView={(view) => setViewMode(view)}
+                  onView={(view: string) => setViewMode(view)}
                   eventPropGetter={eventStyleGetter}
                   onSelectEvent={handleEventSelect}
                   popup
@@ -292,7 +292,7 @@ const Calendar = () => {
                     <Badge
                       variant={
                         selectedEvent.status === 'confirmed' || selectedEvent.status === 'approved'
-                          ? 'success'
+                          ? 'default'
                           : selectedEvent.status === 'cancelled'
                           ? 'destructive'
                           : 'outline'

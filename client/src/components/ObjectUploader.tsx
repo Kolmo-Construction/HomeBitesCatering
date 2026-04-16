@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import Uppy from "@uppy/core";
+// @ts-ignore - DashboardModal type declarations not available
 import DashboardModal from "@uppy/react/lib/DashboardModal";
 import "@uppy/core/dist/style.min.css";
 import "@uppy/dashboard/dist/style.min.css";

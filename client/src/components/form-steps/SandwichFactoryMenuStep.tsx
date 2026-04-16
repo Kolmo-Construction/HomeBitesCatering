@@ -54,18 +54,17 @@ const SandwichFactoryMenuStep = ({
 
   const handlePackageSelect = (packageId: string) => {
     setSelectedPackage(packageId);
-    const currentSelections = watch("sandwichFactorySelections") || {};
+    const currentSelections = watch("sandwichFactorySelections");
     setValue("sandwichFactorySelections", {
-      ...currentSelections, // Preserve existing notes or other fields
       package: packageId,
       // Resetting options specific to the package
-      meats: [], 
+      meats: [],
       cheeses: [],
       vegetables: [],
       breads: [],
       spreads: [],
-      salads: [] 
-      // wantsGlutenFreeBread and glutenFreeBreadCount are handled via FormField, so not reset here unless intended
+      salads: [],
+      wantsGlutenFreeBread: currentSelections?.wantsGlutenFreeBread ?? false
     });
     setSelectedOptions({ // Reset local state for UI tracking
       meats: [], cheeses: [], vegetables: [], breads: [], spreads: [], salads: []
@@ -90,7 +89,16 @@ const SandwichFactoryMenuStep = ({
       }
 
       // Ensure sandwichFactorySelections exists in the form state before setting a nested property
-      const currentFormSandwichSelections = watch("sandwichFactorySelections") || { package: selectedPackage, wantsGlutenFreeBread: false };
+      const currentFormSandwichSelections = watch("sandwichFactorySelections") || {
+        package: selectedPackage,
+        wantsGlutenFreeBread: false,
+        meats: [],
+        cheeses: [],
+        vegetables: [],
+        breads: [],
+        spreads: [],
+        salads: []
+      };
       setValue("sandwichFactorySelections", {
         ...currentFormSandwichSelections,
         [category]: currentCategorySelections
@@ -114,7 +122,7 @@ const SandwichFactoryMenuStep = ({
 
   const renderPackageCards = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      {sandwichFactoryData.packages.map(pkg => (
+      {sandwichFactoryData.packages.map((pkg: { id: string; name: string; price: number; description: string; minGuestCount: number }) => (
         <Card
           key={pkg.id}
           className={`
@@ -210,10 +218,10 @@ const SandwichFactoryMenuStep = ({
               <div>
                 <div className="mb-4 p-3 bg-primary/5 rounded-md">
                   <h3 className="font-medium mb-1">
-                    Selected Package: {sandwichFactoryData.packages.find(p => p.id === selectedPackage)?.name}
+                    Selected Package: {sandwichFactoryData.packages.find((p: { id: string; name: string }) => p.id === selectedPackage)?.name}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {sandwichFactoryData.packages.find(p => p.id === selectedPackage)?.description}
+                    {sandwichFactoryData.packages.find((p: { id: string; description: string }) => p.id === selectedPackage)?.description}
                   </p>
                 </div>
                 <div className="space-y-6">

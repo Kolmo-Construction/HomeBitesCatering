@@ -1010,7 +1010,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
           <Separator />
 
           {/* Key Requirements */}
-          {rawLead.aiKeyRequirements && Array.isArray(rawLead.aiKeyRequirements) && rawLead.aiKeyRequirements.length > 0 && (
+          {!!(rawLead.aiKeyRequirements && Array.isArray(rawLead.aiKeyRequirements) && rawLead.aiKeyRequirements.length > 0) && (
             <div>
               <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
                 <CheckCircleIcon className="h-4 w-4 text-green-600" />
@@ -1028,7 +1028,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
           )}
 
           {/* Potential Concerns */}
-          {rawLead.aiPotentialRedFlags && Array.isArray(rawLead.aiPotentialRedFlags) && rawLead.aiPotentialRedFlags.length > 0 && (
+          {!!(rawLead.aiPotentialRedFlags && Array.isArray(rawLead.aiPotentialRedFlags) && rawLead.aiPotentialRedFlags.length > 0) && (
             <div>
               <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
                 <AlertCircleIcon className="h-4 w-4 text-amber-600" />

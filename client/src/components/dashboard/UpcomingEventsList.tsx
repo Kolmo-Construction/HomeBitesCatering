@@ -6,7 +6,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { MapPinIcon } from "lucide-react";
 
 export default function UpcomingEventsList() {
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events/upcoming"],
   });
 
@@ -69,7 +69,7 @@ export default function UpcomingEventsList() {
       <div className="space-y-4">
         {upcomingEvents.length > 0 ? (
           upcomingEvents.map((event: Event) => {
-            const { month, day } = getMonthDay(event.eventDate);
+            const { month, day } = getMonthDay(typeof event.eventDate === 'string' ? event.eventDate : new Date(event.eventDate).toISOString());
             const colorClass = getEventColor(event.eventType);
             
             return (

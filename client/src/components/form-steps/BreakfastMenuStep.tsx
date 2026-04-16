@@ -32,7 +32,7 @@ const BreakfastMenuStep = ({
 }) => {
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
   const [selectedMenuType, setSelectedMenuType] = useState<string>("");
-  const breakfastSelections = watch("breakfastMenuSelections") || {};
+  const breakfastSelections = watch("breakfastMenuSelections") || {} as NonNullable<EventInquiryFormData['breakfastMenuSelections']>;
 
   useEffect(() => {
     if (!breakfastSelections.menuType) {
@@ -69,8 +69,8 @@ const BreakfastMenuStep = ({
   };
 
   const handleGrabAndGoItemSelect = (sectionId: string, itemId: string, quantity: number) => {
-    const sectionKey = `grab_and_go_${sectionId}` as keyof typeof breakfastSelections.grab_and_go_bites; // Corrected type
-    const currentSelections = (breakfastSelections[sectionKey] as Array<{id: string, quantity: number}>) || [];
+    const sectionKey = `grab_and_go_${sectionId}` as keyof NonNullable<EventInquiryFormData['breakfastMenuSelections']>;
+    const currentSelections = ((breakfastSelections as any)[sectionKey] as Array<{id: string, quantity: number}>) || [];
     const existingIndex = currentSelections.findIndex(item => item.id === itemId);
 
     let newSelections = [...currentSelections];
@@ -86,19 +86,17 @@ const BreakfastMenuStep = ({
         newSelections.splice(existingIndex, 1);
       }
     }
-    setValue(`breakfastMenuSelections.${sectionKey}`, newSelections);
+    setValue(`breakfastMenuSelections.${sectionKey}` as any, newSelections as any);
   };
 
   const handleItemSelect = (sectionId: string, itemId: string, isMultiple: boolean, isSelected: boolean) => {
-    const sectionKey = sectionId as keyof EventInquiryFormData['breakfastMenuSelections'];
-    const currentSelectionsRaw = breakfastSelections[sectionKey];
+    const sectionKey = sectionId as keyof NonNullable<EventInquiryFormData['breakfastMenuSelections']>;
+    const currentSelectionsRaw = (breakfastSelections as any)[sectionKey];
 
     let currentSelections: string[] = [];
     if (Array.isArray(currentSelectionsRaw)) {
         currentSelections = [...currentSelectionsRaw as string[]];
     } else if (typeof currentSelectionsRaw === 'string' && isMultiple) {
-        // This case might need specific handling if a single string can become multiple
-        // For now, assuming if isMultiple, it should always be an array
         currentSelections = [currentSelectionsRaw];
     }
 
@@ -106,26 +104,26 @@ const BreakfastMenuStep = ({
     if (isMultiple) {
       if (isSelected) {
         if (!currentSelections.includes(itemId)) {
-          setValue(`breakfastMenuSelections.${sectionKey}`, [...currentSelections, itemId] as any);
+          setValue(`breakfastMenuSelections.${sectionKey}` as any, [...currentSelections, itemId] as any);
         }
       } else {
-        setValue(`breakfastMenuSelections.${sectionKey}`, currentSelections.filter(id => id !== itemId) as any);
+        setValue(`breakfastMenuSelections.${sectionKey}` as any, currentSelections.filter(id => id !== itemId) as any);
       }
     } else {
-      setValue(`breakfastMenuSelections.${sectionKey}`, itemId as any);
+      setValue(`breakfastMenuSelections.${sectionKey}` as any, itemId as any);
     }
   };
 
   const getItemQuantity = (sectionId: string, itemId: string): number => {
-    const sectionKey = `grab_and_go_${sectionId}` as keyof typeof breakfastSelections.grab_and_go_bites; // Corrected type
-    const selections = (breakfastSelections[sectionKey] as Array<{id: string, quantity: number}>) || [];
-    const item = selections.find(item => item.id === itemId);
+    const sectionKey = `grab_and_go_${sectionId}` as keyof NonNullable<EventInquiryFormData['breakfastMenuSelections']>;
+    const selections = ((breakfastSelections as any)[sectionKey] as Array<{id: string, quantity: number}>) || [];
+    const item = selections.find((item: {id: string, quantity: number}) => item.id === itemId);
     return item ? item.quantity : 0;
   };
 
   const isItemSelected = (sectionId: string, itemId: string): boolean => {
-    const sectionKey = sectionId as keyof EventInquiryFormData['breakfastMenuSelections'];
-    const selections = breakfastSelections[sectionKey];
+    const sectionKey = sectionId as keyof NonNullable<EventInquiryFormData['breakfastMenuSelections']>;
+    const selections = (breakfastSelections as any)[sectionKey];
     if (!selections) return false;
     if (Array.isArray(selections)) {
       return (selections as string[]).includes(itemId);
@@ -229,7 +227,7 @@ const BreakfastMenuStep = ({
           </Button>
         </div>
 
-        {selectedMenu.sections.map((section) => (
+        {selectedMenu.sections.map((section: any) => (
           <div key={section.id} className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h3 className="text-xl font-semibold mb-2">{section.name}</h3>
             <p className="text-gray-600 mb-4">{section.description}</p>
@@ -237,7 +235,7 @@ const BreakfastMenuStep = ({
             {/* Grab and Go sections with quantity inputs */}
             {selectedMenu.id === "grab_and_go" && section.id.startsWith("grab_and_go_") && (
               <div className="space-y-4">
-                {section.items.map((item) => {
+                {section.items.map((item: { id: string; name: string; price: number }) => {
                   const quantity = getItemQuantity(section.id.replace("grab_and_go_", ""), item.id);
                   return (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -283,11 +281,11 @@ const BreakfastMenuStep = ({
             {/* Single-select sections (radio buttons) */}
             {section.selectType === "single" && (
               <RadioGroup
-                value={breakfastSelections[section.id as keyof typeof breakfastSelections] as string || ""}
+                value={(breakfastSelections as any)[section.id] as string || ""}
                 onValueChange={(value) => handleItemSelect(section.id, value, false, true)}
                 className="space-y-3"
               >
-                {section.items.map((item) => (
+                {section.items.map((item: { id: string; name: string; price: number }) => (
                   <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                     <RadioGroupItem value={item.id} id={`${section.id}-${item.id}`} />
                     <Label htmlFor={`${section.id}-${item.id}`} className="flex-1 cursor-pointer">
@@ -314,9 +312,9 @@ const BreakfastMenuStep = ({
                   </p>
                 )}
 
-                {section.items.map((item) => {
+                {section.items.map((item: { id: string; name: string; price: number }) => {
                   const isSelected = isItemSelected(section.id, item.id);
-                  const selections = breakfastSelections[section.id as keyof typeof breakfastSelections] || [];
+                  const selections = (breakfastSelections as any)[section.id] || [];
                   const selectionCount = Array.isArray(selections) ? selections.length : 0;
                   const isLimitReached = section.selectLimit ? selectionCount >= section.selectLimit : false;
                   const disabled = isLimitReached && !isSelected;

@@ -21,6 +21,7 @@ interface RecipeForMenu {
 interface MenuDetailViewProps {
   menu: any;
   onUpdate?: () => void;
+  onEdit?: () => void;
 }
 
 const RECIPE_CATEGORIES = [

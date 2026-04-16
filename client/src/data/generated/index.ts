@@ -39,5 +39,5 @@ export interface MenuTheme {
 import * as allMenuItemsData from './allMenuItems.json';
 import * as menusByThemeData from './menusByTheme.json';
 
-export const allMenuItems: MenuItem[] = allMenuItemsData as MenuItem[];
-export const menusByTheme: Record<string, MenuTheme> = menusByThemeData as Record<string, MenuTheme>;
+export const allMenuItems: MenuItem[] = allMenuItemsData as unknown as MenuItem[];
+export const menusByTheme: Record<string, MenuTheme> = menusByThemeData as unknown as Record<string, MenuTheme>;

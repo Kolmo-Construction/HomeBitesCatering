@@ -5,9 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-// Potentially Label if used with Checkbox/Input directly and not just via FormField (which isn't directly used here)
-// import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Check as CheckIcon } from "lucide-react"; // Renamed Check to CheckIcon to avoid conflict if React.Check existed
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight, Check, Check as CheckIcon } from "lucide-react";
 
 import { EventInquiryFormData } from "@/types/form-types"; // Adjust path as needed
 import { themeMenuData } from "@/data/themeMenuInfo"; // Adjust path as needed, this is crucial
@@ -23,8 +22,6 @@ const MenuSelectionStep = ({
   onPrevious: () => void;
   onNext: () => void;
 }) => {
-  // Add missing import
-  const { useState, useEffect } = React;
   const { control, watch, setValue, formState: { errors } } = useFormContext<EventInquiryFormData>();
   const [selectedActualCategory, setSelectedActualCategory] = useState<string | null>(null);
 
@@ -108,12 +105,12 @@ const MenuSelectionStep = ({
 
   // Get category selection limits based on the selected package
   const getCategoryLimits = (categoryKey: string) => {
-    if (!selectedPackage || !themeData.categories[categoryKey as keyof typeof themeData.categories]) {
+    if (!selectedPackage || !(themeData.categories as any)[categoryKey]) {
       return 0;
     }
 
-    const category = themeData.categories[categoryKey as keyof typeof themeData.categories];
-    return category.limits?.[selectedPackage as keyof typeof category.limits] || 0;
+    const category = (themeData.categories as any)[categoryKey];
+    return category.limits?.[selectedPackage] || 0;
   };
 
   // Check if a category is available for the selected package
@@ -127,8 +124,8 @@ const MenuSelectionStep = ({
       return 0;
     }
 
-    const selectedItems = menuSelections[categoryKey];
-    const item = selectedItems.find(item => item.id === itemId);
+    const selectedItems = menuSelections[categoryKey] as Array<{id: string, quantity: number}>;
+    const item = selectedItems.find((item: any) => typeof item === 'object' && item !== null && item.id === itemId);
     return item ? (item.quantity || 1) : 0;
   };
 
@@ -152,12 +149,13 @@ const MenuSelectionStep = ({
   // Handle selection of an item in a category
   const handleItemSelection = (categoryKey: string, itemId: string, isSelected: boolean, quantity: number = 1) => {
     // Make sure menuSelections[categoryKey] is initialized as an array
-    const currentSelections = Array.isArray(menuSelections?.[categoryKey]) 
-      ? [...menuSelections[categoryKey]] 
+    const rawSelections = menuSelections?.[categoryKey];
+    const currentSelections: Array<{id: string, quantity: number}> = Array.isArray(rawSelections)
+      ? rawSelections.map((item: any) => typeof item === 'object' ? { ...item } : { id: item, quantity: 1 })
       : [];
 
     // Find if item already exists
-    const existingItemIndex = currentSelections.findIndex(item => 
+    const existingItemIndex = currentSelections.findIndex((item: any) =>
       typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
     );
 
@@ -165,7 +163,6 @@ const MenuSelectionStep = ({
       if (existingItemIndex >= 0) {
         // Update existing item with new quantity
         currentSelections[existingItemIndex] = {
-          ...currentSelections[existingItemIndex],
           id: itemId,
           quantity: quantity
         };
@@ -182,7 +179,7 @@ const MenuSelectionStep = ({
       }
     }
 
-    setValue(`menuSelections.${categoryKey}`, currentSelections);
+    setValue(`menuSelections.${categoryKey}` as any, currentSelections as any);
   };
 
   // Removed duplicate useEffect
@@ -193,8 +190,8 @@ const MenuSelectionStep = ({
       return false;
     }
 
-    const selectedItems = menuSelections[categoryKey];
-    return selectedItems.some(item => 
+    const selectedItems = menuSelections[categoryKey] as any[];
+    return selectedItems.some((item: any) =>
       typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
     );
   };
@@ -209,13 +206,14 @@ const MenuSelectionStep = ({
 
     const handleCustomItemSelection = (categoryKey: string, itemId: string, isSelected: boolean) => {
       // Initialize array if it doesn't exist
-      const currentSelections = Array.isArray(menuSelections?.[categoryKey]) 
-        ? [...menuSelections[categoryKey]] 
+      const rawSelections = menuSelections?.[categoryKey];
+      const currentSelections: Array<{id: string, quantity: number}> = Array.isArray(rawSelections)
+        ? rawSelections.map((item: any) => typeof item === 'object' ? { ...item } : { id: item, quantity: 1 })
         : [];
 
       if (isSelected) {
         // Check if item already exists
-        const existingItemIndex = currentSelections.findIndex(item => 
+        const existingItemIndex = currentSelections.findIndex((item: any) =>
           typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
         );
 
@@ -225,7 +223,7 @@ const MenuSelectionStep = ({
         }
       } else {
         // Remove item
-        const existingItemIndex = currentSelections.findIndex(item => 
+        const existingItemIndex = currentSelections.findIndex((item: any) =>
           typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
         );
 
@@ -234,7 +232,7 @@ const MenuSelectionStep = ({
         }
       }
 
-      setValue(`menuSelections.${categoryKey}`, currentSelections);
+      setValue(`menuSelections.${categoryKey}` as any, currentSelections as any);
     };
 
     const isCustomItemSelected = (categoryKey: string, itemId: string) => {
@@ -242,14 +240,20 @@ const MenuSelectionStep = ({
         return false;
       }
 
-      const selectedItems = menuSelections[categoryKey];
-      return selectedItems.some(item => 
+      const selectedItems = menuSelections[categoryKey] as any[];
+      return selectedItems.some((item: any) =>
         typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
       );
     };
 
     // Get the theme data for custom_menu
-    const customMenuData = themeMenuData.custom_menu;
+    const customMenuData = themeMenuData.custom_menu as {
+      title: string;
+      description: string;
+      customizable?: boolean;
+      packages: any[];
+      categories: Record<string, { title: string; description: string; limits: any; items: Array<{ id: string; name: string; upcharge: number }> }>;
+    };
 
     return (
       <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -349,7 +353,7 @@ const MenuSelectionStep = ({
                 <h4 className="text-md font-semibold mb-2">Your Selections</h4>
                 <div className="space-y-2">
                   {Object.keys(menuSelections || {}).map(categoryKey => {
-                    const categoryItems = menuSelections[categoryKey];
+                    const categoryItems = (menuSelections as any)[categoryKey];
                     if (!Array.isArray(categoryItems) || categoryItems.length === 0) return null;
 
                     // Find category name for display
@@ -359,11 +363,11 @@ const MenuSelectionStep = ({
                       <div key={categoryKey} className="pl-2 border-l-2 border-primary/30">
                         <h5 className="font-medium text-sm">{categoryName}:</h5>
                         <ul className="list-disc list-inside ml-2">
-                          {categoryItems.map(item => {
+                          {categoryItems.map((item: any) => {
                             if (typeof item !== 'object' || !item || !('id' in item)) return null;
                             // Find the item name from the menu data
                             const menuItem = customMenuData.categories[categoryKey]?.items.find(
-                              menuItem => menuItem.id === item.id
+                              (menuItem: any) => menuItem.id === item.id
                             );
                             return (
                               <li key={item.id} className="text-sm text-gray-600">
@@ -388,8 +392,8 @@ const MenuSelectionStep = ({
                   Current category selections: {
                     Object.keys(menuSelections || {})
                       .filter(key => selectedActualCategory && key === selectedActualCategory)
-                      .reduce((total, key) => {
-                        const selections = menuSelections[key];
+                      .reduce((total: number, key: string) => {
+                        const selections = (menuSelections as any)[key];
                         return total + (Array.isArray(selections) ? selections.length : 0);
                       }, 0)
                   }
@@ -448,7 +452,7 @@ const MenuSelectionStep = ({
           <h3 className="text-xl font-semibold mb-4">Select a Package</h3>
 
           <div className="grid grid-cols-1 gap-4">
-            {themeData.packages && themeData.packages.map((pkg) => (
+            {themeData.packages && themeData.packages.map((pkg: any) => (
               <div key={pkg.id}>
                 {pkg.minGuestCount > 0 && guestCount < pkg.minGuestCount ? (
                   // Disabled package with warning

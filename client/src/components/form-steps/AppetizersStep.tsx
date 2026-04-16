@@ -11,8 +11,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { EventInquiryFormData } from "@/types/form-types"; // Adjust path as needed
-import { appetizerData } from "@/data/appetizerData"; // Adjust path as needed
-import { horsDoeurvesData } from "@/data/horsDoeurvesInfo"; // Adjust path as needed
+import { appetizerData, AppetizerCategory } from "@/data/appetizerData"; // Adjust path as needed
+import { horsDoeurvesData, HorsDoeuvreCategory } from "@/data/horsDoeurvesInfo"; // Adjust path as needed
 const AppetizersStep = ({ 
   onPrevious,
   onNext 
@@ -69,7 +69,7 @@ const AppetizersStep = ({
   };
 
   // Handle matrix selection for hors d'oeuvres
-  const handleHorsDoeurvesItemSelection = (categoryId: string, itemId: string, quantity: number | null) => {
+  const handleHorsDoeurvesItemSelection = (categoryId: string, itemId: string, quantity: 24 | 36 | 48 | 96 | 144 | null) => {
     initializeHorsDoeurvesSelections();
 
     // Make sure the category exists
@@ -117,7 +117,7 @@ const AppetizersStep = ({
     }
 
     let categoryTotal = 0;
-    const category = horsDoeurvesData.categories.find(c => c.id === categoryId);
+    const category = horsDoeurvesData.categories.find(c => c.id === categoryId) as (HorsDoeuvreCategory & { perPersonPricing?: boolean }) | undefined;
     const items = horsDoeurvesSelections.categories[categoryId].items;
 
     // For per-person pricing (like charcuterie)
@@ -186,6 +186,12 @@ const AppetizersStep = ({
     const existingItems = appetizers[categoryId] || [];
     const existingItemIndex = existingItems.findIndex(item => item.name === itemName);
 
+    // Look up the price from the data
+    const allCategories = [...appetizerData.categories, ...horsDoeurvesData.categories];
+    const cat = allCategories.find(c => c.id === categoryId);
+    const itemData = cat?.items.find(i => i.name === itemName || i.id === itemId);
+    const itemPrice = itemData?.price || 0;
+
     if (quantity === 0) {
       // Remove item if quantity is 0
       if (existingItemIndex !== -1) {
@@ -198,11 +204,11 @@ const AppetizersStep = ({
       if (existingItemIndex !== -1) {
         // Update existing item
         const newItems = [...existingItems];
-        newItems[existingItemIndex] = { name: itemName, quantity };
+        newItems[existingItemIndex] = { name: itemName, quantity, price: itemPrice };
         setValue(`appetizers.${categoryId}`, newItems);
       } else {
         // Add new item
-        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity }]);
+        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity, price: itemPrice }]);
       }
     }
   };
@@ -230,13 +236,13 @@ const AppetizersStep = ({
 
     if (isSelected) {
       // Check if we're at the selection limit
-      if (existingItems.length >= spreadsCategory.selectLimit && existingItemIndex === -1) {
+      if (existingItems.length >= (spreadsCategory.selectLimit || 3) && existingItemIndex === -1) {
         return; // At limit, don't add
       }
 
       // Add item with default quantity of 1 (will be updated later with serving size)
       if (existingItemIndex === -1) {
-        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity: 1 }]);
+        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity: 1, price: spreadsCategory.basePrice || 0 }]);
       }
     } else {
       // Remove item
@@ -349,7 +355,7 @@ const AppetizersStep = ({
 
         {/* Matrix Selection for Hors d'oeuvres */}
         <div className="space-y-12">
-          {horsDoeurvesData.categories.map((category) => {
+          {(horsDoeurvesData.categories as Array<HorsDoeuvreCategory & { selectLimit?: number; basePrice?: number; servingSizes?: number[]; perPersonPricing?: boolean }>).map((category) => {
             // Special handling for spreads which uses a different UI
             if (category.id === "spreads") {
               // Calculate selectedCount at a higher scope level to fix the scoping issue
@@ -388,7 +394,7 @@ const AppetizersStep = ({
                                 if (checked === "indeterminate") return;
                                 if (checked) {
                                   if (selectedCountForSpreads < (category.selectLimit || 3)) {
-                                    handleHorsDoeurvesItemSelection(category.id, item.id, category.servingSizes?.[0] || 24);
+                                    handleHorsDoeurvesItemSelection(category.id, item.id, (category.servingSizes?.[0] || 24) as 24 | 36 | 48 | 96 | 144);
                                   }
                                 } else {
                                   handleHorsDoeurvesItemSelection(category.id, item.id, null);
@@ -415,7 +421,7 @@ const AppetizersStep = ({
                           ]?.quantity || category.servingSizes[0]
                         )} 
                         onValueChange={(value) => {
-                          const quantity = Number(value);
+                          const quantity = Number(value) as 24 | 36 | 48 | 96 | 144;
                           // Update all selected items with the same quantity
                           if (currentSpreadsCategorySelections) {
                             Object.keys(currentSpreadsCategorySelections).forEach(itemId => {
@@ -425,7 +431,7 @@ const AppetizersStep = ({
                         }}
                         className="flex flex-wrap gap-4"
                       >
-                        {category.servingSizes.map((size) => (
+                        {category.servingSizes!.map((size: number) => (
                           <div key={size} className="flex items-center space-x-2">
                             <RadioGroupItem value={String(size)} id={`serving-${category.id}-${size}`} />
                             <Label htmlFor={`serving-${category.id}-${size}`}>{size} servings</Label>
@@ -453,7 +459,7 @@ const AppetizersStep = ({
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">{item.name}</CardTitle>
                         <CardDescription>
-                          ${item.price.toFixed(2)} each. {category.description || `Offered in lots of ${category.lotSizes.join(', ')}`}
+                          ${item.price.toFixed(2)} each. {category.description || `Offered in lots of ${(category.lotSizes || []).join(', ')}`}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -465,7 +471,7 @@ const AppetizersStep = ({
                             render={({ field }) => (
                               <Select
                                 onValueChange={(value) => {
-                                  const newQuantity = value === "0" ? null : parseInt(value, 10);
+                                  const newQuantity = value === "0" ? null : parseInt(value, 10) as 24 | 36 | 48 | 96 | 144;
                                   handleHorsDoeurvesItemSelection(category.id, item.id, newQuantity);
                                 }}
                                 value={getSelectedQuantity(category.id, item.id)?.toString() || "0"}
@@ -475,7 +481,7 @@ const AppetizersStep = ({
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="0">None</SelectItem>
-                                  {category.lotSizes.map((size) => (
+                                  {(category.lotSizes || []).map((size: number) => (
                                     <SelectItem key={size} value={String(size)}>
                                       {size}
                                     </SelectItem>
@@ -491,7 +497,7 @@ const AppetizersStep = ({
                           <div className="mt-3 text-sm font-semibold text-right">
                             Item Total: $
                             {(
-                              item.price * getSelectedQuantity(category.id, item.id)
+                              item.price * (getSelectedQuantity(category.id, item.id) || 0)
                             ).toFixed(2)}
                           </div>
                         )}
@@ -540,7 +546,7 @@ const AppetizersStep = ({
 
         {/* Traditional Appetizer Categories */}
         <div className="space-y-10">
-          {appetizerData.categories.map((category) => {
+          {(appetizerData.categories as AppetizerCategory[]).map((category) => {
             // Special handling for spreads
             if (category.id === "spreads") {
               return (
@@ -550,7 +556,7 @@ const AppetizersStep = ({
                       <h3 className="text-lg font-semibold">{category.name}</h3>
                       <p className="text-sm text-gray-500">{category.note} ({getSelectedSpreadsCount()} of {category.selectLimit} selected)</p>
                     </div>
-                    <div className="text-lg font-medium">${category.basePrice.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
+                    <div className="text-lg font-medium">${(category.basePrice || 0).toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -577,15 +583,15 @@ const AppetizersStep = ({
                   </div>
 
                   {/* Serving Size Selection - only show if some spreads are selected */}
-                  {getSelectedSpreadsCount() > 0 && (
+                  {getSelectedSpreadsCount() > 0 && category.servingSizes && (
                     <div className="mt-4 p-4 border border-gray-200 rounded-md">
                       <h4 className="font-medium mb-2">Select serving size:</h4>
-                      <RadioGroup 
-                        value={String(getSpreadsServingSize())} 
+                      <RadioGroup
+                        value={String(getSpreadsServingSize())}
                         onValueChange={(value) => handleSpreadServingSizeChange(Number(value))}
                         className="flex flex-wrap gap-4"
                       >
-                        {category.servingSizes.map((size) => (
+                        {category.servingSizes.map((size: number) => (
                           <div key={size} className="flex items-center space-x-2">
                             <RadioGroupItem value={String(size)} id={`serving-${size}`} />
                             <Label htmlFor={`serving-${size}`}>{size} servings</Label>

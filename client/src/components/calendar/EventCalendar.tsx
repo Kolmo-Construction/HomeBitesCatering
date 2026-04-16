@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, CalendarDays, MapPin, Users } from "lucide-react";
 import { formatDate, formatTime, generateRandomColor } from "@/lib/utils";
+import { Link } from "wouter";
 
 // Setup the localizer for react-big-calendar
 const locales = {
@@ -28,12 +29,12 @@ export default function EventCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   
   // Fetch events data
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/events"],
   });
-  
+
   // Fetch clients for event details
-  const { data: clients = [] } = useQuery({
+  const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
   
@@ -110,7 +111,7 @@ export default function EventCalendar() {
                     style={{ height: "100%" }}
                     views={["month", "week", "day"]}
                     defaultView="month"
-                    eventPropGetter={(event) => {
+                    eventPropGetter={(event: any) => {
                       const backgroundColor = generateRandomColor(event.title);
                       return { style: { backgroundColor } };
                     }}

@@ -362,7 +362,7 @@ export const FORM_SECTIONS: QuestionSection[] = [
           { value: '5', label: '5 Courses' },
           { value: '6', label: '6+ Courses' }
         ],
-        conditionalDisplay: (data) => data.serviceRequirements?.mealType === 'multi_course'
+        conditionalDisplay: (data) => data.serviceRequirements?.mealType === 'multi_course' || false
       },
       {
         id: 'cocktailHour',
@@ -380,7 +380,7 @@ export const FORM_SECTIONS: QuestionSection[] = [
           { value: '90', label: '1.5 hours' },
           { value: '120', label: '2 hours' }
         ],
-        conditionalDisplay: (data) => data.serviceRequirements?.cocktailHour
+        conditionalDisplay: (data) => !!data.serviceRequirements?.cocktailHour
       },
       {
         id: 'lateNightSnacks',
@@ -406,7 +406,7 @@ export const FORM_SECTIONS: QuestionSection[] = [
         type: 'checkbox',
         label: 'Professional bartending service needed',
         required: false,
-        conditionalDisplay: (data) => data.serviceRequirements?.alcoholService !== 'none'
+        conditionalDisplay: (data) => data.serviceRequirements?.alcoholService !== 'none' && data.serviceRequirements?.alcoholService !== undefined
       },
       {
         id: 'numberOfBartenders',
@@ -414,7 +414,7 @@ export const FORM_SECTIONS: QuestionSection[] = [
         label: 'Number of bartenders needed',
         required: false,
         placeholder: '2',
-        conditionalDisplay: (data) => data.serviceRequirements?.bartendingService
+        conditionalDisplay: (data) => !!data.serviceRequirements?.bartendingService
       }
     ]
   }

@@ -3,7 +3,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Lead } from "@shared/schema";
+import { Opportunity } from "@shared/schema";
 import { formatDate } from "@/lib/utils";
 import { PenIcon } from "lucide-react";
 import { Link } from "wouter";
@@ -23,7 +23,7 @@ export default function RecentLeadsTable() {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   }).slice(0, 4);
 
-  const columns: ColumnDef<Lead>[] = [
+  const columns: ColumnDef<Opportunity>[] = [
     {
       accessorKey: "client",
       header: "Client",

@@ -1062,7 +1062,7 @@ export default function OpportunityDetailPage() {
                                   variant="outline"
                                   size="sm"
                                   className="text-xs"
-                                  onClick={() => window.open(comm.recordingUrl, '_blank')}
+                                  onClick={() => window.open(comm.recordingUrl || undefined, '_blank')}
                                   data-testid={`button-play-recording-${comm.id}`}
                                 >
                                   <Phone className="h-3 w-3 mr-1" />

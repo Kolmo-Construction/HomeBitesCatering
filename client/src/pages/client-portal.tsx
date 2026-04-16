@@ -51,7 +51,7 @@ export default function ClientPortal() {
   });
   
   // Fetch menu data
-  const { data: menu } = useQuery({
+  const { data: menu } = useQuery<any>({
     queryKey: ["/api/menus", estimate?.menuId],
     enabled: !!estimate?.menuId,
   });

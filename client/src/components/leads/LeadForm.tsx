@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertLeadSchema } from "@shared/schema";
+import { insertOpportunitySchema as insertLeadSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ const formSchema = insertLeadSchema.extend({
 type FormValues = z.infer<typeof formSchema>;
 
 interface LeadFormProps {
-  lead?: FormValues;
+  lead?: FormValues & { id?: number };
   isEditing?: boolean;
   leadIdForEdit?: number; // Add this prop for when we want to fetch the lead directly
   onCancel?: () => void;
@@ -66,6 +66,7 @@ interface Client {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   company?: string;
 }
 
@@ -83,7 +84,7 @@ export default function LeadForm({ lead: initialLead, isEditing = false, leadIdF
   });
 
   // Fetch lead data if leadIdForEdit is provided
-  const { data: fetchedLeadData, isLoading: isLoadingFetchedLead } = useQuery<FormValues>({
+  const { data: fetchedLeadData, isLoading: isLoadingFetchedLead } = useQuery<FormValues & { id?: number }>({
     queryKey: ['/api/leads', leadIdForEdit],
     queryFn: async () => {
       if (!leadIdForEdit) return undefined; // Should not happen if enabled is true

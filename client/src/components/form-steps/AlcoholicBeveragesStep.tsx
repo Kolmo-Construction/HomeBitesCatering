@@ -247,7 +247,7 @@ export default function AlcoholicBeveragesStep({
                 <FormField
                   key={option.id}
                   control={control}
-                  name={`alcoholicBeverageSelections.alcoholTypes.${option.id}`}
+                  name={`alcoholicBeverageSelections.alcoholTypes.${option.id}` as any}
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 hover:border-primary transition-colors">
                       <FormControl>
@@ -280,7 +280,7 @@ export default function AlcoholicBeveragesStep({
                 <FormField
                   key={option.id}
                   control={control}
-                  name={`alcoholicBeverageSelections.otherBarEquipment.${option.id}`}
+                  name={`alcoholicBeverageSelections.otherBarEquipment.${option.id}` as any}
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 hover:border-primary transition-colors">
                       <FormControl>

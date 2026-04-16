@@ -60,7 +60,7 @@ export default function EmailSyncToggle() {
         return responseData;
       } catch (error) {
         console.error('Error fetching email sync status:', error);
-        return { enabled: false, configured: false, error: error.message };
+        return { enabled: false, configured: false, error: error instanceof Error ? error.message : String(error) };
       }
     },
     enabled: false, // Disable fetching completely

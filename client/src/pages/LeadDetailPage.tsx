@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X } from "lucide-react";
 import { z } from "zod";
 // Import types directly with relative path since the alias isn't working
-import { Lead, ContactIdentifier, Communication } from "../../types/lead";
+import { Lead, ContactIdentifier, Communication } from "../types/lead";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 

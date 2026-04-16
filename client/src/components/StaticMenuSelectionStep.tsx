@@ -266,7 +266,7 @@ const StaticMenuSelectionStep: React.FC<StaticMenuSelectionStepProps> = ({
   };
 
   const renderDietaryBadges = (item: any) => {
-    const badges = [];
+    const badges: React.ReactElement[] = [];
     
     // Basic dietary flags
     if (item.isVegetarian) badges.push(<Badge key="veg" variant="secondary" className="bg-green-100 text-green-800">Vegetarian</Badge>);

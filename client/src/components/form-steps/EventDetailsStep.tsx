@@ -20,7 +20,6 @@ import {
 } from "lucide-react"; // Added necessary icons
 
 import { EventType, EventInquiryFormData } from "@/types/form-types"; // Adjust path as needed
-import { serviceTypeOptions } from "@/data/eventDetailsOptions"; // We externalized this previously
 const EventDetailsStep = ({ 
   eventType,
   onPrevious,

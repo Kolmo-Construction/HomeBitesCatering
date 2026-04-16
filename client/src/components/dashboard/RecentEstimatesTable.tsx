@@ -17,7 +17,7 @@ export default function RecentEstimatesTable() {
     }
   });
 
-  const { data: clients = [] } = useQuery({
+  const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
     queryFn: async () => {
       const res = await fetch('/api/clients');
@@ -33,7 +33,7 @@ export default function RecentEstimatesTable() {
 
   // Helper to get client name from ID
   const getClientName = (clientId: number) => {
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find((c: any) => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Unknown Client";
   };
 

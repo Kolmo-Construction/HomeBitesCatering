@@ -78,7 +78,7 @@ const WeddingInquiryForm: React.FC = () => {
     id: key,
     name: theme.name,
     description: theme.description || `Experience authentic ${theme.name} cuisine`,
-    itemCount: theme.itemCount
+    itemCount: theme.totalItemCount || theme.allItems?.length || 0
   }));
 
   // Get items for selected theme organized by category
@@ -341,7 +341,7 @@ const WeddingInquiryForm: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {items.map((item) => {
+                      {items.map((item: any) => {
                         const isSelected = selected.includes(item.id);
                         const canSelect = selected.length < limit || isSelected;
                         
@@ -398,7 +398,7 @@ const WeddingInquiryForm: React.FC = () => {
                                             <div>
                                               <h4 className="font-medium mb-2">Dietary Info</h4>
                                               <div className="flex flex-wrap gap-1">
-                                                {item.dietaryFlags.map(flag => (
+                                                {item.dietaryFlags.map((flag: string) => (
                                                   <Badge key={flag} variant="secondary" className="text-xs">
                                                     {flag}
                                                   </Badge>
@@ -414,7 +414,7 @@ const WeddingInquiryForm: React.FC = () => {
                                 <p className="text-sm text-gray-600">{item.description}</p>
                                 {item.dietaryFlags && item.dietaryFlags.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-1">
-                                    {item.dietaryFlags.slice(0, 2).map(flag => (
+                                    {item.dietaryFlags.slice(0, 2).map((flag: string) => (
                                       <Badge key={flag} variant="secondary" className="text-xs">
                                         {flag}
                                       </Badge>

@@ -20,7 +20,7 @@ export default function Users() {
   }
 
   // Fetch users
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading } = useQuery<any[]>({
     queryKey: ['/api/users'],
   });
 

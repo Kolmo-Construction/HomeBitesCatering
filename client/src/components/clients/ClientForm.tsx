@@ -38,7 +38,7 @@ const formSchema = insertClientSchema.extend({
 type FormValues = z.infer<typeof formSchema>;
 
 interface ClientFormProps {
-  client?: FormValues;
+  client?: FormValues & { id?: number };
   isEditing?: boolean;
   onCancel?: () => void;
 }

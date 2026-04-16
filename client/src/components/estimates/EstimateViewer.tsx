@@ -56,6 +56,7 @@ interface ClientType {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phone?: string;
   company?: string;
   address?: string;
   city?: string;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFormContext } from "react-hook-form";
 import { themeMenuData } from "@/data/themeMenuInfo";
@@ -25,8 +25,8 @@ const CustomMenuComponent = ({
   
   const handleCustomItemSelection = (categoryKey: string, itemId: string, isSelected: boolean) => {
     // Initialize array if it doesn't exist
-    const currentSelections = Array.isArray(menuSelections?.[categoryKey]) 
-      ? [...menuSelections[categoryKey]] 
+    const currentSelections: any[] = Array.isArray(menuSelections?.[categoryKey])
+      ? [...menuSelections[categoryKey]]
       : [];
     
     if (isSelected) {
@@ -59,13 +59,17 @@ const CustomMenuComponent = ({
     }
     
     const selectedItems = menuSelections[categoryKey];
-    return selectedItems.some(item => 
+    return selectedItems.some((item: any) =>
       typeof item === 'object' && item !== null && 'id' in item && item.id === itemId
     );
   };
   
   // Get the theme data for custom_menu
-  const customMenuData = themeMenuData.custom_menu;
+  const customMenuData = themeMenuData.custom_menu as {
+    title: string;
+    description: string;
+    categories: Record<string, { title: string; description: string; items?: { id: string; name: string; upcharge?: number }[] }>;
+  };
   
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -120,7 +124,7 @@ const CustomMenuComponent = ({
             </p>
 
             <div className="grid grid-cols-1 gap-3 mt-4">
-              {customMenuData.categories[selectedActualCategory]?.items?.map((item) => {
+              {customMenuData.categories[selectedActualCategory]?.items?.map((item: any) => {
                 if (!item) return null;
                 const isSelected = isCustomItemSelected(selectedActualCategory, item.id);
                 return (

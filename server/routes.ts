@@ -106,7 +106,7 @@ function formatNotes(lead: any): string | null {
           : Object.values(lead.aiKeyRequirements);
         
         if (requirements.length > 0) {
-          requirementsText = requirements.map(req => `• ${req}`).join('\n');
+          requirementsText = requirements.map((req: any) => `• ${req}`).join('\n');
         }
       }
       
@@ -132,7 +132,7 @@ function formatNotes(lead: any): string | null {
           : Object.values(lead.aiPotentialRedFlags);
         
         if (redFlags.length > 0) {
-          redFlagsText = redFlags.map(flag => `• ${flag}`).join('\n');
+          redFlagsText = redFlags.map((flag: any) => `• ${flag}`).join('\n');
         }
       }
       
@@ -420,8 +420,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Only admins can update other users
       if (userId !== req.session.userId) {
-        const currentUser = await storage.getUser(req.session.userId);
-        
+        const currentUser = await storage.getUser(req.session.userId!);
+
         if (!currentUser || currentUser.role !== 'admin') {
           return res.status(403).json({ message: 'Insufficient permissions' });
         }

@@ -463,7 +463,7 @@ export function AlcoholicBeveragesStep({
                 <div key={option.id} className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <Checkbox
                     id={`alcohol-${option.id}`}
-                    checked={!!alcoholTypes[option.id]}
+                    checked={!!(alcoholTypes as Record<string, boolean>)[option.id]}
                     onCheckedChange={(checked) => toggleAlcoholType(option.id, !!checked)}
                   />
                   <FormLabel htmlFor={`alcohol-${option.id}`} className="font-normal cursor-pointer">
@@ -482,7 +482,7 @@ export function AlcoholicBeveragesStep({
                 <div key={option.id} className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <Checkbox
                     id={`equipment-${option.id}`}
-                    checked={!!barEquipment[option.id]}
+                    checked={!!(barEquipment as Record<string, boolean>)[option.id]}
                     onCheckedChange={(checked) => toggleBarEquipment(option.id, !!checked)}
                   />
                   <FormLabel htmlFor={`equipment-${option.id}`} className="font-normal cursor-pointer">

@@ -27,11 +27,11 @@ import { useToast } from "@/hooks/use-toast";
 export default function EstimateList() {
   const canWrite = useCanWrite();
   const canViewFinancials = useCanViewFinancials();
-  const { data: estimates = [], isLoading } = useQuery({
+  const { data: estimates = [], isLoading } = useQuery<Estimate[]>({
     queryKey: ["/api/estimates"],
   });
 
-  const { data: clients = [] } = useQuery({
+  const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
 
@@ -42,7 +42,7 @@ export default function EstimateList() {
 
   // Helper to get client name from ID
   const getClientName = (clientId: number) => {
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find((c: any) => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Unknown Client";
   };
 

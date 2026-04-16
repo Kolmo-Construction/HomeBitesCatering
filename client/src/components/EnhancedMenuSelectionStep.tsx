@@ -60,15 +60,15 @@ const EnhancedMenuSelectionStep: React.FC<EnhancedMenuSelectionStepProps> = ({
   };
 
   const renderDietaryBadges = (item: EnrichedMenuItem) => {
-    const badges = [];
-    
+    const badges: React.ReactElement[] = [];
+
     // Basic dietary flags
     if (item.isVegetarian) badges.push(<Badge key="veg" variant="secondary" className="bg-green-100 text-green-800">Vegetarian</Badge>);
     if (item.isVegan) badges.push(<Badge key="vegan" variant="secondary" className="bg-green-100 text-green-800">Vegan</Badge>);
     if (item.isGlutenFree) badges.push(<Badge key="gf" variant="secondary" className="bg-blue-100 text-blue-800">Gluten-Free</Badge>);
     if (item.isDairyFree) badges.push(<Badge key="df" variant="secondary" className="bg-purple-100 text-purple-800">Dairy-Free</Badge>);
     if (item.isNutFree) badges.push(<Badge key="nf" variant="secondary" className="bg-orange-100 text-orange-800">Nut-Free</Badge>);
-    
+
     // Rich dietary flags
     item.dietaryFlags.forEach(flag => {
       if (!badges.find(b => b.key === flag)) {

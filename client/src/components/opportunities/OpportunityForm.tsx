@@ -55,7 +55,7 @@ const formSchema = insertOpportunitySchema.extend({
 type FormValues = z.infer<typeof formSchema>;
 
 interface OpportunityFormProps {
-  opportunity?: FormValues;
+  opportunity?: FormValues & { id?: number };
   isEditing?: boolean;
   opportunityIdForEdit?: number;
   onCancel?: () => void;
@@ -66,6 +66,7 @@ interface Client {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   company?: string;
 }
 
@@ -97,7 +98,7 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
   });
 
   // Fetch opportunity data if opportunityIdForEdit is provided
-  const { data: fetchedOpportunityData, isLoading: isLoadingFetchedOpportunity } = useQuery<FormValues>({
+  const { data: fetchedOpportunityData, isLoading: isLoadingFetchedOpportunity } = useQuery<FormValues & { id?: number }>({
     queryKey: ['/api/opportunities', opportunityIdForEdit],
     queryFn: async () => {
       if (!opportunityIdForEdit) return undefined;
@@ -254,9 +255,9 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
           if (typeof rawLeadData.aiKeyRequirements === 'string') {
             requirements = rawLeadData.aiKeyRequirements;
           } else if (Array.isArray(rawLeadData.aiKeyRequirements)) {
-            requirements = rawLeadData.aiKeyRequirements.map(req => `• ${req}`).join('\n');
+            requirements = rawLeadData.aiKeyRequirements.map((req: any) => `• ${req}`).join('\n');
           } else if (typeof rawLeadData.aiKeyRequirements === 'object') {
-            requirements = Object.values(rawLeadData.aiKeyRequirements).map(req => `• ${req}`).join('\n');
+            requirements = Object.values(rawLeadData.aiKeyRequirements).map((req: any) => `• ${req}`).join('\n');
           }
           
           if (requirements) {
@@ -274,9 +275,9 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
           if (typeof rawLeadData.aiPotentialRedFlags === 'string') {
             redFlags = rawLeadData.aiPotentialRedFlags;
           } else if (Array.isArray(rawLeadData.aiPotentialRedFlags)) {
-            redFlags = rawLeadData.aiPotentialRedFlags.map(flag => `• ${flag}`).join('\n');
+            redFlags = rawLeadData.aiPotentialRedFlags.map((flag: any) => `• ${flag}`).join('\n');
           } else if (typeof rawLeadData.aiPotentialRedFlags === 'object') {
-            redFlags = Object.values(rawLeadData.aiPotentialRedFlags).map(flag => `• ${flag}`).join('\n');
+            redFlags = Object.values(rawLeadData.aiPotentialRedFlags).map((flag: any) => `• ${flag}`).join('\n');
           }
           
           if (redFlags) {

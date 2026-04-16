@@ -17,11 +17,14 @@ export const getWeddingMenuThemes = async (req: Request, res: Response) => {
       .where(eq(menus.displayOnCustomerForm, true));
 
     const formattedMenus = weddingMenus.map(menu => {
-      let menuStructure;
+      let menuStructure: any;
       try {
-        menuStructure = typeof menu.items === 'string' 
-          ? JSON.parse(menu.items) 
-          : menu.items;
+        // Build structure from the actual menu columns
+        menuStructure = {
+          theme_key: menu.themeKey,
+          categories: menu.categoryItems,
+          packages: menu.packages,
+        };
       } catch (error) {
         console.error(`Failed to parse menu items for menu ${menu.id}:`, error);
         menuStructure = null;

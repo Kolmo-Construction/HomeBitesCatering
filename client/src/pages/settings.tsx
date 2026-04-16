@@ -149,12 +149,12 @@ export default function Settings() {
   }, []);
   
   // Get user data
-  const { data: userData, isLoading } = useQuery({
+  const { data: userData, isLoading } = useQuery<any>({
     queryKey: ["/api/auth/me"],
   });
-  
+
   // Get user list for admin tab
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<any[]>({
     queryKey: ["/api/users"],
     enabled: user?.role === "admin" && activeTab === "users",
   });

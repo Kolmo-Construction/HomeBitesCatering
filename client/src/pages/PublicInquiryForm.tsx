@@ -3191,8 +3191,8 @@ const AppetizersStep = ({
       if (item) {
         setValue(`horsDoeurvesSelections.categories.${categoryId}.items.${itemId}`, {
           name: item.name,
-          price: item.price,
-          quantity
+          price: (item as any).price || 0,
+          quantity: quantity as any
         });
       }
     }
@@ -3294,11 +3294,11 @@ const AppetizersStep = ({
       if (existingItemIndex !== -1) {
         // Update existing item
         const newItems = [...existingItems];
-        newItems[existingItemIndex] = { name: itemName, quantity };
+        newItems[existingItemIndex] = { name: itemName, quantity, price: existingItems[existingItemIndex]?.price || 0 };
         setValue(`appetizers.${categoryId}`, newItems);
       } else {
         // Add new item
-        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity }]);
+        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity, price: 0 }]);
       }
     }
   };
@@ -3326,13 +3326,13 @@ const AppetizersStep = ({
     
     if (isSelected) {
       // Check if we're at the selection limit
-      if (existingItems.length >= spreadsCategory.selectLimit && existingItemIndex === -1) {
+      if (existingItems.length >= (spreadsCategory as any).selectLimit && existingItemIndex === -1) {
         return; // At limit, don't add
       }
-      
+
       // Add item with default quantity of 1 (will be updated later with serving size)
       if (existingItemIndex === -1) {
-        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity: 1 }]);
+        setValue(`appetizers.${categoryId}`, [...existingItems, { name: itemName, quantity: 1, price: 0 }]);
       }
     } else {
       // Remove item
@@ -3462,7 +3462,7 @@ const AppetizersStep = ({
                       <p className="text-sm text-gray-500 mt-1">Select up to {category.selectLimit} options ({selectedCountForSpreads} selected)</p>
                     </div>
                     {category.basePrice && (
-                      <div className="text-lg font-medium">${category.basePrice.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
+                      <div className="text-lg font-medium">${((category as any).basePrice || 0).toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
                     )}
                   </div>
                   
@@ -3549,7 +3549,7 @@ const AppetizersStep = ({
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">{item.name}</CardTitle>
                         <CardDescription>
-                          ${item.price.toFixed(2)} each. {category.description || `Offered in lots of ${category.lotSizes.join(', ')}`}
+                          ${((item as any).price || 0).toFixed(2)} each. {category.description || `Offered in lots of ${(category.lotSizes || []).join(', ')}`}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -3571,7 +3571,7 @@ const AppetizersStep = ({
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="0">None</SelectItem>
-                                  {category.lotSizes.map((size) => (
+                                  {(category.lotSizes || []).map((size: number) => (
                                     <SelectItem key={size} value={String(size)}>
                                       {size}
                                     </SelectItem>
@@ -3587,7 +3587,7 @@ const AppetizersStep = ({
                           <div className="mt-3 text-sm font-semibold text-right">
                             Item Total: $
                             {(
-                              item.price * getSelectedQuantity(category.id, item.id)
+                              ((item as any).price || 0) * (getSelectedQuantity(category.id, item.id) || 0)
                             ).toFixed(2)}
                           </div>
                         )}
@@ -3646,7 +3646,7 @@ const AppetizersStep = ({
                       <h3 className="text-lg font-semibold">{category.name}</h3>
                       <p className="text-sm text-gray-500">{category.note} ({getSelectedSpreadsCount()} of {category.selectLimit} selected)</p>
                     </div>
-                    <div className="text-lg font-medium">${category.basePrice.toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
+                    <div className="text-lg font-medium">${((category as any).basePrice || 0).toFixed(2)} <span className="text-sm text-gray-500">per person</span></div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -3681,7 +3681,7 @@ const AppetizersStep = ({
                         onValueChange={(value) => handleSpreadServingSizeChange(Number(value))}
                         className="flex flex-wrap gap-4"
                       >
-                        {category.servingSizes.map((size) => (
+                        {((category as any).servingSizes || []).map((size: number) => (
                           <div key={size} className="flex items-center space-x-2">
                             <RadioGroupItem value={String(size)} id={`serving-${size}`} />
                             <Label htmlFor={`serving-${size}`}>{size} servings</Label>
@@ -3828,8 +3828,8 @@ const MenuSelectionStep = ({
       return 0;
     }
     
-    const category = themeData.categories[categoryKey as keyof typeof themeData.categories];
-    return category.limits[selectedPackage as keyof typeof category.limits] || 0;
+    const category = themeData.categories[categoryKey as keyof typeof themeData.categories] as any;
+    return category.limits?.[selectedPackage] || 0;
   };
   
   // Check if a category is available for the selected package
@@ -3843,8 +3843,8 @@ const MenuSelectionStep = ({
       return 0;
     }
     
-    const selectedItems = menuSelections[categoryKey];
-    const item = selectedItems.find(item => item.id === itemId);
+    const selectedItems = menuSelections[categoryKey] as Array<{ id: string; quantity: number }>;
+    const item = selectedItems.find((item: any) => item.id === itemId);
     return item ? (item.quantity || 1) : 0;
   };
   
@@ -3881,7 +3881,7 @@ const MenuSelectionStep = ({
       if (existingItemIndex >= 0) {
         // Update existing item with new quantity
         currentSelections[existingItemIndex] = {
-          ...currentSelections[existingItemIndex],
+          ...(typeof currentSelections[existingItemIndex] === 'object' ? currentSelections[existingItemIndex] : {}),
           id: itemId,
           quantity: quantity
         };
@@ -3898,9 +3898,9 @@ const MenuSelectionStep = ({
       }
     }
     
-    setValue(`menuSelections.${categoryKey}`, currentSelections);
+    setValue(`menuSelections.${categoryKey}` as any, currentSelections as any);
   };
-  
+
   // Set hors d'oeuvres as the theme if no other theme is selected
   React.useEffect(() => {
     if (!selectedTheme || selectedTheme === "") {
@@ -3971,7 +3971,7 @@ const MenuSelectionStep = ({
         }
       }
       
-      setValue(`menuSelections.${selectionPath}`, currentSelections);
+      setValue(`menuSelections.${selectionPath}` as any, currentSelections as any);
     };
     
     const isCustomItemSelected = (categoryKey: string, subcategoryKey: string, itemId: string) => {
@@ -3992,7 +3992,7 @@ const MenuSelectionStep = ({
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-3 text-gray-900">{themeData.title}</h2>
           <p className="text-lg text-gray-600">
-            {themeData.description}
+            {(themeData as any).description}
           </p>
         </div>
         
@@ -4007,7 +4007,7 @@ const MenuSelectionStep = ({
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 {Object.keys(themeData.categories).map((categoryKey) => {
-                  const category = themeData.categories[categoryKey];
+                  const category = (themeData.categories as any)[categoryKey];
                   return (
                     <div 
                       key={categoryKey}
@@ -4032,17 +4032,17 @@ const MenuSelectionStep = ({
                   <ChevronLeft className="h-4 w-4 mr-1" /> Back to Cuisine Categories
                 </button>
                 <span className="text-gray-500">→</span>
-                <span className="ml-2 font-medium">{themeData.categories[selectedCategory].title}</span>
+                <span className="ml-2 font-medium">{(themeData.categories as any)[selectedCategory].title}</span>
               </div>
-              
+
               <h3 className="text-xl font-semibold mb-4">Select a Food Category</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Choose the type of items you want to add from {themeData.categories[selectedCategory].title}
+                Choose the type of items you want to add from {(themeData.categories as any)[selectedCategory].title}
               </p>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                {Object.keys(themeData.categories[selectedCategory].subcategories).map((subcategoryKey) => {
-                  const subcategory = themeData.categories[selectedCategory].subcategories[subcategoryKey];
+                {Object.keys((themeData.categories as any)[selectedCategory].subcategories).map((subcategoryKey) => {
+                  const subcategory = (themeData.categories as any)[selectedCategory].subcategories[subcategoryKey];
                   return (
                     <div 
                       key={subcategoryKey}
@@ -4067,21 +4067,21 @@ const MenuSelectionStep = ({
                   <ChevronLeft className="h-4 w-4 mr-1" /> Back to Categories
                 </button>
                 <span className="text-gray-500">→</span>
-                <span className="ml-2 font-medium">{selectedCategory && themeData.categories[selectedCategory]?.title}</span>
+                <span className="ml-2 font-medium">{selectedCategory && (themeData.categories as any)[selectedCategory]?.title}</span>
                 <span className="text-gray-500 mx-2">→</span>
-                <span className="font-medium">{selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}</span>
+                <span className="font-medium">{selectedCategory && selectedSubcategory && (themeData.categories as any)[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}</span>
               </div>
               
               <h3 className="text-xl font-semibold mb-4">
-                {selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}
+                {selectedCategory && selectedSubcategory && (themeData.categories as any)[selectedCategory]?.subcategories?.[selectedSubcategory]?.title}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                {selectedCategory && selectedSubcategory && themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.description}
+                {selectedCategory && selectedSubcategory && (themeData.categories as any)[selectedCategory]?.subcategories?.[selectedSubcategory]?.description}
               </p>
               
               <div className="grid grid-cols-1 gap-3 mt-4">
-                {selectedCategory && selectedSubcategory && 
-                  themeData.categories[selectedCategory]?.subcategories?.[selectedSubcategory]?.items?.map((item) => {
+                {selectedCategory && selectedSubcategory &&
+                  (themeData.categories as any)[selectedCategory]?.subcategories?.[selectedSubcategory]?.items?.map((item: any) => {
                     if (!item || !selectedCategory || !selectedSubcategory) return null;
                     const isSelected = isCustomItemSelected(selectedCategory, selectedSubcategory, item.id);
                     
@@ -4182,7 +4182,7 @@ const MenuSelectionStep = ({
           <h3 className="text-xl font-semibold mb-4">Select a Package</h3>
           
           <div className="grid grid-cols-1 gap-4">
-            {themeData.packages && themeData.packages.map((pkg) => (
+            {(themeData as any).packages && (themeData as any).packages.map((pkg: any) => (
               <div key={pkg.id}>
                 {pkg.minGuestCount > 0 && guestCount < pkg.minGuestCount ? (
                   // Disabled package with warning
@@ -4253,7 +4253,7 @@ const MenuSelectionStep = ({
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {category.items.map((item) => {
+                    {category.items.map((item: any) => {
                       // Special handling for add-ons with quantity input in Sandwich Factory
                       if (categoryKey === 'add_ons' && 'quantityInput' in themeData && themeData.quantityInput) {
                         return (

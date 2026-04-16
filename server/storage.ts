@@ -272,7 +272,7 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     const [updatedUser] = await db
       .update(users)
-      .set({ ...user, updatedAt: new Date() })
+      .set(user)
       .where(eq(users.id, id))
       .returning();
     return updatedUser;
@@ -297,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity> {
-    const [createdOpportunity] = await db.insert(opportunities).values(opportunity).returning();
+    const [createdOpportunity] = await db.insert(opportunities).values(opportunity as any).returning();
     return createdOpportunity;
   }
 
@@ -350,7 +350,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem> {
-    const [createdMenuItem] = await db.insert(menuItems).values(menuItem).returning();
+    const [createdMenuItem] = await db.insert(menuItems).values(menuItem as any).returning();
     return createdMenuItem;
   }
 
@@ -382,7 +382,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMenu(menu: InsertMenu): Promise<DrizzleMenu> {
-    const [createdMenu] = await db.insert(menus).values(menu).returning();
+    const [createdMenu] = await db.insert(menus).values(menu as any).returning();
     return createdMenu;
   }
 
@@ -681,7 +681,7 @@ export class DatabaseStorage implements IStorage {
 
   // Raw Leads methods
   async createRawLead(lead: InsertRawLead): Promise<RawLead> {
-    const [createdLead] = await db.insert(rawLeads).values(lead).returning();
+    const [createdLead] = await db.insert(rawLeads).values(lead as any).returning();
     return createdLead;
   }
 
@@ -812,29 +812,31 @@ export class DatabaseStorage implements IStorage {
       // Process and flatten the results
       for (const queryResult of allResults) {
         if (queryResult.length > 0) {
+          const firstRow = queryResult[0] as any;
           // Check if this is a structured result (from a join)
-          if (queryResult[0].contact) {
+          if (firstRow.contact) {
             for (const row of queryResult) {
-              if (row.opportunity && row.opportunity.id) {
+              const r = row as any;
+              if (r.opportunity && r.opportunity.id) {
                 results.push({
                   type: 'opportunity',
-                  data: row.opportunity,
+                  data: r.opportunity,
                   via: 'contact_identifier'
                 });
               }
-              
-              if (row.client && row.client.id) {
+
+              if (r.client && r.client.id) {
                 results.push({
                   type: 'client',
-                  data: row.client,
+                  data: r.client,
                   via: 'contact_identifier'
                 });
               }
             }
-          } else if (queryResult[0].firstName) {
+          } else if (firstRow.firstName) {
             // This is either an opportunity or client
-            const isOpportunity = queryResult[0].status !== undefined; // Opportunities have status
-            
+            const isOpportunity = firstRow.status !== undefined; // Opportunities have status
+
             for (const item of queryResult) {
               results.push({
                 type: isOpportunity ? 'opportunity' : 'client',

@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
 import { Button } from "@/components/ui/button";
-import { Lead } from "@shared/schema";
+import { Opportunity as Lead } from "@shared/schema";
 import { formatDate } from "@/lib/utils";
 import { EyeIcon, PenIcon, PlusIcon } from "lucide-react";
 
@@ -56,7 +56,7 @@ export default function LeadList() {
     {
       accessorKey: "leadSource",
       header: "Source",
-      cell: ({ row }) => <span>{row.original.leadSource || "—"}</span>,
+      cell: ({ row }) => <span>{(row.original as any).leadSource || row.original.opportunitySource || "—"}</span>,
     },
     {
       accessorKey: "status",

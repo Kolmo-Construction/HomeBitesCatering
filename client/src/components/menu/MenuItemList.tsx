@@ -103,7 +103,7 @@ export default function MenuItemList() {
 
   const handleDelete = () => {
     if (itemToDelete) {
-      deleteMutation.mutate(itemToDelete.id);
+      deleteMutation.mutate(Number(itemToDelete.id));
     }
   };
 

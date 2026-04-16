@@ -134,7 +134,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     if (isEditing && estimate) {
       console.log("EstimateForm - getFormDefaultValues - Populating for editing:", estimate);
       return {
-        clientId: Number(estimate.clientId) || undefined,
+        clientId: Number(estimate.clientId) || 0,
         eventType: estimate.eventType || "",
         guestCount: estimate.guestCount != null ? Number(estimate.guestCount) : null,
         venue: estimate.venue || "",
@@ -156,7 +156,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       };
     }
     return { // Defaults for a new form
-      clientId: undefined,
+      clientId: 0,
       eventType: "",
       guestCount: null,
       venue: "",

@@ -52,16 +52,16 @@ const TIER_PRICING = {
 export default function ComprehensiveWeddingInquiry() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<WeddingInquiryFormData>>({
-    contactInfo: {},
-    eventDetails: {},
-    guestInfo: {},
-    serviceRequirements: {},
-    staffingNeeds: {},
-    equipmentNeeds: {},
-    menuSelections: { selectedItems: {} },
-    budgetInfo: {},
-    additionalServices: {},
-    timeline: {}
+    contactInfo: {} as any,
+    eventDetails: {} as any,
+    guestInfo: {} as any,
+    serviceRequirements: {} as any,
+    staffingNeeds: {} as any,
+    equipmentNeeds: {} as any,
+    menuSelections: { selectedItems: {} } as any,
+    budgetInfo: {} as any,
+    additionalServices: {} as any,
+    timeline: {} as any
   });
   
   const [availableThemes, setAvailableThemes] = useState<MenuTheme[]>([]);
@@ -84,7 +84,9 @@ export default function ComprehensiveWeddingInquiry() {
   const loadMenuThemes = async () => {
     try {
       // Import both the themes and the menusByTheme data
-      const { menuThemes, allMenuItems } = await import('@/data/generated');
+      const { allMenuItems } = await import('@/data/generated');
+      const menuThemesModule = await import('@/data/generated/menuThemes.json');
+      const menuThemes = (menuThemesModule as any).default || menuThemesModule;
       const menusByThemeModule = await import('@/data/generated/menusByTheme.json');
       
       console.log('Raw menuThemes data:', menuThemes);
@@ -94,7 +96,7 @@ export default function ComprehensiveWeddingInquiry() {
       // Process the themes from menuThemes.json
       const themes = (menuThemes || []).map((theme: any) => {
         // Get the corresponding detailed data from menusByTheme.json
-        const detailedThemeData = menusByThemeModule[theme.theme_key] || menusByThemeModule.default?.[theme.theme_key];
+        const detailedThemeData = (menusByThemeModule as any)[theme.theme_key] || (menusByThemeModule as any).default?.[theme.theme_key];
         
         // Build itemsByCategory structure from the theme's categories
         const itemsByCategory: any = {};
@@ -953,7 +955,7 @@ export default function ComprehensiveWeddingInquiry() {
               <MenuBalanceCard
                 selectedItems={selectedItems}
                 menuData={selectedThemeData}
-                guestCount={formData.guestInfo?.expectedGuestCount || 0}
+                guestCount={formData.guestInfo?.totalGuests || 0}
                 selectedTier={formData.menuSelections?.selectedTier || ''}
                 basePricing={TIER_PRICING}
               />
@@ -1280,7 +1282,7 @@ export default function ComprehensiveWeddingInquiry() {
                 <MenuBalanceCard
                   selectedItems={selectedItems}
                   menuData={selectedThemeData}
-                  guestCount={formData.guestInfo?.expectedGuestCount || 0}
+                  guestCount={formData.guestInfo?.totalGuests || 0}
                   selectedTier={formData.menuSelections?.selectedTier || ''}
                   basePricing={TIER_PRICING}
                 />
