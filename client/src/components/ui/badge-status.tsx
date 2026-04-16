@@ -27,7 +27,8 @@ export default function BadgeStatus({ status, children }: BadgeStatusProps) {
     
     // Event statuses
     confirmed: { color: "bg-green-100 text-green-800", label: "Confirmed" },
-    "in-progress": { color: "bg-blue-100 text-blue-800", label: "In Progress" },
+    "in_progress": { color: "bg-blue-100 text-blue-800", label: "In Progress" },
+    "in-progress": { color: "bg-blue-100 text-blue-800", label: "In Progress" }, // legacy compat
     completed: { color: "bg-purple-100 text-purple-800", label: "Completed" },
     cancelled: { color: "bg-red-100 text-red-800", label: "Cancelled" },
     

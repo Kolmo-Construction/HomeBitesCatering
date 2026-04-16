@@ -60,7 +60,7 @@ export async function checkDateAvailability(dateString: string): Promise<Calenda
         and(
           gte(events.eventDate, startOfDay),
           lte(events.eventDate, endOfDay),
-          sql`${events.status} IN ('confirmed', 'in-progress')`
+          sql`${events.status} IN ('confirmed', 'in_progress')`
         )
       );
 

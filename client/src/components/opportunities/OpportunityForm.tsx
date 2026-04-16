@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn, formatDate } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import DuplicateWarning from "@/components/shared/DuplicateWarning";
 
 // Create an extended schema for our form that includes UI-specific fields
 const formSchema = insertOpportunitySchema.extend({
@@ -500,6 +501,15 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                   )}
                 />
               </div>
+
+              {/* Tier 4: Duplicate detection */}
+              {!isEditing && (
+                <DuplicateWarning
+                  email={form.watch("email")}
+                  phone={form.watch("phone") || undefined}
+                  excludeType="opportunity"
+                />
+              )}
             </div>
 
             {/* SECTION 2: EVENT DETAILS */}
@@ -676,9 +686,8 @@ export default function OpportunityForm({ opportunity: initialOpportunity, isEdi
                           <SelectItem value="contacted">Contacted</SelectItem>
                           <SelectItem value="qualified">Qualified</SelectItem>
                           <SelectItem value="proposal">Proposal</SelectItem>
-                          <SelectItem value="negotiation">Negotiation</SelectItem>
-                          <SelectItem value="won">Won</SelectItem>
-                          <SelectItem value="lost">Lost</SelectItem>
+                          <SelectItem value="booked">Booked</SelectItem>
+                          <SelectItem value="archived">Archived</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

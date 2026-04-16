@@ -19,6 +19,8 @@ import {
   type OpportunityEmailThread, type InsertOpportunityEmailThread,
   type FollowUpDraft, type InsertFollowUpDraft,
   type EstimateVersion, type InsertEstimateVersion,
+  auditLog,
+  type AuditLogEntry,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, lte, inArray, and, isNull, desc, or, sql } from "drizzle-orm"; // Added lte for date range query
@@ -309,27 +311,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteOpportunity(id: number): Promise<boolean> {
-    const [deletedOpportunity] = await db
-      .delete(opportunities)
+    // Tier 4: Soft delete
+    const [softDeleted] = await db
+      .update(opportunities)
+      .set({ deletedAt: new Date() })
       .where(eq(opportunities.id, id))
       .returning({ id: opportunities.id });
-    return !!deletedOpportunity;
+    return !!softDeleted;
   }
 
   async listOpportunities(): Promise<Opportunity[]> {
-    return await db.select().from(opportunities);
+    return await db.select().from(opportunities).where(isNull(opportunities.deletedAt));
   }
 
   async listOpportunitiesByStatus(status: string): Promise<Opportunity[]> {
-    return await db.select().from(opportunities).where(eq(opportunities.status, status));
+    return await db.select().from(opportunities).where(and(eq(opportunities.status, status as any), isNull(opportunities.deletedAt)));
   }
 
   async listOpportunitiesBySource(source: string): Promise<Opportunity[]> {
-    return await db.select().from(opportunities).where(eq(opportunities.opportunitySource, source));
+    return await db.select().from(opportunities).where(and(eq(opportunities.opportunitySource, source), isNull(opportunities.deletedAt)));
   }
 
   async listOpportunitiesByPriority(priority: typeof opportunityPriorityEnum.enumValues[number]): Promise<Opportunity[]> {
-    return await db.select().from(opportunities).where(eq(opportunities.priority, priority));
+    return await db.select().from(opportunities).where(and(eq(opportunities.priority, priority), isNull(opportunities.deletedAt)));
   }
 
   // Menu Item methods
@@ -425,17 +429,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: number): Promise<boolean> {
-    const [deletedClient] = await db
-      .delete(clients)
+    const [softDeleted] = await db
+      .update(clients)
+      .set({ deletedAt: new Date() })
       .where(eq(clients.id, id))
       .returning({ id: clients.id });
-    return !!deletedClient;
+    return !!softDeleted;
   }
 
   async listClients(): Promise<Client[]> {
-    console.log('Retrieved', await db.select().from(clients).then(clients => clients.length), 'clients from database');
-    console.log('Successfully retrieved', await db.select().from(clients).then(clients => clients.length), 'clients');
-    return await db.select().from(clients);
+    return await db.select().from(clients).where(isNull(clients.deletedAt));
   }
 
   // Estimate methods
@@ -459,15 +462,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEstimate(id: number): Promise<boolean> {
-    const [deletedEstimate] = await db
-      .delete(estimates)
+    const [softDeleted] = await db
+      .update(estimates)
+      .set({ deletedAt: new Date() })
       .where(eq(estimates.id, id))
       .returning({ id: estimates.id });
-    return !!deletedEstimate;
+    return !!softDeleted;
   }
 
   async listEstimates(): Promise<Estimate[]> {
-    return await db.select().from(estimates);
+    return await db.select().from(estimates).where(isNull(estimates.deletedAt));
   }
 
   // Event methods
@@ -491,15 +495,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEvent(id: number): Promise<boolean> {
-    const [deletedEvent] = await db
-      .delete(events)
+    const [softDeleted] = await db
+      .update(events)
+      .set({ deletedAt: new Date() })
       .where(eq(events.id, id))
       .returning({ id: events.id });
-    return !!deletedEvent;
+    return !!softDeleted;
   }
 
   async listEvents(): Promise<Event[]> {
-    return await db.select().from(events);
+    return await db.select().from(events).where(isNull(events.deletedAt));
   }
 
   async listUpcomingEvents(): Promise<Event[]> {
@@ -507,7 +512,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(events)
-      .where(gte(events.eventDate, today))
+      .where(and(gte(events.eventDate, today), isNull(events.deletedAt)))
       .orderBy(events.eventDate);
   }
 
@@ -930,6 +935,59 @@ export class DatabaseStorage implements IStorage {
   async getEstimateVersion(id: number): Promise<EstimateVersion | undefined> {
     const [version] = await db.select().from(estimateVersions).where(eq(estimateVersions.id, id));
     return version;
+  }
+
+  // ─── Audit Log (Tier 4) ─────────────────────────────────────────────────
+
+  async writeAuditLog(entry: {
+    entityType: string;
+    entityId: number;
+    action: 'created' | 'updated' | 'deleted' | 'restored' | 'merged';
+    userId?: number;
+    changes?: Record<string, any>;
+    metadata?: Record<string, any>;
+  }): Promise<void> {
+    await db.insert(auditLog).values({
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      action: entry.action,
+      userId: entry.userId || null,
+      changes: entry.changes || null,
+      metadata: entry.metadata || null,
+    });
+  }
+
+  async getAuditLog(entityType?: string, entityId?: number, limit = 50): Promise<AuditLogEntry[]> {
+    const conditions = [];
+    if (entityType) conditions.push(eq(auditLog.entityType, entityType));
+    if (entityId) conditions.push(eq(auditLog.entityId, entityId));
+
+    const query = db.select().from(auditLog);
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(auditLog.createdAt)).limit(limit);
+    }
+    return await query.orderBy(desc(auditLog.createdAt)).limit(limit);
+  }
+
+  // Restore soft-deleted record
+  async restoreOpportunity(id: number): Promise<boolean> {
+    const [restored] = await db.update(opportunities).set({ deletedAt: null }).where(eq(opportunities.id, id)).returning({ id: opportunities.id });
+    return !!restored;
+  }
+
+  async restoreClient(id: number): Promise<boolean> {
+    const [restored] = await db.update(clients).set({ deletedAt: null }).where(eq(clients.id, id)).returning({ id: clients.id });
+    return !!restored;
+  }
+
+  async restoreEstimate(id: number): Promise<boolean> {
+    const [restored] = await db.update(estimates).set({ deletedAt: null }).where(eq(estimates.id, id)).returning({ id: estimates.id });
+    return !!restored;
+  }
+
+  async restoreEvent(id: number): Promise<boolean> {
+    const [restored] = await db.update(events).set({ deletedAt: null }).where(eq(events.id, id)).returning({ id: events.id });
+    return !!restored;
   }
 
 }

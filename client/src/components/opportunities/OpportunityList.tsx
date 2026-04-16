@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "wouter";
@@ -6,8 +6,10 @@ import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Opportunity } from "../../types/opportunity";
+import BulkActionToolbar from "@/components/shared/BulkActionToolbar";
 import { formatDate, cn } from "@/lib/utils";
 import { PenIcon, PlusIcon, FilterIcon, SparklesIcon } from "lucide-react";
 import { useCanEditRecord, useIsStaff } from "@/hooks/usePermissions";
@@ -32,6 +34,15 @@ export default function OpportunityList() {
   const isStaff = useIsStaff();
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+  const toggleSelectAll = useCallback((ids: number[]) => {
+    setSelectedIds(prev => prev.length === ids.length ? [] : ids);
+  }, []);
 
   const { data: allOpportunities = [], isLoading } = useQuery({
     queryKey: ["/api/opportunities", { priority: priorityFilter }],
@@ -72,6 +83,27 @@ export default function OpportunityList() {
   }, [allOpportunities]);
 
   const columns: ColumnDef<Opportunity>[] = useMemo(() => [
+    {
+      id: "select",
+      header: () => {
+        const allIds = opportunities.map((o: Opportunity) => o.id);
+        const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
+        return (
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={() => toggleSelectAll(allIds)}
+          />
+        );
+      },
+      cell: ({ row }) => (
+        <Checkbox
+          checked={selectedIds.includes(row.original.id)}
+          onCheckedChange={() => toggleSelect(row.original.id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+    },
     {
       accessorKey: "name",
       header: "Name",
@@ -239,6 +271,14 @@ export default function OpportunityList() {
         searchKey="name"
         loading={isLoading}
         emptyMessage="No opportunities found. Create your first opportunity to get started."
+      />
+
+      {/* Tier 4: Bulk action toolbar */}
+      <BulkActionToolbar
+        selectedIds={selectedIds}
+        entityType="opportunity"
+        onClearSelection={() => setSelectedIds([])}
+        invalidateKeys={["/api/opportunities"]}
       />
     </div>
   );

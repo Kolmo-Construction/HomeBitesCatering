@@ -83,7 +83,7 @@ interface EventRow {
   guestCount: number;
   venue: string;
   menuId: number | null;
-  status: "confirmed" | "in-progress" | "completed" | "cancelled";
+  status: "confirmed" | "in_progress" | "in-progress" | "completed" | "cancelled";
   notes: string | null;
   completedTasks: string[] | null;
   createdAt: string;
@@ -305,6 +305,7 @@ function urgencyBorder(days: number, status: string): string {
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-green-100 text-green-700 border-green-300",
+  "in_progress": "bg-blue-100 text-blue-700 border-blue-300",
   "in-progress": "bg-blue-100 text-blue-700 border-blue-300",
   completed: "bg-gray-100 text-gray-700 border-gray-300",
   cancelled: "bg-red-100 text-red-700 border-red-300",
@@ -685,7 +686,7 @@ function EventHeader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 {canViewSales && <SelectItem value="cancelled">Cancelled</SelectItem>}
               </SelectContent>

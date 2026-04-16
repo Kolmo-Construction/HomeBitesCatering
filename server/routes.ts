@@ -30,6 +30,7 @@ import {
   estimates,                     // for accept-estimate endpoint
   followUpDrafts,                // for follow-up engine
   estimateVersions,              // for quote versioning
+  contactIdentifiers,            // for duplicate merge
   clients,                       // for accept-estimate endpoint (prospect→customer graduation)
   events,                        // for auto-create event on accept and /full endpoint
   menus,                         // for /api/events/:id/full aggregate endpoint
@@ -510,6 +511,316 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Opportunities Routes =====
   
+  // ─── Tier 4, Item 15: Audit Log & Restore ────────────────────────────────
+
+  // Get audit log entries (optionally filtered by entity type/id)
+  app.get('/api/audit-log', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const entityType = req.query.entityType as string | undefined;
+      const entityId = req.query.entityId ? parseInt(req.query.entityId as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const entries = await storage.getAuditLog(entityType, entityId, limit);
+      res.status(200).json(entries);
+    } catch (error) {
+      console.error('Error fetching audit log:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Restore a soft-deleted record
+  app.post('/api/restore/:entityType/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const { entityType, id } = req.params;
+      const entityId = parseInt(id);
+      if (isNaN(entityId)) return res.status(400).json({ message: 'Invalid ID' });
+
+      let restored = false;
+      switch (entityType) {
+        case 'opportunity': restored = await storage.restoreOpportunity(entityId); break;
+        case 'client': restored = await storage.restoreClient(entityId); break;
+        case 'estimate': restored = await storage.restoreEstimate(entityId); break;
+        case 'event': restored = await storage.restoreEvent(entityId); break;
+        default: return res.status(400).json({ message: 'Invalid entity type' });
+      }
+
+      if (!restored) return res.status(404).json({ message: 'Record not found' });
+
+      await storage.writeAuditLog({
+        entityType,
+        entityId,
+        action: 'restored',
+        userId: req.session.userId,
+      });
+
+      res.status(200).json({ message: `${entityType} #${entityId} restored` });
+    } catch (error) {
+      console.error('Error restoring record:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ─── Tier 4, Item 14: Duplicate Detection ────────────────────────────────
+  // Check for existing records matching an email or phone before creation.
+  app.get('/api/duplicates/check', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const email = (req.query.email as string)?.toLowerCase();
+      const phone = req.query.phone as string;
+
+      if (!email && !phone) {
+        return res.status(400).json({ message: 'Provide email or phone to check' });
+      }
+
+      const matches: Array<{ type: string; id: number; name: string; email: string; status?: string }> = [];
+
+      // Check opportunities
+      const allOpps = await storage.listOpportunities();
+      for (const opp of allOpps) {
+        if ((email && opp.email.toLowerCase() === email) || (phone && opp.phone === phone)) {
+          matches.push({
+            type: 'opportunity',
+            id: opp.id,
+            name: `${opp.firstName} ${opp.lastName}`,
+            email: opp.email,
+            status: opp.status,
+          });
+        }
+      }
+
+      // Check clients
+      const allClients = await storage.listClients();
+      for (const client of allClients) {
+        if ((email && client.email.toLowerCase() === email) || (phone && client.phone === phone)) {
+          matches.push({
+            type: 'client',
+            id: client.id,
+            name: `${client.firstName} ${client.lastName}`,
+            email: client.email,
+          });
+        }
+      }
+
+      res.status(200).json({ hasDuplicates: matches.length > 0, matches });
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Merge two opportunities: moves all dependent records from secondary to primary,
+  // then soft-deletes the secondary (or hard-deletes if soft delete not yet enabled).
+  app.post('/api/duplicates/merge', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const { primaryId, secondaryId, entityType } = req.body;
+
+      if (!primaryId || !secondaryId || primaryId === secondaryId) {
+        return res.status(400).json({ message: 'Provide distinct primaryId and secondaryId' });
+      }
+
+      if (entityType === 'opportunity') {
+        const primary = await storage.getOpportunity(primaryId);
+        const secondary = await storage.getOpportunity(secondaryId);
+        if (!primary || !secondary) return res.status(404).json({ message: 'One or both opportunities not found' });
+
+        // Move communications
+        await db.update(communications)
+          .set({ opportunityId: primaryId })
+          .where(eq(communications.opportunityId, secondaryId));
+
+        // Move contact identifiers
+        await db.update(contactIdentifiers)
+          .set({ opportunityId: primaryId })
+          .where(eq(contactIdentifiers.opportunityId, secondaryId));
+
+        // Move quote requests
+        await db.update(quoteRequests)
+          .set({ opportunityId: primaryId })
+          .where(eq(quoteRequests.opportunityId, secondaryId));
+
+        // Move follow-up drafts
+        await db.update(followUpDrafts)
+          .set({ opportunityId: primaryId })
+          .where(eq(followUpDrafts.opportunityId, secondaryId));
+
+        // Merge notes
+        if (secondary.notes) {
+          const mergedNotes = [primary.notes, `[Merged from #${secondaryId}] ${secondary.notes}`]
+            .filter(Boolean).join('\n');
+          await storage.updateOpportunity(primaryId, { notes: mergedNotes });
+        }
+
+        // Delete secondary
+        await storage.deleteOpportunity(secondaryId);
+
+        return res.status(200).json({
+          message: `Opportunity #${secondaryId} merged into #${primaryId}`,
+          primaryId,
+        });
+      }
+
+      if (entityType === 'client') {
+        const primary = await storage.getClient(primaryId);
+        const secondary = await storage.getClient(secondaryId);
+        if (!primary || !secondary) return res.status(404).json({ message: 'One or both clients not found' });
+
+        // Move estimates
+        const allEstimates = await storage.listEstimates();
+        for (const est of allEstimates) {
+          if (est.clientId === secondaryId) {
+            await storage.updateEstimate(est.id, { clientId: primaryId });
+          }
+        }
+
+        // Move events
+        const allEvents = await storage.listEvents();
+        for (const evt of allEvents) {
+          if (evt.clientId === secondaryId) {
+            await storage.updateEvent(evt.id, { clientId: primaryId });
+          }
+        }
+
+        // Move communications
+        await db.update(communications)
+          .set({ clientId: primaryId })
+          .where(eq(communications.clientId, secondaryId));
+
+        // Move contact identifiers
+        await db.update(contactIdentifiers)
+          .set({ clientId: primaryId })
+          .where(eq(contactIdentifiers.clientId, secondaryId));
+
+        // Merge notes
+        if (secondary.notes) {
+          const mergedNotes = [primary.notes, `[Merged from #${secondaryId}] ${secondary.notes}`]
+            .filter(Boolean).join('\n');
+          await storage.updateClient(primaryId, { notes: mergedNotes });
+        }
+
+        // Delete secondary
+        await storage.deleteClient(secondaryId);
+
+        return res.status(200).json({
+          message: `Client #${secondaryId} merged into #${primaryId}`,
+          primaryId,
+        });
+      }
+
+      return res.status(400).json({ message: 'entityType must be "opportunity" or "client"' });
+    } catch (error) {
+      console.error('Error merging duplicates:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ─── Tier 4, Item 16: Bulk Actions ───────────────────────────────────────
+
+  app.post('/api/opportunities/bulk-action', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const { ids, action, assignTo } = req.body as { ids: number[]; action: string; assignTo?: number };
+      if (!ids?.length) return res.status(400).json({ message: 'No IDs provided' });
+
+      let processed = 0;
+      for (const id of ids) {
+        switch (action) {
+          case 'archive':
+            await storage.updateOpportunity(id, { status: 'archived' as any, statusChangedAt: new Date() });
+            processed++;
+            break;
+          case 'delete':
+            await storage.deleteOpportunity(id);
+            processed++;
+            break;
+          case 'reassign':
+            if (assignTo !== undefined) {
+              await storage.updateOpportunity(id, { assignedTo: assignTo });
+              processed++;
+            }
+            break;
+          case 'set_status':
+            if (req.body.status) {
+              await storage.updateOpportunity(id, { status: req.body.status, statusChangedAt: new Date() });
+              processed++;
+            }
+            break;
+        }
+      }
+
+      await storage.writeAuditLog({
+        entityType: 'opportunity',
+        entityId: 0, // bulk action
+        action: action === 'delete' ? 'deleted' : 'updated',
+        userId: req.session.userId,
+        metadata: { bulkAction: action, ids, processed },
+      });
+
+      res.status(200).json({ message: `${processed} opportunities processed`, processed });
+    } catch (error) {
+      console.error('Error in bulk action:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/estimates/bulk-action', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const { ids, action } = req.body as { ids: number[]; action: string };
+      if (!ids?.length) return res.status(400).json({ message: 'No IDs provided' });
+
+      let processed = 0;
+      for (const id of ids) {
+        switch (action) {
+          case 'delete':
+            await storage.deleteEstimate(id);
+            processed++;
+            break;
+          case 'expire':
+            await storage.updateEstimate(id, { status: 'declined' as any });
+            processed++;
+            break;
+        }
+      }
+
+      await storage.writeAuditLog({
+        entityType: 'estimate',
+        entityId: 0,
+        action: action === 'delete' ? 'deleted' : 'updated',
+        userId: req.session.userId,
+        metadata: { bulkAction: action, ids, processed },
+      });
+
+      res.status(200).json({ message: `${processed} estimates processed`, processed });
+    } catch (error) {
+      console.error('Error in bulk action:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/clients/bulk-action', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const { ids, action } = req.body as { ids: number[]; action: string };
+      if (!ids?.length) return res.status(400).json({ message: 'No IDs provided' });
+
+      let processed = 0;
+      for (const id of ids) {
+        if (action === 'delete') {
+          await storage.deleteClient(id);
+          processed++;
+        }
+      }
+
+      await storage.writeAuditLog({
+        entityType: 'client',
+        entityId: 0,
+        action: 'deleted',
+        userId: req.session.userId,
+        metadata: { bulkAction: action, ids, processed },
+      });
+
+      res.status(200).json({ message: `${processed} clients processed`, processed });
+    } catch (error) {
+      console.error('Error in bulk action:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // ─── Tier 2: Funnel Metrics Endpoint ──────────────────────────────────────
   // Returns aggregated counts by stage plus conversion rates for the funnel widget.
   app.get('/api/reports/funnel', isAuthenticated, async (req: Request, res: Response) => {
@@ -865,10 +1176,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guestCount: inquiryData.guestCount || null,
         venue: inquiryData.venue || null,
         notes: inquiryData.notes || null,
-        status: "new",
+        status: "new" as const,
         opportunitySource: inquiryData.source,
-        priority: "medium" as const, // Default priority for public inquiries
-        assignedTo: null // Will be assigned later by admin
+        priority: "medium" as const,
+        assignedTo: null
       };
 
       // Create the opportunity
@@ -2596,9 +2907,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: draft.subject,
         html: draft.bodyHtml,
         text: draft.bodyText,
+        templateKey: `follow_up_${draft.type}`,
+        opportunityId: draft.opportunityId,
       });
 
-      if (!emailResult.success) {
+      if (!emailResult.sent) {
         return res.status(500).json({ message: 'Failed to send email', error: emailResult.error });
       }
 
@@ -3166,7 +3479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Field whitelist for non-admin operational writes
       const CHEF_ALLOWED_FIELDS = new Set(['status', 'notes', 'completedTasks']);
       // Chefs can't cancel an event (commercial implication — affects billing)
-      const CHEF_ALLOWED_STATUSES = new Set(['confirmed', 'in-progress', 'completed']);
+      const CHEF_ALLOWED_STATUSES = new Set(['confirmed', 'in_progress', 'completed']);
 
       let updateData: Record<string, unknown>;
       if (isAdmin) {
@@ -3803,7 +4116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guestCount: lead.extractedGuestCount || null,
         venue: lead.extractedVenue || null,
         opportunitySource: lead.leadSourcePlatform || lead.source || 'raw_lead',
-        status: 'new',
+        status: 'new' as const,
         notes: formatNotes(lead),
         priority: mapLeadQualityToPriority(lead.aiOverallLeadQuality ?? undefined),
         // Tier 1: Link back to source raw lead and carry AI data forward
