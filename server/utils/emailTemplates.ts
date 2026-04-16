@@ -414,14 +414,21 @@ export function inquiryInvitationEmail(args: {
   eventType: string;
   eventDate: string | Date | null;
   inquiryUrl: string;
+  personalNote?: string;
 }): TemplateResult {
   const config = getSiteConfig();
   const eventTypeLabel = args.eventType.replace(/_/g, " ");
   const dateStr = formatDate(args.eventDate);
   const subject = `${config.businessName} — let's plan your ${eventTypeLabel}!`;
 
+  const noteHtml = args.personalNote
+    ? paragraph(args.personalNote.replace(/\n/g, "<br />"))
+    : "";
+  const noteText = args.personalNote ? `${args.personalNote}\n\n` : "";
+
   const html = layout(
     `${heading(`Hi ${args.customerFirstName},`)}
+     ${noteHtml}
      ${paragraph(`Thank you for your interest in having us cater your <strong>${eventTypeLabel}</strong> on <strong>${dateStr}</strong>. We'd love to put together the perfect menu for you.`)}
      ${paragraph(`To get started, fill out our quick menu planner — pick your theme, select your dishes, and tell us about any dietary needs. It only takes a few minutes.`)}
      ${btn("Plan Your Menu", args.inquiryUrl)}
@@ -433,7 +440,7 @@ export function inquiryInvitationEmail(args: {
 
   const text = `Hi ${args.customerFirstName},
 
-Thank you for your interest in having us cater your ${eventTypeLabel} on ${dateStr}. We'd love to put together the perfect menu for you.
+${noteText}Thank you for your interest in having us cater your ${eventTypeLabel} on ${dateStr}. We'd love to put together the perfect menu for you.
 
 Fill out our quick menu planner to get started:
 ${args.inquiryUrl}

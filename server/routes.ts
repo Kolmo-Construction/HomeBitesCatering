@@ -1215,6 +1215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const oppId = parseInt(req.params.id);
       if (isNaN(oppId)) return res.status(400).json({ message: 'Invalid opportunity ID' });
+      const { personalNote } = req.body || {};
 
       const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
       if (!opp) return res.status(404).json({ message: 'Opportunity not found' });
@@ -1224,28 +1225,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const host = req.headers['x-forwarded-host'] || req.get('host');
       const inquiryUrl = `${proto}://${host}/request-quote?opp=${token}`;
 
-      await db.update(opportunities).set({
-        inquiryToken: token,
-        inquirySentAt: new Date(),
-        status: opp.status === 'new' ? 'contacted' : opp.status,
-        updatedAt: new Date(),
-      }).where(eq(opportunities.id, oppId));
-
       const template = inquiryInvitationEmail({
         customerFirstName: opp.firstName,
         eventType: opp.eventType,
         eventDate: opp.eventDate,
         inquiryUrl,
+        personalNote: personalNote || undefined,
       });
-      sendEmailInBackground({
+
+      // Await email so we can report delivery status
+      const emailResult = await sendEmail({
         to: opp.email,
         subject: template.subject,
         html: template.html,
         text: template.text,
         templateKey: 'inquiry_invitation',
+        opportunityId: oppId,
       });
 
-      return res.json({ message: 'Inquiry sent', inquiryUrl, token });
+      if (!emailResult.sent && !emailResult.skipped) {
+        return res.status(502).json({
+          message: `Email failed to send: ${emailResult.error || 'unknown error'}`,
+          emailError: emailResult.error,
+        });
+      }
+
+      // Only stamp sent + update status after successful send (or skip)
+      const newStatus = opp.status === 'new' ? 'contacted' : opp.status;
+      const statusHistory = Array.isArray(opp.statusHistory) ? [...opp.statusHistory] : [];
+      if (newStatus !== opp.status) {
+        statusHistory.push({
+          status: newStatus,
+          changedAt: new Date().toISOString(),
+          changedBy: req.session.userId,
+        });
+      }
+
+      await db.update(opportunities).set({
+        inquiryToken: token,
+        inquirySentAt: new Date(),
+        status: newStatus,
+        statusChangedAt: newStatus !== opp.status ? new Date() : opp.statusChangedAt,
+        statusHistory,
+        updatedAt: new Date(),
+      }).where(eq(opportunities.id, oppId));
+
+      return res.json({
+        message: 'Inquiry sent',
+        inquiryUrl,
+        token,
+        emailSent: emailResult.sent,
+        emailSkipped: emailResult.skipped,
+      });
     } catch (error) {
       console.error('Error sending inquiry:', error);
       return res.status(500).json({ message: 'Server error' });

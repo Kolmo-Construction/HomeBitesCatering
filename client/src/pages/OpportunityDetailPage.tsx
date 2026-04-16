@@ -106,6 +106,8 @@ export default function OpportunityDetailPage() {
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [isAddCommunicationOpen, setIsAddCommunicationOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isSendInquiryOpen, setIsSendInquiryOpen] = useState(false);
+  const [personalNote, setPersonalNote] = useState("");
   
   // Set up forms with Zod validation
   const contactForm = useForm<z.infer<typeof contactIdentifierSchema>>({
@@ -315,10 +317,11 @@ export default function OpportunityDetailPage() {
   });
 
   const sendInquiryMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (note?: string) => {
       const res = await fetch(`/api/opportunities/${opportunityId}/send-inquiry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personalNote: note || undefined }),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -329,14 +332,24 @@ export default function OpportunityDetailPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/opportunities", opportunityId] });
       queryClient.invalidateQueries({ queryKey: ["/api/opportunities", opportunityId, "inquiry-status"] });
-      toast({
-        title: "Inquiry Sent",
-        description: `Menu planner emailed to ${opportunity?.email}. Their response will appear in Inquiries.`,
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/opportunities"] });
+      setIsSendInquiryOpen(false);
+      setPersonalNote("");
+      if (data.emailSkipped) {
+        toast({
+          title: "Inquiry Recorded",
+          description: "Email sending is not configured — inquiry link was generated but no email was sent.",
+        });
+      } else {
+        toast({
+          title: "Inquiry Sent",
+          description: `Menu planner emailed to ${opportunity?.email}. Their response will appear in Quote Requests.`,
+        });
+      }
     },
     onError: (error) => {
       toast({
-        title: "Error",
+        title: "Email Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -393,15 +406,8 @@ export default function OpportunityDetailPage() {
           <p className="text-gray-500">{opportunity.email}</p>
         </div>
         <div className="flex space-x-2">
-          <Button
-            onClick={() => sendInquiryMutation.mutate()}
-            disabled={sendInquiryMutation.isPending}
-          >
-            {sendInquiryMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4 mr-2" />
-            )}
+          <Button onClick={() => setIsSendInquiryOpen(true)}>
+            <Send className="h-4 w-4 mr-2" />
             {(opportunity as any).inquirySentAt ? "Resend Inquiry" : "Send Inquiry"}
           </Button>
           <Button variant="outline" onClick={() => navigate(`/opportunities/${opportunity.id}/edit`)}>
@@ -447,7 +453,63 @@ export default function OpportunityDetailPage() {
           </Button>
         </div>
       </div>
-      
+
+      {/* Send Inquiry Confirmation Dialog */}
+      <Dialog open={isSendInquiryOpen} onOpenChange={setIsSendInquiryOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {(opportunity as any).inquirySentAt ? "Resend Inquiry" : "Send Inquiry"}
+            </DialogTitle>
+            <DialogDescription>
+              This will email a link to your menu planner form. The customer can pick their menu, enter dietary needs, and submit a quote request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border p-3 bg-gray-50 space-y-2 text-sm">
+              <div className="flex gap-2">
+                <span className="font-medium text-gray-500 w-16">To:</span>
+                <span>{opportunity.email}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-medium text-gray-500 w-16">Subject:</span>
+                <span>HomeBites Catering — let's plan your {opportunity.eventType.replace(/_/g, " ")}!</span>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="personalNote">Personal note (optional)</Label>
+              <Textarea
+                id="personalNote"
+                placeholder="e.g. Great chatting with you yesterday! Looking forward to working together."
+                value={personalNote}
+                onChange={(e) => setPersonalNote(e.target.value)}
+                rows={3}
+                className="mt-1.5"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This will appear at the top of the email, before the standard menu planner invitation.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSendInquiryOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => sendInquiryMutation.mutate(personalNote || undefined)}
+              disabled={sendInquiryMutation.isPending}
+            >
+              {sendInquiryMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {sendInquiryMutation.isPending ? "Sending..." : "Send Email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Inquiry status tracker */}
       {inquiryStatus?.sent && (
         <Card>
