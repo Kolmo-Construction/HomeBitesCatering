@@ -152,7 +152,9 @@ export const opportunities = pgTable("opportunities", {
   assignedTo: integer("assigned_to").references(() => users.id),
   clientId: integer("client_id"), // Will be set as foreign key after clients table is defined
   createdBy: integer("created_by").references(() => users.id),
-  // Fields for future extensions
+  inquiryToken: text("inquiry_token"),
+  inquirySentAt: timestamp("inquiry_sent_at"),
+  inquiryViewedAt: timestamp("inquiry_viewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

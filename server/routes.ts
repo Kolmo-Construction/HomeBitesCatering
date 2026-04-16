@@ -22,6 +22,7 @@ import {
   insertCommunicationSchema,     // New
   opportunityPriorityEnum,       // For priority filtering
   insertRawLeadSchema,           // For raw leads management
+  opportunities,                  // for send-inquiry endpoint
   communications,                // table for drizzle updates
   opportunityEmailThreads,       // table for thread migration
   quoteRequests,                 // for promote-to-quote-request endpoint
@@ -53,6 +54,7 @@ import {
   quoteAcceptedAdminEmail,
   findMyEventEmail,
   eventReminderEmail,
+  inquiryInvitationEmail,
   type ReminderKind,
 } from './utils/emailTemplates';
 
@@ -765,8 +767,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ===== Send Inquiry to Customer (from Opportunity) =====
+
+  app.post('/api/opportunities/:id/send-inquiry', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const oppId = parseInt(req.params.id);
+      if (isNaN(oppId)) return res.status(400).json({ message: 'Invalid opportunity ID' });
+
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
+      if (!opp) return res.status(404).json({ message: 'Opportunity not found' });
+
+      const token = opp.inquiryToken || randomBytes(24).toString('base64url');
+      const proto = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      const inquiryUrl = `${proto}://${host}/request-quote?opp=${token}`;
+
+      await db.update(opportunities).set({
+        inquiryToken: token,
+        inquirySentAt: new Date(),
+        status: opp.status === 'new' ? 'contacted' : opp.status,
+        updatedAt: new Date(),
+      }).where(eq(opportunities.id, oppId));
+
+      const template = inquiryInvitationEmail({
+        customerFirstName: opp.firstName,
+        eventType: opp.eventType,
+        eventDate: opp.eventDate,
+        inquiryUrl,
+      });
+      sendEmailInBackground({
+        to: opp.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+        templateKey: 'inquiry_invitation',
+      });
+
+      return res.json({ message: 'Inquiry sent', inquiryUrl, token });
+    } catch (error) {
+      console.error('Error sending inquiry:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Get inquiry status for an opportunity (sent, opened, submitted)
+  app.get('/api/opportunities/:id/inquiry-status', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const oppId = parseInt(req.params.id);
+      if (isNaN(oppId)) return res.status(400).json({ message: 'Invalid opportunity ID' });
+
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
+      if (!opp) return res.status(404).json({ message: 'Not found' });
+
+      const linkedInquiries = await db.select().from(quoteRequests).where(eq(quoteRequests.opportunityId, oppId));
+      const inquiry = linkedInquiries[0] || null;
+
+      return res.json({
+        sent: !!opp.inquirySentAt,
+        sentAt: opp.inquirySentAt,
+        opened: !!opp.inquiryViewedAt,
+        openedAt: opp.inquiryViewedAt,
+        submitted: !!inquiry,
+        submittedAt: inquiry?.submittedAt || null,
+        inquiryId: inquiry?.id || null,
+        inquiryStatus: inquiry?.status || null,
+      });
+    } catch (error) {
+      console.error('Error fetching inquiry status:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public endpoint: fetch opportunity basics for pre-filling the inquiry form
+  app.get('/api/public/opportunity/:token', async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.inquiryToken, token));
+      if (!opp) return res.status(404).json({ message: 'Not found' });
+
+      if (!opp.inquiryViewedAt) {
+        await db.update(opportunities).set({ inquiryViewedAt: new Date() }).where(eq(opportunities.id, opp.id));
+      }
+
+      return res.json({
+        opportunityId: opp.id,
+        firstName: opp.firstName,
+        lastName: opp.lastName,
+        email: opp.email,
+        phone: opp.phone,
+        eventType: opp.eventType,
+        eventDate: opp.eventDate,
+        guestCount: opp.guestCount,
+        venue: opp.venue,
+      });
+    } catch (error) {
+      console.error('Error fetching public opportunity:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // ===== Menu Items Routes =====
-  
+
   // Get all menu items
   app.get('/api/menu-items', isAuthenticated, async (req: Request, res: Response) => {
     try {

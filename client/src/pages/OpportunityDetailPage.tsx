@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X } from "lucide-react";
+import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X, Send, Loader2, ExternalLink, Check } from "lucide-react";
 import { z } from "zod";
 // Import types directly with relative path since the alias isn't working
 import { Opportunity, ContactIdentifier, Communication } from "../types/opportunity";
@@ -240,6 +240,53 @@ export default function OpportunityDetailPage() {
     },
   });
   
+  const { data: inquiryStatus } = useQuery({
+    queryKey: ["/api/opportunities", opportunityId, "inquiry-status"],
+    queryFn: async () => {
+      const res = await fetch(`/api/opportunities/${opportunityId}/inquiry-status`);
+      if (!res.ok) return null;
+      return res.json() as Promise<{
+        sent: boolean;
+        sentAt: string | null;
+        opened: boolean;
+        openedAt: string | null;
+        submitted: boolean;
+        submittedAt: string | null;
+        inquiryId: number | null;
+        inquiryStatus: string | null;
+      }>;
+    },
+  });
+
+  const sendInquiryMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/opportunities/${opportunityId}/send-inquiry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to send inquiry");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/opportunities", opportunityId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/opportunities", opportunityId, "inquiry-status"] });
+      toast({
+        title: "Inquiry Sent",
+        description: `Menu planner emailed to ${opportunity?.email}. Their response will appear in Inquiries.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Submit handlers for forms
   const onSubmitContact = (data: z.infer<typeof contactIdentifierSchema>) => {
     addContactMutation.mutate(data);
@@ -290,6 +337,17 @@ export default function OpportunityDetailPage() {
           <p className="text-gray-500">{opportunity.email}</p>
         </div>
         <div className="flex space-x-2">
+          <Button
+            onClick={() => sendInquiryMutation.mutate()}
+            disabled={sendInquiryMutation.isPending}
+          >
+            {sendInquiryMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            {(opportunity as any).inquirySentAt ? "Resend Inquiry" : "Send Inquiry"}
+          </Button>
           <Button variant="outline" onClick={() => navigate(`/opportunities/${opportunity.id}/edit`)}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Opportunity
@@ -334,6 +392,61 @@ export default function OpportunityDetailPage() {
         </div>
       </div>
       
+      {/* Inquiry status tracker */}
+      {inquiryStatus?.sent && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Inquiry Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-0">
+              {/* Sent */}
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                  <Check className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium mt-1">Sent</span>
+                {inquiryStatus.sentAt && (
+                  <span className="text-[10px] text-muted-foreground">{format(new Date(inquiryStatus.sentAt), "MMM d, h:mm a")}</span>
+                )}
+              </div>
+              {/* Connector */}
+              <div className={cn("flex-1 h-0.5 mb-6", inquiryStatus.opened ? "bg-green-500" : "bg-gray-200")} />
+              {/* Opened */}
+              <div className="flex flex-col items-center">
+                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", inquiryStatus.opened ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400")}>
+                  {inquiryStatus.opened ? <Check className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+                </div>
+                <span className="text-xs font-medium mt-1">Opened</span>
+                {inquiryStatus.openedAt && (
+                  <span className="text-[10px] text-muted-foreground">{format(new Date(inquiryStatus.openedAt), "MMM d, h:mm a")}</span>
+                )}
+              </div>
+              {/* Connector */}
+              <div className={cn("flex-1 h-0.5 mb-6", inquiryStatus.submitted ? "bg-green-500" : "bg-gray-200")} />
+              {/* Submitted */}
+              <div className="flex flex-col items-center">
+                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", inquiryStatus.submitted ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400")}>
+                  {inquiryStatus.submitted ? <Check className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
+                </div>
+                <span className="text-xs font-medium mt-1">Submitted</span>
+                {inquiryStatus.submittedAt && (
+                  <span className="text-[10px] text-muted-foreground">{format(new Date(inquiryStatus.submittedAt), "MMM d, h:mm a")}</span>
+                )}
+              </div>
+            </div>
+            {inquiryStatus.submitted && inquiryStatus.inquiryId && (
+              <div className="mt-3 pt-3 border-t">
+                <Button size="sm" variant="outline" onClick={() => navigate(`/quote-requests?id=${inquiryStatus.inquiryId}`)}>
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  View Inquiry
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Opportunity details card */}
       <Card>
         <CardHeader>

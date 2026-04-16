@@ -406,3 +406,43 @@ Review: ${args.adminInquiryUrl}`;
 
   return { subject, html, text };
 }
+
+// ─── 8. Inquiry invitation: admin sends customer a link to fill out the form ──
+
+export function inquiryInvitationEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  inquiryUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const dateStr = formatDate(args.eventDate);
+  const subject = `${config.businessName} — let's plan your ${eventTypeLabel}!`;
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Thank you for your interest in having us cater your <strong>${eventTypeLabel}</strong> on <strong>${dateStr}</strong>. We'd love to put together the perfect menu for you.`)}
+     ${paragraph(`To get started, fill out our quick menu planner — pick your theme, select your dishes, and tell us about any dietary needs. It only takes a few minutes.`)}
+     ${btn("Plan Your Menu", args.inquiryUrl)}
+     ${paragraph(`Once we receive your selections, we'll prepare a personalized quote and get back to you promptly.`)}
+     ${paragraph(`Questions? Reply to this email or call ${config.chef.firstName} at ${config.chef.phone}.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Let's plan the menu for your ${eventTypeLabel} — fill out our quick planner.`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+Thank you for your interest in having us cater your ${eventTypeLabel} on ${dateStr}. We'd love to put together the perfect menu for you.
+
+Fill out our quick menu planner to get started:
+${args.inquiryUrl}
+
+Once we receive your selections, we'll prepare a personalized quote and get back to you promptly.
+
+Questions? Reply to this email or call ${config.chef.firstName} at ${config.chef.phone}.
+
+— ${config.chef.firstName} and the ${config.businessName} team`;
+
+  return { subject, html, text };
+}

@@ -421,6 +421,7 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
         estimatedServiceFeeCents: pricing.serviceFeeCents,
         estimatedTaxCents: pricing.taxCents,
         estimatedTotalCents: pricing.totalCents,
+        ...(req.body.opportunityId ? { opportunityId: parseInt(req.body.opportunityId) } : {}),
       } as any)
       .returning();
 

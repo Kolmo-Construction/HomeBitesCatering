@@ -548,7 +548,33 @@ export default function RequestQuote() {
   const [submitted, setSubmitted] = useState(false);
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [opportunityId, setOpportunityId] = useState<number | null>(null);
   const { toast } = useToast();
+
+  // ---------- Pre-fill from opportunity token (sent via "Send Inquiry" on opp page) ----------
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oppToken = params.get("opp");
+    if (!oppToken) return;
+
+    fetch(`/api/public/opportunity/${oppToken}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data) return;
+        setOpportunityId(data.opportunityId);
+        setForm((prev) => ({
+          ...prev,
+          firstName: data.firstName || prev.firstName,
+          lastName: data.lastName || prev.lastName,
+          email: data.email || prev.email,
+          phone: data.phone || prev.phone,
+          eventType: data.eventType || prev.eventType,
+          eventDate: data.eventDate ? new Date(data.eventDate).toISOString().split("T")[0] : prev.eventDate,
+          guestCount: data.guestCount ? Number(data.guestCount) : prev.guestCount,
+        }));
+      })
+      .catch(() => {});
+  }, []);
 
   // ---------- Venues query ----------
   const { data: venues = [] } = useQuery<Venue[]>({
@@ -969,6 +995,7 @@ export default function RequestQuote() {
             ? form.drinkingGuestCount
             : undefined,
         estimatedTotal: pricing.estimatedTotal,
+        ...(opportunityId ? { opportunityId } : {}),
       };
       const res = await apiRequest(
         "POST",
