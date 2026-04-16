@@ -160,6 +160,8 @@ export const opportunities = pgTable("opportunities", {
   leadData: jsonb("lead_data"), // AI scoring & parsed data carried from rawLead on conversion
   statusChangedAt: timestamp("status_changed_at").defaultNow(), // Tracks when status last changed (not just any edit)
   lastFollowUpAt: timestamp("last_follow_up_at"), // Prevents over-pinging in auto follow-up engine
+  // --- Tier 2: Time-in-stage tracking ---
+  statusHistory: jsonb("status_history").$type<Array<{ status: string; changedAt: string; changedBy?: number }>>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

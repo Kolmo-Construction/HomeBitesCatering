@@ -5,8 +5,9 @@ import { Switch, Route, Router, useLocation } from "wouter"; // Added Router and
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient"; // Assuming this path is correct
 import Login from "@/pages/login"; // Assuming this path is correct
-import Dashboard from "@/pages/dashboard"; // Assuming this path is correct
+import Dashboard from "@/pages/dashboard";
 import Opportunities from "@/pages/opportunities";
+import Pipeline from "@/pages/Pipeline";
 import Clients from "@/pages/clients";
 import Estimates from "@/pages/estimates";
 import Menus from "@/pages/menus";
@@ -199,6 +200,7 @@ function AppContent() {
         ) : (
           <Switch>
           <Route path="/" component={Dashboard} />
+          <Route path="/pipeline" component={Pipeline} />
           <Route path="/opportunities" component={Opportunities} />
           <Route path="/opportunities/new" component={Opportunities} />
           <Route path="/opportunities/:id" component={Opportunities} />

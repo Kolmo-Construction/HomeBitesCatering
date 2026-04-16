@@ -23,6 +23,7 @@ import {
   UserCog,
   MessageSquareQuote,
   BookOpen,
+  Columns3,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -49,6 +50,7 @@ export default function Sidebar() {
 
     // Sales funnel (top → bottom)
     { name: "Leads", href: "/raw-leads", icon: Inbox },
+    { name: "Pipeline", href: "/pipeline", icon: Columns3 },
     { name: "Opportunities", href: "/opportunities", icon: Filter },
     { name: "Inquiries", href: "/quote-requests", icon: MessageSquareQuote },
     { name: "Quotes", href: "/estimates", icon: FileText },

@@ -509,6 +509,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Opportunities Routes =====
   
+  // ─── Tier 2: Funnel Metrics Endpoint ──────────────────────────────────────
+  // Returns aggregated counts by stage plus conversion rates for the funnel widget.
+  app.get('/api/reports/funnel', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const allOpps = await storage.listOpportunities();
+      const allEstimates = await storage.listEstimates();
+      const allEvents = await storage.listEvents();
+
+      // Count by opportunity status
+      const oppCounts: Record<string, number> = {};
+      const now = new Date();
+      const thisMonth = now.getMonth();
+      const thisYear = now.getFullYear();
+      const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+      const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+
+      const thisMonthOpps: Record<string, number> = {};
+      const lastMonthOpps: Record<string, number> = {};
+
+      for (const opp of allOpps) {
+        oppCounts[opp.status] = (oppCounts[opp.status] || 0) + 1;
+        const created = new Date(opp.createdAt);
+        if (created.getMonth() === thisMonth && created.getFullYear() === thisYear) {
+          thisMonthOpps[opp.status] = (thisMonthOpps[opp.status] || 0) + 1;
+        }
+        if (created.getMonth() === lastMonth && created.getFullYear() === lastMonthYear) {
+          lastMonthOpps[opp.status] = (lastMonthOpps[opp.status] || 0) + 1;
+        }
+      }
+
+      // Estimate counts by status
+      const estCounts: Record<string, number> = {};
+      for (const est of allEstimates) {
+        estCounts[est.status] = (estCounts[est.status] || 0) + 1;
+      }
+
+      // Event counts
+      const eventCount = allEvents.filter(e => e.status !== 'cancelled').length;
+
+      // Build funnel stages
+      const totalLeads = allOpps.length;
+      const contacted = allOpps.filter(o => ['contacted', 'qualified', 'proposal', 'booked'].includes(o.status)).length;
+      const qualified = allOpps.filter(o => ['qualified', 'proposal', 'booked'].includes(o.status)).length;
+      const quotesSent = allEstimates.filter(e => ['sent', 'viewed', 'accepted', 'declined'].includes(e.status)).length;
+      const accepted = allEstimates.filter(e => e.status === 'accepted').length;
+      const booked = eventCount;
+
+      const stages = [
+        { name: "Leads", count: totalLeads, color: "#3B82F6" },
+        { name: "Contacted", count: contacted, color: "#EAB308" },
+        { name: "Qualified", count: qualified, color: "#A855F7" },
+        { name: "Quotes Sent", count: quotesSent, color: "#F97316" },
+        { name: "Accepted", count: accepted, color: "#22C55E" },
+        { name: "Booked", count: booked, color: "#059669" },
+      ];
+
+      // Conversion rates (stage-to-stage)
+      const conversionRates = stages.map((stage, i) => ({
+        from: i > 0 ? stages[i - 1].name : null,
+        to: stage.name,
+        rate: i > 0 && stages[i - 1].count > 0
+          ? Math.round((stage.count / stages[i - 1].count) * 100)
+          : 100,
+      }));
+
+      // Average time to close (first contact to booked) from accepted estimates
+      const acceptedEstimates = allEstimates.filter(e => e.status === 'accepted' && e.acceptedAt);
+      let avgDaysToClose = 0;
+      if (acceptedEstimates.length > 0) {
+        const totalDays = acceptedEstimates.reduce((sum, e) => {
+          return sum + (new Date(e.acceptedAt!).getTime() - new Date(e.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+        }, 0);
+        avgDaysToClose = Math.round(totalDays / acceptedEstimates.length);
+      }
+
+      // Revenue this month vs last month
+      const thisMonthRevenue = allEstimates
+        .filter(e => e.status === 'accepted' && e.acceptedAt &&
+          new Date(e.acceptedAt).getMonth() === thisMonth &&
+          new Date(e.acceptedAt).getFullYear() === thisYear)
+        .reduce((sum, e) => sum + e.total, 0);
+
+      const lastMonthRevenue = allEstimates
+        .filter(e => e.status === 'accepted' && e.acceptedAt &&
+          new Date(e.acceptedAt).getMonth() === lastMonth &&
+          new Date(e.acceptedAt).getFullYear() === lastMonthYear)
+        .reduce((sum, e) => sum + e.total, 0);
+
+      res.status(200).json({
+        stages,
+        conversionRates,
+        oppCounts,
+        estCounts,
+        thisMonth: {
+          opportunities: Object.values(thisMonthOpps).reduce((a, b) => a + b, 0),
+          revenue: thisMonthRevenue,
+        },
+        lastMonth: {
+          opportunities: Object.values(lastMonthOpps).reduce((a, b) => a + b, 0),
+          revenue: lastMonthRevenue,
+        },
+        avgDaysToClose,
+      });
+    } catch (error) {
+      console.error('Error generating funnel report:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Get all opportunities
   app.get('/api/opportunities', isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -652,11 +761,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updateData = req.body;
 
-      // Tier 1: Track statusChangedAt when status actually changes
+      // Tier 1+2: Track statusChangedAt and append to statusHistory when status changes
       if (updateData.status) {
         const existing = await storage.getOpportunity(opportunityId);
         if (existing && existing.status !== updateData.status) {
           updateData.statusChangedAt = new Date();
+          const history = Array.isArray(existing.statusHistory) ? [...existing.statusHistory] : [];
+          history.push({
+            status: updateData.status,
+            changedAt: new Date().toISOString(),
+            changedBy: req.session.userId,
+          });
+          updateData.statusHistory = history;
         }
       }
 
@@ -3090,6 +3206,220 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ─── Tier 2, Item 8: Unified Contact Timeline ────────────────────────────
+  // Aggregates all touchpoints across the funnel for a given email address.
+  // Returns a chronological list of events: communications, status changes,
+  // quote submissions, estimate sent/viewed/accepted, event milestones.
+  app.get('/api/contacts/:email/timeline', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const email = decodeURIComponent(req.params.email).toLowerCase();
+      const timeline: Array<{
+        id: string;
+        type: string; // communication, status_change, quote_submitted, estimate_sent, estimate_accepted, event_created
+        timestamp: string;
+        title: string;
+        detail?: string;
+        entityType?: string;
+        entityId?: number;
+        icon?: string; // email, call, sms, note, meeting, system
+      }> = [];
+
+      // 1. Communications linked to opportunities or clients with this email
+      const allOpps = await storage.listOpportunities();
+      const matchingOppIds = allOpps.filter(o => o.email.toLowerCase() === email).map(o => o.id);
+
+      const allClients = await storage.listClients();
+      const matchingClientIds = allClients.filter(c => c.email.toLowerCase() === email).map(c => c.id);
+
+      // Collect communications from matching opportunities
+      for (const oppId of matchingOppIds) {
+        const comms = await storage.getCommunicationsForOpportunity(oppId);
+        for (const c of comms) {
+          timeline.push({
+            id: `comm-${c.id}`,
+            type: 'communication',
+            timestamp: (c.timestamp || c.createdAt).toString(),
+            title: c.subject || `${c.type} (${c.direction})`,
+            detail: c.bodySummary || c.bodyRaw?.substring(0, 120) || undefined,
+            entityType: 'opportunity',
+            entityId: oppId,
+            icon: c.type,
+          });
+        }
+
+        // Add status history entries
+        const opp = allOpps.find(o => o.id === oppId);
+        if (opp?.statusHistory && Array.isArray(opp.statusHistory)) {
+          for (const entry of opp.statusHistory as any[]) {
+            timeline.push({
+              id: `status-${oppId}-${entry.changedAt}`,
+              type: 'status_change',
+              timestamp: entry.changedAt,
+              title: `Status changed to "${entry.status}"`,
+              entityType: 'opportunity',
+              entityId: oppId,
+              icon: 'system',
+            });
+          }
+        }
+
+        // Inquiry sent/viewed milestones
+        if (opp?.inquirySentAt) {
+          timeline.push({
+            id: `inquiry-sent-${oppId}`,
+            type: 'system',
+            timestamp: new Date(opp.inquirySentAt).toISOString(),
+            title: 'Inquiry email sent to customer',
+            entityType: 'opportunity',
+            entityId: oppId,
+            icon: 'system',
+          });
+        }
+        if (opp?.inquiryViewedAt) {
+          timeline.push({
+            id: `inquiry-viewed-${oppId}`,
+            type: 'system',
+            timestamp: new Date(opp.inquiryViewedAt).toISOString(),
+            title: 'Customer opened inquiry link',
+            entityType: 'opportunity',
+            entityId: oppId,
+            icon: 'system',
+          });
+        }
+      }
+
+      // Collect communications from matching clients
+      for (const clientId of matchingClientIds) {
+        const comms = await storage.getCommunicationsForClient(clientId);
+        for (const c of comms) {
+          // Skip if already added via opportunity link
+          if (timeline.some(t => t.id === `comm-${c.id}`)) continue;
+          timeline.push({
+            id: `comm-${c.id}`,
+            type: 'communication',
+            timestamp: (c.timestamp || c.createdAt).toString(),
+            title: c.subject || `${c.type} (${c.direction})`,
+            detail: c.bodySummary || c.bodyRaw?.substring(0, 120) || undefined,
+            entityType: 'client',
+            entityId: clientId,
+            icon: c.type,
+          });
+        }
+      }
+
+      // 2. Quote request submissions
+      const allQR = await db.select().from(quoteRequests);
+      const matchingQR = allQR.filter(qr => qr.email?.toLowerCase() === email);
+      for (const qr of matchingQR) {
+        if (qr.submittedAt) {
+          timeline.push({
+            id: `qr-submitted-${qr.id}`,
+            type: 'quote_submitted',
+            timestamp: new Date(qr.submittedAt).toISOString(),
+            title: `Quote request submitted (${qr.eventType})`,
+            detail: qr.menuTheme ? `Menu: ${qr.menuTheme} ${qr.menuTier || ''}` : undefined,
+            entityType: 'quoteRequest',
+            entityId: qr.id,
+            icon: 'system',
+          });
+        }
+        if (qr.convertedAt) {
+          timeline.push({
+            id: `qr-converted-${qr.id}`,
+            type: 'system',
+            timestamp: new Date(qr.convertedAt).toISOString(),
+            title: 'Quote request converted to estimate',
+            entityType: 'quoteRequest',
+            entityId: qr.id,
+            icon: 'system',
+          });
+        }
+      }
+
+      // 3. Estimate milestones
+      const allEst = await storage.listEstimates();
+      for (const clientId of matchingClientIds) {
+        const clientEstimates = allEst.filter(e => e.clientId === clientId);
+        for (const est of clientEstimates) {
+          if (est.sentAt) {
+            timeline.push({
+              id: `est-sent-${est.id}`,
+              type: 'estimate_sent',
+              timestamp: new Date(est.sentAt).toISOString(),
+              title: `Quote sent ($${(est.total / 100).toLocaleString()})`,
+              entityType: 'estimate',
+              entityId: est.id,
+              icon: 'system',
+            });
+          }
+          if (est.viewedAt) {
+            timeline.push({
+              id: `est-viewed-${est.id}`,
+              type: 'system',
+              timestamp: new Date(est.viewedAt).toISOString(),
+              title: 'Customer viewed quote',
+              entityType: 'estimate',
+              entityId: est.id,
+              icon: 'system',
+            });
+          }
+          if (est.acceptedAt) {
+            timeline.push({
+              id: `est-accepted-${est.id}`,
+              type: 'estimate_accepted',
+              timestamp: new Date(est.acceptedAt).toISOString(),
+              title: 'Quote accepted!',
+              entityType: 'estimate',
+              entityId: est.id,
+              icon: 'system',
+            });
+          }
+          if (est.declinedAt) {
+            timeline.push({
+              id: `est-declined-${est.id}`,
+              type: 'system',
+              timestamp: new Date(est.declinedAt).toISOString(),
+              title: `Quote declined${est.declinedReason ? `: ${est.declinedReason}` : ''}`,
+              entityType: 'estimate',
+              entityId: est.id,
+              icon: 'system',
+            });
+          }
+        }
+      }
+
+      // 4. Event milestones
+      const allEvts = await storage.listEvents();
+      for (const clientId of matchingClientIds) {
+        const clientEvents = allEvts.filter(e => e.clientId === clientId);
+        for (const evt of clientEvents) {
+          timeline.push({
+            id: `event-created-${evt.id}`,
+            type: 'event_created',
+            timestamp: new Date(evt.createdAt).toISOString(),
+            title: `Event booked: ${evt.eventType} (${evt.guestCount} guests)`,
+            detail: evt.venue,
+            entityType: 'event',
+            entityId: evt.id,
+            icon: 'system',
+          });
+        }
+      }
+
+      // Sort chronologically (newest first)
+      timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      res.status(200).json({
+        email,
+        totalEntries: timeline.length,
+        timeline,
+      });
+    } catch (error) {
+      console.error('Error building contact timeline:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Search contacts
   app.get('/api/contacts/search', isAuthenticated, async (req: Request, res: Response) => {
     try {

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import ContactTimeline from "@/components/shared/ContactTimeline";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -593,7 +595,7 @@ function EventDetail({ eventId }: { eventId: number }) {
         </TabsContent>
 
         <TabsContent value="notes" className="mt-4">
-          <NotesTab event={event} />
+          <NotesTab event={event} clientEmail={client?.email} />
         </TabsContent>
 
         <TabsContent value="checklist" className="mt-4">
@@ -1496,7 +1498,7 @@ function EquipmentTab({ quoteRequest }: { quoteRequest: QuoteRequestRow | null }
 
 // ─── Notes tab ─────────────────────────────────────────────────────────────
 
-function NotesTab({ event }: { event: EventRow }) {
+function NotesTab({ event, clientEmail }: { event: EventRow; clientEmail?: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState<string>(event.notes ?? "");
@@ -1545,13 +1547,19 @@ function NotesTab({ event }: { event: EventRow }) {
         </CardContent>
       </Card>
 
-      <Card className="border-dashed">
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          <p className="font-semibold text-foreground mb-1">Email &amp; call history — coming soon</p>
-          <p>
-            The schema is ready (communications can link to events), but the thread view isn't
-            wired yet. For now, client-level email/call history lives on the client record.
-          </p>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Contact Timeline</CardTitle>
+          <CardDescription>
+            Full communication history for this client across all stages.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {clientEmail ? (
+            <ContactTimeline email={clientEmail} />
+          ) : (
+            <p className="text-sm text-muted-foreground">No client email available for timeline.</p>
+          )}
         </CardContent>
       </Card>
     </div>

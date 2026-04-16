@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Pencil, Plus, Trash2, Mail, Phone, MessageSquare, Calendar, X, Send, Loader2, ExternalLink, Check, Brain, TrendingUp, AlertTriangle, Target, ThermometerSun, DollarSign, Lightbulb } from "lucide-react";
+import ContactTimeline from "@/components/shared/ContactTimeline";
 import { z } from "zod";
 // Import types directly with relative path since the alias isn't working
 import { Opportunity, ContactIdentifier, Communication } from "../types/opportunity";
@@ -652,6 +653,7 @@ export default function OpportunityDetailPage() {
         <TabsList>
           <TabsTrigger value="contacts">Contact Information</TabsTrigger>
           <TabsTrigger value="communications">Communications</TabsTrigger>
+          <TabsTrigger value="timeline">Full Timeline</TabsTrigger>
         </TabsList>
         
         {/* Contact Information Tab */}
@@ -1126,6 +1128,15 @@ export default function OpportunityDetailPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* Unified Timeline Tab — Tier 2 */}
+        <TabsContent value="timeline" className="space-y-4">
+          <h2 className="text-xl font-semibold">Full Contact Timeline</h2>
+          <p className="text-sm text-gray-500">
+            Every touchpoint for this contact across the entire funnel — emails, calls, status changes, quotes, and events.
+          </p>
+          <ContactTimeline email={opportunity.email} />
         </TabsContent>
       </Tabs>
     </div>

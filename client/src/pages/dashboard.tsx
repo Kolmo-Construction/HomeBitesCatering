@@ -10,6 +10,8 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import RecentEstimatesTable from "@/components/dashboard/RecentEstimatesTable";
 import MenuMarginsCard from "@/components/dashboard/MenuMarginsCard";
 import PendingFollowUps from "@/components/dashboard/PendingFollowUps";
+import FunnelChart from "@/components/dashboard/FunnelChart";
+import StaleDealsAlert from "@/components/dashboard/StaleDealsAlert";
 
 export default function Dashboard() {
   // Fetch data for stats
@@ -121,6 +123,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <RecentOpportunitiesTable />
         <UpcomingEventsList />
+      </div>
+
+      {/* Funnel + Stale Deals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <FunnelChart />
+        <StaleDealsAlert />
       </div>
 
       {/* Quick Access & Recent Estimates */}
