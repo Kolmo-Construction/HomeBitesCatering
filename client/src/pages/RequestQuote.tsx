@@ -1030,12 +1030,65 @@ export default function RequestQuote() {
         }
       }
 
-      const payload = {
-        ...form,
-        guestCount: guestCount,
-        // Map form fields to API schema field names
+      // Strip fields the backend schema doesn't understand / that have
+      // type mismatches with FormState, then reshape the rest to match.
+      const {
+        // Fields to drop: not in quoteRequests schema
+        referralSources: _referralSources,
+        promoCode: _promoCode,
+        promoValid: _promoValid,
+        promoId: _promoId,
+        promoDiscount: _promoDiscount,
+        promoDescription: _promoDescription,
+        hasVenue: _hasVenue,
+        selectedVenueId: _selectedVenueId,
+        locationPreferences: _locationPreferences,
+        // Fields to remap below
+        hasKitchen: formHasKitchen,
+        ceremonySameSpace: formCeremonySameSpace,
+        buffetStyle: formBuffetStyle,
+        packageTier: _packageTier,
+        menuItemSelections: _menuItemSelections,
+        appetizerSelections: _appetizerSelections,
+        dessertSelections: _dessertSelections,
+        addAppetizers: _addAppetizers,
+        addDesserts: _addDesserts,
+        appetizerStyle: _appetizerStyle,
+        nonAlcoholicSelections: _nonAlcoholicSelections,
+        alcoholSelections: _alcoholSelections,
+        beverageType: _beverageType,
+        barType: _barType,
+        barDuration: _barDuration,
+        liquorQuality: _liquorQuality,
+        needsGlassware: _needsGlassware,
+        tableWaterService: _tableWaterService,
+        coffeTeaService: _coffeTeaService,
+        needsEquipment: _needsEquipment,
+        equipmentSelections: _equipmentSelections,
+        dietaryRestrictions: _dietaryRestrictions,
+        allergies: _allergies,
+        specialDietaryNotes: _specialDietaryNotes,
+        industryReferrals: _industryReferrals,
+        customMenuNotes: _customMenuNotes,
+        ...rest
+      } = form;
+
+      // "yes"/"no" → boolean mapper, returns undefined when the radio was untouched
+      const yesNoToBool = (v: string | undefined | null): boolean | undefined => {
+        if (v === "yes") return true;
+        if (v === "no") return false;
+        return undefined;
+      };
+
+      const payload: Record<string, any> = {
+        ...rest,
+        guestCount,
+        // Map form fields to schema columns / enums
         menuTier: form.packageTier || undefined,
         menuSelections,
+        serviceStyle: formBuffetStyle || undefined, // buffetStyle → serviceStyle enum
+        venueHasKitchen: yesNoToBool(formHasKitchen),
+        ceremonySameSpace: yesNoToBool(formCeremonySameSpace),
         drinkingGuestCount:
           typeof form.drinkingGuestCount === "number"
             ? form.drinkingGuestCount
@@ -1044,17 +1097,23 @@ export default function RequestQuote() {
         ...(opportunityId ? { opportunityId } : {}),
         // P2-3: prefer utm_source over explicit source param, fall back to "website"
         source: attribution.utmSource || attribution.source || "website",
-        // Stash the full attribution so reporting can break down by campaign later
-        referralDetail: [
-          attribution.utmCampaign ? `campaign=${attribution.utmCampaign}` : null,
-          attribution.utmMedium ? `medium=${attribution.utmMedium}` : null,
-          attribution.utmContent ? `content=${attribution.utmContent}` : null,
-          attribution.utmTerm ? `term=${attribution.utmTerm}` : null,
-          attribution.referrer ? `referrer=${attribution.referrer}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ") || undefined,
+        referralDetail:
+          [
+            attribution.utmCampaign ? `campaign=${attribution.utmCampaign}` : null,
+            attribution.utmMedium ? `medium=${attribution.utmMedium}` : null,
+            attribution.utmContent ? `content=${attribution.utmContent}` : null,
+            attribution.utmTerm ? `term=${attribution.utmTerm}` : null,
+            attribution.referrer ? `referrer=${attribution.referrer}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || undefined,
       };
+
+      // Strip keys whose value is `undefined` so we don't trip optional-but-
+      // strictly-typed fields in Zod.
+      for (const k of Object.keys(payload)) {
+        if (payload[k] === undefined) delete payload[k];
+      }
       const res = await apiRequest(
         "POST",
         "/api/quotes/quote-requests",
