@@ -1139,6 +1139,37 @@ export default function RequestQuote() {
     },
   });
 
+  // ---------- Menu item selection helpers ----------
+  // NOTE: this MUST live above the `if (submitted) return ...` below. Moving
+  // it below triggers React error #300 ("rendered fewer hooks than during the
+  // previous render") because the thank-you render skips this useCallback.
+  const toggleMenuItem = useCallback(
+    (category: string, itemId: string, limit: number) => {
+      setForm((prev) => {
+        const current = prev.menuItemSelections[category] || [];
+        const isSelected = current.includes(itemId);
+        let next: string[];
+        if (isSelected) {
+          next = current.filter((id) => id !== itemId);
+        } else if (current.length < limit) {
+          next = [...current, itemId];
+        } else {
+          toast({
+            title: "Selection limit reached",
+            description: `This tier allows up to ${limit} ${category}${limit === 1 ? "" : "s"}.`,
+            variant: "destructive",
+          });
+          return prev;
+        }
+        return {
+          ...prev,
+          menuItemSelections: { ...prev.menuItemSelections, [category]: next },
+        };
+      });
+    },
+    [toast],
+  );
+
   // ---------- Thank You Screen ----------
   if (submitted) {
     // Build the prefilled Cal.com URL for the embedded booking widget.
@@ -1932,34 +1963,6 @@ export default function RequestQuote() {
     </div>
   );
 
-  // ---------- Menu item selection helpers ----------
-  const toggleMenuItem = useCallback(
-    (category: string, itemId: string, limit: number) => {
-      setForm((prev) => {
-        const current = prev.menuItemSelections[category] || [];
-        const isSelected = current.includes(itemId);
-        let next: string[];
-        if (isSelected) {
-          next = current.filter((id) => id !== itemId);
-        } else if (current.length < limit) {
-          next = [...current, itemId];
-        } else {
-          // Limit reached — show a toast
-          toast({
-            title: "Selection limit reached",
-            description: `This tier allows up to ${limit} ${category}${limit === 1 ? "" : "s"}.`,
-            variant: "destructive",
-          });
-          return prev;
-        }
-        return {
-          ...prev,
-          menuItemSelections: { ...prev.menuItemSelections, [category]: next },
-        };
-      });
-    },
-    [toast],
-  );
 
   // Tier visual palette keyed by known tier slugs — falls back to primary color for custom tiers
   const TIER_COLORS: Record<string, { gradient: string; border: string }> = {
