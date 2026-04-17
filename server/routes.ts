@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { db } from "./db"; // For direct database access
 import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
+import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import session from "express-session";
 import { eq, and, isNull, inArray } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
@@ -34,6 +34,8 @@ import {
   clients,                       // for accept-estimate endpoint (prospect→customer graduation)
   events,                        // for auto-create event on accept and /full endpoint
   menus,                         // for /api/events/:id/full aggregate endpoint
+  tastings,                      // P1-1: tasting bookings
+  contracts,                     // P2-1: contracts
   type InsertCommunication,
   type InsertOpportunityEmailThread,
 } from "@shared/schema";
@@ -48,8 +50,30 @@ import {
 import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
 import { buildProposalFromQuoteRequest, buildProposalFromEstimateAlone } from './lib/proposalFromQuoteRequest';
 import type { Proposal } from '@shared/proposal';
-import { getSiteConfig, getEmailConfig } from './utils/siteConfig';
+import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent } from './utils/siteConfig';
+import { createCheckoutLink, verifySquareWebhook } from './services/paymentService';
+import {
+  generateContractHtml,
+  sendContractForSignature,
+  verifyBoldSignWebhook,
+  boldSignEventToStatus,
+} from './services/contractService';
 import { sendEmail, sendEmailInBackground } from './utils/email';
+import { sendOwnerSmsInBackground } from './services/smsService';
+import {
+  newInquiryOwnerSms,
+  infoRequestedOwnerSms,
+  consultationBookedOwnerSms,
+  quoteDeclinedOwnerSms,
+  declineFeedbackOwnerSms,
+  dripDay3CustomerSms,
+  dripDay7OwnerSms,
+  tastingBookedOwnerSms,
+  tastingPaidOwnerSms,
+  contractSignedOwnerSms,
+  paymentReceivedOwnerSms,
+} from './utils/smsTemplates';
+import { sendSmsInBackground } from './services/smsService';
 import {
   quoteSentEmail,
   quoteViewedAdminEmail,
@@ -63,6 +87,24 @@ import {
   followUpQuoteNotViewed,
   followUpQuoteNoAction,
   followUpQuoteExpiringSoon,
+  infoRequestedClientAckEmail,
+  infoRequestedOwnerEmail,
+  consultationBookedOwnerEmail,
+  quoteDeclinedFeedbackEmail,
+  declineFeedbackOwnerEmail,
+  eventReviewRequestEmail,
+  dripDay2SoftEmail,
+  dripDay5ValueEmail,
+  dripDay10FinalEmail,
+  tastingPaymentEmail,
+  tastingBookedOwnerEmail,
+  tastingPaidCustomerEmail,
+  contractSentCustomerEmail,
+  contractSignedOwnerEmail,
+  depositRequestCustomerEmail,
+  balanceRequestCustomerEmail,
+  paymentReceivedCustomerEmail,
+  paymentReceivedOwnerEmail,
   type ReminderKind,
 } from './utils/emailTemplates';
 
@@ -170,6 +212,28 @@ function formatNotes(lead: any): string | null {
   }
   
   return noteParts.length > 0 ? noteParts.join('\n\n') : null;
+}
+
+/**
+ * P1-2: Pause the drip for an opportunity if it's currently active. No-op if
+ * the opportunity doesn't exist, hasn't started, or is already paused. Safe to
+ * call from any route that represents customer engagement (reply, call, click).
+ */
+async function pauseOpportunityDrip(opportunityId: number | null | undefined, reason: string): Promise<void> {
+  if (!opportunityId) return;
+  try {
+    const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, opportunityId));
+    if (!opp) return;
+    if (opp.followUpSequencePausedAt) return; // already paused
+    if (!opp.followUpSequenceStartedAt) return; // never started — nothing to pause
+    await db
+      .update(opportunities)
+      .set({ followUpSequencePausedAt: new Date(), updatedAt: new Date() })
+      .where(eq(opportunities.id, opp.id));
+    console.log(`[drip] paused opp #${opp.id} (reason: ${reason})`);
+  } catch (err) {
+    console.warn(`[drip] failed to pause opp #${opportunityId}:`, err);
+  }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -909,6 +973,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           new Date(e.acceptedAt).getFullYear() === lastMonthYear)
         .reduce((sum, e) => sum + e.total, 0);
 
+      // P2-3: Break down the funnel by source/campaign.
+      // For each opportunitySource we report: count of opportunities, count of
+      // those that resulted in an accepted estimate (booked), and total revenue.
+      // Sources with zero bookings still appear so Mike can see where the noise is.
+      const estimatesByOpp = new Map<number, any[]>();
+      for (const e of allEstimates) {
+        if (e.opportunityId != null) {
+          const arr = estimatesByOpp.get(e.opportunityId) || [];
+          arr.push(e);
+          estimatesByOpp.set(e.opportunityId, arr);
+        }
+      }
+      const bySource: Record<string, { count: number; booked: number; revenue: number; utmCampaigns: Record<string, number> }> = {};
+      for (const opp of allOpps) {
+        const src = (opp.opportunitySource || opp.utmSource || 'unknown').toLowerCase();
+        if (!bySource[src]) bySource[src] = { count: 0, booked: 0, revenue: 0, utmCampaigns: {} };
+        bySource[src].count += 1;
+        if (opp.utmCampaign) {
+          bySource[src].utmCampaigns[opp.utmCampaign] =
+            (bySource[src].utmCampaigns[opp.utmCampaign] || 0) + 1;
+        }
+        const ests = estimatesByOpp.get(opp.id) || [];
+        const accepted = ests.find((e) => e.status === 'accepted');
+        if (accepted) {
+          bySource[src].booked += 1;
+          bySource[src].revenue += accepted.total;
+        }
+      }
+
       res.status(200).json({
         stages,
         conversionRates,
@@ -923,6 +1016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue: lastMonthRevenue,
         },
         avgDaysToClose,
+        bySource,
       });
     } catch (error) {
       console.error('Error generating funnel report:', error);
@@ -1140,21 +1234,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: z.string().min(1, "Last name is required"),
         email: z.string().email("Valid email address is required"),
         phone: z.string().optional(),
-        
+
         // Required event information
         eventType: z.string().min(1, "Event type is required"),
         eventDate: z.string().optional().nullable().transform(date => date ? new Date(date) : null),
         guestCount: z.coerce.number().int().positive().optional().nullable(),
         venue: z.string().optional(),
-        
+
         // Optional details
         notes: z.string().optional(),
-        
+
         // Form metadata
         formId: z.number().optional(), // Which form was submitted
         formVersion: z.number().optional().default(1),
         source: z.string().optional().default("website"), // Track where inquiry came from
-        
+
+        // P2-3: UTM / referral attribution — captured from URL params or document.referrer
+        utmSource: z.string().optional().nullable(),
+        utmMedium: z.string().optional().nullable(),
+        utmCampaign: z.string().optional().nullable(),
+        utmContent: z.string().optional().nullable(),
+        utmTerm: z.string().optional().nullable(),
+        referrer: z.string().optional().nullable(),
+
         // Detailed form responses for historical record
         formResponses: z.array(z.object({
           questionId: z.number(),
@@ -1165,7 +1267,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const inquiryData = publicInquirySchema.parse(req.body);
       
-      // Create the opportunity with appropriate defaults for public inquiries
+      // Create the opportunity with appropriate defaults for public inquiries.
+      // P2-3: carry UTM + referrer attribution onto the opportunity so it shows
+      // up in reporting and we can tie bookings back to source campaigns.
       const opportunityData = {
         firstName: inquiryData.firstName,
         lastName: inquiryData.lastName,
@@ -1177,13 +1281,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         venue: inquiryData.venue || null,
         notes: inquiryData.notes || null,
         status: "new" as const,
-        opportunitySource: inquiryData.source,
+        opportunitySource: inquiryData.utmSource || inquiryData.source || 'website',
+        utmSource: inquiryData.utmSource || null,
+        utmMedium: inquiryData.utmMedium || null,
+        utmCampaign: inquiryData.utmCampaign || null,
+        utmContent: inquiryData.utmContent || null,
+        utmTerm: inquiryData.utmTerm || null,
+        referrer: inquiryData.referrer || null,
         priority: "medium" as const,
         assignedTo: null
       };
 
       // Create the opportunity
       const newOpportunity = await storage.createOpportunity(opportunityData);
+
+      // Fire-and-forget owner SMS alert (P0-1)
+      sendOwnerSmsInBackground({
+        ...newInquiryOwnerSms({
+          firstName: newOpportunity.firstName,
+          lastName: newOpportunity.lastName,
+          eventType: newOpportunity.eventType,
+          guestCount: newOpportunity.guestCount,
+          eventDate: newOpportunity.eventDate,
+          source: newOpportunity.opportunitySource || 'website',
+          opportunityId: newOpportunity.id,
+        }),
+        templateKey: 'new_inquiry_owner_alert',
+        opportunityId: newOpportunity.id,
+      });
 
       // Return success response with opportunity ID
       res.status(201).json({
@@ -1209,6 +1334,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ===== P1-2: Admin drip state + pause/resume controls =====
+
+  app.get('/api/opportunities/:id/drip-state', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const oppId = parseInt(req.params.id);
+      if (isNaN(oppId)) return res.status(400).json({ message: 'Invalid opportunity ID' });
+
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
+      if (!opp) return res.status(404).json({ message: 'Opportunity not found' });
+
+      const startedAt = opp.followUpSequenceStartedAt;
+      const step = opp.followUpSequenceStep ?? 0;
+      const pausedAt = opp.followUpSequencePausedAt;
+
+      // Compute when the next step fires (if any), so admin UI can show "next at X"
+      let nextStepAt: string | null = null;
+      let nextStepLabel: string | null = null;
+      if (startedAt && !pausedAt && step < 5) {
+        const dayOffsets: Record<number, number> = { 0: 2, 1: 3, 2: 5, 3: 7, 4: 10 };
+        const nextDay = dayOffsets[step];
+        if (nextDay !== undefined) {
+          const t = new Date(startedAt);
+          t.setDate(t.getDate() + nextDay);
+          nextStepAt = t.toISOString();
+          const labels = ['Day 2 email', 'Day 3 SMS', 'Day 5 email', 'Day 7 phone task', 'Day 10 final'];
+          nextStepLabel = labels[step];
+        }
+      }
+
+      return res.json({
+        started: !!startedAt,
+        startedAt,
+        step,
+        totalSteps: 5,
+        paused: !!pausedAt,
+        pausedAt,
+        completed: step >= 5,
+        nextStepAt,
+        nextStepLabel,
+        autosendEnabled: process.env.FOLLOWUP_AUTOSEND_ENABLED === 'true',
+      });
+    } catch (error) {
+      console.error('Error fetching drip state:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/opportunities/:id/drip-pause', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const oppId = parseInt(req.params.id);
+      if (isNaN(oppId)) return res.status(400).json({ message: 'Invalid opportunity ID' });
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
+      if (!opp) return res.status(404).json({ message: 'Opportunity not found' });
+      if (opp.followUpSequencePausedAt) return res.json({ ok: true, alreadyPaused: true });
+
+      await db
+        .update(opportunities)
+        .set({ followUpSequencePausedAt: new Date(), updatedAt: new Date() })
+        .where(eq(opportunities.id, oppId));
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error('Error pausing drip:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/opportunities/:id/drip-resume', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const oppId = parseInt(req.params.id);
+      if (isNaN(oppId)) return res.status(400).json({ message: 'Invalid opportunity ID' });
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
+      if (!opp) return res.status(404).json({ message: 'Opportunity not found' });
+
+      await db
+        .update(opportunities)
+        .set({ followUpSequencePausedAt: null, updatedAt: new Date() })
+        .where(eq(opportunities.id, oppId));
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error('Error resuming drip:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // ===== Send Inquiry to Customer (from Opportunity) =====
 
   app.post('/api/opportunities/:id/send-inquiry', isAuthenticated, async (req: Request, res: Response) => {
@@ -2203,6 +2412,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     viewedAt: e.viewedAt,
     acceptedAt: e.acceptedAt,
     declinedAt: e.declinedAt,
+    // P0-2: "I need more info" state
+    infoRequestedAt: e.infoRequestedAt,
+    infoRequestNote: e.infoRequestNote,
+    consultationBookedAt: e.consultationBookedAt,
+    consultationMeetingUrl: e.consultationMeetingUrl,
   });
 
   // Resolve (and lazily hydrate) the proposal for an estimate. New estimates
@@ -2313,6 +2527,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({ viewedAt: new Date(), updatedAt: new Date() })
           .where(eq(estimates.id, estimate.id));
 
+        // P1-2: Drip clock starts when the customer FIRST views the quote.
+        // We stamp followUpSequenceStartedAt on the linked opportunity (if any)
+        // the first time this happens. Subsequent views are no-ops.
+        if (estimate.opportunityId) {
+          const [opp] = await db
+            .select()
+            .from(opportunities)
+            .where(eq(opportunities.id, estimate.opportunityId));
+          if (opp && !opp.followUpSequenceStartedAt) {
+            await db
+              .update(opportunities)
+              .set({ followUpSequenceStartedAt: new Date(), updatedAt: new Date() })
+              .where(eq(opportunities.id, opp.id));
+          }
+        }
+
         // Fire the admin notification in the background. Don't block the customer's page load.
         try {
           const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
@@ -2365,6 +2595,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ status: 'accepted', acceptedAt: estimate.acceptedAt ?? now, updatedAt: now })
         .where(eq(estimates.id, estimate.id))
         .returning();
+
+      // P1-2: pause drip — client accepted the quote
+      await pauseOpportunityDrip(estimate.opportunityId, 'quote_accepted');
+
+      // P2-1: auto-create a draft contract so the admin can "Send contract"
+      // without an extra click. Errors are logged but don't block the accept.
+      try {
+        await ensureContractForEstimate(estimate.id);
+      } catch (contractErr) {
+        console.warn(`[p2-1] failed to auto-create contract for estimate ${estimate.id}:`, contractErr);
+      }
 
       // Graduate the client → customer
       await db
@@ -2503,16 +2744,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       const reason = typeof req.body?.reason === 'string' ? req.body.reason : null;
 
+      // P0-3: generate a feedback magic-link token so the client can come
+      // back and tell us WHY, without needing to log in.
+      const feedbackToken = estimate.declineFeedbackToken || randomBytes(24).toString('base64url');
+
       const [updated] = await db
         .update(estimates)
         .set({
           status: 'declined',
           declinedAt: now,
           declinedReason: reason,
+          declineFeedbackToken: feedbackToken,
           updatedAt: now,
         })
         .where(eq(estimates.id, estimate.id))
         .returning();
+
+      // P1-2: pause drip — client declined the quote
+      await pauseOpportunityDrip(estimate.opportunityId, 'quote_declined');
+
+      // Fire client feedback-request email + owner SMS (fire-and-forget)
+      try {
+        const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+        const emailCfg = getEmailConfig();
+        const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
+
+        if (client?.email) {
+          const feedbackUrl = `${emailCfg.publicBaseUrl}/decline-feedback/${feedbackToken}`;
+          const clientTemplate = quoteDeclinedFeedbackEmail({
+            customerFirstName: client.firstName || 'there',
+            eventType: estimate.eventType,
+            feedbackUrl,
+          });
+          sendEmailInBackground({
+            to: client.email,
+            subject: clientTemplate.subject,
+            html: clientTemplate.html,
+            text: clientTemplate.text,
+            clientId: client.id,
+            opportunityId: estimate.opportunityId ?? null,
+            templateKey: 'quote_declined_feedback',
+          });
+        }
+
+        sendOwnerSmsInBackground({
+          ...quoteDeclinedOwnerSms({
+            customerName,
+            eventDate: estimate.eventDate,
+            reason,
+            estimateId: estimate.id,
+          }),
+          templateKey: 'quote_declined_owner_alert',
+          clientId: estimate.clientId,
+          opportunityId: estimate.opportunityId ?? null,
+        });
+      } catch (notifyError) {
+        console.warn('Failed to fire decline notifications:', notifyError);
+      }
 
       return res.status(200).json({
         ok: true,
@@ -2520,6 +2808,1372 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error declining public quote:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== P0-3: Public decline-feedback form =====
+
+  // Returns minimal info needed to render the feedback form (no PII beyond first name + event)
+  app.get('/api/public/decline-feedback/:token', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const [estimate] = await db
+        .select()
+        .from(estimates)
+        .where(eq(estimates.declineFeedbackToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Not found' });
+      }
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      return res.json({
+        firstName: client?.firstName || null,
+        eventType: estimate.eventType,
+        eventDate: estimate.eventDate,
+        alreadySubmitted: !!estimate.declineFeedbackSubmittedAt,
+        category: estimate.declineCategory,
+      });
+    } catch (error) {
+      console.error('Error fetching decline feedback:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Records the client's categorized decline reason. Idempotent — latest write wins.
+  app.post('/api/public/decline-feedback/:token', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const bodySchema = z.object({
+        category: z.enum(['pricing', 'menu', 'timing', 'other']),
+        notes: z.string().max(2000).optional().nullable(),
+      });
+      const { category, notes } = bodySchema.parse(req.body || {});
+
+      const [estimate] = await db
+        .select()
+        .from(estimates)
+        .where(eq(estimates.declineFeedbackToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Not found' });
+      }
+
+      const now = new Date();
+      await db
+        .update(estimates)
+        .set({
+          declineCategory: category,
+          declinedReason: notes ?? estimate.declinedReason ?? null,
+          declineFeedbackSubmittedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(estimates.id, estimate.id));
+
+      // Fire owner notification — email + SMS. Re-engage CTA surfaces in the
+      // email body when the category is pricing/menu.
+      try {
+        const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+        const emailCfg = getEmailConfig();
+        const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
+        const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+
+        const ownerTemplate = declineFeedbackOwnerEmail({
+          customerName,
+          customerEmail: client?.email || 'unknown',
+          eventType: estimate.eventType,
+          eventDate: estimate.eventDate,
+          category,
+          notes: notes ?? null,
+          adminEstimateUrl: adminUrl,
+        });
+        sendEmailInBackground({
+          to: emailCfg.adminNotificationEmail,
+          subject: ownerTemplate.subject,
+          html: ownerTemplate.html,
+          text: ownerTemplate.text,
+          clientId: estimate.clientId,
+          opportunityId: estimate.opportunityId ?? null,
+          templateKey: 'decline_feedback_owner_alert',
+        });
+
+        sendOwnerSmsInBackground({
+          ...declineFeedbackOwnerSms({
+            customerName,
+            category,
+            estimateId: estimate.id,
+          }),
+          templateKey: 'decline_feedback_owner_alert',
+          clientId: estimate.clientId,
+          opportunityId: estimate.opportunityId ?? null,
+        });
+      } catch (notifyError) {
+        console.warn('Failed to fire decline-feedback notifications:', notifyError);
+      }
+
+      return res.status(200).json({ ok: true });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid body', errors: error.errors });
+      }
+      console.error('Error submitting decline feedback:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== P1-3: Public Cal.com config (used by inquiry thank-you + any page
+  // that wants to embed the calendar without a token context). Returns only
+  // the raw embed URLs — no PII, no token. Safe for anonymous clients.
+  app.get('/api/public/cal-config', async (_req: Request, res: Response) => {
+    const cal = getCalComConfig();
+    return res.json({
+      consultationUrl: cal.consultationEmbedUrl,
+      tastingUrl: cal.tastingEmbedUrl,
+    });
+  });
+
+  // ===== P0-2: "I Need More Info" — client opens a conversation path =====
+
+  // Public: surface Cal.com embed + state for the proposal page.
+  // Frontend fetches this lazily when the user clicks "Need More Info."
+  app.get('/api/public/quote/:token/booking-config', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const cal = getCalComConfig();
+
+      // Build a pre-filled booking URL: pass name + email + a metadata flag
+      // `estimateToken` so the webhook can round-trip back to the right estimate.
+      const buildUrl = (base: string | null): string | null => {
+        if (!base) return null;
+        try {
+          const u = new URL(base);
+          if (client?.firstName) u.searchParams.set('name', `${client.firstName} ${client.lastName || ''}`.trim());
+          if (client?.email) u.searchParams.set('email', client.email);
+          // Cal.com custom fields come through as query params that become form metadata
+          u.searchParams.set('estimateToken', token);
+          return u.toString();
+        } catch {
+          // If base isn't a valid URL, return it raw
+          return base;
+        }
+      };
+
+      return res.json({
+        consultationUrl: buildUrl(cal.consultationEmbedUrl),
+        tastingUrl: buildUrl(cal.tastingEmbedUrl),
+        infoRequestedAt: estimate.infoRequestedAt,
+        consultationBookedAt: estimate.consultationBookedAt,
+        consultationMeetingUrl: estimate.consultationMeetingUrl,
+      });
+    } catch (error) {
+      console.error('Error fetching booking config:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: client clicked "I need more info" on the proposal. Stamps
+  // infoRequestedAt + optional note, fires owner SMS + email, and returns the
+  // booking URL so the frontend can present the calendar.
+  app.post('/api/public/quote/:token/request-info', async (req: Request, res: Response) => {
+    try {
+      const token = req.params.token;
+      const bodySchema = z.object({ note: z.string().max(2000).optional().nullable() });
+      const { note } = bodySchema.parse(req.body || {});
+
+      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
+      if (!estimate) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+
+      if (estimate.status === 'accepted' || estimate.status === 'declined') {
+        return res.status(400).json({
+          message: `This quote has already been ${estimate.status}.`,
+        });
+      }
+
+      const now = new Date();
+      const [updated] = await db
+        .update(estimates)
+        .set({
+          // Don't change status — stays 'viewed' so downstream logic (follow-up engine)
+          // can see this as a pause-trigger without treating it as a terminal state.
+          infoRequestedAt: estimate.infoRequestedAt ?? now,
+          infoRequestNote: note ?? estimate.infoRequestNote ?? null,
+          updatedAt: now,
+        })
+        .where(eq(estimates.id, estimate.id))
+        .returning();
+
+      // P1-2: pause drip — client asked for more info (active engagement)
+      await pauseOpportunityDrip(estimate.opportunityId, 'info_requested');
+
+      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const cal = getCalComConfig();
+      const emailCfg = getEmailConfig();
+
+      // Pre-fill the booking URL with client info + round-trip token
+      let bookingUrl: string | null = null;
+      if (cal.consultationEmbedUrl) {
+        try {
+          const u = new URL(cal.consultationEmbedUrl);
+          if (client?.firstName) u.searchParams.set('name', `${client.firstName} ${client.lastName || ''}`.trim());
+          if (client?.email) u.searchParams.set('email', client.email);
+          u.searchParams.set('estimateToken', token);
+          bookingUrl = u.toString();
+        } catch {
+          bookingUrl = cal.consultationEmbedUrl;
+        }
+      }
+
+      // Fire client acknowledgment email (fire-and-forget)
+      if (client?.email && bookingUrl) {
+        const clientTemplate = infoRequestedClientAckEmail({
+          customerFirstName: client.firstName || 'there',
+          eventType: estimate.eventType,
+          bookingUrl,
+          note: note ?? null,
+        });
+        sendEmailInBackground({
+          to: client.email,
+          subject: clientTemplate.subject,
+          html: clientTemplate.html,
+          text: clientTemplate.text,
+          clientId: client.id,
+          opportunityId: estimate.opportunityId ?? null,
+          templateKey: 'info_requested_client_ack',
+        });
+      }
+
+      // Fire owner email + SMS alert (fire-and-forget)
+      try {
+        const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+        const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
+        const ownerTemplate = infoRequestedOwnerEmail({
+          customerName,
+          customerEmail: client?.email || 'unknown',
+          customerPhone: client?.phone || null,
+          eventType: estimate.eventType,
+          eventDate: estimate.eventDate,
+          note: note ?? null,
+          adminEstimateUrl: adminUrl,
+        });
+        sendEmailInBackground({
+          to: emailCfg.adminNotificationEmail,
+          subject: ownerTemplate.subject,
+          html: ownerTemplate.html,
+          text: ownerTemplate.text,
+          clientId: estimate.clientId,
+          opportunityId: estimate.opportunityId ?? null,
+          templateKey: 'info_requested_owner_alert',
+        });
+
+        sendOwnerSmsInBackground({
+          ...infoRequestedOwnerSms({
+            customerName,
+            eventDate: estimate.eventDate,
+            note: note ?? null,
+            estimateId: estimate.id,
+          }),
+          templateKey: 'info_requested_owner_alert',
+          clientId: estimate.clientId,
+          opportunityId: estimate.opportunityId ?? null,
+        });
+      } catch (notifyError) {
+        console.warn('Failed to fire info-requested notifications:', notifyError);
+      }
+
+      return res.status(200).json({
+        ok: true,
+        estimate: sanitizeEstimateForPublic(updated),
+        bookingUrl,
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid body', errors: error.errors });
+      }
+      console.error('Error handling request-info:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== P0-2: Cal.com webhook — consultation booked / cancelled =====
+
+  // Verify Cal.com webhook signature. Cal.com sends `x-cal-signature-256` as
+  // a hex HMAC-SHA256 of the raw body using `CAL_COM_WEBHOOK_SECRET`.
+  const verifyCalWebhook = (req: Request): boolean => {
+    const cal = getCalComConfig();
+    if (!cal.webhookSecret) {
+      console.warn('[cal] webhook received but CAL_COM_WEBHOOK_SECRET is unset — accepting (INSECURE, dev only)');
+      return true;
+    }
+    const provided = req.header('x-cal-signature-256') || req.header('x-cal-signature') || '';
+    if (!provided) return false;
+    try {
+      const raw = (req as any).rawBody as Buffer | undefined;
+      const payload = raw ? raw : Buffer.from(JSON.stringify(req.body));
+      const expected = createHmac('sha256', cal.webhookSecret).update(payload).digest('hex');
+      if (provided.length !== expected.length) return false;
+      return timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+    } catch (err) {
+      console.error('[cal] signature verification error:', err);
+      return false;
+    }
+  };
+
+  app.post('/api/cal-webhook', async (req: Request, res: Response) => {
+    try {
+      if (!verifyCalWebhook(req)) {
+        return res.status(401).json({ message: 'Invalid webhook signature' });
+      }
+
+      const triggerEvent = req.body?.triggerEvent as string | undefined;
+      const payload = req.body?.payload || {};
+      if (!triggerEvent) {
+        return res.status(400).json({ message: 'Missing triggerEvent' });
+      }
+
+      const now = new Date();
+      const sqCfg = getSquareConfig();
+
+      // P1-1: Tasting branch — identify by event-type slug.
+      // Cal.com puts the event type in different spots depending on version, so
+      // check multiple locations.
+      const eventTypeSlug: string =
+        payload.eventType?.slug ||
+        payload.eventType?.title?.toLowerCase?.() ||
+        payload.type ||
+        payload.eventTitle?.toLowerCase?.() ||
+        '';
+      const isTasting = eventTypeSlug.toLowerCase().includes(sqCfg.tastingEventSlug.toLowerCase());
+
+      if (isTasting) {
+        const scheduledAt = payload.startTime ? new Date(payload.startTime) : now;
+        const attendee = Array.isArray(payload.attendees) ? payload.attendees[0] : null;
+        const bookingUid: string = payload.uid || payload.bookingUid || payload.id || '';
+        const email: string | null = attendee?.email || payload.responses?.email?.value || payload.responses?.email || null;
+        const name: string = attendee?.name || payload.responses?.name?.value || payload.responses?.name || '';
+        const phone: string | null = attendee?.phoneNumber || payload.responses?.phone?.value || payload.responses?.phone || null;
+        const [firstName, ...rest] = name.trim().split(/\s+/);
+        const lastName = rest.join(' ') || null;
+        // Guest count — look for a custom question or fall back to 2 per spec
+        const rawGuestCount: any =
+          payload.responses?.guestCount?.value ??
+          payload.responses?.guests?.value ??
+          payload.responses?.guestCount ??
+          2;
+        const guestCount = Math.max(1, Math.min(10, Number(rawGuestCount) || 2));
+
+        if (triggerEvent === 'BOOKING_CANCELLED') {
+          // Cancel any tasting we previously created for this booking
+          if (bookingUid) {
+            await db
+              .update(tastings)
+              .set({ status: 'cancelled', updatedAt: now })
+              .where(eq(tastings.calBookingUid, bookingUid));
+          }
+          return res.status(200).json({ ok: true, tasting: 'cancelled' });
+        }
+
+        if (triggerEvent === 'BOOKING_CREATED' || triggerEvent === 'BOOKING_RESCHEDULED') {
+          // Try to link to an existing client/opportunity via email
+          let linkedClientId: number | null = null;
+          let linkedOpportunityId: number | null = null;
+          if (email) {
+            const [c] = await db.select().from(clients).where(eq(clients.email, email));
+            if (c) linkedClientId = c.id;
+            const [o] = await db.select().from(opportunities).where(eq(opportunities.email, email));
+            if (o) linkedOpportunityId = o.id;
+          }
+
+          // Idempotency: if a tasting for this booking already exists, update it
+          let tastingId: number;
+          if (bookingUid) {
+            const [existing] = await db
+              .select()
+              .from(tastings)
+              .where(eq(tastings.calBookingUid, bookingUid));
+            if (existing) {
+              await db
+                .update(tastings)
+                .set({
+                  scheduledAt,
+                  guestCount,
+                  status: 'scheduled',
+                  firstName: firstName || existing.firstName,
+                  lastName: lastName || existing.lastName,
+                  email: email || existing.email,
+                  phone: phone || existing.phone,
+                  updatedAt: now,
+                })
+                .where(eq(tastings.id, existing.id));
+              tastingId = existing.id;
+            } else {
+              const [inserted] = await db
+                .insert(tastings)
+                .values({
+                  opportunityId: linkedOpportunityId,
+                  clientId: linkedClientId,
+                  firstName: firstName || null,
+                  lastName,
+                  email,
+                  phone,
+                  scheduledAt,
+                  guestCount,
+                  pricePerGuestCents: Math.round(sqCfg.tastingFlatPriceCents / guestCount),
+                  totalPriceCents: sqCfg.tastingFlatPriceCents,
+                  status: 'scheduled',
+                  calBookingId: String(payload.id ?? ''),
+                  calBookingUid: bookingUid,
+                } as any)
+                .returning();
+              tastingId = inserted.id;
+            }
+          } else {
+            // No uid — create fresh (can't dedup)
+            const [inserted] = await db
+              .insert(tastings)
+              .values({
+                opportunityId: linkedOpportunityId,
+                clientId: linkedClientId,
+                firstName: firstName || null,
+                lastName,
+                email,
+                phone,
+                scheduledAt,
+                guestCount,
+                pricePerGuestCents: Math.round(sqCfg.tastingFlatPriceCents / guestCount),
+                totalPriceCents: sqCfg.tastingFlatPriceCents,
+                status: 'scheduled',
+              } as any)
+              .returning();
+            tastingId = inserted.id;
+          }
+
+          // Log as internal communication
+          try {
+            await db.insert(communications).values({
+              type: 'meeting',
+              direction: 'internal',
+              timestamp: scheduledAt,
+              source: 'cal_com',
+              externalId: bookingUid || null,
+              subject: `Tasting: ${name || email || 'booked via Cal.com'}`,
+              bodySummary: `Guest count: ${guestCount}`,
+              clientId: linkedClientId,
+              opportunityId: linkedOpportunityId,
+              metaData: {
+                calTriggerEvent: triggerEvent,
+                scheduledAt: scheduledAt.toISOString(),
+                tastingId,
+                rawPayload: payload,
+              },
+            } as any);
+          } catch (logErr) {
+            console.warn('[cal] failed to log tasting communication:', logErr);
+          }
+
+          // Fire Square Checkout link creation + customer payment email (fire-and-forget)
+          const emailCfg = getEmailConfig();
+          const baseUrl = emailCfg.publicBaseUrl.replace(/\/$/, '');
+          if (email) {
+            // Defer to avoid blocking webhook response
+            (async () => {
+              try {
+                const customerName = `${firstName || ''} ${lastName || ''}`.trim() || 'Client';
+                const link = await createCheckoutLink({
+                  amountCents: sqCfg.tastingFlatPriceCents,
+                  name: `Home Bites Tasting — ${customerName}`,
+                  note: `Tasting on ${scheduledAt.toLocaleString()} · ${guestCount} guest(s)`,
+                  redirectUrl: `${baseUrl}/tasting/thanks?tid=${tastingId}`,
+                  referenceId: `tasting-${tastingId}`,
+                  email,
+                  phone,
+                });
+                if (link.created && link.paymentLinkUrl) {
+                  await db
+                    .update(tastings)
+                    .set({
+                      squarePaymentLinkId: link.paymentLinkId || null,
+                      squarePaymentLinkUrl: link.paymentLinkUrl,
+                      squareOrderId: link.orderId || null,
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(tastings.id, tastingId));
+
+                  // Email customer the payment link
+                  const tpl = tastingPaymentEmail({
+                    customerFirstName: firstName || 'there',
+                    scheduledAt,
+                    guestCount,
+                    totalPriceCents: sqCfg.tastingFlatPriceCents,
+                    paymentUrl: link.paymentLinkUrl,
+                  });
+                  sendEmailInBackground({
+                    to: email,
+                    subject: tpl.subject,
+                    html: tpl.html,
+                    text: tpl.text,
+                    clientId: linkedClientId,
+                    opportunityId: linkedOpportunityId,
+                    templateKey: 'tasting_payment_request',
+                  });
+                } else if (link.skipped) {
+                  console.log(`[tasting ${tastingId}] Square unconfigured — booking scheduled without payment`);
+                } else {
+                  console.error(`[tasting ${tastingId}] Square error:`, link.error);
+                }
+              } catch (payErr) {
+                console.error(`[tasting ${tastingId}] checkout link error:`, payErr);
+              }
+            })();
+          }
+
+          // Owner alerts (email + SMS)
+          try {
+            const customerName = `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown';
+            const adminUrl = `${baseUrl}/admin/tastings/${tastingId}`;
+            const ownerTpl = tastingBookedOwnerEmail({
+              customerName,
+              customerEmail: email,
+              customerPhone: phone,
+              scheduledAt,
+              guestCount,
+              totalPriceCents: sqCfg.tastingFlatPriceCents,
+              adminUrl,
+            });
+            sendEmailInBackground({
+              to: emailCfg.adminNotificationEmail,
+              subject: ownerTpl.subject,
+              html: ownerTpl.html,
+              text: ownerTpl.text,
+              clientId: linkedClientId,
+              opportunityId: linkedOpportunityId,
+              templateKey: 'tasting_booked_owner',
+            });
+            sendOwnerSmsInBackground({
+              ...tastingBookedOwnerSms({
+                customerName,
+                scheduledAt,
+                guestCount,
+                tastingId,
+              }),
+              templateKey: 'tasting_booked_owner',
+              clientId: linkedClientId,
+              opportunityId: linkedOpportunityId,
+            });
+          } catch (notifyErr) {
+            console.warn('[cal] failed to fire tasting owner alerts:', notifyErr);
+          }
+
+          return res.status(200).json({ ok: true, tastingId });
+        }
+
+        return res.status(200).json({ ok: true, ignored: true, reason: `tasting: unhandled ${triggerEvent}` });
+      }
+
+      // Extract estimateToken from Cal's metadata / responses. Cal.com puts
+      // query-param prefills inside payload.responses or payload.metadata.
+      const estimateToken: string | undefined =
+        payload.metadata?.estimateToken ||
+        payload.responses?.estimateToken?.value ||
+        payload.responses?.estimateToken ||
+        payload.additionalNotes?.estimateToken;
+
+      if (!estimateToken) {
+        console.warn(`[cal] webhook ${triggerEvent} without estimateToken — ignoring`);
+        return res.status(200).json({ ok: true, ignored: true, reason: 'no estimateToken' });
+      }
+
+      const [estimate] = await db
+        .select()
+        .from(estimates)
+        .where(eq(estimates.viewToken, estimateToken));
+      if (!estimate) {
+        console.warn(`[cal] webhook ${triggerEvent} for unknown estimateToken ${estimateToken}`);
+        return res.status(200).json({ ok: true, ignored: true, reason: 'estimate not found' });
+      }
+
+      if (triggerEvent === 'BOOKING_CREATED' || triggerEvent === 'BOOKING_RESCHEDULED') {
+        const scheduledAt = payload.startTime ? new Date(payload.startTime) : now;
+        const meetingUrl: string | null =
+          payload.location?.link || payload.metadata?.videoCallUrl || payload.videoCallUrl || null;
+
+        await db
+          .update(estimates)
+          .set({
+            consultationBookedAt: scheduledAt,
+            consultationMeetingUrl: meetingUrl,
+            updatedAt: now,
+          })
+          .where(eq(estimates.id, estimate.id));
+
+        // P1-2: pause drip — client booked a consultation (definite engagement)
+        await pauseOpportunityDrip(estimate.opportunityId, 'consultation_booked');
+
+        // Log the booking as a communication (meeting type)
+        try {
+          await db.insert(communications).values({
+            type: 'meeting',
+            direction: 'internal',
+            timestamp: scheduledAt,
+            source: 'cal_com',
+            externalId: payload.uid || payload.id || null,
+            subject: `Consultation: ${payload.title || 'Booked via Cal.com'}`,
+            bodySummary: payload.additionalNotes || null,
+            clientId: estimate.clientId,
+            opportunityId: estimate.opportunityId ?? null,
+            metaData: {
+              calTriggerEvent: triggerEvent,
+              scheduledAt: scheduledAt.toISOString(),
+              meetingUrl,
+              rawPayload: payload,
+            },
+          } as any);
+        } catch (logErr) {
+          console.warn('[cal] failed to log communication:', logErr);
+        }
+
+        // Owner SMS + email alert
+        try {
+          const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+          const emailCfg = getEmailConfig();
+          const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
+          const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+
+          const ownerEmail = consultationBookedOwnerEmail({
+            customerName,
+            scheduledAt,
+            meetingUrl,
+            adminEstimateUrl: adminUrl,
+          });
+          sendEmailInBackground({
+            to: emailCfg.adminNotificationEmail,
+            subject: ownerEmail.subject,
+            html: ownerEmail.html,
+            text: ownerEmail.text,
+            clientId: estimate.clientId,
+            opportunityId: estimate.opportunityId ?? null,
+            templateKey: 'consultation_booked_owner',
+          });
+
+          sendOwnerSmsInBackground({
+            ...consultationBookedOwnerSms({
+              customerName,
+              scheduledAt,
+              estimateId: estimate.id,
+            }),
+            templateKey: 'consultation_booked_owner',
+            clientId: estimate.clientId,
+            opportunityId: estimate.opportunityId ?? null,
+          });
+        } catch (notifyError) {
+          console.warn('[cal] failed to fire booking notifications:', notifyError);
+        }
+
+        return res.status(200).json({ ok: true, estimateId: estimate.id });
+      }
+
+      if (triggerEvent === 'BOOKING_CANCELLED') {
+        await db
+          .update(estimates)
+          .set({
+            consultationBookedAt: null,
+            consultationMeetingUrl: null,
+            updatedAt: now,
+          })
+          .where(eq(estimates.id, estimate.id));
+        return res.status(200).json({ ok: true, estimateId: estimate.id, cleared: true });
+      }
+
+      // Unknown trigger — acknowledge but don't act
+      return res.status(200).json({ ok: true, ignored: true, triggerEvent });
+    } catch (error) {
+      console.error('[cal] webhook error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== P1-1: Tasting endpoints =====
+
+  // Public: fetch tasting details by id (used on the /tasting/thanks page).
+  // No PII token scheme here — the id is opaque enough given the low volume,
+  // and the page only shows scheduled time + guest count + payment state.
+  app.get('/api/public/tastings/:id', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: 'Invalid tasting id' });
+      const [t] = await db.select().from(tastings).where(eq(tastings.id, id));
+      if (!t) return res.status(404).json({ message: 'Not found' });
+      return res.json({
+        id: t.id,
+        scheduledAt: t.scheduledAt,
+        guestCount: t.guestCount,
+        totalPriceCents: t.totalPriceCents,
+        status: t.status,
+        paid: !!t.paidAt,
+        paidAt: t.paidAt,
+        paymentUrl: t.squarePaymentLinkUrl,
+        firstName: t.firstName,
+      });
+    } catch (error) {
+      console.error('Error fetching tasting:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: (re)issue a Square checkout link for a tasting. Idempotent — if
+  // we already have a link and it's unpaid, we return the existing one.
+  app.post('/api/tastings/:id/checkout', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: 'Invalid tasting id' });
+      const [t] = await db.select().from(tastings).where(eq(tastings.id, id));
+      if (!t) return res.status(404).json({ message: 'Not found' });
+      if (t.paidAt) {
+        return res.status(400).json({ message: 'This tasting has already been paid for.' });
+      }
+      if (t.squarePaymentLinkUrl) {
+        return res.json({ url: t.squarePaymentLinkUrl, reused: true });
+      }
+
+      const emailCfg = getEmailConfig();
+      const customerName = `${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Client';
+      const link = await createCheckoutLink({
+        amountCents: t.totalPriceCents,
+        name: `Home Bites Tasting — ${customerName}`,
+        note: `Tasting on ${new Date(t.scheduledAt).toLocaleString()} · ${t.guestCount} guest(s)`,
+        redirectUrl: `${emailCfg.publicBaseUrl.replace(/\/$/, '')}/tasting/thanks?tid=${id}`,
+        referenceId: `tasting-${id}`,
+        email: t.email,
+        phone: t.phone,
+      });
+      if (link.skipped) {
+        return res.status(503).json({ message: 'Square is not configured on the server.' });
+      }
+      if (!link.created || !link.paymentLinkUrl) {
+        return res.status(502).json({ message: link.error || 'Failed to create checkout link' });
+      }
+
+      await db
+        .update(tastings)
+        .set({
+          squarePaymentLinkId: link.paymentLinkId || null,
+          squarePaymentLinkUrl: link.paymentLinkUrl,
+          squareOrderId: link.orderId || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(tastings.id, id));
+
+      return res.json({ url: link.paymentLinkUrl, reused: false });
+    } catch (error) {
+      console.error('Error creating tasting checkout:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== Square Webhook =====
+  // Listens for payment / order events. Signature-verified. Only action we take
+  // today is marking tastings paid on payment.created / payment.updated when
+  // the associated order references a known tasting.
+  app.post('/api/webhooks/square', async (req: Request, res: Response) => {
+    try {
+      const signatureHeader =
+        req.get('x-square-hmacsha256-signature') || req.get('x-square-signature') || '';
+      const rawBody = (req as any).rawBody as Buffer | undefined;
+      if (!verifySquareWebhook(rawBody ?? JSON.stringify(req.body ?? {}), signatureHeader)) {
+        return res.status(401).json({ message: 'Invalid signature' });
+      }
+
+      const evt = req.body;
+      const type = evt?.type as string | undefined;
+      if (!type) return res.status(400).json({ message: 'Missing type' });
+
+      // Square fires several events around a payment. We want to react once the
+      // payment is COMPLETED. Check both payment.updated and order.fulfilled.
+      const payment = evt?.data?.object?.payment;
+      const order = evt?.data?.object?.order;
+      const orderId: string | null =
+        payment?.order_id || order?.id || evt?.data?.object?.order_id || null;
+      const paymentId: string | null = payment?.id || evt?.data?.id || null;
+      const paymentStatus: string | null = payment?.status || null;
+
+      if (!orderId) {
+        return res.status(200).json({ ok: true, ignored: true, reason: 'no orderId' });
+      }
+
+      // Only act when the payment reaches a successful terminal state.
+      const isCompleted =
+        type === 'payment.updated' && paymentStatus === 'COMPLETED';
+      const isCreatedCompleted =
+        type === 'payment.created' && paymentStatus === 'COMPLETED';
+      const isOrderFulfilled = type === 'order.fulfilled';
+      if (!isCompleted && !isCreatedCompleted && !isOrderFulfilled) {
+        return res.status(200).json({ ok: true, ignored: true, reason: `status ${paymentStatus ?? type}` });
+      }
+
+      const now = new Date();
+
+      // Route by orderId — it may belong to a tasting, an event deposit, or an
+      // event balance. We check each in order and take the first match.
+      const [t] = await db.select().from(tastings).where(eq(tastings.squareOrderId, orderId));
+      if (t) {
+        if (t.paidAt) {
+          return res.status(200).json({ ok: true, alreadyPaid: true, tastingId: t.id });
+        }
+        await db
+          .update(tastings)
+          .set({ squarePaymentId: paymentId, paidAt: now, updatedAt: now })
+          .where(eq(tastings.id, t.id));
+
+        try {
+          const customerName = `${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Client';
+          if (t.email) {
+            const tpl = tastingPaidCustomerEmail({
+              customerFirstName: t.firstName || 'there',
+              scheduledAt: t.scheduledAt,
+              guestCount: t.guestCount,
+              totalPriceCents: t.totalPriceCents,
+            });
+            sendEmailInBackground({
+              to: t.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+              clientId: t.clientId,
+              opportunityId: t.opportunityId,
+              templateKey: 'tasting_paid_customer',
+            });
+          }
+          sendOwnerSmsInBackground({
+            ...tastingPaidOwnerSms({
+              customerName,
+              totalPriceCents: t.totalPriceCents,
+              tastingId: t.id,
+            }),
+            templateKey: 'tasting_paid_owner',
+            clientId: t.clientId,
+            opportunityId: t.opportunityId,
+          });
+        } catch (notifyErr) {
+          console.warn('[square] tasting paid-notifications failed:', notifyErr);
+        }
+        return res.status(200).json({ ok: true, tastingId: t.id });
+      }
+
+      // P2-2: Event deposit
+      const [evDep] = await db.select().from(events).where(eq(events.depositSquareOrderId, orderId));
+      if (evDep) {
+        if (evDep.depositPaidAt) {
+          return res.status(200).json({ ok: true, alreadyPaid: true, eventId: evDep.id, kind: 'deposit' });
+        }
+        await db
+          .update(events)
+          .set({ depositSquarePaymentId: paymentId, depositPaidAt: now, updatedAt: now })
+          .where(eq(events.id, evDep.id));
+
+        try {
+          const [client] = await db.select().from(clients).where(eq(clients.id, evDep.clientId));
+          const emailCfg = getEmailConfig();
+          const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'Client';
+          if (client?.email) {
+            const tpl = paymentReceivedCustomerEmail({
+              customerFirstName: client.firstName || 'there',
+              eventType: evDep.eventType,
+              eventDate: evDep.eventDate,
+              amountCents: evDep.depositAmountCents || 0,
+              paymentKind: 'deposit',
+            });
+            sendEmailInBackground({
+              to: client.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+              clientId: client.id,
+              eventId: evDep.id,
+              templateKey: 'deposit_paid_customer',
+            });
+          }
+          const ownerTpl = paymentReceivedOwnerEmail({
+            customerName,
+            amountCents: evDep.depositAmountCents || 0,
+            paymentKind: 'deposit',
+            eventId: evDep.id,
+            adminUrl: `${emailCfg.publicBaseUrl}/events/${evDep.id}`,
+          });
+          sendEmailInBackground({
+            to: emailCfg.adminNotificationEmail,
+            subject: ownerTpl.subject,
+            html: ownerTpl.html,
+            text: ownerTpl.text,
+            clientId: evDep.clientId,
+            eventId: evDep.id,
+            templateKey: 'deposit_paid_owner',
+          });
+          sendOwnerSmsInBackground({
+            ...paymentReceivedOwnerSms({
+              customerName,
+              amountCents: evDep.depositAmountCents || 0,
+              paymentKind: 'deposit',
+              eventId: evDep.id,
+            }),
+            templateKey: 'deposit_paid_owner',
+            clientId: evDep.clientId,
+            eventId: evDep.id,
+          });
+        } catch (notifyErr) {
+          console.warn('[square] deposit paid-notifications failed:', notifyErr);
+        }
+        return res.status(200).json({ ok: true, eventId: evDep.id, kind: 'deposit' });
+      }
+
+      // P2-2: Event balance
+      const [evBal] = await db.select().from(events).where(eq(events.balanceSquareOrderId, orderId));
+      if (evBal) {
+        if (evBal.balancePaidAt) {
+          return res.status(200).json({ ok: true, alreadyPaid: true, eventId: evBal.id, kind: 'balance' });
+        }
+        await db
+          .update(events)
+          .set({ balanceSquarePaymentId: paymentId, balancePaidAt: now, updatedAt: now })
+          .where(eq(events.id, evBal.id));
+
+        try {
+          const [client] = await db.select().from(clients).where(eq(clients.id, evBal.clientId));
+          const emailCfg = getEmailConfig();
+          const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'Client';
+          if (client?.email) {
+            const tpl = paymentReceivedCustomerEmail({
+              customerFirstName: client.firstName || 'there',
+              eventType: evBal.eventType,
+              eventDate: evBal.eventDate,
+              amountCents: evBal.balanceAmountCents || 0,
+              paymentKind: 'balance',
+            });
+            sendEmailInBackground({
+              to: client.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+              clientId: client.id,
+              eventId: evBal.id,
+              templateKey: 'balance_paid_customer',
+            });
+          }
+          const ownerTpl = paymentReceivedOwnerEmail({
+            customerName,
+            amountCents: evBal.balanceAmountCents || 0,
+            paymentKind: 'balance',
+            eventId: evBal.id,
+            adminUrl: `${emailCfg.publicBaseUrl}/events/${evBal.id}`,
+          });
+          sendEmailInBackground({
+            to: emailCfg.adminNotificationEmail,
+            subject: ownerTpl.subject,
+            html: ownerTpl.html,
+            text: ownerTpl.text,
+            clientId: evBal.clientId,
+            eventId: evBal.id,
+            templateKey: 'balance_paid_owner',
+          });
+          sendOwnerSmsInBackground({
+            ...paymentReceivedOwnerSms({
+              customerName,
+              amountCents: evBal.balanceAmountCents || 0,
+              paymentKind: 'balance',
+              eventId: evBal.id,
+            }),
+            templateKey: 'balance_paid_owner',
+            clientId: evBal.clientId,
+            eventId: evBal.id,
+          });
+        } catch (notifyErr) {
+          console.warn('[square] balance paid-notifications failed:', notifyErr);
+        }
+        return res.status(200).json({ ok: true, eventId: evBal.id, kind: 'balance' });
+      }
+
+      console.warn(`[square] webhook for unknown orderId ${orderId}`);
+      return res.status(200).json({ ok: true, ignored: true, reason: 'no matching record' });
+    } catch (error) {
+      console.error('[square] webhook error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ============================================================================
+  // P2-1: Contracts — BoldSign e-signature flow
+  // ============================================================================
+
+  // Helper: fire the deposit checkout link for an event (used by the contract
+  // signed webhook, and also callable manually by admin via /api/events/:id/deposit/checkout).
+  async function ensureEventDepositCheckout(eventId: number): Promise<{ url: string | null; error?: string }> {
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId));
+    if (!ev) return { url: null, error: "event not found" };
+    if (ev.depositPaidAt) return { url: ev.depositSquarePaymentLinkUrl, error: "already paid" };
+    if (ev.depositSquarePaymentLinkUrl) return { url: ev.depositSquarePaymentLinkUrl };
+
+    const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
+    const [est] = ev.estimateId
+      ? await db.select().from(estimates).where(eq(estimates.id, ev.estimateId))
+      : [null as any];
+    if (!est) return { url: null, error: "no estimate — cannot determine amount" };
+
+    const depositPercent = ev.depositPercent ?? getDepositPercent();
+    const depositCents = Math.round((est.total * depositPercent) / 100);
+
+    const emailCfg = getEmailConfig();
+    const customerName = client ? `${client.firstName} ${client.lastName || ""}`.trim() : "Client";
+    const link = await createCheckoutLink({
+      amountCents: depositCents,
+      name: `Home Bites ${est.eventType.replace(/_/g, " ")} — Deposit`,
+      note: `${depositPercent}% deposit for ${ev.eventType} on ${new Date(ev.eventDate).toLocaleDateString()}`,
+      redirectUrl: `${emailCfg.publicBaseUrl.replace(/\/$/, "")}/event/${ev.viewToken || ev.id}?paid=deposit`,
+      referenceId: `event-deposit-${eventId}`,
+      email: client?.email ?? null,
+      phone: client?.phone ?? null,
+    });
+    if (link.skipped) return { url: null, error: "square not configured" };
+    if (!link.created || !link.paymentLinkUrl) return { url: null, error: link.error || "link failed" };
+
+    await db
+      .update(events)
+      .set({
+        depositAmountCents: depositCents,
+        depositSquarePaymentLinkId: link.paymentLinkId || null,
+        depositSquarePaymentLinkUrl: link.paymentLinkUrl,
+        depositSquareOrderId: link.orderId || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(events.id, eventId));
+
+    // Fire customer email with deposit link
+    if (client?.email) {
+      const tpl = depositRequestCustomerEmail({
+        customerFirstName: client.firstName || "there",
+        eventType: ev.eventType,
+        eventDate: ev.eventDate,
+        depositCents,
+        paymentUrl: link.paymentLinkUrl,
+      });
+      sendEmailInBackground({
+        to: client.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        clientId: client.id,
+        eventId,
+        templateKey: "deposit_request_customer",
+      });
+    }
+    return { url: link.paymentLinkUrl };
+  }
+
+  async function ensureEventBalanceCheckout(eventId: number): Promise<{ url: string | null; error?: string }> {
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId));
+    if (!ev) return { url: null, error: "event not found" };
+    if (ev.balancePaidAt) return { url: ev.balanceSquarePaymentLinkUrl, error: "already paid" };
+    if (ev.balanceSquarePaymentLinkUrl) return { url: ev.balanceSquarePaymentLinkUrl };
+
+    const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
+    const [est] = ev.estimateId
+      ? await db.select().from(estimates).where(eq(estimates.id, ev.estimateId))
+      : [null as any];
+    if (!est) return { url: null, error: "no estimate — cannot determine balance" };
+
+    const depositPercent = ev.depositPercent ?? getDepositPercent();
+    const depositCents = ev.depositAmountCents ?? Math.round((est.total * depositPercent) / 100);
+    const balanceCents = Math.max(0, est.total - depositCents);
+
+    const emailCfg = getEmailConfig();
+    const link = await createCheckoutLink({
+      amountCents: balanceCents,
+      name: `Home Bites ${est.eventType.replace(/_/g, " ")} — Balance`,
+      note: `Final balance for ${ev.eventType} on ${new Date(ev.eventDate).toLocaleDateString()}`,
+      redirectUrl: `${emailCfg.publicBaseUrl.replace(/\/$/, "")}/event/${ev.viewToken || ev.id}?paid=balance`,
+      referenceId: `event-balance-${eventId}`,
+      email: client?.email ?? null,
+      phone: client?.phone ?? null,
+    });
+    if (link.skipped) return { url: null, error: "square not configured" };
+    if (!link.created || !link.paymentLinkUrl) return { url: null, error: link.error || "link failed" };
+
+    await db
+      .update(events)
+      .set({
+        balanceAmountCents: balanceCents,
+        balanceSquarePaymentLinkId: link.paymentLinkId || null,
+        balanceSquarePaymentLinkUrl: link.paymentLinkUrl,
+        balanceSquareOrderId: link.orderId || null,
+        balanceRequestedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(events.id, eventId));
+
+    if (client?.email) {
+      const tpl = balanceRequestCustomerEmail({
+        customerFirstName: client.firstName || "there",
+        eventType: ev.eventType,
+        eventDate: ev.eventDate,
+        balanceCents,
+        paymentUrl: link.paymentLinkUrl,
+      });
+      sendEmailInBackground({
+        to: client.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        clientId: client.id,
+        eventId,
+        templateKey: "balance_request_customer",
+      });
+    }
+    return { url: link.paymentLinkUrl };
+  }
+
+  // Admin: create-or-reuse a draft contract for an estimate. Auto-called on
+  // quote accept (no-op if one exists), and also callable manually.
+  async function ensureContractForEstimate(estimateId: number): Promise<{ id: number } | { error: string }> {
+    const [est] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+    if (!est) return { error: "estimate not found" };
+    const [existing] = await db.select().from(contracts).where(eq(contracts.estimateId, estimateId));
+    if (existing) return { id: existing.id };
+    const [client] = await db.select().from(clients).where(eq(clients.id, est.clientId));
+    if (!client) return { error: "client not found" };
+    const [ev] = await db.select().from(events).where(eq(events.estimateId, estimateId));
+
+    const [inserted] = await db
+      .insert(contracts)
+      .values({
+        clientId: client.id,
+        estimateId: est.id,
+        eventId: ev?.id ?? null,
+        status: "draft",
+        contractSnapshot: est.proposal,
+      } as any)
+      .returning();
+    return { id: inserted.id };
+  }
+
+  // GET contract(s) by estimate — used by the admin UI
+  app.get('/api/estimates/:id/contract', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+      const [c] = await db.select().from(contracts).where(eq(contracts.estimateId, estimateId));
+      return res.json(c || null);
+    } catch (error) {
+      console.error('Error fetching contract:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Admin action: generate contract HTML, send via BoldSign, stamp sentAt
+  app.post('/api/estimates/:id/send-contract', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+    try {
+      const estimateId = parseInt(req.params.id);
+      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+
+      const [est] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (!est) return res.status(404).json({ message: 'Estimate not found' });
+      const [client] = await db.select().from(clients).where(eq(clients.id, est.clientId));
+      if (!client?.email) return res.status(400).json({ message: 'Client has no email address' });
+
+      // Ensure the contract row exists
+      const ensured = await ensureContractForEstimate(estimateId);
+      if ("error" in ensured) return res.status(400).json({ message: ensured.error });
+      const contractId = ensured.id;
+
+      const depositPercent = getDepositPercent();
+      const html = generateContractHtml({
+        clientName: `${client.firstName} ${client.lastName || ''}`.trim(),
+        clientEmail: client.email,
+        eventType: est.eventType,
+        eventDate: est.eventDate,
+        guestCount: est.guestCount,
+        venue: est.venue,
+        totalCents: est.total,
+        depositPercent,
+        proposal: (est.proposal as any) || null,
+      });
+
+      const site = getSiteConfig();
+      const result = await sendContractForSignature({
+        contractId,
+        title: `${site.businessName} — ${est.eventType.replace(/_/g, ' ')} Contract`,
+        message: `Please review and sign your catering contract with ${site.businessName}.`,
+        signerName: `${client.firstName} ${client.lastName || ''}`.trim() || "Client",
+        signerEmail: client.email,
+        documentHtml: html,
+      });
+
+      if (result.skipped) {
+        // BoldSign not configured — mark contract as 'sent' manually so admin
+        // sees status changed, and include the HTML in the response.
+        await db
+          .update(contracts)
+          .set({ status: 'sent', sentAt: new Date(), updatedAt: new Date() })
+          .where(eq(contracts.id, contractId));
+        return res.json({ ok: true, skipped: true, contractId, note: 'BOLDSIGN_API_KEY unset — contract HTML generated but not sent via e-sign provider' });
+      }
+      if (!result.sent) {
+        return res.status(502).json({ message: result.error || 'BoldSign send failed' });
+      }
+
+      await db
+        .update(contracts)
+        .set({
+          status: 'sent',
+          sentAt: new Date(),
+          providerDocId: result.providerDocId || null,
+          signingUrl: result.signingUrl || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(contracts.id, contractId));
+
+      // Notify customer (in addition to BoldSign's email)
+      const tpl = contractSentCustomerEmail({
+        customerFirstName: client.firstName || 'there',
+        eventType: est.eventType,
+        signingUrl: result.signingUrl ?? null,
+      });
+      sendEmailInBackground({
+        to: client.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        clientId: client.id,
+        opportunityId: est.opportunityId,
+        templateKey: 'contract_sent_customer',
+      });
+
+      return res.json({ ok: true, contractId, providerDocId: result.providerDocId });
+    } catch (error) {
+      console.error('Error sending contract:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // BoldSign webhook — consumes document lifecycle events.
+  app.post('/api/webhooks/boldsign', async (req: Request, res: Response) => {
+    try {
+      const rawBody = (req as any).rawBody as Buffer | undefined;
+      const signatureHeader = req.get('x-boldsign-signature') || '';
+      if (!verifyBoldSignWebhook(rawBody ?? JSON.stringify(req.body ?? {}), signatureHeader)) {
+        return res.status(401).json({ message: 'Invalid signature' });
+      }
+
+      const evt = req.body || {};
+      const eventName: string | undefined = evt.event || evt.eventType || evt.type;
+      const docData = evt.data || evt;
+      const providerDocId: string | undefined = docData?.documentId || docData?.id;
+      if (!providerDocId) {
+        return res.status(200).json({ ok: true, ignored: true, reason: 'no documentId' });
+      }
+
+      const status = boldSignEventToStatus(eventName);
+      if (!status) {
+        return res.status(200).json({ ok: true, ignored: true, reason: `unknown event ${eventName}` });
+      }
+
+      const [c] = await db.select().from(contracts).where(eq(contracts.providerDocId, providerDocId));
+      if (!c) {
+        return res.status(200).json({ ok: true, ignored: true, reason: 'contract not found' });
+      }
+
+      const now = new Date();
+      const patch: Partial<typeof contracts.$inferInsert> = { status, updatedAt: now };
+      if (status === 'viewed') patch.viewedAt = c.viewedAt ?? now;
+      if (status === 'signed') patch.signedAt = now;
+      if (status === 'declined') patch.declinedAt = now;
+      if (status === 'expired') patch.expiredAt = now;
+      if (docData?.downloadUrl) patch.pdfUrl = docData.downloadUrl;
+
+      await db.update(contracts).set(patch as any).where(eq(contracts.id, c.id));
+
+      // On signed: fire deposit + owner alerts
+      if (status === 'signed') {
+        const [client] = await db.select().from(clients).where(eq(clients.id, c.clientId));
+        const [est] = c.estimateId
+          ? await db.select().from(estimates).where(eq(estimates.id, c.estimateId))
+          : [null as any];
+        const [ev] = c.eventId
+          ? await db.select().from(events).where(eq(events.id, c.eventId))
+          : [null as any];
+        const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
+        const emailCfg = getEmailConfig();
+        const adminUrl = est ? `${emailCfg.publicBaseUrl}/estimates/${est.id}` : emailCfg.publicBaseUrl;
+
+        sendEmailInBackground({
+          to: emailCfg.adminNotificationEmail,
+          ...contractSignedOwnerEmail({
+            customerName,
+            eventType: est?.eventType || ev?.eventType || 'event',
+            eventDate: est?.eventDate || ev?.eventDate || null,
+            totalCents: est?.total || 0,
+            adminUrl,
+          }),
+          clientId: c.clientId,
+          eventId: c.eventId ?? null,
+          templateKey: 'contract_signed_owner',
+        });
+
+        sendOwnerSmsInBackground({
+          ...contractSignedOwnerSms({
+            customerName,
+            eventDate: est?.eventDate || ev?.eventDate || null,
+            estimateId: c.estimateId,
+            opportunityId: est?.opportunityId,
+          }),
+          templateKey: 'contract_signed_owner',
+          clientId: c.clientId,
+        });
+
+        // Fire the deposit checkout link (emails customer automatically)
+        if (c.eventId) {
+          try {
+            await ensureEventDepositCheckout(c.eventId);
+          } catch (e) {
+            console.warn(`[boldsign] failed to fire deposit checkout for event ${c.eventId}:`, e);
+          }
+        }
+      }
+
+      return res.status(200).json({ ok: true, contractId: c.id, status });
+    } catch (error) {
+      console.error('[boldsign] webhook error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ============================================================================
+  // P2-2: Deposit / balance Square checkout endpoints
+  // ============================================================================
+
+  app.post('/api/events/:id/deposit/checkout', async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) return res.status(400).json({ message: 'Invalid event id' });
+      const result = await ensureEventDepositCheckout(eventId);
+      if (!result.url) return res.status(400).json({ message: result.error || 'Failed' });
+      return res.json({ url: result.url });
+    } catch (error) {
+      console.error('Error creating deposit checkout:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/events/:id/balance/checkout', async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) return res.status(400).json({ message: 'Invalid event id' });
+      const result = await ensureEventBalanceCheckout(eventId);
+      if (!result.url) return res.status(400).json({ message: result.error || 'Failed' });
+      return res.json({ url: result.url });
+    } catch (error) {
+      console.error('Error creating balance checkout:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });
@@ -2664,9 +4318,326 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      return res.status(200).json({ ok: true, results, processedAt: new Date().toISOString() });
+      // ─── P0-4: Post-event review & referral request ──────────────────────
+      // Separate pass with its own gating: day-after-event AND status='completed'
+      // AND no prior review request. Dedicated column (reviewRequestSentAt) so
+      // it doesn't pile up in completedTasks and is easy to surface in reports.
+      const reviewResults: Array<{ eventId: number; sent: boolean; skipped?: string }> = [];
+      for (const ev of allEvents) {
+        if (ev.status !== 'completed') continue;
+        if (ev.reviewRequestSentAt) {
+          reviewResults.push({ eventId: ev.id, sent: false, skipped: 'already_sent' });
+          continue;
+        }
+        const eventDay = new Date(ev.eventDate);
+        eventDay.setHours(0, 0, 0, 0);
+        const daysUntil = Math.round((eventDay.getTime() - now.getTime()) / 86400000);
+        if (daysUntil !== -1) continue; // only the day after
+
+        const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
+        if (!client?.email) {
+          reviewResults.push({ eventId: ev.id, sent: false, skipped: 'no_client_email' });
+          continue;
+        }
+
+        const template = eventReviewRequestEmail({
+          customerFirstName: client.firstName || 'there',
+          eventType: ev.eventType,
+          eventDate: ev.eventDate,
+        });
+
+        const r = await sendEmail({
+          to: client.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          clientId: client.id,
+          eventId: ev.id,
+          templateKey: 'event_review_request',
+        });
+
+        if (r.sent || r.skipped) {
+          // Stamp even on skip so we don't re-fire once keys come online.
+          await db
+            .update(events)
+            .set({ reviewRequestSentAt: new Date(), updatedAt: new Date() })
+            .where(eq(events.id, ev.id));
+          reviewResults.push({ eventId: ev.id, sent: true, skipped: r.skipped ? 'no_resend_key' : undefined });
+        } else {
+          reviewResults.push({ eventId: ev.id, sent: false, skipped: r.error || 'unknown_error' });
+        }
+      }
+
+      // ─── P2-2: Balance reminder — 7 days before event ────────────────────
+      // Sends the balance Square Checkout link (and creates it on the fly) for
+      // any event whose balance hasn't been paid or requested yet, exactly 7
+      // days out. Idempotent via `balance_requested_at`.
+      const balanceResults: Array<{ eventId: number; sent: boolean; skipped?: string }> = [];
+      for (const ev of allEvents) {
+        if (ev.status === 'cancelled' || ev.status === 'completed') continue;
+        if (ev.balancePaidAt) continue;
+        if (ev.balanceRequestedAt) continue;
+        const eventDay = new Date(ev.eventDate);
+        eventDay.setHours(0, 0, 0, 0);
+        const daysUntil = Math.round((eventDay.getTime() - now.getTime()) / 86400000);
+        if (daysUntil !== 7) continue;
+
+        try {
+          const result = await ensureEventBalanceCheckout(ev.id);
+          if (result.url) {
+            balanceResults.push({ eventId: ev.id, sent: true });
+          } else {
+            balanceResults.push({ eventId: ev.id, sent: false, skipped: result.error || 'unknown' });
+          }
+        } catch (e: any) {
+          balanceResults.push({ eventId: ev.id, sent: false, skipped: e?.message || 'error' });
+        }
+      }
+
+      return res.status(200).json({
+        ok: true,
+        results,
+        reviewResults,
+        balanceResults,
+        processedAt: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Error running event reminder cron:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ─── P1-2: Auto-Send Drip Engine ─────────────────────────────────────────
+  // Advances each active opportunity through the 5-step follow-up cadence:
+  //   Day 2  — soft check-in email
+  //   Day 3  — SMS (if phone on file)
+  //   Day 5  — value + tasting email
+  //   Day 7  — phone-call TASK for Mike (draft in follow_up_drafts) + owner SMS
+  //   Day 10 — final urgency email
+  // Clock starts on first quote view (followUpSequenceStartedAt). Paused on
+  // any customer engagement signal (inbound reply, info-requested, booked,
+  // accept, decline). Intended to run daily at a stable time via Railway cron.
+  //
+  // Gated by FOLLOWUP_AUTOSEND_ENABLED env var. Unset/false → cron is a no-op.
+  app.post('/api/cron/drip-engine', async (req: Request, res: Response) => {
+    try {
+      const emailCfg = getEmailConfig();
+      if (!emailCfg.cronSecret) {
+        return res.status(503).json({ message: 'CRON_SECRET not configured' });
+      }
+      const supplied = req.get('x-cron-secret');
+      if (supplied !== emailCfg.cronSecret) {
+        return res.status(401).json({ message: 'Invalid cron secret' });
+      }
+
+      if (process.env.FOLLOWUP_AUTOSEND_ENABLED !== 'true') {
+        return res.status(200).json({
+          ok: true,
+          disabled: true,
+          reason: 'Set FOLLOWUP_AUTOSEND_ENABLED=true to enable auto-send drip.',
+          processedAt: new Date().toISOString(),
+        });
+      }
+
+      const cal = getCalComConfig();
+      const siteConfig = getSiteConfig();
+      const now = new Date();
+
+      // Active drips only: started AND not paused AND not completed all 5 steps.
+      const activeOpps = await db
+        .select()
+        .from(opportunities)
+        .where(
+          and(
+            // drizzle: followUpSequenceStartedAt IS NOT NULL AND pausedAt IS NULL
+            // We filter step < 5 in code to keep the SQL simple.
+            isNull(opportunities.followUpSequencePausedAt),
+          )
+        );
+
+      const results: Array<{ opportunityId: number; fired?: string; skipped?: string }> = [];
+
+      for (const opp of activeOpps) {
+        if (!opp.followUpSequenceStartedAt) {
+          continue; // not started yet
+        }
+        if ((opp.followUpSequenceStep ?? 0) >= 5) {
+          continue; // sequence complete
+        }
+
+        const startedAt = new Date(opp.followUpSequenceStartedAt);
+        const dayNumber = Math.floor((now.getTime() - startedAt.getTime()) / 86400000);
+        const step = opp.followUpSequenceStep ?? 0;
+
+        // Determine NEXT step this opp qualifies for today.
+        let nextStep: 1 | 2 | 3 | 4 | 5 | null = null;
+        if (step < 1 && dayNumber >= 2) nextStep = 1;
+        else if (step < 2 && dayNumber >= 3) nextStep = 2;
+        else if (step < 3 && dayNumber >= 5) nextStep = 3;
+        else if (step < 4 && dayNumber >= 7) nextStep = 4;
+        else if (step < 5 && dayNumber >= 10) nextStep = 5;
+
+        if (nextStep === null) {
+          results.push({ opportunityId: opp.id, skipped: `no_step_due_day_${dayNumber}` });
+          continue;
+        }
+
+        // Find the linked estimate for quote URL (most recent sent one)
+        const [estimate] = await db
+          .select()
+          .from(estimates)
+          .where(eq(estimates.opportunityId, opp.id));
+
+        const quoteUrl = estimate?.viewToken
+          ? `${emailCfg.publicBaseUrl}/quote/${estimate.viewToken}`
+          : `${emailCfg.publicBaseUrl}/opportunities/${opp.id}`;
+
+        const buildCalUrl = (base: string | null): string | null => {
+          if (!base) return null;
+          try {
+            const u = new URL(base);
+            if (opp.firstName) u.searchParams.set('name', `${opp.firstName} ${opp.lastName || ''}`.trim());
+            if (opp.email) u.searchParams.set('email', opp.email);
+            if (estimate?.viewToken) u.searchParams.set('estimateToken', estimate.viewToken);
+            return u.toString();
+          } catch {
+            return base;
+          }
+        };
+        const bookingUrl = buildCalUrl(cal.consultationEmbedUrl);
+        const tastingUrl = buildCalUrl(cal.tastingEmbedUrl);
+
+        let fired = false;
+        const firedKind: string[] = [];
+
+        if (nextStep === 1) {
+          // Day 2 — Soft email
+          if (opp.email) {
+            const tpl = dripDay2SoftEmail({
+              customerFirstName: opp.firstName || 'there',
+              eventType: opp.eventType,
+              quoteUrl,
+              tastingUrl,
+              bookingUrl,
+            });
+            const r = await sendEmail({
+              to: opp.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+              opportunityId: opp.id,
+              templateKey: 'drip_day_2',
+            });
+            if (r.sent || r.skipped) fired = true;
+            firedKind.push('day2_email');
+          }
+        } else if (nextStep === 2) {
+          // Day 3 — SMS to customer (only if we have a phone)
+          if (opp.phone) {
+            const tpl = dripDay3CustomerSms({
+              firstName: opp.firstName || 'there',
+              chefFirstName: siteConfig.chef.firstName,
+            });
+            sendSmsInBackground({
+              to: opp.phone,
+              body: tpl.body,
+              templateKey: 'drip_day_3',
+              opportunityId: opp.id,
+            });
+            fired = true;
+            firedKind.push('day3_sms');
+          } else {
+            // No phone — skip the SMS step but still advance so we don't stall
+            fired = true;
+            firedKind.push('day3_skipped_no_phone');
+          }
+        } else if (nextStep === 3) {
+          // Day 5 — Value email
+          if (opp.email) {
+            const tpl = dripDay5ValueEmail({
+              customerFirstName: opp.firstName || 'there',
+              eventType: opp.eventType,
+              quoteUrl,
+              tastingUrl,
+              bookingUrl,
+            });
+            const r = await sendEmail({
+              to: opp.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+              opportunityId: opp.id,
+              templateKey: 'drip_day_5',
+            });
+            if (r.sent || r.skipped) fired = true;
+            firedKind.push('day5_email');
+          }
+        } else if (nextStep === 4) {
+          // Day 7 — Phone-call TASK for Mike (followUpDrafts with type=drip_phone_call)
+          const subject = `☎️ Call ${opp.firstName} ${opp.lastName || ''}`.trim() + ` — Day 7 drip`;
+          const body = `Customer has been silent since first viewing the quote 7 days ago. Per the drip cadence, today is the phone-call day.\n\nScript opener: "Hey ${opp.firstName || 'there'}, this is ${siteConfig.chef.firstName} from Home Bites Catering — I just wanted to follow up on the proposal and see if you had any questions."\n\nIf hesitant: "Totally understand — this is usually when people are comparing options."\n\nOffer: tasting · Zoom/phone · budget adjustment.\n\nPhone: ${opp.phone || 'not on file'}\nEmail: ${opp.email}`;
+          await db.insert(followUpDrafts).values({
+            type: 'drip_phone_call',
+            opportunityId: opp.id,
+            estimateId: estimate?.id ?? null,
+            recipientEmail: opp.email,
+            recipientName: `${opp.firstName} ${opp.lastName || ''}`.trim(),
+            subject,
+            bodyHtml: `<pre style="white-space:pre-wrap">${body}</pre>`,
+            bodyText: body,
+            triggerReason: 'Day 7 drip — phone call task',
+          } as any);
+
+          // Owner SMS nudge
+          sendOwnerSmsInBackground({
+            ...dripDay7OwnerSms({
+              customerName: `${opp.firstName} ${opp.lastName || ''}`.trim(),
+              customerPhone: opp.phone,
+              opportunityId: opp.id,
+            }),
+            templateKey: 'drip_day_7',
+            opportunityId: opp.id,
+          });
+          fired = true;
+          firedKind.push('day7_phone_task');
+        } else if (nextStep === 5) {
+          // Day 10 — Final email
+          if (opp.email) {
+            const tpl = dripDay10FinalEmail({
+              customerFirstName: opp.firstName || 'there',
+              eventType: opp.eventType,
+              eventDate: opp.eventDate,
+              quoteUrl,
+              tastingUrl,
+              bookingUrl,
+            });
+            const r = await sendEmail({
+              to: opp.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+              opportunityId: opp.id,
+              templateKey: 'drip_day_10',
+            });
+            if (r.sent || r.skipped) fired = true;
+            firedKind.push('day10_email');
+          }
+        }
+
+        if (fired) {
+          await db
+            .update(opportunities)
+            .set({ followUpSequenceStep: nextStep, lastFollowUpAt: now, updatedAt: now })
+            .where(eq(opportunities.id, opp.id));
+          results.push({ opportunityId: opp.id, fired: firedKind.join(',') });
+        } else {
+          results.push({ opportunityId: opp.id, skipped: `step_${nextStep}_no_send` });
+        }
+      }
+
+      return res.status(200).json({ ok: true, results, processedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error('Error running drip engine cron:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });
@@ -4893,6 +6864,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const comm = await storage.createCommunication(communicationData);
         console.log(`GAS Email Intake: Created follow-up communication ID ${comm.id} for thread ${threadId}`);
 
+        // P1-2: pause drip — inbound email reply counts as engagement
+        await pauseOpportunityDrip(existingThread.opportunityId ?? null, 'inbound_email');
+
         // Mark email as processed
         await storage.recordProcessedEmail({
           messageId: gmailMessageId,
@@ -5020,6 +6994,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         service: 'google_apps_script',
         email: to || from,
         labelApplied: true,
+      });
+
+      // Fire-and-forget owner SMS alert for this new lead (P0-1)
+      sendOwnerSmsInBackground({
+        ...newInquiryOwnerSms({
+          firstName: leadData.extractedProspectName || 'Unknown',
+          lastName: null,
+          eventType: leadData.extractedEventType || 'event',
+          guestCount: leadData.extractedGuestCount || null,
+          eventDate: leadData.extractedEventDate || null,
+          source: leadData.leadSourcePlatform || 'email',
+          rawLeadId: createdLead.id,
+        }),
+        templateKey: 'new_inquiry_owner_alert',
       });
 
       res.status(201).json({
@@ -5201,7 +7189,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const comm = await storage.createCommunication(communicationData);
       console.log(`OpenPhone Webhook: Created communication ${comm.id} for call ${callData.id}`);
-      
+
+      // P1-2: pause drip — inbound call counts as engagement (only if matched
+      // to an existing opportunity; a brand-new lead won't have a drip yet).
+      if (!isNewLead && callData.direction === 'inbound' && opportunityId) {
+        await pauseOpportunityDrip(opportunityId, 'inbound_call');
+      }
+
+      // Fire-and-forget owner SMS alert on a new inbound-call lead (P0-1).
+      // Only for inbound calls that created a fresh raw lead — outbound or
+      // already-matched calls don't count as "new inquiries."
+      if (isNewLead && callData.direction === 'inbound' && rawLeadId) {
+        sendOwnerSmsInBackground({
+          ...newInquiryOwnerSms({
+            firstName: 'Unknown Caller',
+            eventType: 'call',
+            guestCount: null,
+            eventDate: null,
+            source: `phone ${customerPhone}`,
+            rawLeadId,
+          }),
+          templateKey: 'new_inquiry_owner_alert',
+        });
+      }
+
       res.status(200).json({
         success: true,
         communicationId: comm.id,

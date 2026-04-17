@@ -16,6 +16,8 @@ import { calculateMenuMargin, calculateMenuMarginDetail } from "./utils/menuMarg
 import { calculateShoppingListForQuoteRequest } from "./utils/shoppingList";
 import { getEmailConfig } from "./utils/siteConfig";
 import { sendEmailInBackground } from "./utils/email";
+import { sendOwnerSmsInBackground } from "./services/smsService";
+import { newInquiryOwnerSms } from "./utils/smsTemplates";
 import { storage } from "./storage";
 import {
   newInquiryCustomerAckEmail,
@@ -483,6 +485,21 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
         html: adminTemplate.html,
         text: adminTemplate.text,
         templateKey: 'new_inquiry_admin',
+      });
+
+      // Owner SMS alert (P0-1)
+      sendOwnerSmsInBackground({
+        ...newInquiryOwnerSms({
+          firstName: request.firstName,
+          lastName: request.lastName,
+          eventType: request.eventType,
+          guestCount: request.guestCount,
+          eventDate: request.eventDate,
+          source: request.source || 'quote_form',
+          opportunityId: request.opportunityId,
+        }),
+        templateKey: 'new_inquiry_owner_alert',
+        opportunityId: request.opportunityId ?? null,
       });
     } catch (notifyError) {
       console.warn('Failed to fire new-inquiry notifications:', notifyError);

@@ -39,6 +39,266 @@ const communicationSchema = z.object({
   date: z.date(),
 });
 
+// P2-1: Contract panel — shows current e-sign status + a "Send contract" button.
+// Only useful once an estimate has been accepted (that's when we auto-create a
+// draft contract row). Per linked estimate.
+function ContractPanel({ opportunityId }: { opportunityId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Find the first accepted estimate for this opportunity
+  const { data: est } = useQuery<any>({
+    queryKey: ["/api/estimates/contract-candidate", opportunityId],
+    queryFn: async () => {
+      const res = await fetch(`/api/estimates?opportunityId=${opportunityId}`);
+      if (!res.ok) return null;
+      const all: any[] = await res.json();
+      const candidates = all.filter((e) => e.opportunityId === opportunityId);
+      // Prefer accepted > sent > viewed > most recent
+      return (
+        candidates.find((e) => e.status === "accepted") ||
+        candidates.find((e) => e.status === "sent") ||
+        candidates[0] ||
+        null
+      );
+    },
+  });
+
+  const { data: contract } = useQuery<any>({
+    queryKey: ["/api/estimates", est?.id, "contract"],
+    queryFn: async () => {
+      if (!est?.id) return null;
+      const res = await fetch(`/api/estimates/${est.id}/contract`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!est?.id,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      if (!est?.id) throw new Error("No estimate available");
+      const res = await fetch(`/api/estimates/${est.id}/send-contract`, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message || "Failed");
+      return body;
+    },
+    onSuccess: (result: any) => {
+      toast({
+        title: result.skipped ? "Contract drafted" : "Contract sent",
+        description: result.skipped
+          ? "BoldSign not configured — contract generated but not e-signed. Send manually for now."
+          : "E-sign email dispatched to the customer.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates", est?.id, "contract"] });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Failed to send contract", description: e.message, variant: "destructive" }),
+  });
+
+  if (!est) return null;
+
+  const status = contract?.status || "not_started";
+  const statusLabels: Record<string, string> = {
+    not_started: "No contract yet",
+    draft: "Draft — not sent",
+    sent: "Sent — waiting for signature",
+    viewed: "Viewed — not yet signed",
+    signed: "Signed ✓",
+    declined: "Declined",
+    expired: "Expired",
+    cancelled: "Cancelled",
+  };
+  const isSigned = status === "signed";
+  const isTerminal = ["signed", "declined", "expired", "cancelled"].includes(status);
+
+  return (
+    <Card
+      className={cn(
+        "mb-4",
+        isSigned && "border-emerald-300 bg-emerald-50/50",
+        (status === "sent" || status === "viewed") && "border-blue-200 bg-blue-50/40",
+      )}
+    >
+      <CardContent className="py-3 px-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Mail className="h-4 w-4 text-stone-500" />
+          <div>
+            <div className="text-sm">
+              <strong>Contract</strong>:{" "}
+              <Badge variant="secondary" className={cn(isSigned && "bg-emerald-100 text-emerald-800")}>
+                {statusLabels[status] || status}
+              </Badge>
+            </div>
+            {contract?.signedAt && (
+              <div className="text-xs text-stone-500 mt-0.5">
+                Signed {format(new Date(contract.signedAt), "MMM d, yyyy")}
+              </div>
+            )}
+            {contract?.sentAt && !contract.signedAt && (
+              <div className="text-xs text-stone-500 mt-0.5">
+                Sent {format(new Date(contract.sentAt), "MMM d")}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {!isTerminal && est?.status === "accepted" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => sendMutation.mutate()}
+              disabled={sendMutation.isPending}
+              data-testid="button-send-contract"
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : status === "sent" || status === "viewed" ? (
+                "Resend"
+              ) : (
+                "Send contract"
+              )}
+            </Button>
+          )}
+          {contract?.pdfUrl && (
+            <a href={contract.pdfUrl} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="ghost">
+                View PDF
+              </Button>
+            </a>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// P1-2: Drip state panel — shows current step, next fire time, pause/resume buttons.
+// Self-contained: queries its own state + has its own mutations, so it slots in
+// anywhere on the opportunity detail page.
+function DripPanel({ opportunityId }: { opportunityId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: state } = useQuery<{
+    started: boolean;
+    startedAt: string | null;
+    step: number;
+    totalSteps: number;
+    paused: boolean;
+    pausedAt: string | null;
+    completed: boolean;
+    nextStepAt: string | null;
+    nextStepLabel: string | null;
+    autosendEnabled: boolean;
+  }>({
+    queryKey: [`/api/opportunities/${opportunityId}/drip-state`],
+    queryFn: async () => {
+      const res = await fetch(`/api/opportunities/${opportunityId}/drip-state`);
+      if (!res.ok) throw new Error("Failed to fetch drip state");
+      return res.json();
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/opportunities/${opportunityId}/drip-pause`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to pause");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Drip paused", description: "No more automated follow-ups will fire." });
+      queryClient.invalidateQueries({ queryKey: [`/api/opportunities/${opportunityId}/drip-state`] });
+    },
+    onError: (e: Error) => toast({ title: "Failed to pause", description: e.message, variant: "destructive" }),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/opportunities/${opportunityId}/drip-resume`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to resume");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Drip resumed", description: "Follow-ups will continue on schedule." });
+      queryClient.invalidateQueries({ queryKey: [`/api/opportunities/${opportunityId}/drip-state`] });
+    },
+    onError: (e: Error) => toast({ title: "Failed to resume", description: e.message, variant: "destructive" }),
+  });
+
+  if (!state || !state.started) {
+    return (
+      <Card className="mb-4 border-stone-200">
+        <CardContent className="py-3 px-4 text-sm text-stone-500 flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          <span>Drip: <strong>not started</strong></span>
+          <span className="text-xs text-stone-400">(starts when the customer first views their quote)</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const pct = Math.round(((state.step ?? 0) / state.totalSteps) * 100);
+  const nextStr = state.nextStepAt ? format(new Date(state.nextStepAt), "MMM d, h:mma") : null;
+
+  return (
+    <Card className={cn("mb-4", state.paused && "border-amber-300 bg-amber-50/50", state.completed && "border-stone-300 bg-stone-50")}>
+      <CardContent className="py-3 px-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <MessageSquare className="h-4 w-4 text-stone-500" />
+          <div>
+            <div className="text-sm">
+              <strong>Drip</strong>: step {state.step}/{state.totalSteps} ({pct}%)
+              {state.paused && <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-800">Paused</Badge>}
+              {state.completed && <Badge variant="secondary" className="ml-2">Complete</Badge>}
+            </div>
+            <div className="text-xs text-stone-500 mt-0.5">
+              {state.paused
+                ? `Paused ${state.pausedAt ? format(new Date(state.pausedAt), "MMM d") : ""} — customer engaged`
+                : state.completed
+                ? "All 5 steps sent"
+                : state.nextStepLabel && nextStr
+                ? `Next: ${state.nextStepLabel} on ${nextStr}`
+                : "Running"}
+              {!state.autosendEnabled && !state.paused && !state.completed && (
+                <span className="ml-2 text-amber-700">· FOLLOWUP_AUTOSEND_ENABLED is off</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {!state.paused && !state.completed && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => pauseMutation.mutate()}
+              disabled={pauseMutation.isPending}
+              data-testid="button-drip-pause"
+            >
+              {pauseMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Pause"}
+            </Button>
+          )}
+          {state.paused && !state.completed && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => resumeMutation.mutate()}
+              disabled={resumeMutation.isPending}
+              data-testid="button-drip-resume"
+            >
+              {resumeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Resume"}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function LinkedEstimates({ opportunityId }: { opportunityId: number }) {
   const { data: estimates = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/estimates", { opportunityId }],
@@ -770,6 +1030,12 @@ export default function OpportunityDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* P1-2: Follow-up drip state */}
+      <DripPanel opportunityId={opportunityId} />
+
+      {/* P2-1: Contract status + send button */}
+      <ContractPanel opportunityId={opportunityId} />
 
       {/* Tabs for contact info and communications */}
       <Tabs defaultValue="contacts" className="w-full">

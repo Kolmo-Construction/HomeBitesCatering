@@ -16,6 +16,18 @@ interface PublicEstimate {
   viewedAt: string | null;
   acceptedAt: string | null;
   declinedAt: string | null;
+  infoRequestedAt?: string | null;
+  infoRequestNote?: string | null;
+  consultationBookedAt?: string | null;
+  consultationMeetingUrl?: string | null;
+}
+
+interface BookingConfig {
+  consultationUrl: string | null;
+  tastingUrl: string | null;
+  infoRequestedAt: string | null;
+  consultationBookedAt: string | null;
+  consultationMeetingUrl: string | null;
 }
 
 interface PublicClient {
@@ -38,6 +50,8 @@ export default function PublicQuote() {
     "idle" | "accepting" | "accepted" | "declining" | "declined"
   >("idle");
   const [eventPublicUrl, setEventPublicUrl] = useState<string | null>(null);
+  const [infoFlowState, setInfoFlowState] = useState<"idle" | "submitting" | "submitted">("idle");
+  const [bookingConfig, setBookingConfig] = useState<BookingConfig | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery<PublicQuotePayload>({
     queryKey: [`/api/public/quote/${token}`],
@@ -56,6 +70,18 @@ export default function PublicQuote() {
   useEffect(() => {
     if (!token || !data) return;
     fetch(`/api/public/quote/${token}/view`, { method: "POST" }).catch(() => undefined);
+  }, [token, data?.estimate.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pull Cal.com booking config once the quote loads. Cheap GET — safe to run
+  // even if the user never clicks "Need More Info."
+  useEffect(() => {
+    if (!token || !data) return;
+    fetch(`/api/public/quote/${token}/booking-config`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg: BookingConfig | null) => {
+        if (cfg) setBookingConfig(cfg);
+      })
+      .catch(() => undefined);
   }, [token, data?.estimate.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -84,6 +110,32 @@ export default function PublicQuote() {
       alert(e.message);
     },
   });
+
+  // P0-2: "I need more info" — submit note, get back bookingUrl, show iframe
+  const handleRequestInfo = async (note: string): Promise<{ bookingUrl: string | null } | null> => {
+    if (!token) return null;
+    setInfoFlowState("submitting");
+    try {
+      const res = await fetch(`/api/public/quote/${token}/request-info`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: note || null }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || "Failed to submit request");
+      }
+      const payload = (await res.json()) as { bookingUrl: string | null };
+      setInfoFlowState("submitted");
+      // Refetch so the sanitized estimate reflects infoRequestedAt
+      refetch();
+      return { bookingUrl: payload.bookingUrl };
+    } catch (e: any) {
+      setInfoFlowState("idle");
+      alert(e.message || "Something went wrong");
+      return null;
+    }
+  };
 
   const declineMutation = useMutation({
     mutationFn: async (reason: string) => {
@@ -143,6 +195,12 @@ export default function PublicQuote() {
         acceptedEventUrl={eventPublicUrl}
         onAccept={() => acceptMutation.mutate()}
         onDecline={(reason) => declineMutation.mutate(reason)}
+        onRequestInfo={handleRequestInfo}
+        infoFlowState={infoFlowState}
+        infoRequestedAt={data.estimate.infoRequestedAt ?? null}
+        consultationBookedAt={data.estimate.consultationBookedAt ?? null}
+        consultationMeetingUrl={data.estimate.consultationMeetingUrl ?? null}
+        resolvedBookingUrl={bookingConfig?.consultationUrl ?? null}
       />
       {/* Tier 3: PDF download for customer */}
       <div className="max-w-3xl mx-auto px-6 pb-8 text-center">

@@ -12,7 +12,15 @@ import {
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
+// Capture raw body for webhook signature verification (Cal.com, Stripe, etc.).
+// `verify` is called before JSON parsing so we can store the untouched bytes.
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {

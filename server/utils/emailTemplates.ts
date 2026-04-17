@@ -5,7 +5,7 @@
 // event page: warm, serif-y, celebration-focused. Admin-facing templates are
 // tighter and more informational.
 
-import { getSiteConfig } from "./siteConfig";
+import { getSiteConfig, getReviewConfig } from "./siteConfig";
 
 interface TemplateResult {
   subject: string;
@@ -562,5 +562,729 @@ export function followUpQuoteExpiringSoon(args: {
     `Your ${eventTypeLabel} quote expires on ${expiryDate}`
   );
   const text = `Hi ${args.customerFirstName}, Your quote for your ${eventTypeLabel} expires on ${expiryDate}. Review: ${args.quoteUrl} — ${config.chef.firstName} and the ${config.businessName} team`;
+  return { subject, html, text };
+}
+
+// ─── P0-2: "I Need More Info" — client ack ────────────────────────────────────
+
+export function infoRequestedClientAckEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  bookingUrl: string;
+  note?: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Let's talk through your ${eventTypeLabel}`;
+
+  const noteHtml = args.note
+    ? `<div style="background:#faf7f2;border-left:3px solid #9a7d3d;padding:12px 16px;margin:14px 0;color:#374151;font-style:italic;">"${args.note}"</div>`
+    : "";
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Thanks for flagging that you'd like to talk through a few more details before deciding — that's exactly what we'd want you to do. A short call is usually the fastest way to get answers on menu, logistics, pricing, or anything else.`)}
+     ${noteHtml}
+     ${paragraph(`Pick any time that works for you on ${config.chef.firstName}'s calendar — Zoom or phone, your choice.`)}
+     ${btn("Book a time to talk", args.bookingUrl)}
+     ${paragraph(`If none of those times work, just reply to this email and we'll find one that does.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Book a quick call about your ${eventTypeLabel}.`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+Thanks for flagging that you'd like to talk through a few more details. A short call is usually the fastest way to get answers on menu, logistics, pricing, or anything else.${args.note ? `\n\nYou wrote: "${args.note}"` : ""}
+
+Pick any time on ${config.chef.firstName}'s calendar — Zoom or phone:
+${args.bookingUrl}
+
+If none of those times work, just reply to this email.
+
+— ${config.chef.firstName} and the ${config.businessName} team`;
+
+  return { subject, html, text };
+}
+
+// ─── P0-2: "I Need More Info" — owner alert ───────────────────────────────────
+
+export function infoRequestedOwnerEmail(args: {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string | null;
+  eventType: string;
+  eventDate: string | Date | null;
+  note?: string | null;
+  adminEstimateUrl: string;
+}): TemplateResult {
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `${args.customerName} wants more info before deciding`;
+
+  const noteHtml = args.note
+    ? `<div style="background:#fff7ed;border-left:3px solid #c2410c;padding:12px 16px;margin:14px 0;color:#374151;">${args.note}</div>`
+    : `<p style="margin:0 0 12px 0;color:#6b7280;font-style:italic;">No note left.</p>`;
+
+  const html = layout(
+    `${heading(`Info requested`)}
+     ${paragraph(`<strong>${args.customerName}</strong> just clicked "I need more info" on their quote.`)}
+     ${noteHtml}
+     <table cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;margin:12px 0;">
+       <tr><td style="color:#6b7280;width:140px;">Contact</td><td>${args.customerEmail}${args.customerPhone ? ` · ${args.customerPhone}` : ""}</td></tr>
+       <tr><td style="color:#6b7280;">Event</td><td>${eventTypeLabel} on ${formatDate(args.eventDate)}</td></tr>
+     </table>
+     ${paragraph(`They've been shown a Cal.com link to book a call. You'll get another alert when they book.`)}
+     ${btn("Open in Admin", args.adminEstimateUrl)}`,
+    `${args.customerName} wants to talk before deciding — book alert to follow.`
+  );
+
+  const text = `${args.customerName} clicked "I need more info" on their quote.
+
+${args.note ? `Note: ${args.note}\n` : "No note left.\n"}
+Contact: ${args.customerEmail}${args.customerPhone ? ` · ${args.customerPhone}` : ""}
+Event: ${eventTypeLabel} on ${formatDate(args.eventDate)}
+
+They've been given a Cal.com link — booking alert will follow.
+
+Admin: ${args.adminEstimateUrl}`;
+
+  return { subject, html, text };
+}
+
+// ─── P0-3: Quote declined — feedback request (client) ────────────────────────
+
+export function quoteDeclinedFeedbackEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  feedbackUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Thank you — one quick favor`;
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Thank you for taking the time to review our proposal for your ${eventTypeLabel} — we truly appreciate the opportunity.`)}
+     ${paragraph(`If you don&rsquo;t mind sharing, we&rsquo;d love to better understand your decision. It helps us improve and, in some cases, lets us revisit options that may fit better.`)}
+     ${paragraph(`Would you say the main reason was:`)}
+     <ul style="margin:0 0 16px 20px;color:#1f2937;">
+       <li>Pricing / budget</li>
+       <li>Not quite the right menu or style</li>
+       <li>Timing or logistics</li>
+       <li>Something else</li>
+     </ul>
+     ${btn("Share a quick reason", args.feedbackUrl)}
+     ${paragraph(`Takes about 10 seconds — no login needed. If you&rsquo;re open to reconnecting, we&rsquo;d be happy to see if there&rsquo;s a way to adjust the proposal.`)}
+     ${paragraph(`Either way, we truly appreciate you considering ${config.businessName} and wish you all the best with your ${eventTypeLabel}!`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `One quick question about your decision — takes 10 seconds.`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+Thank you for taking the time to review our proposal for your ${eventTypeLabel} — we truly appreciate the opportunity.
+
+If you don't mind sharing, we'd love to better understand your decision. Would you say the main reason was:
+  • Pricing / budget
+  • Not quite the right menu or style
+  • Timing or logistics
+  • Something else
+
+Share a quick reason: ${args.feedbackUrl}
+
+If you're open to reconnecting, we'd be happy to adjust the proposal. Either way, we appreciate you considering ${config.businessName}.
+
+— ${config.chef.firstName} and the ${config.businessName} team`;
+
+  return { subject, html, text };
+}
+
+// ─── P0-3: Decline feedback submitted — owner alert ──────────────────────────
+
+export function declineFeedbackOwnerEmail(args: {
+  customerName: string;
+  customerEmail: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  category: string;
+  notes: string | null;
+  adminEstimateUrl: string;
+}): TemplateResult {
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const categoryLabel: Record<string, string> = {
+    pricing: "Pricing / budget",
+    menu: "Menu / style",
+    timing: "Timing / logistics",
+    other: "Other",
+  };
+  const catNice = categoryLabel[args.category] || args.category;
+  const reEngage = args.category === "pricing" || args.category === "menu";
+  const subject = `${args.customerName} left feedback: ${catNice}${reEngage ? " — consider re-engaging" : ""}`;
+
+  const html = layout(
+    `${heading(`Decline feedback`)}
+     ${paragraph(`<strong>${args.customerName}</strong> shared why they passed on the ${eventTypeLabel} proposal.`)}
+     <table cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;margin:12px 0;">
+       <tr><td style="color:#6b7280;width:140px;">Category</td><td><strong>${catNice}</strong></td></tr>
+       <tr><td style="color:#6b7280;">Event</td><td>${eventTypeLabel} on ${formatDate(args.eventDate)}</td></tr>
+       <tr><td style="color:#6b7280;">Contact</td><td>${args.customerEmail}</td></tr>
+     </table>
+     ${args.notes ? `<div style="background:#faf7f2;border-left:3px solid #9a7d3d;padding:12px 16px;margin:14px 0;color:#374151;font-style:italic;">${args.notes}</div>` : ""}
+     ${reEngage ? paragraph(`<strong>Consider re-engaging</strong> — this feedback category often converts when the proposal is adjusted.`) : ""}
+     ${btn("Open in Admin", args.adminEstimateUrl)}`,
+    `${args.customerName} left decline feedback — ${catNice}.`
+  );
+
+  const text = `${args.customerName} shared why they passed on the ${eventTypeLabel} proposal.
+
+Category: ${catNice}
+Event: ${eventTypeLabel} on ${formatDate(args.eventDate)}
+Contact: ${args.customerEmail}
+${args.notes ? `\nNotes: ${args.notes}\n` : ""}
+${reEngage ? "Consider re-engaging — this feedback category often converts when the proposal is adjusted.\n" : ""}
+Admin: ${args.adminEstimateUrl}`;
+
+  return { subject, html, text };
+}
+
+// ─── P0-2: Consultation booked — owner + client confirmation ─────────────────
+
+export function consultationBookedOwnerEmail(args: {
+  customerName: string;
+  scheduledAt: string | Date;
+  meetingUrl: string | null;
+  adminEstimateUrl: string;
+}): TemplateResult {
+  const when = formatDate(args.scheduledAt);
+  const subject = `${args.customerName} booked a consultation`;
+
+  const html = layout(
+    `${heading(`Consultation booked`)}
+     ${paragraph(`<strong>${args.customerName}</strong> just booked a call for <strong>${when}</strong>.`)}
+     ${args.meetingUrl ? btn("Join Meeting", args.meetingUrl) : ""}
+     ${btn("Open in Admin", args.adminEstimateUrl)}`,
+    `${args.customerName} booked a call for ${when}.`
+  );
+
+  const text = `${args.customerName} booked a consultation for ${when}.
+${args.meetingUrl ? `\nMeeting: ${args.meetingUrl}` : ""}
+Admin: ${args.adminEstimateUrl}`;
+
+  return { subject, html, text };
+}
+
+// ─── P2-1: Contract sent / signed ─────────────────────────────────────────────
+
+export function contractSentCustomerEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  signingUrl: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Your ${eventTypeLabel} contract is ready to sign`;
+
+  const cta = args.signingUrl
+    ? btn("Review & Sign", args.signingUrl)
+    : paragraph(`Check your inbox — the contract was sent to you directly by our e-sign provider. If it hasn&rsquo;t arrived within a few minutes, check spam or reply to this email and we&rsquo;ll resend.`);
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Great — we&rsquo;ve put together the contract for your ${eventTypeLabel}. Review the terms, sign electronically, and you&rsquo;re one step away from locking in your date.`)}
+     ${cta}
+     ${paragraph(`Once signed, we&rsquo;ll send you a deposit link (35% of total) to officially confirm. Questions? Just reply to this email.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Your ${eventTypeLabel} contract is ready.`
+  );
+  const text = `Hi ${args.customerFirstName},
+
+We've put together the contract for your ${eventTypeLabel}.${args.signingUrl ? `\n\nReview and sign: ${args.signingUrl}` : "\n\nCheck your inbox for the e-sign email."}
+
+Once signed, we'll send a deposit link to confirm. Questions? Reply anytime.
+
+— ${config.chef.firstName}`;
+  return { subject, html, text };
+}
+
+export function contractSignedOwnerEmail(args: {
+  customerName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  totalCents: number;
+  adminUrl: string;
+}): TemplateResult {
+  const subject = `🖋️ ${args.customerName} signed the contract`;
+  const html = layout(
+    `${heading(`Contract signed`)}
+     ${paragraph(`<strong>${args.customerName}</strong> just signed the ${args.eventType.replace(/_/g, " ")} contract.`)}
+     ${paragraph(`Deposit email has been queued automatically — you&rsquo;ll get another alert once they pay.`)}
+     ${btn("Open in Admin", args.adminUrl)}`,
+    `${args.customerName} signed the contract.`
+  );
+  const text = `${args.customerName} signed the ${args.eventType.replace(/_/g, " ")} contract.
+
+Deposit email queued. Admin: ${args.adminUrl}`;
+  return { subject, html, text };
+}
+
+// ─── P2-2: Deposit / balance requests ────────────────────────────────────────
+
+export function depositRequestCustomerEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  depositCents: number;
+  paymentUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const dateStr = formatDate(args.eventDate);
+  const subject = `Let's confirm your ${eventTypeLabel} — deposit`;
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Thanks for signing the contract! To officially lock in ${dateStr}, please complete the deposit below.`)}
+     ${paragraph(`Deposit: <strong>$${(args.depositCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> (35% of your grand total)`)}
+     ${btn("Pay deposit", args.paymentUrl)}
+     ${paragraph(`This deposit secures your date. The balance is due 7 days before the event.`)}
+     ${italic(`— ${config.chef.firstName}`)}`,
+    `Deposit link for your ${eventTypeLabel} on ${dateStr}.`
+  );
+  const text = `Hi ${args.customerFirstName},
+
+Thanks for signing! To lock in ${dateStr}, please complete the deposit of $${(args.depositCents / 100).toFixed(2)} (35% of total).
+
+Pay here: ${args.paymentUrl}
+
+Balance is due 7 days before the event.
+
+— ${config.chef.firstName}`;
+  return { subject, html, text };
+}
+
+export function balanceRequestCustomerEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  balanceCents: number;
+  paymentUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const dateStr = formatDate(args.eventDate);
+  const subject = `Balance due for your ${eventTypeLabel}`;
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Your ${eventTypeLabel} is almost here! The final balance is due before the event on ${dateStr}.`)}
+     ${paragraph(`Balance: <strong>$${(args.balanceCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>`)}
+     ${btn("Pay balance", args.paymentUrl)}
+     ${paragraph(`If anything has changed — guest count, menu, logistics — just reply and we&rsquo;ll sort it out.`)}
+     ${italic(`— ${config.chef.firstName}`)}`,
+    `Balance due for your ${eventTypeLabel}.`
+  );
+  const text = `Hi ${args.customerFirstName},
+
+Your ${eventTypeLabel} is coming up on ${dateStr}. The balance of $${(args.balanceCents / 100).toFixed(2)} is due before the event.
+
+Pay here: ${args.paymentUrl}
+
+— ${config.chef.firstName}`;
+  return { subject, html, text };
+}
+
+export function paymentReceivedCustomerEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  amountCents: number;
+  paymentKind: "deposit" | "balance";
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const dateStr = formatDate(args.eventDate);
+  const amountStr = `$${(args.amountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const kindStr = args.paymentKind === "deposit" ? "deposit" : "balance";
+  const subject = args.paymentKind === "deposit"
+    ? `Deposit received — your ${eventTypeLabel} is locked in`
+    : `Balance paid — all set for your ${eventTypeLabel}`;
+
+  const nextLine = args.paymentKind === "deposit"
+    ? `Your date on <strong>${dateStr}</strong> is officially confirmed. We&rsquo;ll circle back about 2 weeks out to finalize any remaining details.`
+    : `Everything&rsquo;s set. We&rsquo;ll see you on <strong>${dateStr}</strong>!`;
+
+  const html = layout(
+    `${heading(`Thank you, ${args.customerFirstName}!`)}
+     ${paragraph(`We received your ${kindStr} of <strong>${amountStr}</strong>.`)}
+     ${paragraph(nextLine)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `${args.paymentKind === "deposit" ? "Deposit" : "Balance"} received.`
+  );
+  const text = `Thank you, ${args.customerFirstName}!
+
+We received your ${kindStr} of ${amountStr}.
+
+${args.paymentKind === "deposit"
+    ? `Your date on ${dateStr} is officially confirmed. We'll circle back about 2 weeks out to finalize details.`
+    : `Everything's set. See you on ${dateStr}!`}
+
+— ${config.chef.firstName}`;
+  return { subject, html, text };
+}
+
+export function paymentReceivedOwnerEmail(args: {
+  customerName: string;
+  amountCents: number;
+  paymentKind: "deposit" | "balance";
+  eventId: number;
+  adminUrl: string;
+}): TemplateResult {
+  const amount = `$${(args.amountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const subject = `💰 ${args.paymentKind === "deposit" ? "Deposit" : "Balance"} received: ${args.customerName} — ${amount}`;
+  const html = layout(
+    `${heading(`${args.paymentKind === "deposit" ? "Deposit" : "Balance"} received`)}
+     ${paragraph(`<strong>${args.customerName}</strong> just paid <strong>${amount}</strong>.`)}
+     ${btn("Open in Admin", args.adminUrl)}`,
+    `${args.paymentKind} paid: ${args.customerName} ${amount}`
+  );
+  const text = `${args.paymentKind === "deposit" ? "Deposit" : "Balance"} received from ${args.customerName}: ${amount}
+
+Admin: ${args.adminUrl}`;
+  return { subject, html, text };
+}
+
+// ─── P1-1: Tasting flow ───────────────────────────────────────────────────────
+
+function formatMoneyCents(cents: number): string {
+  return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDateTime(d: Date | string | null): string {
+  if (!d) return "TBD";
+  const date = d instanceof Date ? d : new Date(d);
+  return date.toLocaleString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// Customer email — payment link after they book a tasting slot
+export function tastingPaymentEmail(args: {
+  customerFirstName: string;
+  scheduledAt: Date | string;
+  guestCount: number;
+  totalPriceCents: number;
+  paymentUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const when = formatDateTime(args.scheduledAt);
+  const total = formatMoneyCents(args.totalPriceCents);
+  const subject = `Your Home Bites tasting is booked — complete payment`;
+
+  const html = layout(
+    `${heading(`You're booked, ${args.customerFirstName}!`)}
+     ${paragraph(`Thank you for scheduling a tasting — we&rsquo;re looking forward to cooking for you.`)}
+     <table cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;margin:12px 0;">
+       <tr><td style="color:#6b7280;width:140px;">When</td><td><strong>${when}</strong></td></tr>
+       <tr><td style="color:#6b7280;">Guests</td><td>${args.guestCount}</td></tr>
+       <tr><td style="color:#6b7280;">Total</td><td><strong>${total}</strong></td></tr>
+     </table>
+     ${paragraph(`To confirm your slot, please complete payment below — it takes about 20 seconds.`)}
+     ${btn(`Pay ${total} to confirm`, args.paymentUrl)}
+     ${paragraph(`If anything changes or you have questions, just reply to this email.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Tasting booked for ${when} — complete payment to confirm.`
+  );
+
+  const text = `You're booked, ${args.customerFirstName}!
+
+Thank you for scheduling a tasting.
+
+When: ${when}
+Guests: ${args.guestCount}
+Total: ${total}
+
+To confirm your slot, please complete payment: ${args.paymentUrl}
+
+Questions? Just reply to this email.
+
+— ${config.chef.firstName}`;
+
+  return { subject, html, text };
+}
+
+// Owner email — someone just booked a tasting
+export function tastingBookedOwnerEmail(args: {
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  scheduledAt: Date | string;
+  guestCount: number;
+  totalPriceCents: number;
+  adminUrl: string;
+}): TemplateResult {
+  const when = formatDateTime(args.scheduledAt);
+  const total = formatMoneyCents(args.totalPriceCents);
+  const subject = `New tasting: ${args.customerName} · ${when}`;
+
+  const html = layout(
+    `${heading(`Tasting booked`)}
+     ${paragraph(`<strong>${args.customerName}</strong> just booked a tasting via Cal.com. Payment link has been emailed to them.`)}
+     <table cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;margin:12px 0;">
+       <tr><td style="color:#6b7280;width:140px;">When</td><td><strong>${when}</strong></td></tr>
+       <tr><td style="color:#6b7280;">Guests</td><td>${args.guestCount}</td></tr>
+       <tr><td style="color:#6b7280;">Total</td><td>${total}</td></tr>
+       <tr><td style="color:#6b7280;">Email</td><td>${args.customerEmail || "—"}</td></tr>
+       <tr><td style="color:#6b7280;">Phone</td><td>${args.customerPhone || "—"}</td></tr>
+     </table>
+     ${btn("Open in Admin", args.adminUrl)}`,
+    `Tasting booked: ${args.customerName} · ${when}`
+  );
+
+  const text = `Tasting booked: ${args.customerName}
+
+When: ${when}
+Guests: ${args.guestCount}
+Total: ${total}
+Email: ${args.customerEmail || "—"}
+Phone: ${args.customerPhone || "—"}
+
+Admin: ${args.adminUrl}`;
+
+  return { subject, html, text };
+}
+
+// Customer email — tasting payment received
+export function tastingPaidCustomerEmail(args: {
+  customerFirstName: string;
+  scheduledAt: Date | string;
+  guestCount: number;
+  totalPriceCents: number;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const when = formatDateTime(args.scheduledAt);
+  const total = formatMoneyCents(args.totalPriceCents);
+  const subject = `Payment received — see you at your tasting`;
+
+  const html = layout(
+    `${heading(`Thank you, ${args.customerFirstName}!`)}
+     ${paragraph(`Your payment of <strong>${total}</strong> has been received. Your tasting is officially confirmed.`)}
+     <table cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;margin:12px 0;">
+       <tr><td style="color:#6b7280;width:140px;">When</td><td><strong>${when}</strong></td></tr>
+       <tr><td style="color:#6b7280;">Guests</td><td>${args.guestCount}</td></tr>
+     </table>
+     ${paragraph(`We&rsquo;ll send a quick reminder the day before. If anything changes, just reply to this email.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Payment received — tasting confirmed for ${when}.`
+  );
+
+  const text = `Thank you, ${args.customerFirstName}!
+
+Your payment of ${total} has been received. Your tasting is confirmed.
+
+When: ${when}
+Guests: ${args.guestCount}
+
+We'll send a reminder the day before. Questions? Just reply.
+
+— ${config.chef.firstName}`;
+
+  return { subject, html, text };
+}
+
+// ─── P1-2: Auto-send follow-up drip — customer-facing ─────────────────────────
+
+// Day 2 — Soft check-in
+export function dripDay2SoftEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  quoteUrl: string;
+  tastingUrl?: string | null;
+  bookingUrl?: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `A quick check-in on your ${eventTypeLabel}`;
+
+  const tastingLine = args.tastingUrl
+    ? paragraph(`We also offer tastings if you&rsquo;d like to experience the food firsthand and meet our team — it&rsquo;s a great way to get a feel for everything before deciding. <a href="${args.tastingUrl}">Book a tasting</a>.`)
+    : paragraph(`We also offer tastings if you&rsquo;d like to experience the food firsthand and meet our team — just reply and we&rsquo;ll set one up.`);
+
+  const callLine = args.bookingUrl
+    ? paragraph(`If it would be helpful, you&rsquo;re also welcome to <a href="${args.bookingUrl}">schedule a quick call</a> so we can go through everything together.`)
+    : "";
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`I just wanted to follow up and see if you had any questions about the proposal or if there&rsquo;s anything you&rsquo;d like to adjust.`)}
+     ${paragraph(`If you&rsquo;re still exploring options, I completely understand — happy to help refine the menu or adjust things to better fit your vision, guest count, or budget.`)}
+     ${tastingLine}
+     ${callLine}
+     ${btn("Review your proposal", args.quoteUrl)}
+     ${paragraph(`Looking forward to your thoughts!`)}
+     ${italic(`— ${config.chef.firstName}`)}`,
+    `Following up on your ${eventTypeLabel} proposal.`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+I just wanted to follow up and see if you had any questions about the proposal or if there's anything you'd like to adjust. Happy to refine the menu or adjust to better fit your vision, guest count, or budget.
+
+We also offer tastings if you'd like to experience the food firsthand${args.tastingUrl ? `: ${args.tastingUrl}` : " — just reply and we'll set one up"}.${args.bookingUrl ? `\n\nOr schedule a quick call: ${args.bookingUrl}` : ""}
+
+Review your proposal: ${args.quoteUrl}
+
+Looking forward to your thoughts!
+— ${config.chef.firstName}`;
+
+  return { subject, html, text };
+}
+
+// Day 5 — Value + comparison + tasting
+export function dripDay5ValueEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  quoteUrl: string;
+  tastingUrl?: string | null;
+  bookingUrl?: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const subject = `Checking in on your ${eventTypeLabel} plans`;
+
+  const ctaTasting = args.tastingUrl
+    ? btn("Schedule a tasting", args.tastingUrl)
+    : "";
+  const ctaCall = args.bookingUrl
+    ? btn("Book a quick call", args.bookingUrl)
+    : "";
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`I wanted to follow up and see where things are at with your catering plans.`)}
+     ${paragraph(`If you&rsquo;re still reviewing options, I completely understand — this is usually when couples and hosts are comparing proposals. I&rsquo;m happy to help walk through everything and make sure you&rsquo;re comparing apples to apples.`)}
+     ${paragraph(`A lot of clients at this stage find it helpful to schedule either a <strong>tasting</strong> or a quick <strong>phone or Zoom call</strong>. It&rsquo;s a great way to experience the food, meet our team, and get a real sense of how everything comes together.`)}
+     ${paragraph(`We can also adjust the proposal to better fit your vision or budget if needed.`)}
+     ${ctaTasting}
+     ${ctaCall}
+     ${paragraph(`Would you like to schedule a quick call or Zoom to go over everything — or set up a tasting?`)}
+     ${btn("Review your proposal", args.quoteUrl)}
+     ${italic(`— ${config.chef.firstName}`)}`,
+    `Comparing caterers? Let's make it easy.`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+I wanted to follow up and see where things are at with your catering plans.
+
+If you're still reviewing options, I completely understand — this is usually when people are comparing proposals. Happy to walk through everything to make sure you're comparing apples to apples.
+
+A lot of clients at this stage find it helpful to schedule a tasting or a quick phone/Zoom call. Great way to experience the food, meet our team, and get a real sense of how everything comes together. We can also adjust the proposal to better fit your vision or budget.
+${args.tastingUrl ? `\nTasting: ${args.tastingUrl}\n` : ""}${args.bookingUrl ? `Book a call: ${args.bookingUrl}\n` : ""}
+Review your proposal: ${args.quoteUrl}
+
+Would you like to schedule a quick call or set up a tasting?
+
+— ${config.chef.firstName}`;
+
+  return { subject, html, text };
+}
+
+// Day 10 — Final urgency + close
+export function dripDay10FinalEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  quoteUrl: string;
+  tastingUrl?: string | null;
+  bookingUrl?: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const dateStr = formatDate(args.eventDate);
+  const subject = `One last check-in about your ${eventTypeLabel}`;
+
+  const ctaCall = args.bookingUrl
+    ? btn("Book a quick call", args.bookingUrl)
+    : "";
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`I just wanted to reach out one last time regarding your event on <strong>${dateStr}</strong>.`)}
+     ${paragraph(`We&rsquo;re beginning to finalize our calendar and wanted to check in before we close out availability.`)}
+     ${paragraph(`If you&rsquo;re still interested, we&rsquo;d be happy to reconnect, adjust the proposal, schedule a tasting, or set up a quick phone call or Zoom to answer any final questions.`)}
+     ${ctaCall}
+     ${btn("Review your proposal", args.quoteUrl)}
+     ${paragraph(`If you&rsquo;ve decided to go another direction, no worries at all — we truly appreciate the opportunity.`)}
+     ${paragraph(`Wishing you all the best!`)}
+     ${italic(`— ${config.chef.firstName}`)}`,
+    `Final check-in about your ${eventTypeLabel} on ${dateStr}.`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+I just wanted to reach out one last time regarding your event on ${dateStr}. We're beginning to finalize our calendar and wanted to check in before closing out availability.
+
+If you're still interested, we'd be happy to reconnect, adjust the proposal, schedule a tasting, or set up a quick phone call or Zoom.
+${args.bookingUrl ? `\nBook a call: ${args.bookingUrl}\n` : ""}${args.tastingUrl ? `Schedule a tasting: ${args.tastingUrl}\n` : ""}
+Review your proposal: ${args.quoteUrl}
+
+If you've decided to go another direction, no worries at all — we truly appreciate the opportunity.
+
+Wishing you all the best!
+— ${config.chef.firstName}`;
+
+  return { subject, html, text };
+}
+
+// ─── P0-4: Post-event review + referral request ──────────────────────────────
+
+export function eventReviewRequestEmail(args: {
+  customerFirstName: string;
+  eventType: string;
+  eventDate: string | Date | null;
+  // Optional override for the Google review URL; falls back to env via getReviewConfig().
+  googleReviewUrl?: string | null;
+  referralCreditDollars?: number;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const review = getReviewConfig();
+  const eventTypeLabel = args.eventType.replace(/_/g, " ");
+  const reviewUrl = args.googleReviewUrl ?? review.googleReviewUrl;
+  const credit = args.referralCreditDollars ?? review.referralCreditDollars;
+
+  const subject = `How did everything go, ${args.customerFirstName}?`;
+
+  const reviewBlock = reviewUrl
+    ? `${paragraph(`If you enjoyed the food and service, a quick Google review means the world to a small team like ours — it&rsquo;s the single biggest thing that helps new couples and families find us.`)}
+       ${btn("Leave a Google review", reviewUrl)}`
+    : `${paragraph(`If you enjoyed the food and service, a quick review means the world to a small team like ours. Just reply to this email and we&rsquo;ll point you to the right spot.`)}`;
+
+  const html = layout(
+    `${heading(`Hi ${args.customerFirstName},`)}
+     ${paragraph(`Thank you so much for having us be part of your ${eventTypeLabel}! It was genuinely a pleasure cooking for you and your guests — we hope everything felt seamless and that the food lived up to the moment.`)}
+     ${paragraph(`A quick favor — two things, either or both:`)}
+     ${reviewBlock}
+     ${paragraph(`<strong>Know someone planning an event?</strong> Send them our way — we&rsquo;ll send you a <strong>$${credit} credit</strong> for any referral that books with us. Just have them mention your name when they reach out.`)}
+     ${paragraph(`Either way, thank you again. We&rsquo;d love to cook for you again someday.`)}
+     ${italic(`— ${config.chef.firstName} and the ${config.businessName} team`)}`,
+    `Thank you — how did everything go?`
+  );
+
+  const text = `Hi ${args.customerFirstName},
+
+Thank you so much for having us be part of your ${eventTypeLabel}! It was genuinely a pleasure cooking for you and your guests.
+
+A quick favor — two things, either or both:
+
+${reviewUrl ? `• Leave a Google review — it's the single biggest thing that helps small teams like ours: ${reviewUrl}\n\n` : ""}• Know someone planning an event? Send them our way — we'll send you a $${credit} credit for any referral that books with us.
+
+Either way, thank you again. We'd love to cook for you again someday.
+
+— ${config.chef.firstName} and the ${config.businessName} team`;
+
   return { subject, html, text };
 }

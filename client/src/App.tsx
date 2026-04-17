@@ -55,6 +55,14 @@ import PublicEventPage from "@/pages/PublicEventPage";
 
 // Public self-serve "find my event" link recovery page
 import FindMyEvent from "@/pages/FindMyEvent";
+
+// P0-3: Public decline-feedback form (magic-link)
+import PublicDeclineFeedback from "@/pages/PublicDeclineFeedback";
+
+// P1-1: Public tasting booking + post-booking payment page
+import PublicTasting from "@/pages/PublicTasting";
+import PublicTastingThanks from "@/pages/PublicTastingThanks";
+
 import UnmatchedInbox from "@/pages/UnmatchedInbox";
 
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
@@ -128,7 +136,9 @@ function AppContent() {
   const isPublicEventPage = location.startsWith("/event/");
   const isFindMyEventPage = location === "/find-my-event";
   const isClientPortalPage = location.startsWith("/my-events");
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage;
+  const isDeclineFeedbackPage = location.startsWith("/decline-feedback/");
+  const isTastingPage = location === "/tasting" || location.startsWith("/tasting/");
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage || isDeclineFeedbackPage || isTastingPage;
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -142,6 +152,9 @@ function AppContent() {
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/find-my-event" component={FindMyEvent} />
+          <Route path="/decline-feedback/:token" component={PublicDeclineFeedback} />
+          <Route path="/tasting" component={PublicTasting} />
+          <Route path="/tasting/thanks" component={PublicTastingThanks} />
           <Route>
             <div className="flex items-center justify-center h-screen text-xl">404 - Page Not Found</div>
           </Route>
@@ -233,6 +246,9 @@ function AppContent() {
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/find-my-event" component={FindMyEvent} />
+          <Route path="/decline-feedback/:token" component={PublicDeclineFeedback} />
+          <Route path="/tasting" component={PublicTasting} />
+          <Route path="/tasting/thanks" component={PublicTastingThanks} />
 
           {/* Fallback Route for authenticated users */}
           <Route>

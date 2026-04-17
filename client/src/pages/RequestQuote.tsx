@@ -549,7 +549,53 @@ export default function RequestQuote() {
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
   const [opportunityId, setOpportunityId] = useState<number | null>(null);
+  // P1-3: Cal.com consultation URL, resolved from /api/public/cal-config
+  const [consultationUrl, setConsultationUrl] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // P1-3: pull Cal.com consultation URL once, for the post-submit thank-you page.
+  useEffect(() => {
+    fetch("/api/public/cal-config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg: { consultationUrl: string | null } | null) => {
+        if (cfg?.consultationUrl) setConsultationUrl(cfg.consultationUrl);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  // P2-3: capture URL params + document.referrer once and attach them to any
+  // submission this session. Runs once on mount so we don't lose the params if
+  // the user navigates within the form.
+  const [attribution, setAttribution] = useState<{
+    source: string | null;
+    utmSource: string | null;
+    utmMedium: string | null;
+    utmCampaign: string | null;
+    utmContent: string | null;
+    utmTerm: string | null;
+    referrer: string | null;
+  }>({
+    source: null,
+    utmSource: null,
+    utmMedium: null,
+    utmCampaign: null,
+    utmContent: null,
+    utmTerm: null,
+    referrer: null,
+  });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = document.referrer && !document.referrer.includes(window.location.host) ? document.referrer : null;
+    setAttribution({
+      source: params.get("source"),
+      utmSource: params.get("utm_source"),
+      utmMedium: params.get("utm_medium"),
+      utmCampaign: params.get("utm_campaign"),
+      utmContent: params.get("utm_content"),
+      utmTerm: params.get("utm_term"),
+      referrer: ref,
+    });
+  }, []);
 
   // ---------- Pre-fill from opportunity token (sent via "Send Inquiry" on opp page) ----------
   useEffect(() => {
@@ -996,6 +1042,18 @@ export default function RequestQuote() {
             : undefined,
         estimatedTotal: pricing.estimatedTotal,
         ...(opportunityId ? { opportunityId } : {}),
+        // P2-3: prefer utm_source over explicit source param, fall back to "website"
+        source: attribution.utmSource || attribution.source || "website",
+        // Stash the full attribution so reporting can break down by campaign later
+        referralDetail: [
+          attribution.utmCampaign ? `campaign=${attribution.utmCampaign}` : null,
+          attribution.utmMedium ? `medium=${attribution.utmMedium}` : null,
+          attribution.utmContent ? `content=${attribution.utmContent}` : null,
+          attribution.utmTerm ? `term=${attribution.utmTerm}` : null,
+          attribution.referrer ? `referrer=${attribution.referrer}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined,
       };
       const res = await apiRequest(
         "POST",
@@ -1024,41 +1082,91 @@ export default function RequestQuote() {
 
   // ---------- Thank You Screen ----------
   if (submitted) {
+    // Build the prefilled Cal.com URL for the embedded booking widget.
+    // If Cal.com isn't configured, the right column collapses gracefully.
+    let prefilledCalUrl: string | null = null;
+    if (consultationUrl) {
+      try {
+        const u = new URL(consultationUrl);
+        const name = `${form.firstName || ""} ${form.lastName || ""}`.trim();
+        if (name) u.searchParams.set("name", name);
+        if (form.email) u.searchParams.set("email", form.email);
+        prefilledCalUrl = u.toString();
+      } catch {
+        prefilledCalUrl = consultationUrl;
+      }
+    }
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg shadow-xl">
-          <CardContent className="pt-10 pb-10 text-center space-y-4">
-            <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-600" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900">Thank You!</h2>
-            <p className="text-gray-600 text-lg leading-relaxed">
-              Your quote request has been submitted successfully. Our catering
-              team will review your event details and respond within{" "}
-              <span className="font-semibold">24-48 hours</span>.
-            </p>
-            {form.promoValid && form.promoDiscount > 0 && (
-              <Badge variant="secondary" className="text-sm">
-                {form.promoDiscount}% promo discount applied
-              </Badge>
-            )}
-            <Separator />
-            <p className="text-sm text-gray-500">
-              A confirmation email has been sent to{" "}
-              <span className="font-medium">{form.email}</span>.
-            </p>
-            <Button
-              className="mt-4"
-              onClick={() => {
-                setForm({ ...initialFormState });
-                setStep(1);
-                setSubmitted(false);
-              }}
-            >
-              Submit Another Request
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 p-4 sm:p-8">
+        <div
+          className={cn(
+            "max-w-6xl mx-auto grid gap-6",
+            prefilledCalUrl ? "lg:grid-cols-2" : "grid-cols-1 max-w-lg"
+          )}
+        >
+          {/* ─── Confirmation (left column, or centered if no Cal.com) ─── */}
+          <Card className="shadow-xl h-fit" data-testid="card-confirmation">
+            <CardContent className="pt-10 pb-10 text-center space-y-4">
+              <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900">Thank You!</h2>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                Your quote request has been submitted. Our team will review
+                your event details and respond within{" "}
+                <span className="font-semibold">24-48 hours</span>.
+              </p>
+              {form.promoValid && form.promoDiscount > 0 && (
+                <Badge variant="secondary" className="text-sm">
+                  {form.promoDiscount}% promo discount applied
+                </Badge>
+              )}
+              <Separator />
+              <p className="text-sm text-gray-500">
+                A confirmation email has been sent to{" "}
+                <span className="font-medium">{form.email}</span>.
+              </p>
+              {prefilledCalUrl && (
+                <p className="text-sm text-gray-700 font-medium pt-1">
+                  Want answers faster? Book a free 15-minute call →
+                </p>
+              )}
+              <Button
+                variant="outline"
+                className="mt-2"
+                onClick={() => {
+                  setForm({ ...initialFormState });
+                  setStep(1);
+                  setSubmitted(false);
+                }}
+              >
+                Submit Another Request
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* ─── Cal.com embed (right column, only when configured) ─── */}
+          {prefilledCalUrl && (
+            <Card className="shadow-xl overflow-hidden" data-testid="card-cal-embed">
+              <div className="px-6 py-4 border-b bg-white">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Book a quick call with Mike
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Zoom or phone — your pick. Totally optional.
+                </p>
+              </div>
+              <iframe
+                src={prefilledCalUrl}
+                title="Book a consultation"
+                className="w-full border-0"
+                style={{ height: "min(75vh, 720px)" }}
+                data-testid="iframe-inquiry-cal-booking"
+              />
+            </Card>
+          )}
+        </div>
       </div>
     );
   }

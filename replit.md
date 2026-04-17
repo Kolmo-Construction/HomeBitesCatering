@@ -58,6 +58,11 @@ RESTful endpoints organized by feature domain:
 - `/api/questionnaires/*` - Public-facing questionnaire retrieval
 - `/api/gas-email-intake` - Google Apps Script email webhook for incoming customer emails
 - `/api/raw-leads/*` - Raw lead management (pre-opportunity conversion)
+- `/api/public/quote/:token/*` - Customer-facing proposal: `view`, `accept`, `decline`, `request-info`, `booking-config` (tokenized, no auth)
+- `/api/public/decline-feedback/:token` - Magic-link form that captures categorized decline reasons
+- `/api/cal-webhook` - Cal.com consultation-booking webhook (HMAC-SHA256 signature)
+- `/api/cron/event-reminders` - Daily cron: event reminders + day-after review/referral ask (requires `x-cron-secret` header)
+- `/api/cron/follow-up-engine` - Daily cron: generates follow-up DRAFTS for admin review
 
 **Data Layer (Storage Pattern):**
 The application uses a storage abstraction layer (`server/storage.ts`) that wraps Drizzle ORM operations. This provides a consistent interface for database operations and centralizes complex query logic. The storage layer handles relationships between entities (opportunities, clients, contact identifiers) and manages JSONB fields for flexible data structures.
@@ -114,7 +119,13 @@ Sessions persist across requests via HTTP-only cookies. The `/api/auth/me` endpo
 - @neondatabase/serverless - Serverless PostgreSQL driver for Neon hosting
 
 **Email Services:**
-- SendGrid (@sendgrid/mail) - Transactional email delivery (inquiry confirmations, notifications)
+- Resend - Transactional email delivery via `server/utils/email.ts`. Every send auto-logs to the `communications` table as an outgoing email. Gracefully skips when `RESEND_API_KEY` is unset. (SendGrid is still in package.json but no longer in active use.)
+
+**SMS Services:**
+- Twilio - Owner SMS alerts on new inquiries, info-requested events, consultation bookings, declines, and decline-feedback submissions. Wrapped by `server/services/smsService.ts` with the same graceful-skip + audit-log pattern as email. Controlled by `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, `OWNER_SMS_NUMBER`.
+
+**Booking / Calendar:**
+- Cal.com - Customer-facing consultation + tasting bookings. Embedded as an iframe on the proposal page when a client clicks "I need more info." Booking completion round-trips to the app via `POST /api/cal-webhook`, which matches the booking back to an estimate using a hidden `estimateToken` custom field. Secured by HMAC-SHA256 signature (`CAL_COM_WEBHOOK_SECRET`).
 
 **AI/ML Services:**
 - Anthropic SDK (@anthropic-ai/sdk) - Claude AI integration (likely for form generation or customer inquiry processing)
@@ -138,6 +149,25 @@ The system is designed to integrate with external services through environment c
 
 **Important Notes:**
 - Gmail sync services were removed from the codebase (November 2024) to simplify the architecture. Email intake now exclusively uses Google Apps Script webhook.
-- All communications (emails and phone calls) are tracked in the `communications` table with links to opportunities/raw leads
+- All communications (emails, phone calls, SMS, and Cal.com meetings) are tracked in the `communications` table with links to opportunities/raw leads
 - Phone calls are matched by normalized phone number (E.164 format) via the `contact_identifiers` table
 - OpenPhone webhooks require `OPENPHONE_WEBHOOK_SECRET` or `OPENPHONE_API_KEY` environment variable for authentication
+
+## Sales Funnel Automation (P0 — shipped)
+
+End-to-end proposal funnel with no manual steps gating customer progression:
+
+1. **Inquiry** — any inquiry channel (public form, quote-request form, forwarded email, OpenPhone inbound) fires an instant owner SMS via Twilio within seconds of landing.
+2. **Proposal** — the customer sees three doors on the public quote page: **Accept** / **I need more info** / **Decline**. The middle door opens a modal and surfaces an embedded Cal.com calendar for a Zoom or phone consultation; booking round-trips via `/api/cal-webhook` and stamps the estimate with `consultation_booked_at` + meeting URL.
+3. **Decline** — generates an unguessable magic-link token and auto-emails the customer a 10-second feedback form asking "why: pricing / menu / timing / other." Submissions categorize the reason on the estimate; Mike gets an owner email flagged with "consider re-engaging" when the category is pricing or menu.
+4. **Post-event** — daily cron (`/api/cron/event-reminders`) sends a "How did everything go?" email the day after `status='completed'` events, with Google review + $100 referral-credit CTAs. Stamp is idempotent (`review_request_sent_at`).
+
+All outgoing emails + SMS live behind graceful-skip helpers — the app runs and behaves correctly even when `RESEND_API_KEY`, `TWILIO_*`, or `CAL_COM_*` are unset. See `sales_funnel_implementation_plan.md` for P1/P2 roadmap and `Operational steps before this goes live.md` for account setup + smoke-test tracker.
+
+**Required env vars for the P0 funnel to be fully operational:**
+- Email: `RESEND_API_KEY`, `HOMEBITES_FROM_EMAIL`, `HOMEBITES_ADMIN_NOTIFICATION_EMAIL`
+- SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, `OWNER_SMS_NUMBER`
+- Calendar: `CAL_COM_EMBED_URL`, `CAL_COM_TASTING_URL`, `CAL_COM_WEBHOOK_SECRET`
+- Reviews: `GOOGLE_REVIEW_URL`, `REFERRAL_CREDIT_DOLLARS` (optional, defaults to 100)
+- Cron: `CRON_SECRET` (header `x-cron-secret` on all cron POSTs)
+- Misc: `HOMEBITES_PUBLIC_BASE_URL` (used in SMS links + email absolute URLs)

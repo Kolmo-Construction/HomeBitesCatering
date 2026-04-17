@@ -51,6 +51,19 @@ export interface QuoteProposalViewProps {
   acceptFlowState?: "idle" | "accepting" | "accepted" | "declining" | "declined";
   acceptedEventUrl?: string | null;
 
+  // P0-2: "I need more info" — opens a conversation path. Parent submits the
+  // note and returns the Cal.com booking URL, which this component embeds.
+  onRequestInfo?: (note: string) => Promise<{ bookingUrl: string | null } | null>;
+  infoFlowState?: "idle" | "submitting" | "submitted";
+  // Pre-existing state pulled from the server (set if the user already clicked
+  // "Need More Info" in a prior session or already booked a time).
+  infoRequestedAt?: string | null;
+  consultationBookedAt?: string | null;
+  consultationMeetingUrl?: string | null;
+  // Resolved Cal.com URL (from /booking-config) — used when re-opening the
+  // embed on a subsequent visit.
+  resolvedBookingUrl?: string | null;
+
   // Preview mode — admin actions
   onBack?: () => void;
   onEdit?: () => void;
@@ -240,6 +253,12 @@ export default function QuoteProposalView({
   onDecline,
   acceptFlowState = "idle",
   acceptedEventUrl = null,
+  onRequestInfo,
+  infoFlowState = "idle",
+  infoRequestedAt = null,
+  consultationBookedAt = null,
+  consultationMeetingUrl = null,
+  resolvedBookingUrl = null,
   onBack,
   onEdit,
   onSend,
@@ -249,6 +268,9 @@ export default function QuoteProposalView({
 }: QuoteProposalViewProps) {
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [infoNote, setInfoNote] = useState("");
+  const [activeBookingUrl, setActiveBookingUrl] = useState<string | null>(resolvedBookingUrl);
 
   const effectiveStatus =
     acceptFlowState === "accepted" || estimateStatus === "accepted"
@@ -298,6 +320,22 @@ export default function QuoteProposalView({
 
   const handleConfirmDecline = () => {
     if (onDecline) onDecline(declineReason.trim());
+  };
+
+  // P0-2: open the modal. If the user already requested info in a prior
+  // session, jump straight to the iframe using the previously-resolved URL.
+  const handleNeedMoreInfoClick = () => {
+    if (infoRequestedAt && activeBookingUrl) {
+      setShowInfoModal(true);
+      return;
+    }
+    setShowInfoModal(true);
+  };
+
+  const handleSubmitInfoRequest = async () => {
+    if (!onRequestInfo) return;
+    const result = await onRequestInfo(infoNote.trim());
+    if (result?.bookingUrl) setActiveBookingUrl(result.bookingUrl);
   };
 
   return (
@@ -708,7 +746,26 @@ export default function QuoteProposalView({
               </>
             )}
           </Button>
-          <p className="mt-5 text-sm">
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm">
+            {onRequestInfo && (
+              <button
+                type="button"
+                onClick={handleNeedMoreInfoClick}
+                className="text-white hover:text-white underline underline-offset-4 font-medium"
+                data-testid="button-need-more-info"
+              >
+                I need more info — let&rsquo;s talk
+              </button>
+            )}
+            <a
+              href="/tasting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white hover:text-white underline underline-offset-4 font-medium"
+              data-testid="button-book-tasting"
+            >
+              🍴 Book a tasting first
+            </a>
             <button
               type="button"
               onClick={() => setShowDeclineForm(true)}
@@ -717,7 +774,112 @@ export default function QuoteProposalView({
             >
               I need to pass on this
             </button>
-          </p>
+          </div>
+          {consultationBookedAt && (
+            <p className="mt-4 text-sm text-white/90" data-testid="consultation-booked-indicator">
+              ✓ Call scheduled for {new Date(consultationBookedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════ "I NEED MORE INFO" MODAL ═══════════════ */}
+      {mode === "public" && showInfoModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4 py-8 overflow-y-auto"
+          onClick={() => setShowInfoModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Step 1: collect the optional note */}
+            {!activeBookingUrl && infoFlowState !== "submitted" && (
+              <div className="p-6 sm:p-8">
+                <h3 className="text-2xl font-serif text-stone-900 mb-2">
+                  Let&rsquo;s talk it through
+                </h3>
+                <p className="text-stone-600 mb-5">
+                  What would you like to discuss? Totally optional — you can skip and
+                  go straight to booking a time.
+                </p>
+                <Textarea
+                  value={infoNote}
+                  onChange={(e) => setInfoNote(e.target.value)}
+                  placeholder="e.g. 'Can we swap the salmon for something else?', 'Curious about budget flexibility', 'Want to ask about timing on the day…'"
+                  rows={4}
+                  className="border-stone-300 mb-4"
+                  data-testid="input-info-note"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowInfoModal(false);
+                      setInfoNote("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 bg-[#8B7355] hover:bg-[#7a6448] text-white"
+                    disabled={infoFlowState === "submitting"}
+                    onClick={handleSubmitInfoRequest}
+                    data-testid="button-confirm-need-info"
+                  >
+                    {infoFlowState === "submitting" ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Getting calendar…
+                      </>
+                    ) : (
+                      "Pick a time →"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Cal.com embed (or fallback) */}
+            {activeBookingUrl && (
+              <div>
+                <div className="px-6 pt-5 pb-3 border-b border-stone-200 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-serif text-stone-900">Pick a time to talk</h3>
+                    <p className="text-sm text-stone-500">Zoom or phone — your choice.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowInfoModal(false)}
+                    className="text-stone-400 hover:text-stone-700 text-2xl leading-none"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <iframe
+                  src={activeBookingUrl}
+                  className="w-full h-[70vh] border-0"
+                  title="Book a consultation"
+                  data-testid="iframe-cal-booking"
+                />
+              </div>
+            )}
+
+            {/* Fallback: no Cal.com configured */}
+            {!activeBookingUrl && infoFlowState === "submitted" && (
+              <div className="p-8 text-center">
+                <p className="text-stone-700 mb-2">
+                  Thanks — we&rsquo;ve got your message.
+                </p>
+                <p className="text-stone-500 text-sm mb-4">
+                  We&rsquo;ll reach out shortly to set up a call.
+                </p>
+                <Button onClick={() => setShowInfoModal(false)}>Close</Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
