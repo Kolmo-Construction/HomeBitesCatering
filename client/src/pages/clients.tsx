@@ -2,15 +2,22 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import ClientList from "@/components/clients/ClientList";
 import ClientForm from "@/components/clients/ClientForm";
+import ClientTimeline from "@/components/clients/ClientTimeline";
+import ClientIdentifiers from "@/components/clients/ClientIdentifiers";
+import LogCommunicationDialog from "@/components/clients/LogCommunicationDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { formatDate } from "@/lib/utils";
+import { ArrowLeft, PenIcon } from "lucide-react";
 
 export default function Clients() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mode, setMode] = useState<"list" | "new" | "edit" | "view">("list");
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  
+
   // Extract mode and ID from location
   useEffect(() => {
     if (location === "/clients") {
@@ -27,7 +34,7 @@ export default function Clients() {
       setSelectedClientId(parseInt(location.split("/")[2], 10));
     }
   }, [location]);
-  
+
   // Fetch client data if editing or viewing
   const { data: client, isLoading: isLoadingClient } = useQuery({
     queryKey: ["/api/clients", selectedClientId],
@@ -38,7 +45,7 @@ export default function Clients() {
     },
     enabled: (mode === "edit" || mode === "view") && !!selectedClientId,
   });
-  
+
   // Fetch estimates for the client if viewing
   const { data: clientEstimates = [], isLoading: isLoadingEstimates } = useQuery({
     queryKey: ["/api/estimates", selectedClientId],
@@ -50,16 +57,16 @@ export default function Clients() {
     },
     enabled: mode === "view" && !!selectedClientId,
   });
-  
+
   // Render appropriate component based on mode
   if (mode === "list") {
     return <ClientList />;
   }
-  
+
   if (mode === "new") {
     return <ClientForm />;
   }
-  
+
   if ((mode === "edit" || mode === "view") && isLoadingClient) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -67,83 +74,75 @@ export default function Clients() {
       </div>
     );
   }
-  
+
   if (mode === "edit" && client) {
     return <ClientForm client={client} isEditing={true} />;
   }
-  
+
   if (mode === "view" && client) {
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="font-poppins text-2xl font-bold text-neutral-900">Client Details</h1>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {client.firstName} {client.lastName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Contact Information</h3>
-                    <div className="space-y-2">
-                      <p><span className="font-medium">Email:</span> {client.email}</p>
-                      <p><span className="font-medium">Phone:</span> {client.phone || "—"}</p>
-                      {client.company && (
-                        <p><span className="font-medium">Company:</span> {client.company}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {(client.address || client.city || client.state || client.zip) && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-1">Address</h3>
-                      <div className="space-y-2">
-                        {client.address && <p>{client.address}</p>}
-                        <p>
-                          {client.city && `${client.city}, `}
-                          {client.state} {client.zip}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {client.notes && (
-                  <div className="mt-4 pt-4 border-t">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
-                    <p className="text-gray-700 whitespace-pre-wrap">{client.notes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/clients")}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+            <h1 className="font-poppins text-2xl font-bold text-neutral-900">
+              {client.firstName} {client.lastName}
+            </h1>
+            <Badge variant={client.type === "customer" ? "default" : "secondary"} className="capitalize">
+              {client.type || "prospect"}
+            </Badge>
           </div>
-          
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Client Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Estimates</h3>
+          <div className="flex items-center gap-2">
+            <LogCommunicationDialog clientId={client.id} />
+            <Button size="sm" variant="outline" onClick={() => navigate(`/clients/${client.id}/edit`)}>
+              <PenIcon className="h-4 w-4 mr-1" /> Edit
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column: Timeline (main content) */}
+          <div className="lg:col-span-2">
+            <Tabs defaultValue="timeline">
+              <TabsList>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="estimates">Estimates ({clientEstimates.length})</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="timeline" className="mt-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <ClientTimeline clientId={client.id} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="estimates" className="mt-4">
+                <Card>
+                  <CardContent className="pt-6">
                     {isLoadingEstimates ? (
                       <p className="text-sm text-gray-500">Loading estimates...</p>
                     ) : clientEstimates.length > 0 ? (
-                      <ul className="space-y-2">
+                      <ul className="space-y-3">
                         {clientEstimates.map((estimate: any) => (
-                          <li key={estimate.id} className="text-sm">
-                            <a 
-                              href={`/estimates/${estimate.id}/view`} 
-                              className="text-primary-purple hover:underline"
-                            >
-                              {estimate.eventType} - {formatDate(new Date(estimate.createdAt))}
+                          <li key={estimate.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                            <a href={`/estimates/${estimate.id}/view`} className="block">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-primary-purple">
+                                  {estimate.eventType} - {formatDate(new Date(estimate.createdAt))}
+                                </span>
+                                <Badge variant="outline" className="capitalize text-xs">
+                                  {estimate.status}
+                                </Badge>
+                              </div>
+                              {estimate.total && (
+                                <span className="text-xs text-gray-500">
+                                  ${(estimate.total / 100).toLocaleString()}
+                                </span>
+                              )}
                             </a>
                           </li>
                         ))}
@@ -151,21 +150,53 @@ export default function Clients() {
                     ) : (
                       <p className="text-sm text-gray-500">No estimates yet</p>
                     )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Right column: Contact info + Identifiers */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <p><span className="font-medium text-gray-500">Email:</span> {client.email}</p>
+                  <p><span className="font-medium text-gray-500">Phone:</span> {client.phone || "---"}</p>
+                  {client.company && (
+                    <p><span className="font-medium text-gray-500">Company:</span> {client.company}</p>
+                  )}
+                  {(client.address || client.city) && (
+                    <p>
+                      <span className="font-medium text-gray-500">Address:</span>{" "}
+                      {[client.address, client.city, client.state, client.zip].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                </div>
+
+                {client.notes && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notes}</p>
                   </div>
-                  
-                  <div className="pt-4 border-t">
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Client Since</h3>
-                    <p className="text-sm">{formatDate(new Date(client.createdAt))}</p>
-                  </div>
+                )}
+
+                <div className="mt-4 pt-4 border-t text-xs text-gray-400">
+                  Client since {formatDate(new Date(client.createdAt))}
                 </div>
               </CardContent>
             </Card>
+
+            <ClientIdentifiers clientId={client.id} />
           </div>
         </div>
       </div>
     );
   }
-  
+
   return (
     <div className="text-center py-12">
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Client Not Found</h2>

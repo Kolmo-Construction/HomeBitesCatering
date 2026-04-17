@@ -485,16 +485,18 @@ export const insertEventSchema = createInsertSchema(events, {
 });
 
 // --- NEW: Contact Identifiers Table ---
-export const identifierTypeEnum = pgEnum("identifier_type", ["email", "phone"]);
+export const identifierTypeEnum = pgEnum("identifier_type", ["email", "phone", "sms", "whatsapp", "instagram", "web_chat", "other"]);
 
 export const contactIdentifiers = pgTable("contact_identifiers", {
   id: serial("id").primaryKey(),
   opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'cascade' }), // Link to opportunity
   clientId: integer("client_id").references(() => clients.id, { onDelete: 'cascade' }), // Link to client
-  type: identifierTypeEnum("type").notNull(), // 'email' or 'phone'
-  value: text("value").notNull(), // The actual email address or phone number
+  type: identifierTypeEnum("type").notNull(), // 'email', 'phone', 'sms', 'whatsapp', 'instagram', 'web_chat', 'other'
+  value: text("value").notNull(), // The actual email address, phone number, handle, etc.
+  label: text("label"), // Optional human-readable label (e.g., "Work email", "Mom's phone")
   isPrimary: boolean("is_primary").default(false).notNull(),
-  source: text("source"), // How this identifier was added (e.g., 'lead_form', 'email_sync', 'manual_entry')
+  verified: boolean("verified").default(false).notNull(), // Whether this identifier has been confirmed (e.g., email opened, call answered)
+  source: text("source"), // How this identifier was added (e.g., 'lead_form', 'email_sync', 'manual_entry', 'web_chat', 'gmail_sync')
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -504,7 +506,7 @@ export const insertContactIdentifierSchema = createInsertSchema(contactIdentifie
 });
 
 // --- NEW: Communications/Interactions Table ---
-export const communicationTypeEnum = pgEnum("communication_type", ["email", "call", "sms", "note", "meeting"]);
+export const communicationTypeEnum = pgEnum("communication_type", ["email", "call", "sms", "note", "meeting", "in_person", "web_chat", "hand_written", "whatsapp"]);
 export const communicationDirectionEnum = pgEnum("communication_direction", ["incoming", "outgoing", "internal"]);
 
 export const communications = pgTable("communications", {
@@ -1285,7 +1287,6 @@ export const insertQuoteRequestSchema = createInsertSchema(quoteRequests, {
   estimatedSubtotalCents: true,
   estimatedServiceFeeCents: true,
   estimatedTaxCents: true,
-  estimatedTotalCents: true,
 });
 
 export type QuoteRequest = typeof quoteRequests.$inferSelect;

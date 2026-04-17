@@ -1629,9 +1629,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/clients', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const clientData = insertClientSchema.parse(req.body);
-      
+
       const newClient = await storage.createClient(clientData);
-      
+
+      // Auto-seed contact identifiers from primary email/phone
+      try {
+        await storage.seedClientIdentifiers(newClient.id, newClient.email, newClient.phone);
+      } catch (seedErr) {
+        console.error('Warning: failed to seed identifiers for new client:', seedErr);
+      }
+
       res.status(201).json(newClient);
     } catch (error) {
       console.error('Error creating client:', error);
@@ -1961,6 +1968,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ type: 'customer', updatedAt: now })
         .where(eq(clients.id, estimate.clientId))
         .returning();
+
+      // Ensure contact identifiers exist for matching engine
+      if (updatedClient) {
+        try {
+          await storage.seedClientIdentifiers(updatedClient.id, updatedClient.email, updatedClient.phone);
+        } catch (seedErr) {
+          console.error('Warning: failed to seed identifiers on estimate accept:', seedErr);
+        }
+      }
 
       // Auto-create (or fetch existing) Event row for this estimate
       const [existingEvent] = await db.select().from(events).where(eq(events.estimateId, estimateId));
@@ -3680,27 +3696,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/communications', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const data = insertCommunicationSchema.parse(req.body);
-      
+
       // Set the user ID for tracking who created it
       const userId = req.session.userId;
-      
+
+      // Auto-match: if no clientId provided, try to resolve from fromAddress or toAddress
+      let resolvedClientId = data.clientId;
+      let resolvedOpportunityId = data.opportunityId;
+      if (!resolvedClientId) {
+        const matchValue = data.fromAddress || data.toAddress;
+        if (matchValue) {
+          const match = await storage.resolveClientFromIdentifier(matchValue);
+          if (match && match.clientId > 0) {
+            resolvedClientId = match.clientId;
+            if (!resolvedOpportunityId && match.opportunityId) {
+              resolvedOpportunityId = match.opportunityId;
+            }
+          }
+        }
+      }
+
       const result = await storage.createCommunication({
         ...data,
+        clientId: resolvedClientId,
+        opportunityId: resolvedOpportunityId,
         userId
       });
-      
+
       res.status(201).json(result);
     } catch (error) {
       console.error('Error creating communication:', error);
-      
+
       if (error instanceof ZodError) {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
-      
+
       res.status(500).json({ message: 'Server error' });
     }
   });
   
+  // Get unmatched communications (MUST be before /:id route)
+  app.get('/api/communications/unmatched', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const result = await storage.getUnmatchedCommunications();
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error getting unmatched communications:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Get a specific communication
   app.get('/api/communications/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -4012,6 +4057,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error building contact timeline:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ─── Unified Client Timeline (by client ID) ──────────────────────────────
+  // Aggregates all communications, estimates, events, and status changes for a client.
+  app.get('/api/clients/:id/timeline', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ message: 'Invalid client ID' });
+      }
+
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
+
+      const timeline: Array<{
+        id: string;
+        type: string;
+        channel?: string;
+        timestamp: string;
+        title: string;
+        detail?: string;
+        direction?: string;
+        entityType?: string;
+        entityId?: number;
+      }> = [];
+
+      // 1. All communications directly linked to this client
+      const comms = await storage.getCommunicationsForClient(clientId);
+      for (const c of comms) {
+        timeline.push({
+          id: `comm-${c.id}`,
+          type: 'communication',
+          channel: c.type,
+          direction: c.direction,
+          timestamp: (c.timestamp || c.createdAt).toString(),
+          title: c.subject || `${c.type} (${c.direction})`,
+          detail: c.bodySummary || c.bodyRaw?.substring(0, 200) || undefined,
+          entityType: 'communication',
+          entityId: c.id,
+        });
+      }
+
+      // 2. Also get communications linked to the client's opportunities
+      const allOpps = await storage.listOpportunities();
+      const clientOpps = allOpps.filter(o => o.clientId === clientId);
+      for (const opp of clientOpps) {
+        const oppComms = await storage.getCommunicationsForOpportunity(opp.id);
+        for (const c of oppComms) {
+          if (timeline.some(t => t.id === `comm-${c.id}`)) continue;
+          timeline.push({
+            id: `comm-${c.id}`,
+            type: 'communication',
+            channel: c.type,
+            direction: c.direction,
+            timestamp: (c.timestamp || c.createdAt).toString(),
+            title: c.subject || `${c.type} (${c.direction})`,
+            detail: c.bodySummary || c.bodyRaw?.substring(0, 200) || undefined,
+            entityType: 'communication',
+            entityId: c.id,
+          });
+        }
+
+        // Status changes from opportunities
+        if (opp.statusHistory && Array.isArray(opp.statusHistory)) {
+          for (const entry of opp.statusHistory as any[]) {
+            timeline.push({
+              id: `status-${opp.id}-${entry.changedAt}`,
+              type: 'status_change',
+              timestamp: entry.changedAt,
+              title: `Pipeline: status changed to "${entry.status}"`,
+              entityType: 'opportunity',
+              entityId: opp.id,
+            });
+          }
+        }
+
+        // Inquiry milestones
+        if (opp.inquirySentAt) {
+          timeline.push({
+            id: `inquiry-sent-${opp.id}`,
+            type: 'milestone',
+            timestamp: new Date(opp.inquirySentAt).toISOString(),
+            title: 'Inquiry email sent',
+            entityType: 'opportunity',
+            entityId: opp.id,
+          });
+        }
+        if (opp.inquiryViewedAt) {
+          timeline.push({
+            id: `inquiry-viewed-${opp.id}`,
+            type: 'milestone',
+            timestamp: new Date(opp.inquiryViewedAt).toISOString(),
+            title: 'Customer opened inquiry',
+            entityType: 'opportunity',
+            entityId: opp.id,
+          });
+        }
+      }
+
+      // 3. Estimate milestones
+      const allEstimates = await storage.listEstimates();
+      const clientEstimates = allEstimates.filter(e => e.clientId === clientId);
+      for (const est of clientEstimates) {
+        timeline.push({
+          id: `est-created-${est.id}`,
+          type: 'milestone',
+          timestamp: new Date(est.createdAt).toISOString(),
+          title: `Quote created ($${(est.total / 100).toLocaleString()})`,
+          entityType: 'estimate',
+          entityId: est.id,
+        });
+        if (est.sentAt) {
+          timeline.push({
+            id: `est-sent-${est.id}`,
+            type: 'milestone',
+            timestamp: new Date(est.sentAt).toISOString(),
+            title: `Quote sent ($${(est.total / 100).toLocaleString()})`,
+            entityType: 'estimate',
+            entityId: est.id,
+          });
+        }
+        if (est.viewedAt) {
+          timeline.push({
+            id: `est-viewed-${est.id}`,
+            type: 'milestone',
+            timestamp: new Date(est.viewedAt).toISOString(),
+            title: 'Customer viewed quote',
+            entityType: 'estimate',
+            entityId: est.id,
+          });
+        }
+        if (est.acceptedAt) {
+          timeline.push({
+            id: `est-accepted-${est.id}`,
+            type: 'milestone',
+            timestamp: new Date(est.acceptedAt).toISOString(),
+            title: 'Quote accepted!',
+            entityType: 'estimate',
+            entityId: est.id,
+          });
+        }
+        if (est.declinedAt) {
+          timeline.push({
+            id: `est-declined-${est.id}`,
+            type: 'milestone',
+            timestamp: new Date(est.declinedAt).toISOString(),
+            title: `Quote declined${est.declinedReason ? `: ${est.declinedReason}` : ''}`,
+            entityType: 'estimate',
+            entityId: est.id,
+          });
+        }
+      }
+
+      // 4. Event milestones
+      const allEvents = await storage.listEvents();
+      const clientEvents = allEvents.filter(e => e.clientId === clientId);
+      for (const evt of clientEvents) {
+        timeline.push({
+          id: `event-created-${evt.id}`,
+          type: 'milestone',
+          timestamp: new Date(evt.createdAt).toISOString(),
+          title: `Event booked: ${evt.eventType} (${evt.guestCount} guests)`,
+          detail: evt.venue || undefined,
+          entityType: 'event',
+          entityId: evt.id,
+        });
+      }
+
+      // 5. Quote requests linked via opportunity
+      const oppIds = clientOpps.map(o => o.id);
+      if (oppIds.length > 0) {
+        const allQR = await db.select().from(quoteRequests);
+        const linkedQR = allQR.filter(qr => qr.opportunityId && oppIds.includes(qr.opportunityId));
+        for (const qr of linkedQR) {
+          if (qr.submittedAt) {
+            timeline.push({
+              id: `qr-submitted-${qr.id}`,
+              type: 'milestone',
+              timestamp: new Date(qr.submittedAt).toISOString(),
+              title: `Quote request submitted (${qr.eventType})`,
+              entityType: 'quoteRequest',
+              entityId: qr.id,
+            });
+          }
+        }
+      }
+
+      // Sort chronologically (newest first)
+      timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      res.status(200).json({
+        client: { id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email },
+        totalEntries: timeline.length,
+        timeline,
+      });
+    } catch (error) {
+      console.error('Error building client timeline:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Assign an unmatched communication to a client
+  app.post('/api/communications/:id/assign', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const communicationId = parseInt(req.params.id);
+      const { clientId } = req.body;
+
+      if (isNaN(communicationId) || !clientId) {
+        return res.status(400).json({ message: 'Communication ID and clientId are required' });
+      }
+
+      const result = await storage.assignCommunicationToClient(communicationId, clientId);
+      if (!result) {
+        return res.status(404).json({ message: 'Communication not found' });
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error assigning communication:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });

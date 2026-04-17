@@ -615,6 +615,15 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       type: 'prospect',
     }).returning())[0];
 
+    // Auto-seed contact identifiers for matching engine
+    if (!existingClient) {
+      try {
+        await storage.seedClientIdentifiers(client.id, client.email, client.phone);
+      } catch (seedErr) {
+        console.error('Warning: failed to seed identifiers for new client:', seedErr);
+      }
+    }
+
     // 2. Create opportunity
     const [opportunity] = await db.insert(opportunities).values({
       firstName: request.firstName,

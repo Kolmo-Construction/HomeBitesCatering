@@ -43,6 +43,7 @@ import {
   Columns3,
   GripVertical,
   RotateCcw,
+  MessageCircleQuestion,
 } from "lucide-react";
 
 // Full nav, with a `chef` flag on items kitchen staff should see. Items without
@@ -63,6 +64,7 @@ const ALL_NAV: NavItem[] = [
   { name: "Quote Requests", href: "/quote-requests", icon: MessageSquareQuote },
   { name: "Quotes", href: "/estimates", icon: FileText },
   { name: "Clients", href: "/clients", icon: Users },
+  { name: "Unmatched", href: "/unmatched", icon: MessageCircleQuestion },
   { name: "Events", href: "/events", icon: CalendarCheck, chef: true },
   { name: "Calendar", href: "/calendar", icon: Calendar, chef: true },
   { name: "Menus", href: "/menus", icon: ClipboardList, chef: true },

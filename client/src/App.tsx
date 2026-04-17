@@ -32,9 +32,6 @@ import { EventType } from "@/pages/wedding/types/weddingFormTypes"; // Get Event
 // Import the new Public Event Inquiry page
 import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 
-// Tier 1: Unified inquiry form (consolidates PublicInquiryForm, PublicEventInquiryPage, WeddingInquiry)
-import UnifiedInquiryForm from "@/pages/UnifiedInquiryForm";
-
 // Tier 3: Client portal (magic-link authenticated)
 import ClientPortal from "@/pages/ClientPortal";
 
@@ -58,6 +55,7 @@ import PublicEventPage from "@/pages/PublicEventPage";
 
 // Public self-serve "find my event" link recovery page
 import FindMyEvent from "@/pages/FindMyEvent";
+import UnmatchedInbox from "@/pages/UnmatchedInbox";
 
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
@@ -129,9 +127,8 @@ function AppContent() {
   const isPublicQuotePage = location.startsWith("/quote/");
   const isPublicEventPage = location.startsWith("/event/");
   const isFindMyEventPage = location === "/find-my-event";
-  const isGetStartedPage = location === "/get-started";
   const isClientPortalPage = location.startsWith("/my-events");
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isGetStartedPage || isClientPortalPage || location === "/inquiry" || location === "/event-selection";
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage;
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -139,16 +136,8 @@ function AppContent() {
       <div className="min-h-screen bg-gray-50">
         <Toaster />
         <Switch>
-          {/* Tier 1: Unified inquiry form — new canonical URL */}
-          <Route path="/get-started" component={UnifiedInquiryForm} />
           {/* Tier 3: Client portal (magic-link auth) */}
           <Route path="/my-events" component={ClientPortal} />
-          {/* Legacy inquiry forms — redirect to unified form */}
-          <Route path="/wedding-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          <Route path="/event-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          <Route path="/inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          <Route path="/event-selection">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          {/* These remain as-is (they serve different purposes) */}
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
@@ -215,6 +204,7 @@ function AppContent() {
           <Route path="/clients/new" component={Clients} />
           <Route path="/clients/:id" component={Clients} />
           <Route path="/clients/:id/edit" component={Clients} />
+          <Route path="/unmatched" component={UnmatchedInbox} />
           <Route path="/estimates" component={Estimates} />
           <Route path="/estimates/new" component={Estimates} />
           <Route path="/estimates/:id/view" component={Estimates} />
@@ -239,11 +229,6 @@ function AppContent() {
           <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible when logged in */}
-          <Route path="/get-started" component={UnifiedInquiryForm} />
-          <Route path="/wedding-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          <Route path="/event-inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          <Route path="/inquiry">{() => { window.location.replace("/get-started"); return null; }}</Route>
-          <Route path="/event-selection">{() => { window.location.replace("/get-started"); return null; }}</Route>
           <Route path="/request-quote" component={RequestQuote} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />

@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, ClipboardCheck, Wand2, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, TrendingUp, TrendingDown, ClipboardCheck, Wand2, Sparkles, ArrowUp, ArrowDown, ArrowUpDown, Eye } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type BaseIngredient, insertBaseIngredientSchema, DIETARY_TAGS } from "@shared/schema";
@@ -106,8 +106,28 @@ export default function BaseIngredientsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  type SortField = "name" | "category" | "price" | "unit" | "supplier";
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDirection === "asc"
+      ? <ArrowUp className="h-3 w-3 ml-1 inline" />
+      : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<BaseIngredient | null>(null);
+  const [viewingIngredient, setViewingIngredient] = useState<BaseIngredient | null>(null);
   const [deletingIngredient, setDeletingIngredient] = useState<BaseIngredient | null>(null);
   const [suggestion, setSuggestion] = useState<ConversionSuggestion | null>(null);
   const [isBackfilling, setIsBackfilling] = useState(false);
@@ -355,6 +375,28 @@ export default function BaseIngredientsPage() {
     return matchesSearch && matchesCategory;
   });
 
+  // Sort ingredients
+  const sortedIngredients = [...filteredIngredients].sort((a, b) => {
+    const dir = sortDirection === "asc" ? 1 : -1;
+    switch (sortField) {
+      case "name":
+        return a.name.localeCompare(b.name) * dir;
+      case "category":
+        return (a.category || "").localeCompare(b.category || "") * dir;
+      case "price": {
+        const aPrice = parseFloat(a.purchasePrice) / parseFloat(a.purchaseQuantity || "1");
+        const bPrice = parseFloat(b.purchasePrice) / parseFloat(b.purchaseQuantity || "1");
+        return (aPrice - bPrice) * dir;
+      }
+      case "unit":
+        return (a.purchaseUnit || "").localeCompare(b.purchaseUnit || "") * dir;
+      case "supplier":
+        return (a.supplier || "").localeCompare(b.supplier || "") * dir;
+      default:
+        return 0;
+    }
+  });
+
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl" data-testid="page-base-ingredients">
       <div className="flex flex-col gap-6">
@@ -463,7 +505,7 @@ export default function BaseIngredientsPage() {
           <CardContent className="pt-6">
             {isLoading ? (
               <div className="text-center py-12" data-testid="text-loading">Loading...</div>
-            ) : filteredIngredients.length === 0 ? (
+            ) : sortedIngredients.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground" data-testid="text-no-ingredients">
                 No ingredients found. Add your first ingredient to get started.
               </div>
@@ -472,19 +514,49 @@ export default function BaseIngredientsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("name")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-name"
+                      >
+                        Name<SortIcon field="name" />
+                      </TableHead>
                       <TableHead>SKU</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Purchase Price</TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("category")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-category"
+                      >
+                        Category<SortIcon field="category" />
+                      </TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("price")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-price"
+                      >
+                        Purchase Price<SortIcon field="price" />
+                      </TableHead>
                       <TableHead>Price Change</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead>Supplier</TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("unit")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-unit"
+                      >
+                        Unit<SortIcon field="unit" />
+                      </TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("supplier")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-supplier"
+                      >
+                        Supplier<SortIcon field="supplier" />
+                      </TableHead>
                       <TableHead>Dietary</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIngredients.map((ingredient) => {
+                    {sortedIngredients.map((ingredient) => {
                       const priceChange = calculatePriceChange(ingredient);
                       const percentageChange = calculatePercentageChange(ingredient);
                       
@@ -568,8 +640,18 @@ export default function BaseIngredientsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                onClick={() => setViewingIngredient(ingredient)}
+                                data-testid={`button-view-${ingredient.id}`}
+                                title="View details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleEdit(ingredient)}
                                 data-testid={`button-edit-${ingredient.id}`}
+                                title="Edit"
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -927,6 +1009,159 @@ export default function BaseIngredientsPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog
+        open={viewingIngredient !== null}
+        onOpenChange={(open) => !open && setViewingIngredient(null)}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-ingredient">
+          <DialogHeader>
+            <DialogTitle>{viewingIngredient?.name}</DialogTitle>
+            <DialogDescription>Ingredient details</DialogDescription>
+          </DialogHeader>
+          {viewingIngredient && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Category</div>
+                  <div className="mt-1">
+                    <Badge variant="outline">
+                      {INGREDIENT_CATEGORIES.find((c) => c.value === viewingIngredient.category)?.label ||
+                        viewingIngredient.category}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">SKU</div>
+                  <div className="mt-1 font-mono">{viewingIngredient.sku || "—"}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Purchase Price</div>
+                  <div className="mt-1 font-medium">
+                    {formatCurrency(parseFloat(viewingIngredient.purchasePrice))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Quantity</div>
+                  <div className="mt-1">{viewingIngredient.purchaseQuantity}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Unit</div>
+                  <div className="mt-1">{viewingIngredient.purchaseUnit}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Price Per Unit</div>
+                <div className="mt-1 font-medium">
+                  {formatCurrency(
+                    parseFloat(viewingIngredient.purchasePrice) /
+                      parseFloat(viewingIngredient.purchaseQuantity || "1"),
+                  )}{" "}
+                  / {viewingIngredient.purchaseUnit}
+                </div>
+              </div>
+
+              {viewingIngredient.previousPurchasePrice && (
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Previous Price</div>
+                  <div className="mt-1">
+                    {formatCurrency(parseFloat(viewingIngredient.previousPurchasePrice))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Supplier</div>
+                  <div className="mt-1">{viewingIngredient.supplier || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Yield / Trim</div>
+                  <div className="mt-1">
+                    {viewingIngredient.yieldPct
+                      ? `${(parseFloat(viewingIngredient.yieldPct) * 100).toFixed(1)}%`
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+
+              {(viewingIngredient.dietaryTags as string[] | null)?.length ? (
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Dietary Characteristics</div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {(viewingIngredient.dietaryTags as string[]).map((tag) => {
+                      const tagInfo = DIETARY_TAGS.find((t) => t.value === tag);
+                      return (
+                        <Badge key={tag} variant="secondary">
+                          {tagInfo?.label || tag}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {viewingIngredient.unitConversions &&
+                Object.keys(viewingIngredient.unitConversions as Record<string, number>).length > 0 && (
+                  <div>
+                    <div className="text-muted-foreground text-xs uppercase">Unit Conversions</div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {Object.entries(
+                        viewingIngredient.unitConversions as Record<string, number>,
+                      ).map(([unit, factor]) => (
+                        <Badge key={unit} variant="outline" className="font-mono text-[11px]">
+                          1 {unit} = {factor} {viewingIngredient.purchaseUnit}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {viewingIngredient.notes && (
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Notes</div>
+                  <div className="mt-1 whitespace-pre-wrap">{viewingIngredient.notes}</div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 pt-2 text-xs text-muted-foreground border-t">
+                <div>
+                  Created: {new Date(viewingIngredient.createdAt).toLocaleDateString()}
+                </div>
+                <div>
+                  Updated: {new Date(viewingIngredient.updatedAt).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setViewingIngredient(null)}
+              data-testid="button-close-view"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (viewingIngredient) {
+                  handleEdit(viewingIngredient);
+                  setViewingIngredient(null);
+                }
+              }}
+              data-testid="button-edit-from-view"
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

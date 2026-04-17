@@ -93,13 +93,15 @@ export interface IStorage {
   listEvents(): Promise<Event[]>;
   listUpcomingEvents(): Promise<Event[]>;
 
-  // Contact Identifiers 
+  // Contact Identifiers
   createContactIdentifier(data: InsertContactIdentifier): Promise<ContactIdentifier>;
   getContactIdentifier(id: number): Promise<ContactIdentifier | undefined>;
   getContactIdentifiersForOpportunity(opportunityId: number): Promise<ContactIdentifier[]>;
   getContactIdentifiersForClient(clientId: number): Promise<ContactIdentifier[]>;
   findContactIdentifierByPhone(phone: string): Promise<ContactIdentifier | undefined>;
+  findContactIdentifierByValue(value: string): Promise<ContactIdentifier | undefined>;
   deleteContactIdentifier(id: number): Promise<boolean>;
+  seedClientIdentifiers(clientId: number, email: string, phone?: string | null): Promise<void>;
 
   // Communications
   createCommunication(data: InsertCommunication): Promise<Communication>;
@@ -107,6 +109,9 @@ export interface IStorage {
   getCommunicationsForOpportunity(opportunityId: number): Promise<Communication[]>;
   getCommunicationsForClient(clientId: number): Promise<Communication[]>;
   getCommunicationsForRawLead(rawLeadId: number): Promise<Communication[]>;
+  getUnmatchedCommunications(): Promise<Communication[]>;
+  assignCommunicationToClient(communicationId: number, clientId: number): Promise<Communication | undefined>;
+  resolveClientFromIdentifier(value: string): Promise<{ clientId: number; opportunityId?: number } | null>;
   
   // Opportunity Email Threads
   createOpportunityEmailThread(data: InsertOpportunityEmailThread): Promise<OpportunityEmailThread>;
@@ -555,6 +560,109 @@ export class DatabaseStorage implements IStorage {
     return !!deletedIdentifier;
   }
 
+  async findContactIdentifierByValue(value: string): Promise<ContactIdentifier | undefined> {
+    const normalized = value.trim().toLowerCase();
+    const [identifier] = await db
+      .select()
+      .from(contactIdentifiers)
+      .where(sql`lower(trim(${contactIdentifiers.value})) = ${normalized}`)
+      .limit(1);
+    return identifier;
+  }
+
+  async seedClientIdentifiers(clientId: number, email: string, phone?: string | null): Promise<void> {
+    // Check if email identifier already exists for this client
+    const existingEmail = await db.select().from(contactIdentifiers)
+      .where(and(
+        eq(contactIdentifiers.clientId, clientId),
+        eq(contactIdentifiers.type, 'email'),
+        sql`lower(trim(${contactIdentifiers.value})) = ${email.trim().toLowerCase()}`
+      ))
+      .limit(1);
+
+    if (existingEmail.length === 0 && email) {
+      await db.insert(contactIdentifiers).values({
+        clientId,
+        type: 'email',
+        value: email.trim().toLowerCase(),
+        isPrimary: true,
+        verified: false,
+        source: 'auto_seed',
+      });
+    }
+
+    if (phone) {
+      const normalizedPhone = phone.replace(/[^\d+]/g, '');
+      const existingPhone = await db.select().from(contactIdentifiers)
+        .where(and(
+          eq(contactIdentifiers.clientId, clientId),
+          eq(contactIdentifiers.type, 'phone'),
+          eq(contactIdentifiers.value, normalizedPhone)
+        ))
+        .limit(1);
+
+      if (existingPhone.length === 0) {
+        await db.insert(contactIdentifiers).values({
+          clientId,
+          type: 'phone',
+          value: normalizedPhone,
+          isPrimary: true,
+          verified: false,
+          source: 'auto_seed',
+        });
+      }
+    }
+  }
+
+  // Resolve a client from an email/phone/handle by looking up contact_identifiers, then fallback to clients table
+  async resolveClientFromIdentifier(value: string): Promise<{ clientId: number; opportunityId?: number } | null> {
+    const normalized = value.trim().toLowerCase();
+
+    // First, look up in contact_identifiers (most reliable)
+    const [identifier] = await db
+      .select()
+      .from(contactIdentifiers)
+      .where(sql`lower(trim(${contactIdentifiers.value})) = ${normalized}`)
+      .limit(1);
+
+    if (identifier?.clientId) {
+      // Also find the most recent opportunity for context
+      const [opp] = await db.select({ id: opportunities.id })
+        .from(opportunities)
+        .where(eq(opportunities.clientId, identifier.clientId))
+        .orderBy(desc(opportunities.createdAt))
+        .limit(1);
+      return { clientId: identifier.clientId, opportunityId: opp?.id };
+    }
+
+    if (identifier?.opportunityId) {
+      // Found via opportunity — check if that opp has a client
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, identifier.opportunityId));
+      if (opp?.clientId) {
+        return { clientId: opp.clientId, opportunityId: opp.id };
+      }
+      return { clientId: 0, opportunityId: opp?.id }; // has opportunity but no client yet
+    }
+
+    // Fallback: look in clients table directly (email or phone)
+    const [client] = await db.select({ id: clients.id })
+      .from(clients)
+      .where(and(
+        isNull(clients.deletedAt),
+        or(
+          sql`lower(trim(${clients.email})) = ${normalized}`,
+          sql`replace(${clients.phone}, '-', '') = replace(${normalized}, '-', '')`
+        )
+      ))
+      .limit(1);
+
+    if (client) {
+      return { clientId: client.id };
+    }
+
+    return null;
+  }
+
   // Communications methods
   async createCommunication(data: InsertCommunication): Promise<Communication> {
     const [createdCommunication] = await db.insert(communications).values(data).returning();
@@ -637,6 +745,34 @@ export class DatabaseStorage implements IStorage {
         hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)
       }
     }));
+  }
+
+  async getUnmatchedCommunications(): Promise<Communication[]> {
+    const comms = await db
+      .select()
+      .from(communications)
+      .where(and(
+        isNull(communications.clientId),
+        isNull(communications.opportunityId)
+      ))
+      .orderBy(desc(communications.timestamp));
+
+    return comms.map(comm => ({
+      ...comm,
+      metadata: {
+        ...(comm.metaData as any || {}),
+        hasFullEmailInStorage: !!(comm.gcpStoragePath && comm.gmailMessageId)
+      }
+    }));
+  }
+
+  async assignCommunicationToClient(communicationId: number, clientId: number): Promise<Communication | undefined> {
+    const [updated] = await db
+      .update(communications)
+      .set({ clientId, updatedAt: new Date() })
+      .where(eq(communications.id, communicationId))
+      .returning();
+    return updated;
   }
 
   async createOpportunityEmailThread(data: InsertOpportunityEmailThread): Promise<OpportunityEmailThread> {

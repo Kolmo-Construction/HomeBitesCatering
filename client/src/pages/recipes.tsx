@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered, Link2, CalendarDays, Leaf, AlertTriangle, Scale } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Search, ChefHat, Utensils, Info, Camera, Image, X, Play, Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, GripVertical, Pause, Lightbulb, ListOrdered, Link2, CalendarDays, Leaf, AlertTriangle, Scale, Eye, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Recipe, type BaseIngredient, insertRecipeSchema, preparationStepSchema, type PreparationStep, DIETARY_TAGS, ALLERGEN_CONTAINS_TAGS, LIFESTYLE_TAGS, type RecipeDietaryFlags } from "@shared/schema";
@@ -166,6 +166,26 @@ export default function RecipesPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  type RecipeSortField = "name" | "category" | "yield" | "cost";
+  const [sortField, setSortField] = useState<RecipeSortField>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [detailRecipe, setDetailRecipe] = useState<RecipeWithCost | null>(null);
+
+  const toggleSort = (field: RecipeSortField) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: RecipeSortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDirection === "asc"
+      ? <ArrowUp className="h-3 w-3 ml-1 inline" />
+      : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<RecipeWithCost | null>(null);
   const [deletingRecipe, setDeletingRecipe] = useState<RecipeWithCost | null>(null);
@@ -670,6 +690,22 @@ export default function RecipesPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const sortedRecipes = [...filteredRecipes].sort((a, b) => {
+    const dir = sortDirection === "asc" ? 1 : -1;
+    switch (sortField) {
+      case "name":
+        return a.name.localeCompare(b.name) * dir;
+      case "category":
+        return (a.category || "").localeCompare(b.category || "") * dir;
+      case "yield":
+        return ((parseFloat(a.yield as any) || 0) - (parseFloat(b.yield as any) || 0)) * dir;
+      case "cost":
+        return ((a.totalCost || 0) - (b.totalCost || 0)) * dir;
+      default:
+        return 0;
+    }
+  });
+
   const nextEventLabel = (() => {
     if (!dashboardStats?.upcomingEvents.nextEventDate) return null;
     const d = new Date(dashboardStats.upcomingEvents.nextEventDate);
@@ -915,7 +951,7 @@ export default function RecipesPage() {
           <CardContent className="pt-6">
             {isLoading ? (
               <div className="text-center py-12" data-testid="text-loading">Loading...</div>
-            ) : filteredRecipes.length === 0 ? (
+            ) : sortedRecipes.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground" data-testid="text-no-recipes">
                 <Utensils className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p className="text-lg font-medium">No recipes found</p>
@@ -926,17 +962,41 @@ export default function RecipesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Recipe Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Yield</TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("name")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-name"
+                      >
+                        Recipe Name<SortIcon field="name" />
+                      </TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("category")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-category"
+                      >
+                        Category<SortIcon field="category" />
+                      </TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("yield")}
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        data-testid="header-sort-yield"
+                      >
+                        Yield<SortIcon field="yield" />
+                      </TableHead>
                       <TableHead>Details</TableHead>
                       <TableHead>Dietary</TableHead>
-                      <TableHead className="text-right">Total Cost</TableHead>
+                      <TableHead
+                        onClick={() => toggleSort("cost")}
+                        className="cursor-pointer select-none hover:bg-muted/50 text-right"
+                        data-testid="header-sort-cost"
+                      >
+                        Total Cost<SortIcon field="cost" />
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredRecipes.map((recipe) => (
+                    {sortedRecipes.map((recipe) => (
                       <TableRow key={recipe.id} data-testid={`row-recipe-${recipe.id}`}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -1035,8 +1095,18 @@ export default function RecipesPage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => setDetailRecipe(recipe)}
+                              data-testid={`button-view-details-${recipe.id}`}
+                              title="View details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleEditRecipe(recipe)}
                               data-testid={`button-edit-${recipe.id}`}
+                              title="Edit"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -1045,6 +1115,7 @@ export default function RecipesPage() {
                               size="icon"
                               onClick={() => setDeletingRecipe(recipe)}
                               data-testid={`button-delete-${recipe.id}`}
+                              title="Delete"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -2047,6 +2118,16 @@ export default function RecipesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Recipe Details View Dialog */}
+      <RecipeDetailDialog
+        recipe={detailRecipe}
+        onClose={() => setDetailRecipe(null)}
+        onEdit={(r) => {
+          setDetailRecipe(null);
+          handleEditRecipe(r);
+        }}
+      />
+
       <Dialog open={!!viewingRecipe} onOpenChange={(open) => !open && setViewingRecipe(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
@@ -2195,5 +2276,188 @@ export default function RecipesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Recipe details dialog (read-only) ────────────────────────────────
+function RecipeDetailDialog({
+  recipe,
+  onClose,
+  onEdit,
+}: {
+  recipe: RecipeWithCost | null;
+  onClose: () => void;
+  onEdit: (r: RecipeWithCost) => void;
+}) {
+  const { data: full } = useQuery<any>({
+    queryKey: [`/api/ingredients/recipes/${recipe?.id}`],
+    enabled: !!recipe,
+  });
+
+  const components: any[] = full?.components || [];
+  const steps = (recipe?.preparationSteps as PreparationStep[]) || [];
+  const dietary = recipe?.dietaryFlags as RecipeDietaryFlags | null;
+  const allergenWarnings = dietary?.allergenWarnings || [];
+  const manualTags = dietary?.manualDesignations || [];
+
+  return (
+    <Dialog open={!!recipe} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-recipe-detail">
+        <DialogHeader>
+          <DialogTitle>{recipe?.name}</DialogTitle>
+          <DialogDescription>Recipe details</DialogDescription>
+        </DialogHeader>
+
+        {recipe && (
+          <div className="space-y-4 text-sm">
+            {recipe.description && (
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Description</div>
+                <div className="mt-1">{recipe.description}</div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Category</div>
+                <div className="mt-1">
+                  <Badge variant="outline">{recipe.category || "—"}</Badge>
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Yield</div>
+                <div className="mt-1">
+                  {recipe.yield} {recipe.yieldUnit || "serving"}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Labor Hours</div>
+                <div className="mt-1">{recipe.laborHours || "0"}h</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Ingredients</div>
+                <div className="mt-1">{recipe.ingredientCount}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 border-t pt-3">
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Total Cost</div>
+                <div className="mt-1 font-medium">${(recipe.totalCost || 0).toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Ingredient Cost</div>
+                <div className="mt-1">${(recipe.ingredientCost || 0).toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Cost / Serving</div>
+                <div className="mt-1 font-medium">${(recipe.costPerServing || 0).toFixed(2)}</div>
+              </div>
+            </div>
+
+            {components.length > 0 && (
+              <div>
+                <div className="text-muted-foreground text-xs uppercase mb-2">Ingredients</div>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ingredient</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>Prep Notes</TableHead>
+                        <TableHead className="text-right">Cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {components.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">{c.baseIngredient?.name || "—"}</TableCell>
+                          <TableCell>{c.quantity}</TableCell>
+                          <TableCell>{c.unit}</TableCell>
+                          <TableCell className="text-muted-foreground">{c.prepNotes || "—"}</TableCell>
+                          <TableCell className="text-right">
+                            ${parseFloat(c.calculatedCost ?? "0").toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {steps.length > 0 && (
+              <div>
+                <div className="text-muted-foreground text-xs uppercase mb-2">Preparation Steps</div>
+                <ol className="space-y-2">
+                  {steps
+                    .slice()
+                    .sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0))
+                    .map((s, idx) => (
+                      <li key={idx} className="flex gap-3 border rounded-md p-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-medium">
+                          {s.stepNumber || idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">{s.title}</div>
+                          {s.instruction && <div className="text-muted-foreground mt-1">{s.instruction}</div>}
+                          {s.duration ? (
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {s.duration} min
+                            </div>
+                          ) : null}
+                          {(s as any).tips && (
+                            <div className="text-xs italic text-amber-700 mt-1 flex gap-1">
+                              <Lightbulb className="h-3 w-3 flex-shrink-0 mt-0.5" /> {(s as any).tips}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                </ol>
+              </div>
+            )}
+
+            {(allergenWarnings.length > 0 || manualTags.length > 0) && (
+              <div>
+                <div className="text-muted-foreground text-xs uppercase mb-2">Dietary Flags</div>
+                <div className="flex flex-wrap gap-1">
+                  {allergenWarnings.map((w) => (
+                    <Badge key={`a-${w}`} variant="destructive" className="text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" /> contains {w}
+                    </Badge>
+                  ))}
+                  {manualTags.map((t) => (
+                    <Badge key={`m-${t}`} variant="secondary" className="text-xs">
+                      <Leaf className="h-3 w-3 mr-1" /> {t}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recipe.notes && (
+              <div>
+                <div className="text-muted-foreground text-xs uppercase">Notes</div>
+                <div className="mt-1 whitespace-pre-wrap">{recipe.notes}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} data-testid="button-close-detail">
+            Close
+          </Button>
+          {recipe && (
+            <Button onClick={() => onEdit(recipe)} data-testid="button-edit-from-detail">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
