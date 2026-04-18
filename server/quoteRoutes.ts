@@ -658,9 +658,17 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       ].filter(Boolean).join("\n"),
       status: "qualified",
       opportunitySource: request.source || "website",
+      // P2-3: propagate UTM attribution so reporting can break down booked
+      // opportunities by campaign, not just by top-level source.
+      utmSource: request.source || null,
+      utmMedium: request.utmMedium || null,
+      utmCampaign: request.utmCampaign || null,
+      utmContent: request.utmContent || null,
+      utmTerm: request.utmTerm || null,
+      referrer: request.referrer || null,
       priority: "medium",
       clientId: client.id,
-    }).returning();
+    } as any).returning();
 
     // 3. Build estimate line items from structured quote data
     const lineItems: Array<{ id: string; name: string; quantity: number; price: number }> = [];
@@ -909,6 +917,13 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
     ].filter(Boolean).join("\n"),
     status: "qualified",
     opportunitySource: request.source || "website",
+    // P2-3: UTM attribution on auto-quoted opportunities too
+    utmSource: request.source || null,
+    utmMedium: request.utmMedium || null,
+    utmCampaign: request.utmCampaign || null,
+    utmContent: request.utmContent || null,
+    utmTerm: request.utmTerm || null,
+    referrer: request.referrer || null,
     priority: "medium",
     clientId: client.id,
     statusChangedAt: new Date(),

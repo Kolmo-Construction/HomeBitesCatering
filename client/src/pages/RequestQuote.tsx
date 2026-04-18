@@ -1097,6 +1097,13 @@ export default function RequestQuote() {
         ...(opportunityId ? { opportunityId } : {}),
         // P2-3: prefer utm_source over explicit source param, fall back to "website"
         source: attribution.utmSource || attribution.source || "website",
+        // Individual UTM columns — used at convert-time to populate the opportunity
+        utmMedium: attribution.utmMedium || undefined,
+        utmCampaign: attribution.utmCampaign || undefined,
+        utmContent: attribution.utmContent || undefined,
+        utmTerm: attribution.utmTerm || undefined,
+        referrer: attribution.referrer || undefined,
+        // Human-readable summary for the admin UI
         referralDetail:
           [
             attribution.utmCampaign ? `campaign=${attribution.utmCampaign}` : null,

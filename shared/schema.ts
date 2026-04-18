@@ -1336,6 +1336,12 @@ export const quoteRequests = pgTable("quote_requests", {
   // Source & Attribution
   source: text("source"),                        // website, wedding_wire, the_knot, zola, google, referral, etc.
   referralDetail: text("referral_detail"),        // free text: "recommended by Sarah", "found on Instagram", etc.
+  // P2-3: Structured UTM attribution captured from URL params at submit time
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  utmContent: text("utm_content"),
+  utmTerm: text("utm_term"),
+  referrer: text("referrer"),
   promoCodeId: integer("promo_code_id").references(() => promoCodes.id),
   discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }),
   decisionTimeline: text("decision_timeline"),    // 7_to_10_days, 10_to_20_days, 20_to_30_days, 30_to_60_days
