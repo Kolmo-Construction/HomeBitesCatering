@@ -5736,7 +5736,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subject,
           bodyRaw: trimmed,
           bodySummary: trimmed.length > 280 ? trimmed.slice(0, 277) + '…' : trimmed,
-          metaData: { category: categoryLabel, channel: 'client_portal' },
+          metaData: {
+            category: categoryLabel,
+            channel: 'client_portal',
+            status: 'open',
+            submittedAt: new Date().toISOString(),
+          },
         })
         .returning();
 
@@ -5758,6 +5763,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({ ok: true, communicationId: comm.id });
     } catch (error) {
       console.error('Error recording portal change request:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Portal: list the customer's submitted change requests for one event so
+  // they can see status + any reply Mike added. Session-authed.
+  app.get('/api/public/portal/events/:id/change-requests', async (req: Request, res: Response) => {
+    try {
+      const ctx = await requirePortalSession(req, res);
+      if (!ctx) return;
+
+      const eventId = parseInt(req.params.id, 10);
+      if (isNaN(eventId)) return res.status(400).json({ message: 'Invalid event id' });
+
+      const event = await storage.getEvent(eventId);
+      if (!event || event.clientId !== ctx.clientId) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      const rows = await db
+        .select({
+          id: communications.id,
+          subject: communications.subject,
+          bodyRaw: communications.bodyRaw,
+          metaData: communications.metaData,
+          timestamp: communications.timestamp,
+        })
+        .from(communications)
+        .where(
+          and(
+            eq(communications.eventId, eventId),
+            eq(communications.clientId, ctx.clientId),
+            eq(communications.source, 'portal_change_request'),
+          ),
+        )
+        .orderBy(desc(communications.timestamp));
+
+      res.json(rows);
+    } catch (error) {
+      console.error('Error listing portal change requests:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -5935,10 +5980,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // pricing and totals). They get all the operational data they need from inquiry
   // and event. This is defense-in-depth — the UI also hides these fields, but stripping
   // on the server means chefs can't craft requests to see pricing.
+  // Admin: update lifecycle state on a single change request. Accepts
+  // { status?, adminReply? } and merges into communications.metaData. No
+  // schema migration — state lives in the existing jsonb column.
+  app.patch('/api/events/:id/change-requests/:commId', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const commId = parseInt(req.params.commId);
+      if (isNaN(eventId) || isNaN(commId)) {
+        return res.status(400).json({ message: 'Invalid id' });
+      }
+      const { status, adminReply } = req.body as {
+        status?: 'open' | 'resolved';
+        adminReply?: string | null;
+      };
+      if (status && status !== 'open' && status !== 'resolved') {
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+
+      const [row] = await db
+        .select()
+        .from(communications)
+        .where(
+          and(
+            eq(communications.id, commId),
+            eq(communications.eventId, eventId),
+            eq(communications.source, 'portal_change_request'),
+          ),
+        );
+      if (!row) return res.status(404).json({ message: 'Request not found' });
+
+      const existing = (row.metaData as Record<string, unknown>) || {};
+      const nextMeta: Record<string, unknown> = { ...existing };
+      if (status) {
+        nextMeta.status = status;
+        if (status === 'resolved') nextMeta.resolvedAt = new Date().toISOString();
+        if (status === 'open') delete nextMeta.resolvedAt;
+      }
+      if (typeof adminReply === 'string') {
+        const trimmed = adminReply.trim();
+        if (trimmed.length === 0) {
+          delete nextMeta.adminReply;
+          delete nextMeta.repliedAt;
+        } else {
+          nextMeta.adminReply = trimmed.slice(0, 2000);
+          nextMeta.repliedAt = new Date().toISOString();
+        }
+      }
+
+      const [updated] = await db
+        .update(communications)
+        .set({ metaData: nextMeta as any, updatedAt: new Date() })
+        .where(eq(communications.id, commId))
+        .returning({
+          id: communications.id,
+          subject: communications.subject,
+          bodyRaw: communications.bodyRaw,
+          bodySummary: communications.bodySummary,
+          metaData: communications.metaData,
+          timestamp: communications.timestamp,
+        });
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating change request:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Lightweight list of customer change requests for an event. Reads from
-  // communications where source='portal_change_request'. No write endpoint
-  // yet — Mike handles each via the normal communication channels. Full
-  // lifecycle (status, reply path) is backlog item #7.
+  // communications where source='portal_change_request'. Status + reply live
+  // on communications.metaData (no dedicated table yet).
   app.get('/api/events/:id/change-requests', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);

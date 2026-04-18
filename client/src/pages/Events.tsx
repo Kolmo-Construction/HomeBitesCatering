@@ -530,7 +530,14 @@ interface PortalChangeRequest {
   subject: string | null;
   bodyRaw: string | null;
   bodySummary: string | null;
-  metaData: { category?: string; channel?: string } | null;
+  metaData: {
+    category?: string;
+    channel?: string;
+    status?: "open" | "resolved";
+    resolvedAt?: string;
+    adminReply?: string;
+    repliedAt?: string;
+  } | null;
   timestamp: string;
 }
 
@@ -543,57 +550,214 @@ const CHANGE_CATEGORY_COLORS: Record<string, string> = {
 };
 
 function ChangeRequestsCard({ eventId }: { eventId: number }) {
+  const qc = useQueryClient();
+  const [showResolved, setShowResolved] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+
   const { data = [], isLoading } = useQuery<PortalChangeRequest[]>({
     queryKey: [`/api/events/${eventId}/change-requests`],
   });
 
+  const patchMutation = useMutation({
+    mutationFn: async ({
+      commId,
+      status,
+      adminReply,
+    }: {
+      commId: number;
+      status?: "open" | "resolved";
+      adminReply?: string | null;
+    }) => {
+      const res = await apiRequest(
+        "PATCH",
+        `/api/events/${eventId}/change-requests/${commId}`,
+        { status, adminReply },
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [`/api/events/${eventId}/change-requests`] });
+      setReplyingTo(null);
+      setReplyDraft("");
+    },
+  });
+
   if (isLoading || data.length === 0) return null;
+
+  const open = data.filter((r) => (r.metaData?.status || "open") === "open");
+  const resolved = data.filter((r) => r.metaData?.status === "resolved");
+  const visible = showResolved ? data : open;
+  const title = "Customer change requests";
+
+  const renderItem = (req: PortalChangeRequest) => {
+    const category = req.metaData?.category || "other";
+    const status = req.metaData?.status || "open";
+    const when = new Date(req.timestamp);
+    const relative = daysAgoLabel(when);
+    const adminReply = req.metaData?.adminReply;
+    const isReplying = replyingTo === req.id;
+
+    return (
+      <li
+        key={req.id}
+        className={cn(
+          "rounded-lg border px-3 py-2 transition",
+          status === "resolved"
+            ? "border-emerald-200 bg-emerald-50/40"
+            : "border-stone-200 bg-white",
+        )}
+      >
+        <div className="flex gap-3">
+          <Badge
+            className={cn(
+              "shrink-0 capitalize text-[11px] px-2 py-0.5 border-0",
+              CHANGE_CATEGORY_COLORS[category] || CHANGE_CATEGORY_COLORS.other,
+            )}
+          >
+            {category.replace(/_/g, " ")}
+          </Badge>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-stone-800 whitespace-pre-wrap break-words">
+              {req.bodyRaw || req.bodySummary || "(empty request)"}
+            </p>
+            <div className="flex items-center gap-2 mt-1 text-[11px] text-stone-400">
+              <span>{relative}</span>
+              {status === "resolved" && (
+                <Badge className="bg-emerald-100 text-emerald-800 border-0 text-[10px] px-1.5 py-0">
+                  Resolved
+                </Badge>
+              )}
+            </div>
+            {adminReply && (
+              <div className="mt-2 rounded-md bg-white border border-stone-200 px-2.5 py-1.5">
+                <p className="text-[10px] uppercase tracking-wide text-stone-500 font-semibold mb-0.5">
+                  Your reply
+                </p>
+                <p className="text-xs text-stone-700 whitespace-pre-wrap">
+                  {adminReply}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isReplying ? (
+          <div className="mt-2 space-y-2">
+            <Textarea
+              value={replyDraft}
+              onChange={(e) => setReplyDraft(e.target.value)}
+              placeholder="Write a reply the customer will see in the portal…"
+              rows={3}
+              className="text-sm border-stone-300"
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setReplyingTo(null);
+                  setReplyDraft("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-[#8B7355] hover:bg-[#7a6448] text-white"
+                disabled={!replyDraft.trim() || patchMutation.isPending}
+                onClick={() =>
+                  patchMutation.mutate({
+                    commId: req.id,
+                    adminReply: replyDraft.trim(),
+                    status: "resolved",
+                  })
+                }
+              >
+                Send & mark resolved
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2 flex gap-1.5 justify-end">
+            {status === "open" ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setReplyingTo(req.id);
+                    setReplyDraft(adminReply || "");
+                  }}
+                >
+                  Reply
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() =>
+                    patchMutation.mutate({ commId: req.id, status: "resolved" })
+                  }
+                  disabled={patchMutation.isPending}
+                >
+                  Mark resolved
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-stone-500"
+                onClick={() =>
+                  patchMutation.mutate({ commId: req.id, status: "open" })
+                }
+                disabled={patchMutation.isPending}
+              >
+                Reopen
+              </Button>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  };
 
   return (
     <Card className="md:col-span-2 border-[#E28C0A]/40 bg-gradient-to-br from-[#fff6e6] to-white">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[#8B7355]" />
-            <h3 className="font-semibold text-stone-900">
-              Customer change requests
-            </h3>
-            <Badge className="bg-[#E28C0A] text-white hover:bg-[#E28C0A]">
-              {data.length}
-            </Badge>
+            <h3 className="font-semibold text-stone-900">{title}</h3>
+            {open.length > 0 && (
+              <Badge className="bg-[#E28C0A] text-white hover:bg-[#E28C0A]">
+                {open.length} open
+              </Badge>
+            )}
+            {resolved.length > 0 && (
+              <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                {resolved.length} resolved
+              </Badge>
+            )}
           </div>
-          <p className="text-xs text-stone-500 hidden sm:block">
-            From the client portal
-          </p>
+          {resolved.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowResolved((v) => !v)}
+              className="text-xs text-stone-500 hover:text-stone-700 underline"
+            >
+              {showResolved ? "Hide resolved" : `Show all (${data.length})`}
+            </button>
+          )}
         </div>
-        <ul className="space-y-2">
-          {data.map((req) => {
-            const category = req.metaData?.category || "other";
-            const when = new Date(req.timestamp);
-            const relative = daysAgoLabel(when);
-            return (
-              <li
-                key={req.id}
-                className="flex gap-3 rounded-lg bg-white border border-stone-200 px-3 py-2"
-              >
-                <Badge
-                  className={cn(
-                    "shrink-0 capitalize text-[11px] px-2 py-0.5 border-0",
-                    CHANGE_CATEGORY_COLORS[category] || CHANGE_CATEGORY_COLORS.other,
-                  )}
-                >
-                  {category.replace(/_/g, " ")}
-                </Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-stone-800 whitespace-pre-wrap break-words">
-                    {req.bodyRaw || req.bodySummary || "(empty request)"}
-                  </p>
-                  <p className="text-[11px] text-stone-400 mt-0.5">{relative}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        {visible.length === 0 ? (
+          <p className="text-sm text-stone-500 italic">
+            All caught up — no open requests.
+          </p>
+        ) : (
+          <ul className="space-y-2">{visible.map(renderItem)}</ul>
+        )}
       </CardContent>
     </Card>
   );

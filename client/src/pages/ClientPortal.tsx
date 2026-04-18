@@ -412,6 +412,117 @@ function ActiveEventHero({
   );
 }
 
+// ─── Customer's change request history ────────────────────────────────────
+
+interface PortalChangeRequest {
+  id: number;
+  subject: string | null;
+  bodyRaw: string | null;
+  metaData: {
+    category?: string;
+    status?: "open" | "resolved";
+    adminReply?: string;
+    repliedAt?: string;
+    resolvedAt?: string;
+  } | null;
+  timestamp: string;
+}
+
+function ChangeRequestsHistory({
+  eventId,
+  sessionToken,
+}: {
+  eventId: number;
+  sessionToken: string;
+}) {
+  const { data = [], isLoading } = useQuery<PortalChangeRequest[]>({
+    queryKey: [`/api/public/portal/events/${eventId}/change-requests`],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/public/portal/events/${eventId}/change-requests`,
+        { headers: { Authorization: `Bearer ${sessionToken}` } },
+      );
+      if (!res.ok) throw new Error("Failed to load");
+      return res.json();
+    },
+  });
+
+  if (isLoading || data.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle
+          className="text-lg flex items-center gap-2"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          <MessageSquare className="h-5 w-5 text-[#8B7355]" />
+          Your change requests
+        </CardTitle>
+        <CardDescription>
+          Everything you've sent us for this event, and our replies.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-3">
+          {data.map((req) => {
+            const status = req.metaData?.status || "open";
+            const category = req.metaData?.category || "other";
+            const when = new Date(req.timestamp);
+            return (
+              <li
+                key={req.id}
+                className={cn(
+                  "rounded-lg border px-3 py-2.5",
+                  status === "resolved"
+                    ? "border-emerald-200 bg-emerald-50/40"
+                    : "border-stone-200 bg-white",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="capitalize text-[10px] px-1.5 py-0 bg-stone-100 text-stone-700 border-0">
+                        {category.replace(/_/g, " ")}
+                      </Badge>
+                      <span className="text-xs text-stone-500">
+                        {when.toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-stone-800 mt-1 whitespace-pre-wrap break-words">
+                      {req.bodyRaw}
+                    </p>
+                    {req.metaData?.adminReply && (
+                      <div className="mt-2 rounded-md bg-white border border-stone-200 px-2.5 py-1.5">
+                        <p className="text-[10px] uppercase tracking-wide text-[#8B7355] font-semibold mb-0.5">
+                          Mike replied
+                        </p>
+                        <p className="text-xs text-stone-700 whitespace-pre-wrap">
+                          {req.metaData.adminReply}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <Badge
+                    className={cn(
+                      "shrink-0 text-[10px] px-1.5 py-0 border-0",
+                      status === "resolved"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-[#E28C0A]/15 text-[#8B7355]",
+                    )}
+                  >
+                    {status === "resolved" ? "Resolved" : "Waiting"}
+                  </Badge>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Documents ──────────────────────────────────────────────────────────────
 
 function DocumentLocker({ events }: { events: PortalEvent[] }) {
@@ -747,6 +858,13 @@ function PortalDashboard({
 
         {/* Documents */}
         {heroEvent && <DocumentLocker events={upcomingEvents} />}
+
+        {heroEvent && (
+          <ChangeRequestsHistory
+            eventId={heroEvent.id}
+            sessionToken={sessionToken}
+          />
+        )}
 
         {/* Other upcoming events */}
         {otherUpcoming.length > 0 && (
