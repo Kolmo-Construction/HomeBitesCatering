@@ -44,6 +44,7 @@ import {
   GripVertical,
   RotateCcw,
   MessageCircleQuestion,
+  TrendingUp,
 } from "lucide-react";
 
 // Full nav, with a `chef` flag on items kitchen staff should see. Items without
@@ -54,17 +55,28 @@ type NavItem = {
   icon: any;
   chef?: boolean;
   adminOnly?: boolean;
-  submenu?: { name: string; href: string }[];
+  submenu?: { name: string; href: string; icon: any }[];
 };
 
+// Sales-funnel items live under one collapsible "Sales" group so the
+// top-level nav reflects the actual workflow sections rather than a flat
+// list of every page. Clicking the parent toggles expansion; each child
+// navigates. Auto-expands when the current location matches any child.
 const ALL_NAV: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, chef: true },
-  { name: "Leads", href: "/raw-leads", icon: Inbox },
-  { name: "Pipeline", href: "/pipeline", icon: Columns3 },
-  { name: "Quote Requests", href: "/inquiries", icon: MessageSquareQuote },
-  { name: "Quotes", href: "/quotes", icon: FileText },
-  { name: "Clients", href: "/clients", icon: Users },
-  { name: "Unmatched", href: "/unmatched", icon: MessageCircleQuestion },
+  {
+    name: "Sales",
+    href: "/sales",
+    icon: TrendingUp,
+    submenu: [
+      { name: "Leads", href: "/raw-leads", icon: Inbox },
+      { name: "Pipeline", href: "/pipeline", icon: Columns3 },
+      { name: "Quote Requests", href: "/inquiries", icon: MessageSquareQuote },
+      { name: "Quotes", href: "/quotes", icon: FileText },
+      { name: "Clients", href: "/clients", icon: Users },
+      { name: "Unmatched", href: "/unmatched", icon: MessageCircleQuestion },
+    ],
+  },
   { name: "Events", href: "/events", icon: CalendarCheck, chef: true },
   { name: "Calendar", href: "/calendar", icon: Calendar, chef: true },
   { name: "Menus", href: "/menus", icon: ClipboardList, chef: true },
@@ -76,7 +88,9 @@ const ALL_NAV: NavItem[] = [
   { name: "Users", href: "/users", icon: UserCog, adminOnly: true },
 ];
 
-const STORAGE_KEY = "sidebar-nav-order";
+// v2 — bust any saved flat order so existing users pick up the new "Sales"
+// grouping on first load. They can still reorder after.
+const STORAGE_KEY = "sidebar-nav-order.v2";
 const DEFAULT_ORDER = ALL_NAV.map((item) => item.name);
 
 function getSavedOrder(): string[] | null {
