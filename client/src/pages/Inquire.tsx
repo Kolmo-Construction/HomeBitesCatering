@@ -565,6 +565,7 @@ interface AppItemSelection {
 interface FormState {
   // Step 1
   referralSources: string[];
+  referralSourceOther: string;
   promoCode: string;
   promoValid: boolean | null;
   promoId: number | null;
@@ -675,6 +676,7 @@ interface FormState {
 
 const initialFormState: FormState = {
   referralSources: [],
+  referralSourceOther: "",
   promoCode: "",
   promoValid: null,
   promoId: null,
@@ -1310,6 +1312,7 @@ export default function Inquire() {
       const {
         // Fields to drop: not in inquiries schema
         referralSources: _referralSources,
+        referralSourceOther: _referralSourceOther,
         promoCode: _promoCode,
         promoValid: _promoValid,
         promoId: _promoId,
@@ -1794,12 +1797,31 @@ export default function Inquire() {
             >
               <Checkbox
                 checked={form.referralSources.includes(src)}
-                onCheckedChange={() => toggleArrayItem("referralSources", src)}
+                onCheckedChange={() => {
+                  toggleArrayItem("referralSources", src);
+                  // Clear the free-text box when "Other" is un-checked
+                  if (src === "Other" && form.referralSources.includes("Other")) {
+                    update("referralSourceOther", "");
+                  }
+                }}
               />
               <span className="text-sm">{src}</span>
             </label>
           ))}
         </div>
+        {form.referralSources.includes("Other") && (
+          <div className="space-y-1.5">
+            <Label htmlFor="referralSourceOther" className="text-sm">
+              Please tell us how you heard about us
+            </Label>
+            <Input
+              id="referralSourceOther"
+              value={form.referralSourceOther}
+              onChange={(e) => update("referralSourceOther", e.target.value)}
+              placeholder="e.g. friend's name, specific publication, etc."
+            />
+          </div>
+        )}
       </div>
 
       {/* Promo code */}
@@ -3817,7 +3839,13 @@ export default function Inquire() {
             {form.referralSources.length > 0 && (
               <p>
                 <span className="text-gray-500">Heard about us:</span>{" "}
-                {form.referralSources.join(", ")}
+                {form.referralSources
+                  .map((s) =>
+                    s === "Other" && form.referralSourceOther
+                      ? `Other: ${form.referralSourceOther}`
+                      : s,
+                  )
+                  .join(", ")}
               </p>
             )}
           </CardContent>
