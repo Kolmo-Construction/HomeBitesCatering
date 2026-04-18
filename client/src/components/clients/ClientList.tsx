@@ -143,7 +143,22 @@ export default function ClientList() {
               <PenIcon className="h-4 w-4" />
             </div>
           </Link>
-          <button 
+          <SendInquiryDialog
+            clientId={row.original.id}
+            prefillFirstName={row.original.firstName}
+            prefillLastName={row.original.lastName}
+            prefillEmail={row.original.email}
+            prefillPhone={row.original.phone || undefined}
+            trigger={
+              <button
+                className="text-primary-purple hover:text-primary-blue transition"
+                title={`Send inquiry to ${row.original.firstName} ${row.original.lastName}`}
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            }
+          />
+          <button
             className="text-red-500 hover:text-red-700 transition"
             onClick={() => setClientToDelete(row.original)}
           >
