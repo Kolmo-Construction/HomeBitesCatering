@@ -3969,6 +3969,7 @@ export default function Inquire() {
                     <div className="space-y-3">
                       {cat.items.map((item) => {
                         const qty = selections[item.name] || 0;
+                        const isPerPerson = item.unit === "per person";
                         return (
                           <div
                             key={item.name}
@@ -3978,21 +3979,48 @@ export default function Inquire() {
                               <p className="font-medium text-sm">{item.name}</p>
                               <p className="text-xs text-gray-500">
                                 {fmt(item.price)} {item.unit}
+                                {isPerPerson && guestCount > 0 && (
+                                  <>
+                                    {" "}
+                                    · {guestCount} guests ={" "}
+                                    <strong>
+                                      {fmt(item.price * guestCount)}
+                                    </strong>
+                                  </>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center gap-3">
-                              {renderQuantitySelector(
-                                qty,
-                                (v) =>
-                                  setEquipmentQty(cat.label, item.name, v),
-                                0,
-                                item.unit === "per person" ? 1 : 1,
+                              {isPerPerson ? (
+                                // Per-person items are all-or-nothing: 1 set
+                                // per guest, auto-scaled by guestCount. Old
+                                // +/- qty confused customers who thought
+                                // they needed to type the headcount
+                                // themselves.
+                                <Checkbox
+                                  checked={qty > 0}
+                                  onCheckedChange={(v) =>
+                                    setEquipmentQty(
+                                      cat.label,
+                                      item.name,
+                                      v === true ? 1 : 0,
+                                    )
+                                  }
+                                />
+                              ) : (
+                                renderQuantitySelector(
+                                  qty,
+                                  (v) =>
+                                    setEquipmentQty(cat.label, item.name, v),
+                                  0,
+                                  1,
+                                )
                               )}
                               {qty > 0 && (
                                 <span className="text-sm text-gray-600 w-20 text-right">
                                   {fmt(
-                                    item.unit === "per person"
-                                      ? item.price * qty * guestCount
+                                    isPerPerson
+                                      ? item.price * guestCount
                                       : item.price * qty,
                                   )}
                                 </span>
