@@ -651,7 +651,7 @@ function ChangeRequestsCard({ eventId }: { eventId: number }) {
               rows={3}
               className="text-sm border-stone-300"
             />
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-wrap gap-2 justify-end">
               <Button
                 size="sm"
                 variant="ghost"
@@ -662,9 +662,30 @@ function ChangeRequestsCard({ eventId }: { eventId: number }) {
               >
                 Cancel
               </Button>
+              {/* Two-button split:
+                  - "Reply" keeps the request open (use when the conversation
+                    is still going — e.g. a counter-offer).
+                  - "Reply & resolve" closes it out (use when the answer
+                    settles the matter). */}
               <Button
                 size="sm"
-                className="bg-[#8B7355] hover:bg-[#7a6448] text-white"
+                variant="outline"
+                className="border-[#8B7355]/40 text-[#8B7355] hover:bg-[#faf5e9]"
+                disabled={!replyDraft.trim() || patchMutation.isPending}
+                onClick={() =>
+                  patchMutation.mutate({
+                    commId: req.id,
+                    adminReply: replyDraft.trim(),
+                    // No status — keeps existing (open).
+                  })
+                }
+                title="Send the reply; customer will see it and can respond further"
+              >
+                Reply
+              </Button>
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 disabled={!replyDraft.trim() || patchMutation.isPending}
                 onClick={() =>
                   patchMutation.mutate({
@@ -673,8 +694,9 @@ function ChangeRequestsCard({ eventId }: { eventId: number }) {
                     status: "resolved",
                   })
                 }
+                title="Send the reply and close out the request"
               >
-                Send & mark resolved
+                Reply & resolve
               </Button>
             </div>
           </div>
