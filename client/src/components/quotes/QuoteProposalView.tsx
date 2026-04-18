@@ -1015,26 +1015,33 @@ export default function QuoteProposalView({
             <button
               type="button"
               onClick={async () => {
+                // Always copy-to-clipboard — more predictable than the native
+                // share sheet for the "forward this to my parents" use case.
                 try {
-                  if (navigator.share) {
-                    await navigator.share({
-                      title: `${coupleTitle(proposal)} · ${site?.businessName ?? "Homebites"} proposal`,
-                      url: shareUrl,
-                    });
-                  } else {
-                    await navigator.clipboard.writeText(shareUrl);
+                  await navigator.clipboard.writeText(shareUrl);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2000);
+                } catch {
+                  // Fallback for older browsers / restricted contexts
+                  const ta = document.createElement("textarea");
+                  ta.value = shareUrl;
+                  document.body.appendChild(ta);
+                  ta.select();
+                  try {
+                    document.execCommand("copy");
                     setShareCopied(true);
                     setTimeout(() => setShareCopied(false), 2000);
+                  } catch {
+                    /* no-op */
                   }
-                } catch {
-                  // user cancelled — no-op
+                  document.body.removeChild(ta);
                 }
               }}
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[#e0d0b3] text-stone-700 hover:bg-[#faf5e9] hover:border-[#c9b089] font-medium text-sm transition shadow-sm"
               data-testid="button-share-link"
             >
               <Share2 className="h-4 w-4" />
-              {shareCopied ? "Link copied!" : "Share with family"}
+              {shareCopied ? "Link copied!" : "Copy link to share"}
             </button>
           )}
         </div>
