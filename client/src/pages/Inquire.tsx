@@ -289,11 +289,52 @@ const SERVICE_TYPES = [
 ] as const;
 
 const BUFFET_STYLES = [
-  { value: "drop_off", label: "Drop-off" },
-  { value: "standard", label: "Standard" },
-  { value: "full_service_no_setup", label: "Full Service (No Setup)" },
-  { value: "full_service", label: "Full Service" },
+  {
+    value: "drop_off",
+    label: "Drop-off",
+    description:
+      "We deliver your order in sealed disposable containers — hot food, salads and appetizers in aluminum trays, sauces and garnishes in plastic. Optional chafing stands (lids, sternos, plastic serving utensils) available as an add-on to keep food warm on a buffet line.",
+  },
+  {
+    value: "standard",
+    label: "Standard",
+    description:
+      "We deliver, set up the buffet, place serving utensils, and keep dishes topped up during the meal. Staff packs out at the end of the meal service period — pickup is limited to buffet items only, and staff does not stay past the meal.",
+  },
+  {
+    value: "full_service_no_setup",
+    label: "Full Service (No Setup)",
+    description:
+      "We deliver, set up the buffet, and keep it stocked during service. Tables, chairs, and other non-buffet equipment stay as-is — that's on you or your venue. Staff stays for the full event, handling bussing, trash, and breakdown of any equipment we brought. Buffet closes after the meal window; final pickup happens at the end of the event.",
+  },
+  {
+    value: "full_service",
+    label: "Full Service",
+    description:
+      "The full package. We deliver and set up the buffet, plus tables, chairs, plates, silverware and any place settings to your spec — equipment supplied by us (additional cost) or by you. Staff runs the full event: serving, replenishment, bussing, trash, and breakdown. Buffet closes after the meal window; pickup happens at the end of the event to stay out of the way.",
+  },
 ] as const;
+
+// Short one-line descriptions for the top-level service types — shown when
+// a card is selected so customers know what they're picking.
+const SERVICE_TYPE_DESCRIPTIONS: Record<string, string> = {
+  buffet:
+    "Pick a buffet style below — from simple drop-off to full on-site service.",
+  plated:
+    "Plated, table-served meal. Full-service staffing, place settings, and coursed delivery. Best for weddings and formal sit-down events.",
+  family_style:
+    "A middle ground between plated and buffet: food arrives on large shared platters that guests pass around each table, like a family meal at home. Requires a venue with kitchen facilities. Includes table/chair setup, place settings, timely platter delivery, and full-event staffing (bussing, trash, breakdown).",
+  cocktail_party:
+    "Passed and/or stationed appetizers with a bar. No main meal service — great for networking events, receptions, and shorter gatherings.",
+  breakfast_brunch:
+    "Morning spread: pastries, fruit, hot items, coffee/tea service. Setup and timing tuned for breakfast or brunch service windows.",
+  sandwich:
+    "Sandwich / boxed-lunch style service — perfect for quick corporate meetings, working lunches, or casual gatherings.",
+  food_truck:
+    "Our food truck on-site, cooking fresh and serving guests directly from the window. We'll confirm parking, power, and water on Step 2.",
+  kids_party:
+    "Kid-friendly menu sized for a younger crowd — think mini-portions, familiar favourites, and easy-to-eat options.",
+};
 
 // --- Public Menu types (matches API response from /api/quotes/menus/public) ---
 interface PublicMenuTier {
@@ -3042,6 +3083,14 @@ export default function Inquire() {
         {renderCardSelector(SERVICE_TYPES, form.serviceType, (v) =>
           update("serviceType", v),
         )}
+        {/* Plain-language description of the currently selected service
+            type — helps customers understand what they're choosing without
+            us having to write it out on every card. */}
+        {form.serviceType && SERVICE_TYPE_DESCRIPTIONS[form.serviceType] && (
+          <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm text-gray-700 leading-relaxed">
+            {SERVICE_TYPE_DESCRIPTIONS[form.serviceType]}
+          </div>
+        )}
       </div>
 
       {/* Food-truck logistics — shown whenever serviceType is food_truck,
@@ -3050,7 +3099,9 @@ export default function Inquire() {
           food-truck event. */}
       {form.serviceType === "food_truck" && renderTruckLogistics()}
 
-      {/* Buffet style (conditional) */}
+      {/* Buffet style (conditional) — each option gets a description
+          inline so customers know what "Full Service (No Setup)" vs
+          "Full Service" actually means before picking. */}
       {form.serviceType === "buffet" && (
         <div className="space-y-3">
           <Label className="text-base font-semibold">
@@ -3059,20 +3110,29 @@ export default function Inquire() {
           <RadioGroup
             value={form.buffetStyle}
             onValueChange={(v) => update("buffetStyle", v)}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+            className="grid grid-cols-1 gap-3"
           >
             {BUFFET_STYLES.map((bs) => (
               <label
                 key={bs.value}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all",
+                  "flex items-start gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all",
                   form.buffetStyle === bs.value
                     ? "border-primary bg-primary/5"
                     : "border-gray-200 hover:border-gray-300",
                 )}
               >
-                <RadioGroupItem value={bs.value} id={`bs-${bs.value}`} />
-                <span className="font-medium">{bs.label}</span>
+                <RadioGroupItem
+                  value={bs.value}
+                  id={`bs-${bs.value}`}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium">{bs.label}</div>
+                  <div className="text-sm text-gray-600 mt-1 leading-relaxed">
+                    {bs.description}
+                  </div>
+                </div>
               </label>
             ))}
           </RadioGroup>
