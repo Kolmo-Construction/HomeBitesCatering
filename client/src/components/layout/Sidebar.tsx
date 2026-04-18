@@ -125,7 +125,7 @@ function SortableNavItem({
   isActive: boolean;
   isExpanded: boolean;
   location: string;
-  onToggleSubmenu: (name: string) => void;
+  onToggleSubmenu: (name: string, currentlyExpanded: boolean) => void;
   /** Map of href → badge count. Used to flag the Follow-ups submenu item. */
   badges?: Record<string, number>;
 }) {
@@ -152,7 +152,7 @@ function SortableNavItem({
       {hasSubmenu ? (
         <div>
           <div
-            onClick={() => onToggleSubmenu(item.name)}
+            onClick={() => onToggleSubmenu(item.name, isExpanded)}
             className={cn(
               "flex items-center justify-between p-2 rounded-lg transition cursor-pointer",
               isActive
@@ -344,8 +344,11 @@ export default function Sidebar() {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  const toggleSubmenu = (name: string) => {
-    setExpandedMenus((prev) => ({ ...prev, [name]: !prev[name] }));
+  // Flip the effective state of the submenu — not just prev[name], because
+  // the effective state may be auto-derived from `isActive`. Passing in the
+  // currently-visible state from the render means one click always toggles.
+  const toggleSubmenu = (name: string, currentlyExpanded: boolean) => {
+    setExpandedMenus((prev) => ({ ...prev, [name]: !currentlyExpanded }));
   };
 
   const isMenuActive = (item: NavItem) => {
@@ -381,7 +384,14 @@ export default function Sidebar() {
             <ul className="space-y-1">
               {orderedNav.map((item) => {
                 const isActive = isMenuActive(item);
-                const isExpanded = expandedMenus[item.name] || isActive;
+                // `expandedMenus[name]` is a user override — when they click
+                // the parent we store their intent. If unset, fall back to
+                // auto-expanding when a sub-route is currently active.
+                // Using `??` (not `||`) so that `false` wins over `isActive`,
+                // letting the user collapse a group even while on one of
+                // its sub-routes.
+                const userIntent = expandedMenus[item.name];
+                const isExpanded = userIntent ?? isActive;
 
                 return (
                   <SortableNavItem
