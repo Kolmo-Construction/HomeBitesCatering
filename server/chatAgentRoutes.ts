@@ -13,6 +13,7 @@ import {
   recipeComponents,
   clients,
   inquiries,
+  ingredientPackSizes,
   insertMenuItemSchema,
   insertMenuSchema,
   insertBaseIngredientSchema,
@@ -359,6 +360,19 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           limit: { type: "number" },
         },
         required: ["tags"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "check_recipe_ingredient_gaps",
+      description:
+        "For a recipe, flag components whose base ingredient is missing real purchase data: zero/missing price, no supplier, no pack sizes, or no unit conversion when the recipe unit differs from the purchase unit. Use this before cooking to know which ingredients still need sourcing info.",
+      parameters: {
+        type: "object",
+        properties: { id: { type: "number", description: "Recipe id" } },
+        required: ["id"],
       },
     },
   },
@@ -931,6 +945,97 @@ const toolHandlers: Record<string, ToolHandler> = {
     };
   },
 
+  async check_recipe_ingredient_gaps({ id }) {
+    const recipeId = Number(id);
+    const [recipe] = await db.select().from(recipes).where(eq(recipes.id, recipeId));
+    if (!recipe) return { error: `Recipe ${id} not found.` };
+
+    const components = await db
+      .select({
+        componentId: recipeComponents.id,
+        recipeQuantity: recipeComponents.quantity,
+        recipeUnit: recipeComponents.unit,
+        ingredientId: baseIngredients.id,
+        ingredientName: baseIngredients.name,
+        purchasePrice: baseIngredients.purchasePrice,
+        purchaseUnit: baseIngredients.purchaseUnit,
+        supplier: baseIngredients.supplier,
+        sku: baseIngredients.sku,
+        unitConversions: baseIngredients.unitConversions,
+        yieldPct: baseIngredients.yieldPct,
+      })
+      .from(recipeComponents)
+      .innerJoin(baseIngredients, eq(recipeComponents.baseIngredientId, baseIngredients.id))
+      .where(eq(recipeComponents.recipeId, recipeId));
+
+    // Load pack sizes for all involved ingredients in one query.
+    const ingredientIds = components.map((c) => c.ingredientId);
+    const packs =
+      ingredientIds.length > 0
+        ? await db
+            .select({
+              baseIngredientId: ingredientPackSizes.baseIngredientId,
+              id: ingredientPackSizes.id,
+            })
+            .from(ingredientPackSizes)
+            .where(inArray(ingredientPackSizes.baseIngredientId, ingredientIds))
+        : [];
+    const packCount = new Map<number, number>();
+    for (const p of packs) packCount.set(p.baseIngredientId, (packCount.get(p.baseIngredientId) || 0) + 1);
+
+    const gaps: Array<{
+      ingredientId: number;
+      ingredientName: string;
+      issues: string[];
+      link: string;
+    }> = [];
+
+    for (const c of components) {
+      const issues: string[] = [];
+      const priceNum = parseFloat(String(c.purchasePrice ?? "0"));
+      if (!priceNum || priceNum <= 0) issues.push("no purchase price");
+      if (!c.supplier) issues.push("no supplier");
+      if (!c.sku) issues.push("no SKU");
+      if ((packCount.get(c.ingredientId) || 0) === 0) issues.push("no pack sizes defined");
+      // Unit mismatch without a conversion factor means cost/shopping math will fail.
+      if (
+        c.recipeUnit &&
+        c.purchaseUnit &&
+        c.recipeUnit.toLowerCase() !== c.purchaseUnit.toLowerCase()
+      ) {
+        const conv = (c.unitConversions || {}) as Record<string, number>;
+        if (!conv || !conv[c.recipeUnit]) {
+          // Only flag if units are likely incompatible kinds. We conservatively
+          // flag all mismatches; the chef can decide.
+          issues.push(`no "${c.recipeUnit} → ${c.purchaseUnit}" conversion`);
+        }
+      }
+      if (!c.yieldPct) issues.push("no yield/trim % (waste not modeled)");
+
+      if (issues.length > 0) {
+        gaps.push({
+          ingredientId: c.ingredientId,
+          ingredientName: c.ingredientName,
+          issues,
+          link: `/base-ingredients`,
+        });
+      }
+    }
+
+    return {
+      recipeId,
+      recipeName: recipe.name,
+      totalComponents: components.length,
+      gapCount: gaps.length,
+      gaps,
+      link: `/recipes/${recipeId}`,
+      note:
+        gaps.length === 0
+          ? "All ingredients have price, supplier, SKU, pack sizes, and unit handling set."
+          : "Filling these in will make the shopping list and cost math reliable.",
+    };
+  },
+
   async get_recipe_cost({ id, servings }) {
     const breakdown = await getRecipeCostBreakdown(Number(id));
     if (!breakdown) return { error: `Recipe ${id} not found.` };
@@ -1104,6 +1209,206 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[chat-agent] fatal:", err);
     return res.status(500).json({ error: err?.message || "Chat agent error" });
+  }
+});
+
+// =============================================================================
+// Streaming endpoint — Server-Sent Events
+// =============================================================================
+//
+// Event types emitted:
+//   event: tool_call   data: { name, args }
+//   event: tool_result data: { name, resultPreview }
+//   event: chunk       data: { text }        (text delta)
+//   event: done        data: { provider, toolCalls }
+//   event: error       data: { message }
+//
+// Client reads the stream and appends `chunk.text` to the assistant bubble,
+// updates tool log on tool_call/tool_result, and closes on done/error.
+
+function sseWrite(res: Response, event: string, data: any) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+  // @ts-expect-error — response-compression may expose flush()
+  if (typeof res.flush === "function") (res as any).flush();
+}
+
+router.post("/stream", isAuthenticated, async (req: Request, res: Response) => {
+  if (providers.length === 0) {
+    return res.status(503).json({
+      error: "No LLM provider configured.",
+    });
+  }
+
+  const schema = req.body as {
+    messages?: Array<{ role: "user" | "assistant"; content: string }>;
+    message?: string;
+    context?: { currentPath?: string };
+  };
+
+  if (!schema || (!schema.message && !schema.messages)) {
+    return res.status(400).json({ error: "message or messages required" });
+  }
+
+  // Set SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering
+  res.flushHeaders?.();
+
+  const contextLine = schema.context?.currentPath
+    ? `\n\nContext: the chef is currently on the page "${schema.context.currentPath}". If their question refers to "this event/recipe/ingredient", try to resolve ids from that path first.`
+    : "";
+  const todayLine = `\n\nToday's date is ${new Date().toISOString().slice(0, 10)} (server time).`;
+  const history: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT + todayLine + contextLine },
+  ];
+  if (schema.messages) {
+    for (const m of schema.messages) {
+      if (m.role === "user" || m.role === "assistant") {
+        history.push({ role: m.role, content: m.content });
+      }
+    }
+  }
+  if (schema.message) history.push({ role: "user", content: schema.message });
+
+  const toolLog: Array<{ name: string; args: any; resultPreview: string }> = [];
+  const MAX_TOOL_ROUNDS = 6;
+
+  let clientClosed = false;
+  req.on("close", () => {
+    clientClosed = true;
+  });
+
+  try {
+    for (const provider of providers) {
+      try {
+        let messages = [...history];
+        let finished = false;
+
+        for (let round = 0; round < MAX_TOOL_ROUNDS && !finished && !clientClosed; round++) {
+          const stream = await provider.client.chat.completions.create({
+            model: provider.model,
+            messages,
+            tools: toolDefs,
+            tool_choice: "auto",
+            temperature: 0.2,
+            stream: true,
+          });
+
+          // Accumulators for this round
+          let textBuffer = "";
+          const toolCallBuffers: Record<
+            number,
+            { id?: string; name: string; arguments: string }
+          > = {};
+
+          for await (const part of stream) {
+            if (clientClosed) break;
+            const delta = part.choices?.[0]?.delta as any;
+            if (!delta) continue;
+
+            if (typeof delta.content === "string" && delta.content.length > 0) {
+              textBuffer += delta.content;
+              sseWrite(res, "chunk", { text: delta.content });
+            }
+
+            if (Array.isArray(delta.tool_calls)) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+                if (!toolCallBuffers[idx]) {
+                  toolCallBuffers[idx] = { id: tc.id, name: "", arguments: "" };
+                }
+                if (tc.id) toolCallBuffers[idx].id = tc.id;
+                if (tc.function?.name) toolCallBuffers[idx].name += tc.function.name;
+                if (typeof tc.function?.arguments === "string") {
+                  toolCallBuffers[idx].arguments += tc.function.arguments;
+                }
+              }
+            }
+          }
+
+          const toolCalls = Object.keys(toolCallBuffers)
+            .map((k) => Number(k))
+            .sort((a, b) => a - b)
+            .map((idx) => toolCallBuffers[idx]);
+
+          if (toolCalls.length > 0) {
+            // Record the assistant tool-call message in history so tool results
+            // can link back to it.
+            messages.push({
+              role: "assistant",
+              content: textBuffer || null,
+              tool_calls: toolCalls.map((t) => ({
+                id: t.id || `call_${Math.random().toString(36).slice(2, 10)}`,
+                type: "function" as const,
+                function: { name: t.name, arguments: t.arguments },
+              })),
+            } as any);
+
+            for (const t of toolCalls) {
+              let args: any = {};
+              try {
+                args = t.arguments ? JSON.parse(t.arguments) : {};
+              } catch {
+                args = {};
+              }
+              sseWrite(res, "tool_call", { name: t.name, args });
+
+              const handler = toolHandlers[t.name];
+              let result: any;
+              if (!handler) {
+                result = { error: `Unknown tool ${t.name}` };
+              } else {
+                try {
+                  result = await handler(args);
+                } catch (err: any) {
+                  result = { error: err?.message || String(err) };
+                }
+              }
+              const serialized = JSON.stringify(result);
+              const preview =
+                serialized.length > 200 ? serialized.slice(0, 200) + "…" : serialized;
+              toolLog.push({ name: t.name, args, resultPreview: preview });
+              sseWrite(res, "tool_result", { name: t.name, resultPreview: preview });
+
+              messages.push({
+                role: "tool",
+                tool_call_id: t.id || "",
+                content:
+                  serialized.length > 12000
+                    ? serialized.slice(0, 12000) + "…(truncated)"
+                    : serialized,
+              });
+            }
+          } else {
+            // Pure-text response — we already streamed chunks above.
+            finished = true;
+          }
+        }
+
+        if (!finished && !clientClosed) {
+          sseWrite(res, "chunk", {
+            text: "\n\n(stopped — ran out of tool rounds)",
+          });
+        }
+
+        sseWrite(res, "done", { provider: provider.label, toolCalls: toolLog });
+        res.end();
+        return;
+      } catch (err: any) {
+        console.warn(`[chat-agent stream] provider ${provider.label} failed:`, err?.message || err);
+        // try next provider
+      }
+    }
+
+    sseWrite(res, "error", { message: "All LLM providers failed" });
+    res.end();
+  } catch (err: any) {
+    console.error("[chat-agent stream] fatal:", err);
+    sseWrite(res, "error", { message: err?.message || "Chat agent error" });
+    res.end();
   }
 });
 
