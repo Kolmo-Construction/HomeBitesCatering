@@ -791,7 +791,10 @@ inquiryRouter.post("/:id/convert", async (req: Request, res: Response) => {
       eventType: request.eventType,
       eventDate: request.eventDate,
       guestCount: request.guestCount,
-      venue: request.venueName || undefined,
+      // Fallback to the street address when no venue name was provided so
+      // downstream pages (and the event record) don't end up with a blank
+      // venue that renders as "TBD".
+      venue: request.venueName || venueAddr?.street || undefined,
       venueAddress: venueAddr?.street || undefined,
       venueCity: venueAddr?.city || undefined,
       venueZip: venueAddr?.zip || undefined,
@@ -1022,7 +1025,7 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
     eventType: request.eventType,
     eventDate: request.eventDate,
     guestCount: request.guestCount,
-    venue: request.venueName || undefined,
+    venue: request.venueName || venueAddr?.street || undefined,
     venueAddress: venueAddr?.street || undefined,
     venueCity: venueAddr?.city || undefined,
     venueZip: venueAddr?.zip || undefined,

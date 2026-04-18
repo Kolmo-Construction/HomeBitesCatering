@@ -2827,7 +2827,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endTime,
           eventType: quote.eventType,
           guestCount: quote.guestCount ?? originatingQuote?.guestCount ?? 1,
-          venue: quote.venue || originatingQuote?.venueName || 'Venue TBD',
+          venue:
+            quote.venue ||
+            originatingQuote?.venueName ||
+            (originatingQuote?.venueAddress as any)?.street ||
+            (typeof originatingQuote?.venueAddress === 'string'
+              ? originatingQuote?.venueAddress
+              : null) ||
+            'Venue TBD',
           menuId: quote.menuId ?? null,
           status: 'confirmed',
           notes: quote.notes ?? null,
