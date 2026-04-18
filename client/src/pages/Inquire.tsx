@@ -568,6 +568,11 @@ interface FormState {
   // Step 1
   referralSources: string[];
   referralSourceOther: string;
+  // Drop-off mode — customer just wants food delivered, not full event catering.
+  // Collapses Step 2's venue flow into an address + delivery window + recipient,
+  // and forces service type to buffet/drop_off on Step 3.
+  isDropOff: boolean;
+  dropOffTime: string;
   promoCode: string;
   promoValid: boolean | null;
   promoId: number | null;
@@ -679,6 +684,8 @@ interface FormState {
 const initialFormState: FormState = {
   referralSources: [],
   referralSourceOther: "",
+  isDropOff: false,
+  dropOffTime: "",
   promoCode: "",
   promoValid: null,
   promoId: null,
@@ -1332,6 +1339,8 @@ export default function Inquire() {
         // Fields to drop: not in inquiries schema
         referralSources: _referralSources,
         referralSourceOther: _referralSourceOther,
+        isDropOff: _isDropOff,
+        dropOffTime: _dropOffTime,
         promoCode: _promoCode,
         promoValid: _promoValid,
         promoId: _promoId,
@@ -1412,6 +1421,17 @@ export default function Inquire() {
       // today, but the summary keeps all the structured answers in front of
       // the admin reviewing the inquiry.
       const typeSummaryLines: string[] = [];
+      if (form.isDropOff) {
+        typeSummaryLines.push("DROP-OFF ORDER — no on-site service");
+        if (form.dropOffTime)
+          typeSummaryLines.push(
+            `Drop-off target: ${form.dropOffTime} (±15 min window)`,
+          );
+        if (form.venueContactName)
+          typeSummaryLines.push(`Recipient: ${form.venueContactName}`);
+        if (form.venueContactPhone)
+          typeSummaryLines.push(`Recipient phone: ${form.venueContactPhone}`);
+      }
       if (form.eventType === "corporate") {
         if (form.corporatePurpose) {
           const label = CORPORATE_PURPOSES.find(
@@ -1803,6 +1823,56 @@ export default function Inquire() {
 
   const renderStep1 = () => (
     <div className="space-y-8">
+      {/* Drop-off shortcut — prominent callout at the top for customers who
+          just need food delivered, not full event catering. Simplifies the
+          rest of the form: Step 2 collapses to address + window + recipient,
+          Step 3 skips cocktail/meal timing entirely. */}
+      <label
+        className={cn(
+          "flex items-start gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all",
+          form.isDropOff
+            ? "border-primary bg-primary/5"
+            : "border-amber-300 bg-amber-50/50 hover:border-amber-400",
+        )}
+      >
+        <Checkbox
+          checked={form.isDropOff}
+          onCheckedChange={(v) => {
+            const checked = v === true;
+            setForm((prev) => ({
+              ...prev,
+              isDropOff: checked,
+              // When flipping ON, lock service type to drop-off buffet and
+              // clear the cocktail/main-meal timing that doesn't apply.
+              ...(checked
+                ? {
+                    serviceType: "buffet",
+                    buffetStyle: "drop_off",
+                    hasCocktailHour: false,
+                    cocktailStartTime: "",
+                    cocktailEndTime: "",
+                    hasMainMeal: false,
+                    mainMealStartTime: "",
+                    mainMealEndTime: "",
+                  }
+                : {}),
+            }));
+          }}
+          className="mt-0.5"
+        />
+        <div>
+          <div className="font-semibold flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            This is a drop-off order
+          </div>
+          <div className="text-sm text-gray-600 mt-0.5">
+            Just need food delivered — no on-site service. We'll keep the
+            form short: delivery address, time window, and who's receiving
+            it.
+          </div>
+        </div>
+      </label>
+
       {/* How did you hear about us */}
       <div className="space-y-3">
         <Label className="text-base font-semibold">
@@ -2471,6 +2541,116 @@ export default function Inquire() {
   );
 
   const renderStep2 = () => {
+    // Drop-off mode: short, focused form — delivery address, arrival time,
+    // and who's receiving it. Nothing else on this step applies.
+    if (form.isDropOff) {
+      return (
+        <div className="space-y-8">
+          <div className="rounded-lg border border-amber-300 bg-amber-50/40 p-4">
+            <div className="font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Drop-off Delivery
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              We'll arrive within ±15 minutes of your target time. Please give
+              us the delivery address and who we should hand it off to.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">
+              Delivery Address <span className="text-red-500">*</span>
+            </Label>
+            <div className="space-y-1.5">
+              <Input
+                id="venueAddress"
+                value={form.venueAddress}
+                onChange={(e) => update("venueAddress", e.target.value)}
+                placeholder="Street address"
+              />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="venueCity">City</Label>
+                <Input
+                  id="venueCity"
+                  value={form.venueCity}
+                  onChange={(e) => update("venueCity", e.target.value)}
+                  placeholder="City"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venueState">State</Label>
+                <Input
+                  id="venueState"
+                  value={form.venueState}
+                  onChange={(e) => update("venueState", e.target.value)}
+                  placeholder="State"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venueZip">ZIP</Label>
+                <Input
+                  id="venueZip"
+                  value={form.venueZip}
+                  onChange={(e) => update("venueZip", e.target.value)}
+                  placeholder="ZIP code"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="dropOffTime" className="text-base font-semibold">
+              Target Drop-off Time <span className="text-red-500">*</span>
+            </Label>
+            <p className="text-sm text-gray-500">
+              We'll arrive within ±15 minutes of this time.
+            </p>
+            <Input
+              id="dropOffTime"
+              type="time"
+              value={form.dropOffTime}
+              onChange={(e) => update("dropOffTime", e.target.value)}
+              className="sm:max-w-xs"
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">
+              Who's receiving the delivery?
+            </Label>
+            <p className="text-sm text-gray-500 -mt-2">
+              The person on-site we can call when we arrive.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="venueContactName">Recipient Name</Label>
+                <Input
+                  id="venueContactName"
+                  value={form.venueContactName}
+                  onChange={(e) => update("venueContactName", e.target.value)}
+                  placeholder="Name of person receiving delivery"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venueContactPhone">Recipient Phone</Label>
+                <Input
+                  id="venueContactPhone"
+                  type="tel"
+                  value={form.venueContactPhone}
+                  onChange={(e) => update("venueContactPhone", e.target.value)}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Venue/location flow driven by EVENT_TYPE_CONFIG. Food-truck event type
     // goes through this same flow — truck-specific questions (parking,
     // power, etc.) live in Step 3, tied to serviceType=food_truck so they
@@ -2790,7 +2970,28 @@ export default function Inquire() {
     );
   };
 
-  const renderStep3 = () => (
+  const renderStep3 = () => {
+    // Drop-off mode: service style is locked to drop-off buffet, and the
+    // cocktail-hour / main-meal timing questions don't apply — the delivery
+    // time window in Step 2 already answers "when".
+    if (form.isDropOff) {
+      return (
+        <div className="space-y-6">
+          <div className="rounded-lg border border-amber-300 bg-amber-50/40 p-4">
+            <div className="font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Drop-off Service
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Your order is set as a drop-off buffet — you picked this on
+              Step 1 and your delivery time is set on Step 2. Nothing else
+              to configure here. Click Next to pick the menu.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return (
     <div className="space-y-8">
       {/* Service type */}
       <div className="space-y-3">
@@ -2937,6 +3138,7 @@ export default function Inquire() {
         )}
     </div>
   );
+  };
 
 
   // Tier visual palette keyed by known tier slugs — falls back to primary color for custom tiers
@@ -3850,7 +4052,14 @@ export default function Inquire() {
             <p>
               <span className="text-gray-500">Event Type:</span>{" "}
               {EVENT_TYPES.find((t) => t.value === form.eventType)?.label || form.eventType}
+              {form.isDropOff && " · DROP-OFF"}
             </p>
+            {form.isDropOff && form.dropOffTime && (
+              <p>
+                <span className="text-gray-500">Drop-off:</span>{" "}
+                {form.dropOffTime} (±15 min window)
+              </p>
+            )}
             <p>
               <span className="text-gray-500">Date:</span> {form.eventDate}
             </p>
