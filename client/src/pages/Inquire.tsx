@@ -1279,6 +1279,47 @@ export default function Inquire() {
             errors.push(
               `${selectedTier.tierName} tier requires at least ${selectedTier.minGuestCount} guests.`,
             );
+          // Each category must be filled to its limit — e.g. a tier with
+          // "sides: 4" means the customer picked 4 sides, not 1. We only
+          // validate categories that actually have items available for this
+          // tier, matching what the renderer shows.
+          if (
+            selectedTier?.selectionLimits &&
+            selectedMenu?.categoryItems
+          ) {
+            for (const [category, limit] of Object.entries(
+              selectedTier.selectionLimits,
+            )) {
+              const allItems =
+                selectedMenu.categoryItems[category] || [];
+              const items = allItems.filter((it) => {
+                const tiers = it.availableInTiers;
+                if (!tiers || tiers.length === 0) return true;
+                return tiers.includes(selectedTier.tierKey);
+              });
+              if (items.length === 0) continue;
+              const selectedCount = (
+                form.menuItemSelections[category] || []
+              ).length;
+              if (selectedCount < limit) {
+                const pretty =
+                  category === "salsa"
+                    ? "Salsas"
+                    : category === "condiment"
+                      ? "Condiments"
+                      : category === "spread"
+                        ? "Spreads"
+                        : category === "sauce"
+                          ? "Sauces"
+                          : category === "pasta"
+                            ? "Pasta"
+                            : `${category.charAt(0).toUpperCase()}${category.slice(1)}s`;
+                errors.push(
+                  `${pretty}: please select ${limit} (you have ${selectedCount}).`,
+                );
+              }
+            }
+          }
           break;
         // Steps 5-7 are optional selections
         default:
@@ -1286,7 +1327,7 @@ export default function Inquire() {
       }
       return errors;
     },
-    [form, guestCount],
+    [form, guestCount, selectedTier, selectedMenu],
   );
 
   const goNext = useCallback(() => {
