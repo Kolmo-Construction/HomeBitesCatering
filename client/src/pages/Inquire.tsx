@@ -1218,8 +1218,16 @@ export default function Inquire() {
           : form.liquorQuality === "mid_shelf"
             ? 1.25
             : 1;
+      // When the user explicitly types a drinking-guest count (including
+      // 0 — "no one drinks"), respect it. Only fall back to guestCount
+      // when the field is empty (still a string "") — in that case treat
+      // it as "assume everyone is drinking".
+      const headcountForBar =
+        typeof form.drinkingGuestCount === "number"
+          ? form.drinkingGuestCount
+          : guestCount;
       beverageQuote +=
-        baseRate * qualityMultiplier * durationHours * (drinkGuests || guestCount);
+        baseRate * qualityMultiplier * durationHours * headcountForBar;
     }
     if (form.tableWaterService) {
       beverageQuote += 6.5 * guestCount;
@@ -1247,13 +1255,24 @@ export default function Inquire() {
     const subtotal =
       foodSubtotal + appetizerTotal + dessertTotal + beverageQuote + equipmentTotal;
 
-    // Service fee
+    // Service fee — keyed off the actual service style:
+    // - Drop-off buffet: 0% (no on-site staff)
+    // - Standard buffet: 15% (staff for meal window only)
+    // - Full-service no setup: 17.5% (staff stays the full event)
+    // - Full-service: 20% (staff plus full equipment/table setup)
+    // - Plated / family_style / cocktail_party / etc.: 15% (all staffed)
     let serviceFeeRate = 0;
     if (form.buffetStyle === "full_service") {
       serviceFeeRate = 0.2;
+    } else if (form.buffetStyle === "full_service_no_setup") {
+      serviceFeeRate = 0.175;
     } else if (form.buffetStyle === "standard" || form.serviceType === "plated") {
       serviceFeeRate = 0.15;
-    } else if (form.serviceType && form.serviceType !== "buffet") {
+    } else if (
+      form.serviceType &&
+      form.serviceType !== "buffet" &&
+      !form.isDropOff
+    ) {
       serviceFeeRate = 0.15;
     }
     const serviceFee = subtotal * serviceFeeRate;
@@ -1362,7 +1381,19 @@ export default function Inquire() {
             }
           }
           break;
-        // Steps 5-7 are optional selections
+        case 6:
+          // Drinking guest count sanity check — can't have more drinkers
+          // than total guests.
+          if (
+            typeof form.drinkingGuestCount === "number" &&
+            form.drinkingGuestCount > guestCount
+          ) {
+            errors.push(
+              `Drinking guest count (${form.drinkingGuestCount}) can't exceed total guests (${guestCount}).`,
+            );
+          }
+          break;
+        // Steps 5, 7 are optional selections
         default:
           break;
       }
@@ -3792,25 +3823,31 @@ export default function Inquire() {
               </div>
             </div>
 
-            {/* Alcohol selections */}
+            {/* Alcohol package — radio (single choice). Previously checkboxes,
+                which let customers pick mutually-exclusive packages like
+                "Beer" + "Open Bar" simultaneously. */}
             <div className="space-y-3">
               <Label>Alcohol Package</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <RadioGroup
+                value={form.alcoholSelections[0] || ""}
+                onValueChange={(v) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    alcoholSelections: v ? [v] : [],
+                  }))
+                }
+                className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+              >
                 {ALCOHOL_OPTIONS.map((opt) => (
                   <label
                     key={opt}
                     className="flex items-center gap-2 cursor-pointer"
                   >
-                    <Checkbox
-                      checked={form.alcoholSelections.includes(opt)}
-                      onCheckedChange={() =>
-                        toggleArrayItem("alcoholSelections", opt)
-                      }
-                    />
+                    <RadioGroupItem value={opt} id={`alc-${opt}`} />
                     <span className="text-sm">{opt}</span>
                   </label>
                 ))}
-              </div>
+              </RadioGroup>
             </div>
 
             {/* Liquor quality (wet hire only) */}
@@ -4647,8 +4684,8 @@ export default function Inquire() {
           </div>
           <p className="text-xs text-gray-400">
             {guestCount} guests
-            {pricing.perPersonFood > 0 &&
-              ` | ${fmt(pricing.perPersonFood)}/pp`}
+            {guestCount > 0 && pricing.estimatedTotal > 0 &&
+              ` | ${fmt(pricing.estimatedTotal / guestCount)}/pp total`}
           </p>
         </CardContent>
       </Card>
