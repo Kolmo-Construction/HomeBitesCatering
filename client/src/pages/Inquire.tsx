@@ -791,6 +791,10 @@ export default function Inquire() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>({ ...initialFormState });
   const [submitted, setSubmitted] = useState(false);
+  // Tracks whether the "Have a promo code?" toggle is expanded. We can't
+  // derive this from promoCode/promoValid because when the user *turns it
+  // on* those fields are still empty — the input never appears.
+  const [showPromoInput, setShowPromoInput] = useState(false);
   // Per-event-type rendering config — drives section labels, which blocks
   // render, and what extra fields show. Falls back to wedding defaults while
   // the user hasn't picked a type yet (Step 1 radio).
@@ -1829,8 +1833,9 @@ export default function Inquire() {
         <div className="flex items-center gap-3">
           <Label className="text-base font-semibold">Have a promo code?</Label>
           <Switch
-            checked={form.promoCode !== "" || form.promoValid !== null}
+            checked={showPromoInput}
             onCheckedChange={(checked) => {
+              setShowPromoInput(checked);
               if (!checked) {
                 setForm((prev) => ({
                   ...prev,
@@ -1844,7 +1849,7 @@ export default function Inquire() {
             }}
           />
         </div>
-        {(form.promoCode !== "" || form.promoValid !== null) && (
+        {showPromoInput && (
           <div className="flex items-center gap-2">
             <Input
               placeholder="Enter promo code"
