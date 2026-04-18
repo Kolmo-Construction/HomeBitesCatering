@@ -9,7 +9,6 @@
  * change-request path that creates a communications record for Mike.
  */
 import { useState, useEffect, useMemo } from "react";
-import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
@@ -880,14 +879,18 @@ function PortalDashboard({
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function ClientPortal() {
-  const [location] = useLocation();
+  // wouter's useLocation returns only the pathname — the `?token=…` query
+  // lives on window.location.search, so we read that directly.
   const [sessionToken, setSessionToken] = useState<string | null>(
     localStorage.getItem(SESSION_KEY),
   );
   const [verifying, setVerifying] = useState(false);
   const { toast } = useToast();
 
-  const urlParams = new URLSearchParams(location.split("?")[1] || "");
+  const urlParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams();
   const magicToken = urlParams.get("token");
 
   useEffect(() => {
