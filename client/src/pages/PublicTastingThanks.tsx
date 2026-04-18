@@ -74,7 +74,7 @@ export default function PublicTastingThanks() {
           <h1 className="text-2xl font-serif text-stone-900 mb-2">Thank you!</h1>
           <p className="text-stone-600">
             You should receive a confirmation email shortly. If anything looks
-            off, reach out at events@eathomebites.com.
+            off, reach out at Hello@eathomebites.com.
           </p>
         </Card>
       </div>

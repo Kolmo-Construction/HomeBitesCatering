@@ -112,7 +112,7 @@ export function getBoldSignConfig(): BoldSignConfig {
     senderEmail:
       process.env.BOLDSIGN_SENDER_EMAIL ||
       process.env.HOMEBITES_FROM_EMAIL ||
-      "events@eathomebites.com",
+      "Hello@eathomebites.com",
     senderName: process.env.BOLDSIGN_SENDER_NAME || process.env.HOMEBITES_FROM_NAME || "Home Bites Catering",
   };
 }
@@ -147,17 +147,17 @@ export function getSquareConfig(): SquareConfig {
 export function getEmailConfig(): EmailConfig {
   return {
     resendApiKey: process.env.RESEND_API_KEY || null,
-    fromEmail: process.env.HOMEBITES_FROM_EMAIL || "events@eathomebites.com",
+    fromEmail: process.env.HOMEBITES_FROM_EMAIL || "Hello@eathomebites.com",
     fromName: process.env.HOMEBITES_FROM_NAME || "Homebites Catering",
     replyToEmail:
       process.env.HOMEBITES_REPLY_TO_EMAIL ||
       process.env.HOMEBITES_FROM_EMAIL ||
-      "events@eathomebites.com",
+      "Hello@eathomebites.com",
     adminNotificationEmail:
       process.env.HOMEBITES_ADMIN_NOTIFICATION_EMAIL ||
       process.env.HOMEBITES_CHEF_EMAIL ||
       process.env.HOMEBITES_EMAIL ||
-      "events@eathomebites.com",
+      "Hello@eathomebites.com",
     publicBaseUrl: process.env.HOMEBITES_PUBLIC_BASE_URL || "https://homebitescatering-production.up.railway.app",
     cronSecret: process.env.CRON_SECRET || null,
   };
@@ -171,7 +171,7 @@ export function getSiteConfig(): SiteConfig {
       "Bring your event to life with custom menus & exceptional service.",
     address: process.env.HOMEBITES_ADDRESS || "1005 Terrace St, Seattle, WA 98104",
     phone: process.env.HOMEBITES_PHONE || "206.779.1347",
-    email: process.env.HOMEBITES_EMAIL || "events@eathomebites.com",
+    email: process.env.HOMEBITES_EMAIL || "Hello@eathomebites.com",
     website: process.env.HOMEBITES_WEBSITE || "https://www.homebites.net",
     chef: {
       firstName: process.env.HOMEBITES_CHEF_FIRST_NAME || "Mike",
@@ -182,7 +182,7 @@ export function getSiteConfig(): SiteConfig {
         "I'll be personally preparing your event with my team. If anything comes up before the day, reach out to me directly — I'd rather hear from you than hope everything's okay.",
       photoUrl: process.env.HOMEBITES_CHEF_PHOTO_URL || null,
       phone: process.env.HOMEBITES_CHEF_PHONE || process.env.HOMEBITES_PHONE || "206.779.1347",
-      email: process.env.HOMEBITES_CHEF_EMAIL || process.env.HOMEBITES_EMAIL || "events@eathomebites.com",
+      email: process.env.HOMEBITES_CHEF_EMAIL || process.env.HOMEBITES_EMAIL || "Hello@eathomebites.com",
     },
     social: {
       instagram: process.env.HOMEBITES_INSTAGRAM || "https://www.instagram.com/eathomebites/",

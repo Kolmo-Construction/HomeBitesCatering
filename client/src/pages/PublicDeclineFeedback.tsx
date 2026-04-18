@@ -96,7 +96,7 @@ export default function PublicDeclineFeedback() {
           <h2 className="text-xl font-serif font-semibold mb-1">Link not valid</h2>
           <p className="text-stone-600">
             This feedback link may have expired or already been submitted. Feel
-            free to reach out to us directly at events@eathomebites.com.
+            free to reach out to us directly at Hello@eathomebites.com.
           </p>
         </div>
       </div>

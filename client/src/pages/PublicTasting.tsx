@@ -90,8 +90,8 @@ export default function PublicTasting() {
               <p>Loading tasting calendar…</p>
               <p className="text-xs mt-2 max-w-xs text-center">
                 If this doesn&rsquo;t load, email us at{" "}
-                <a className="underline" href="mailto:events@eathomebites.com">
-                  events@eathomebites.com
+                <a className="underline" href="mailto:Hello@eathomebites.com">
+                  Hello@eathomebites.com
                 </a>{" "}
                 and we&rsquo;ll set up a time.
               </p>
