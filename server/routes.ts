@@ -2741,11 +2741,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'This quote has already been accepted.' });
       }
 
+      // Accept both the legacy single-`reason` payload AND the flattened
+      // P0-3 payload `{ category, notes }`. When category is present, we
+      // capture the structured decline reason in one pass and skip the
+      // magic-link follow-up email.
+      const bodySchema = z.object({
+        reason: z.string().max(2000).optional().nullable(),
+        category: z.enum(['pricing', 'menu', 'timing', 'other']).optional().nullable(),
+        notes: z.string().max(2000).optional().nullable(),
+      });
+      const body = bodySchema.parse(req.body || {});
       const now = new Date();
-      const reason = typeof req.body?.reason === 'string' ? req.body.reason : null;
+      const category = body.category ?? null;
+      const notes = body.notes ?? body.reason ?? null;
+      const reason = notes;
+      const hasStructuredFeedback = !!category;
 
-      // P0-3: generate a feedback magic-link token so the client can come
-      // back and tell us WHY, without needing to log in.
+      // P0-3: always mint a feedback magic-link token so /decline-feedback/:token
+      // still resolves even when feedback was submitted up-front (backward-compat
+      // for anyone clicking an older decline email).
       const feedbackToken = estimate.declineFeedbackToken || randomBytes(24).toString('base64url');
 
       const [updated] = await db
@@ -2755,6 +2769,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           declinedAt: now,
           declinedReason: reason,
           declineFeedbackToken: feedbackToken,
+          // When structured feedback came in, stamp it right away so admin
+          // reporting shows this decline in its aggregate bucket immediately.
+          ...(hasStructuredFeedback
+            ? {
+                declineCategory: category,
+                declineFeedbackSubmittedAt: now,
+              }
+            : {}),
           updatedAt: now,
         })
         .where(eq(estimates.id, estimate.id))
@@ -2763,13 +2785,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // P1-2: pause drip — client declined the quote
       await pauseOpportunityDrip(estimate.opportunityId, 'quote_declined');
 
-      // Fire client feedback-request email + owner SMS (fire-and-forget)
+      // Notifications (fire-and-forget)
       try {
         const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
         const emailCfg = getEmailConfig();
         const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
 
-        if (client?.email) {
+        // Only send the magic-link feedback email when we DON'T already have
+        // structured feedback. With flattening, the email is skipped for the
+        // common case where the customer picked a category inline.
+        if (!hasStructuredFeedback && client?.email) {
           const feedbackUrl = `${emailCfg.publicBaseUrl}/decline-feedback/${feedbackToken}`;
           const clientTemplate = quoteDeclinedFeedbackEmail({
             customerFirstName: client.firstName || 'there',
@@ -2787,17 +2812,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Decline SMS to owner — always fires, now includes category when known
         sendOwnerSmsInBackground({
           ...quoteDeclinedOwnerSms({
             customerName,
             eventDate: estimate.eventDate,
-            reason,
+            reason: category ? `${category}${notes ? ` — ${notes}` : ''}` : reason,
             estimateId: estimate.id,
           }),
           templateKey: 'quote_declined_owner_alert',
           clientId: estimate.clientId,
           opportunityId: estimate.opportunityId ?? null,
         });
+
+        // When structured feedback came in up-front, also fire the owner's
+        // "consider re-engaging" email immediately (it would normally fire
+        // only after the customer submitted the magic-link form).
+        if (hasStructuredFeedback && category) {
+          const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+          const ownerTemplate = declineFeedbackOwnerEmail({
+            customerName,
+            customerEmail: client?.email || 'unknown',
+            eventType: estimate.eventType,
+            eventDate: estimate.eventDate,
+            category,
+            notes,
+            adminEstimateUrl: adminUrl,
+          });
+          sendEmailInBackground({
+            to: emailCfg.adminNotificationEmail,
+            subject: ownerTemplate.subject,
+            html: ownerTemplate.html,
+            text: ownerTemplate.text,
+            clientId: estimate.clientId,
+            opportunityId: estimate.opportunityId ?? null,
+            templateKey: 'decline_feedback_owner_alert',
+          });
+          sendOwnerSmsInBackground({
+            ...declineFeedbackOwnerSms({
+              customerName,
+              category,
+              estimateId: estimate.id,
+            }),
+            templateKey: 'decline_feedback_owner_alert',
+            clientId: estimate.clientId,
+            opportunityId: estimate.opportunityId ?? null,
+          });
+        }
       } catch (notifyError) {
         console.warn('Failed to fire decline notifications:', notifyError);
       }
@@ -2807,6 +2868,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimate: sanitizeEstimateForPublic(updated),
       });
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid body', errors: error.errors });
+      }
       console.error('Error declining public quote:', error);
       return res.status(500).json({ message: 'Server error' });
     }

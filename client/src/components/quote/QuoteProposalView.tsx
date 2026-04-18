@@ -38,16 +38,25 @@ import type { Proposal } from "@shared/proposal";
 
 export type QuoteViewMode = "public" | "preview";
 
+// P0-3: categorized decline reason — aggregated for reporting
+export type DeclineCategory = "pricing" | "menu" | "timing" | "other";
+const DECLINE_OPTIONS: { value: DeclineCategory; label: string; blurb: string }[] = [
+  { value: "pricing", label: "Pricing or budget", blurb: "The numbers didn't line up." },
+  { value: "menu", label: "Menu or style", blurb: "The food wasn't quite the right fit." },
+  { value: "timing", label: "Timing or logistics", blurb: "Date, location, or availability." },
+  { value: "other", label: "Something else", blurb: "A different reason." },
+];
+
 export interface QuoteProposalViewProps {
   proposal: Proposal;
   estimateStatus: "draft" | "sent" | "viewed" | "accepted" | "declined";
   mode: QuoteViewMode;
 
   // Public mode — accept/decline handlers. The component owns the decline
-  // form state internally and calls onDecline(reason) when the customer
-  // confirms.
+  // form state internally and calls onDecline({ category, notes }) when the
+  // customer confirms. Category is the structured P0-3 decline reason.
   onAccept?: () => void;
-  onDecline?: (reason: string) => void;
+  onDecline?: (payload: { category: DeclineCategory | null; notes: string }) => void;
   acceptFlowState?: "idle" | "accepting" | "accepted" | "declining" | "declined";
   acceptedEventUrl?: string | null;
 
@@ -268,6 +277,7 @@ export default function QuoteProposalView({
 }: QuoteProposalViewProps) {
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
+  const [declineCategory, setDeclineCategory] = useState<DeclineCategory | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoNote, setInfoNote] = useState("");
   const [activeBookingUrl, setActiveBookingUrl] = useState<string | null>(resolvedBookingUrl);
@@ -319,7 +329,7 @@ export default function QuoteProposalView({
   );
 
   const handleConfirmDecline = () => {
-    if (onDecline) onDecline(declineReason.trim());
+    if (onDecline) onDecline({ category: declineCategory, notes: declineReason.trim() });
   };
 
   // P0-2: open the modal. If the user already requested info in a prior
@@ -885,35 +895,72 @@ export default function QuoteProposalView({
 
       {mode === "public" && effectiveStatus === "pending" && showDeclineForm && (
         <div className="mb-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-          <p className="text-base text-stone-700 mb-3">
-            We&rsquo;re sorry to hear this isn&rsquo;t the right fit. If you
-            don&rsquo;t mind sharing why, it helps us improve.
+          <p className="text-base text-stone-700 mb-1">
+            We&rsquo;re sorry to hear this isn&rsquo;t the right fit.
           </p>
+          <p className="text-sm text-stone-500 mb-4">
+            If you don&rsquo;t mind, which of these was closest to the reason?
+          </p>
+
+          <div className="space-y-2 mb-4">
+            {DECLINE_OPTIONS.map((opt) => {
+              const selected = declineCategory === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setDeclineCategory(opt.value)}
+                  data-testid={`decline-option-${opt.value}`}
+                  className={`w-full text-left p-3 rounded-xl border transition-all ${
+                    selected
+                      ? "border-[#8B7355] bg-[#faf5e9] ring-2 ring-[#E28C0A]/30"
+                      : "border-stone-200 hover:border-stone-300 bg-white"
+                  }`}
+                >
+                  <div className="font-medium text-stone-900 text-sm">{opt.label}</div>
+                  <div className="text-xs text-stone-500 mt-0.5">{opt.blurb}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          <label className="text-sm text-stone-700 block mb-1">
+            Anything else we should know? <span className="text-stone-400">(optional)</span>
+          </label>
           <Textarea
             value={declineReason}
             onChange={(e) => setDeclineReason(e.target.value)}
-            placeholder="Optional — budget, timing, found another caterer, change of plans…"
+            placeholder="Any detail helps — no pressure either way."
             rows={3}
             className="border-stone-300"
+            data-testid="input-decline-notes"
           />
-          <div className="flex gap-2 mt-3">
+
+          <div className="flex gap-2 mt-4">
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => setShowDeclineForm(false)}
+              onClick={() => {
+                setShowDeclineForm(false);
+                setDeclineCategory(null);
+                setDeclineReason("");
+              }}
             >
               Back
             </Button>
             <Button
               variant="outline"
               className="flex-1 border-stone-400 text-stone-700 hover:bg-stone-100"
-              disabled={acceptFlowState === "declining"}
+              disabled={acceptFlowState === "declining" || !declineCategory}
               onClick={handleConfirmDecline}
               data-testid="button-confirm-decline"
             >
-              {acceptFlowState === "declining" ? "Sending…" : "Confirm"}
+              {acceptFlowState === "declining" ? "Sending…" : "Send feedback"}
             </Button>
           </div>
+          <p className="text-xs text-stone-400 mt-2 text-center">
+            Takes 10 seconds. No login needed.
+          </p>
         </div>
       )}
 

@@ -138,11 +138,15 @@ export default function PublicQuote() {
   };
 
   const declineMutation = useMutation({
-    mutationFn: async (reason: string) => {
+    mutationFn: async (payload: { category: string | null; notes: string }) => {
       const res = await fetch(`/api/public/quote/${token}/decline`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({
+          category: payload.category,
+          notes: payload.notes,
+          reason: payload.notes, // legacy field — still accepted server-side
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -194,7 +198,7 @@ export default function PublicQuote() {
         acceptFlowState={localStatus}
         acceptedEventUrl={eventPublicUrl}
         onAccept={() => acceptMutation.mutate()}
-        onDecline={(reason) => declineMutation.mutate(reason)}
+        onDecline={(payload) => declineMutation.mutate(payload)}
         onRequestInfo={handleRequestInfo}
         infoFlowState={infoFlowState}
         infoRequestedAt={data.estimate.infoRequestedAt ?? null}
