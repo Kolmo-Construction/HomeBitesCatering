@@ -57,7 +57,7 @@ export interface RecipeCostBreakdown {
  * Calculate the cost-per-serving for a single recipe based on its ingredients.
  * Returns a full breakdown (ingredient vs labor) for drill-down display.
  */
-async function getRecipeCostBreakdown(
+export async function getRecipeCostBreakdown(
   recipeId: number,
 ): Promise<RecipeCostBreakdown | null> {
   const [recipe] = await db.select().from(recipes).where(eq(recipes.id, recipeId));

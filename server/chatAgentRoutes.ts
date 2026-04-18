@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { db } from "./db";
-import { and, eq, gte, ilike, isNull, asc } from "drizzle-orm";
+import { and, eq, gte, ilike, isNull, asc, inArray, lte, sql } from "drizzle-orm";
 import {
   events,
   menus,
@@ -12,10 +12,14 @@ import {
   recipes,
   recipeComponents,
   clients,
+  inquiries,
   insertMenuItemSchema,
   insertMenuSchema,
   insertBaseIngredientSchema,
+  type MenuRecipeItem,
 } from "@shared/schema";
+import { calculateShoppingListForInquiry } from "./utils/shoppingList";
+import { getRecipeCostBreakdown } from "./utils/menuMargin";
 
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -266,6 +270,110 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: { id: { type: "number" } },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_events_this_week",
+      description: "Events happening in the next 7 days (from today). Compact list with date, time, event type, guest count, venue, client.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_event_shopping_list",
+      description:
+        "Aggregated shopping list for one event — sums all recipe ingredients scaled by guest count. Requires the event to be linked to an inquiry (quoteId). Returns grouped ingredients with quantities and estimated cost.",
+      parameters: {
+        type: "object",
+        properties: {
+          eventId: { type: "number" },
+          portionMultiplier: { type: "number", description: "Optional override for portion size (default inferred from service style)" },
+        },
+        required: ["eventId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_event_prep_sheet",
+      description:
+        "Prep summary for an event: event info + every recipe on the attached menu with estimated servings to cook based on guest count. Works even if the event is not linked to a full inquiry.",
+      parameters: {
+        type: "object",
+        properties: { eventId: { type: "number" } },
+        required: ["eventId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_ingredient_usage",
+      description:
+        "Find every recipe that uses a given ingredient, by ingredient id or name (case-insensitive partial match). Use this before changing prices, substituting, or discontinuing an ingredient.",
+      parameters: {
+        type: "object",
+        properties: {
+          ingredientId: { type: "number" },
+          name: { type: "string", description: "Partial name match, e.g., 'chicken', 'beef'" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_ingredient_price",
+      description:
+        "Update the purchase price of a base ingredient. Stores the previous price for tracking. Use this when a supplier price changes.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          newPrice: { type: "number", description: "New purchase price in dollars" },
+        },
+        required: ["id", "newPrice"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_recipes_by_dietary",
+      description:
+        "Find recipes that match dietary requirements. Tags: vegan, vegetarian, gluten_free, dairy_free, nut_free, kosher, halal, keto, paleo.",
+      parameters: {
+        type: "object",
+        properties: {
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "One or more dietary tags that must ALL be satisfied (manual designations).",
+          },
+          limit: { type: "number" },
+        },
+        required: ["tags"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_recipe_cost",
+      description:
+        "Get per-serving ingredient cost, labor cost, and total cost (in dollars) for a recipe. Optionally scale by a number of servings.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          servings: { type: "number", description: "If provided, total cost is multiplied by this count." },
+        },
         required: ["id"],
       },
     },
@@ -557,7 +665,295 @@ const toolHandlers: Record<string, ToolHandler> = {
     return {
       recipe: { id: recipe.id, name: recipe.name, yield: recipe.yield, yieldUnit: recipe.yieldUnit },
       items: components,
+      link: `/recipes/${recipe.id}`,
       note: "Quantities are in recipe units. Pricing reflects per-purchase-unit cost — conversion between recipe and purchase units may require unit conversion factors.",
+    };
+  },
+
+  async list_events_this_week() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    const rows = await db
+      .select({
+        id: events.id,
+        eventDate: events.eventDate,
+        startTime: events.startTime,
+        eventType: events.eventType,
+        guestCount: events.guestCount,
+        venue: events.venue,
+        status: events.status,
+        clientFirstName: clients.firstName,
+        clientLastName: clients.lastName,
+      })
+      .from(events)
+      .leftJoin(clients, eq(events.clientId, clients.id))
+      .where(
+        and(
+          gte(events.eventDate, start),
+          lte(events.eventDate, end),
+          isNull(events.deletedAt),
+        ),
+      )
+      .orderBy(asc(events.eventDate));
+    return rows.map((r) => ({
+      ...r,
+      clientName: [r.clientFirstName, r.clientLastName].filter(Boolean).join(" ") || null,
+      link: `/events/${r.id}`,
+    }));
+  },
+
+  async get_event_shopping_list({ eventId, portionMultiplier }) {
+    const [event] = await db.select().from(events).where(eq(events.id, Number(eventId)));
+    if (!event) return { error: `Event ${eventId} not found` };
+    if (!event.quoteId) {
+      return {
+        error:
+          "Event is not linked to a quote, so no structured menu selections exist. Try get_event_prep_sheet instead for a recipe-level summary.",
+      };
+    }
+    const [inquiry] = await db
+      .select()
+      .from(inquiries)
+      .where(eq(inquiries.quoteId, event.quoteId));
+    if (!inquiry) {
+      return {
+        error:
+          "No originating inquiry found for this event — structured shopping list needs the inquiry record.",
+      };
+    }
+    const list = await calculateShoppingListForInquiry(inquiry.id, {
+      portionMultiplier: portionMultiplier ? Number(portionMultiplier) : undefined,
+    });
+    if (!list) return { error: "Could not compute shopping list." };
+    // Trim to keep the tool result compact.
+    return {
+      eventId: event.id,
+      eventSummary: list.eventSummary,
+      portionMultiplier: list.portionMultiplier,
+      totalEstimatedCostUSD: list.totalEstimatedCost,
+      totalLaborHours: list.totalLaborHours,
+      totalFullyLoadedCostUSD: list.totalFullyLoadedCost,
+      lineCount: list.totalLineCount,
+      lines: list.allLines.slice(0, 60).map((l) => ({
+        ingredient: l.name,
+        category: l.category,
+        quantity: l.totalQuantity,
+        unit: l.purchaseUnit,
+        supplier: l.supplier,
+        estimatedCostUSD: l.estimatedCost,
+      })),
+      unlinkedItems: list.unlinkedItems,
+      link: `/events/${event.id}`,
+    };
+  },
+
+  async get_event_prep_sheet({ eventId }) {
+    const [event] = await db
+      .select()
+      .from(events)
+      .leftJoin(clients, eq(events.clientId, clients.id))
+      .leftJoin(menus, eq(events.menuId, menus.id))
+      .where(eq(events.id, Number(eventId)));
+    if (!event) return { error: `Event ${eventId} not found` };
+
+    const menu = event.menus;
+    let recipeDetails: Array<{
+      id: number;
+      name: string;
+      category: string | null;
+      yield: number;
+      yieldUnit: string | null;
+      batchesNeeded: number;
+      laborHours: number;
+    }> = [];
+
+    if (menu) {
+      const menuRecipes = (menu.recipes as MenuRecipeItem[]) || [];
+      const recipeIds = menuRecipes.map((r) => r.recipeId).filter(Boolean);
+      if (recipeIds.length > 0) {
+        const rows = await db
+          .select()
+          .from(recipes)
+          .where(inArray(recipes.id, recipeIds));
+        const guest = event.events.guestCount || 0;
+        recipeDetails = rows.map((r) => {
+          const yieldAmount = parseFloat(r.yield || "1") || 1;
+          const batches = yieldAmount > 0 ? Math.ceil(guest / yieldAmount) : 0;
+          return {
+            id: r.id,
+            name: r.name,
+            category: r.category,
+            yield: yieldAmount,
+            yieldUnit: r.yieldUnit,
+            batchesNeeded: batches,
+            laborHours: parseFloat(String(r.laborHours || "0")) || 0,
+          };
+        });
+      }
+    }
+
+    return {
+      event: {
+        id: event.events.id,
+        eventDate: event.events.eventDate,
+        startTime: event.events.startTime,
+        eventType: event.events.eventType,
+        guestCount: event.events.guestCount,
+        venue: event.events.venue,
+        status: event.events.status,
+      },
+      client: event.clients
+        ? {
+            name: [event.clients.firstName, event.clients.lastName].filter(Boolean).join(" "),
+            email: event.clients.email,
+            phone: event.clients.phone,
+          }
+        : null,
+      menu: menu ? { id: menu.id, name: menu.name } : null,
+      recipes: recipeDetails,
+      totalLaborHours: recipeDetails.reduce((s, r) => s + r.laborHours * r.batchesNeeded, 0),
+      link: `/events/${event.events.id}`,
+    };
+  },
+
+  async find_ingredient_usage({ ingredientId, name }) {
+    let ingredientIds: number[] = [];
+    let matched: Array<{ id: number; name: string }> = [];
+    if (ingredientId) {
+      const [row] = await db
+        .select({ id: baseIngredients.id, name: baseIngredients.name })
+        .from(baseIngredients)
+        .where(eq(baseIngredients.id, Number(ingredientId)));
+      if (row) {
+        ingredientIds = [row.id];
+        matched = [row];
+      }
+    } else if (name) {
+      const rows = await db
+        .select({ id: baseIngredients.id, name: baseIngredients.name })
+        .from(baseIngredients)
+        .where(ilike(baseIngredients.name, `%${name}%`))
+        .limit(10);
+      ingredientIds = rows.map((r) => r.id);
+      matched = rows;
+    } else {
+      return { error: "Provide ingredientId or name." };
+    }
+    if (ingredientIds.length === 0) return { error: "No matching ingredient." };
+
+    const usages = await db
+      .select({
+        ingredientId: recipeComponents.baseIngredientId,
+        recipeId: recipes.id,
+        recipeName: recipes.name,
+        recipeCategory: recipes.category,
+        quantity: recipeComponents.quantity,
+        unit: recipeComponents.unit,
+      })
+      .from(recipeComponents)
+      .innerJoin(recipes, eq(recipeComponents.recipeId, recipes.id))
+      .where(inArray(recipeComponents.baseIngredientId, ingredientIds))
+      .orderBy(asc(recipes.name))
+      .limit(50);
+
+    return {
+      matchedIngredients: matched,
+      usages: usages.map((u) => ({
+        ...u,
+        link: `/recipes/${u.recipeId}`,
+      })),
+    };
+  },
+
+  async update_ingredient_price({ id, newPrice }) {
+    const ingredientId = Number(id);
+    const price = Number(newPrice);
+    if (!Number.isFinite(price) || price < 0) {
+      return { error: "newPrice must be a non-negative number." };
+    }
+    const [existing] = await db
+      .select({
+        id: baseIngredients.id,
+        name: baseIngredients.name,
+        currentPrice: baseIngredients.purchasePrice,
+      })
+      .from(baseIngredients)
+      .where(eq(baseIngredients.id, ingredientId));
+    if (!existing) return { error: `Ingredient ${ingredientId} not found.` };
+
+    const [updated] = await db
+      .update(baseIngredients)
+      .set({
+        previousPurchasePrice: existing.currentPrice,
+        purchasePrice: price.toFixed(2) as any,
+        updatedAt: new Date(),
+      })
+      .where(eq(baseIngredients.id, ingredientId))
+      .returning();
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      oldPrice: existing.currentPrice,
+      newPrice: updated.purchasePrice,
+      link: `/base-ingredients`,
+    };
+  },
+
+  async search_recipes_by_dietary({ tags, limit = 20 }) {
+    const list: string[] = Array.isArray(tags) ? tags.map(String) : [];
+    if (list.length === 0) return { error: "Provide at least one tag." };
+    // Match if recipes.dietaryFlags.manualDesignations @> tags (jsonb containment)
+    const rows = await db
+      .select({
+        id: recipes.id,
+        name: recipes.name,
+        category: recipes.category,
+        dietaryFlags: recipes.dietaryFlags,
+      })
+      .from(recipes)
+      .where(
+        sql`(${recipes.dietaryFlags} -> 'manualDesignations') @> ${JSON.stringify(list)}::jsonb`,
+      )
+      .orderBy(asc(recipes.name))
+      .limit(Math.min(Number(limit) || 20, 100));
+    return {
+      tags: list,
+      count: rows.length,
+      recipes: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        link: `/recipes/${r.id}`,
+      })),
+    };
+  },
+
+  async get_recipe_cost({ id, servings }) {
+    const breakdown = await getRecipeCostBreakdown(Number(id));
+    if (!breakdown) return { error: `Recipe ${id} not found.` };
+    const scale = servings ? Number(servings) : 1;
+    const totalPerServingCents = breakdown.totalCostCents;
+    return {
+      recipeId: breakdown.recipeId,
+      recipeName: breakdown.recipeName,
+      yield: breakdown.yieldAmount,
+      yieldUnit: breakdown.yieldUnit,
+      laborHoursPerBatch: breakdown.laborHours,
+      perServing: {
+        ingredientCostUSD: breakdown.ingredientCostCents / 100,
+        laborCostUSD: breakdown.laborCostCents / 100,
+        totalCostUSD: totalPerServingCents / 100,
+      },
+      ...(servings
+        ? {
+            scaledFor: scale,
+            scaledTotalCostUSD: (totalPerServingCents * scale) / 100,
+          }
+        : {}),
+      link: `/recipes/${breakdown.recipeId}`,
     };
   },
 };
@@ -566,17 +962,26 @@ const toolHandlers: Record<string, ToolHandler> = {
 // Route handler
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are HomeBites Kitchen Assistant, a helpful AI for the chef at a catering company.
-You help the chef look up events, menus, menu items, ingredients, and recipes, and you can create new menus, menu items, and base ingredients when asked.
+const SYSTEM_PROMPT = `You are HomeBites Kitchen Assistant, an AI for the chef at a catering company.
+
+You can:
+- Look up events (today, this week, any upcoming), menus, menu items, ingredients, and recipes.
+- Build an event shopping list or prep sheet for a specific event.
+- Find which recipes use a given ingredient (critical before price changes or substitutions).
+- Update an ingredient's purchase price.
+- Search recipes by dietary tags (vegan, gluten_free, etc).
+- Get per-serving and scaled recipe cost (ingredient + labor).
+- Create new menus, menu items, and base ingredients.
 
 Rules:
-- Always call the appropriate tool to fetch live data; do not invent prices, ids, or dates.
-- Keep answers short and scannable. Use bullet lists or compact tables.
-- When listing events, format dates human-readably (e.g. "Sat Apr 25, 5:30 PM").
-- Money values are dollars unless otherwise noted.
-- For create_* operations, confirm what you just created and include its id.
+- Always call the appropriate tool for live data; never invent prices, ids, or dates.
+- Keep answers short and scannable. Prefer bullet lists or compact tables.
+- When a tool result includes a "link" field, render ids as markdown links — e.g. "Event [#42](/events/42) · Sat Apr 25, 5:30 PM". Do the same for recipes (/recipes/:id) and base ingredients (/base-ingredients).
+- Format dates human-readably (e.g. "Sat Apr 25, 5:30 PM"). Money values are dollars unless noted.
+- For create_*, update_*, confirm what you just did and include the id + link.
+- Before calling update_ingredient_price, prefer to first show the chef find_ingredient_usage results so they know the downstream impact — unless they've already asked to just change it.
 - If a tool returns an error, tell the chef plainly and suggest the next step.
-- If the user's request is ambiguous (e.g. "create a menu" with no name), ask one clarifying question instead of guessing.`;
+- If the request is ambiguous (e.g. "create a menu" with no name), ask one clarifying question instead of guessing.`;
 
 const router = Router();
 
@@ -596,15 +1001,20 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
   const schema = req.body as {
     messages?: Array<{ role: "user" | "assistant"; content: string }>;
     message?: string;
+    context?: { currentPath?: string };
   };
 
   if (!schema || (!schema.message && !schema.messages)) {
     return res.status(400).json({ error: "message or messages required" });
   }
 
-  // Build the conversation
+  // Build the conversation with a live context note appended to the system prompt.
+  const contextLine = schema.context?.currentPath
+    ? `\n\nContext: the chef is currently on the page "${schema.context.currentPath}". If their question refers to "this event/recipe/ingredient", try to resolve ids from that path first.`
+    : "";
+  const todayLine = `\n\nToday's date is ${new Date().toISOString().slice(0, 10)} (server time).`;
   const history: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: SYSTEM_PROMPT + todayLine + contextLine },
   ];
   if (schema.messages) {
     for (const m of schema.messages) {

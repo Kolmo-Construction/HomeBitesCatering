@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { MessageCircle, X, Send, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -16,17 +17,48 @@ type ToolCallLog = {
 };
 
 const QUICK_PROMPTS = [
-  "What events do we have coming up?",
-  "What's on my schedule today?",
-  "Show me all our menus",
-  "List chicken menu items",
-  "Find ingredients with 'beef' in the name",
+  "What events do we have this week?",
+  "Shopping list for my next event",
+  "Prep sheet for the next event",
+  "What recipes use chicken?",
+  "Show me vegan recipes",
+  "What does recipe 12 cost per serving?",
 ];
 
 const STORAGE_KEY = "chatAgentHistory.v1";
 
+// Tiny markdown renderer — only supports [text](path) links and newlines.
+// Safe: only renders internal paths (starting with "/") as anchors; everything
+// else is treated as plain text.
+function renderMarkdown(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /\[([^\]]+)\]\((\/[^\s)]*)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const [, label, href] = match;
+    parts.push(
+      <a
+        key={`lnk-${key++}`}
+        href={href}
+        className="text-purple-700 underline hover:text-purple-900"
+      >
+        {label}
+      </a>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
 export default function ChatAgentWidget() {
   const { user } = useAuthContext();
+  const [location] = useLocation();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -67,6 +99,7 @@ export default function ChatAgentWidget() {
     try {
       const res = await apiRequest("POST", "/api/chat-agent", {
         messages: nextHistory,
+        context: { currentPath: location },
       });
       const data = await res.json();
       const reply = data.reply || "(no response)";
@@ -173,7 +206,7 @@ export default function ChatAgentWidget() {
                       : "bg-white border border-gray-200 text-gray-800"
                   }`}
                 >
-                  {m.content}
+                  {m.role === "assistant" ? renderMarkdown(m.content) : m.content}
                 </div>
               </div>
             ))}
