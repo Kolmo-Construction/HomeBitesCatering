@@ -378,6 +378,15 @@ interface AppetizerCategory {
   label: string;
   items: AppetizerItem[];
   perPerson?: boolean; // If true, quantity = per person instead of lot sizes
+  // Trio / pack categories: one lot-size selector for the whole category,
+  // customer picks N flavors (no per-flavor price, just variety within
+  // that pack). Used for Spreads: $6.50/serving × servings chosen, with
+  // 3 flavor picks making up the trio.
+  servingPack?: {
+    pricePerServing: number;
+    flavorsToPick: number;
+    description?: string;
+  };
 }
 
 const LOT_SIZES = [24, 36, 48, 72, 96, 144];
@@ -450,12 +459,19 @@ const APPETIZER_CATEGORIES: AppetizerCategory[] = [
   },
   {
     label: "Spreads",
-    perPerson: true,
+    servingPack: {
+      pricePerServing: 6.5,
+      flavorsToPick: 3,
+      description:
+        "Pick 3 spreads to make up your trio, then choose how many servings you'd like.",
+    },
+    // Flavors have a 0 price — the pack is priced at the category level
+    // (pricePerServing × servings). Listed as "per serving" for the UI.
     items: [
-      { name: "Tzatziki", price: 6.5, unit: "per person" },
-      { name: "Hummus", price: 6.5, unit: "per person" },
-      { name: "Baba Ghanoush", price: 6.5, unit: "per person" },
-      { name: "Spicy Feta", price: 6.5, unit: "per person" },
+      { name: "Tzatziki", price: 0, unit: "flavor" },
+      { name: "Hummus", price: 0, unit: "flavor" },
+      { name: "Baba Ghanoush", price: 0, unit: "flavor" },
+      { name: "Spicy Feta", price: 0, unit: "flavor" },
     ],
   },
 ];
@@ -1183,6 +1199,14 @@ export default function Inquire() {
     // Appetizers
     APPETIZER_CATEGORIES.forEach((cat) => {
       const selections = form.appetizerSelections[cat.label] || {};
+      if (cat.servingPack) {
+        // Pack category: one price-per-serving × servings, regardless of
+        // which flavors are picked. Servings stored under the sentinel
+        // key "__servings".
+        const servings = selections["__servings"] || 0;
+        appetizerTotal += cat.servingPack.pricePerServing * servings;
+        return;
+      }
       cat.items.forEach((item) => {
         const qty = selections[item.name] || 0;
         if (cat.perPerson) {
@@ -1378,6 +1402,24 @@ export default function Inquire() {
                   `${pretty}: please select ${limit} (you have ${selectedCount}).`,
                 );
               }
+            }
+          }
+          break;
+        case 5:
+          // If a serving-pack appetizer category has servings picked, the
+          // flavor count must match (e.g. Spreads trio requires exactly 3).
+          for (const cat of APPETIZER_CATEGORIES) {
+            if (!cat.servingPack) continue;
+            const sel = form.appetizerSelections[cat.label] || {};
+            const servings = sel["__servings"] || 0;
+            if (servings <= 0) continue;
+            const picked = cat.items.filter(
+              (it) => (sel[it.name] || 0) > 0,
+            ).length;
+            if (picked !== cat.servingPack.flavorsToPick) {
+              errors.push(
+                `${cat.label}: please pick ${cat.servingPack.flavorsToPick} flavors (you have ${picked}).`,
+              );
             }
           }
           break;
@@ -3551,13 +3593,16 @@ export default function Inquire() {
             <Accordion type="multiple" className="w-full">
               {APPETIZER_CATEGORIES.map((cat) => {
                 const selections = form.appetizerSelections[cat.label] || {};
-                const catTotal = cat.items.reduce((sum, item) => {
-                  const qty = selections[item.name] || 0;
-                  if (cat.perPerson) {
-                    return sum + (qty > 0 ? item.price * guestCount : 0);
-                  }
-                  return sum + item.price * qty;
-                }, 0);
+                const catTotal = cat.servingPack
+                  ? cat.servingPack.pricePerServing *
+                    (selections["__servings"] || 0)
+                  : cat.items.reduce((sum, item) => {
+                      const qty = selections[item.name] || 0;
+                      if (cat.perPerson) {
+                        return sum + (qty > 0 ? item.price * guestCount : 0);
+                      }
+                      return sum + item.price * qty;
+                    }, 0);
 
                 return (
                   <AccordionItem key={cat.label} value={cat.label}>
@@ -3572,6 +3617,101 @@ export default function Inquire() {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
+                      {cat.servingPack ? (
+                        (() => {
+                          const servings =
+                            selections["__servings"] || 0;
+                          const pickedFlavors = cat.items.filter(
+                            (it) => (selections[it.name] || 0) > 0,
+                          );
+                          const maxFlavors = cat.servingPack.flavorsToPick;
+                          return (
+                            <div className="space-y-4">
+                              {cat.servingPack.description && (
+                                <p className="text-sm text-gray-600">
+                                  {cat.servingPack.description}
+                                </p>
+                              )}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-sm font-medium">
+                                    Pick {maxFlavors} flavors
+                                  </Label>
+                                  <span
+                                    className={cn(
+                                      "text-xs font-medium px-2 py-0.5 rounded-full",
+                                      pickedFlavors.length === maxFlavors
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-gray-100 text-gray-600",
+                                    )}
+                                  >
+                                    {pickedFlavors.length} / {maxFlavors}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {cat.items.map((item) => {
+                                    const on =
+                                      (selections[item.name] || 0) > 0;
+                                    const atLimit =
+                                      !on &&
+                                      pickedFlavors.length >= maxFlavors;
+                                    return (
+                                      <label
+                                        key={item.name}
+                                        className={cn(
+                                          "flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-all text-sm",
+                                          on
+                                            ? "border-primary bg-primary/5"
+                                            : atLimit
+                                              ? "border-gray-200 opacity-50 cursor-not-allowed"
+                                              : "border-gray-200 hover:border-gray-300",
+                                        )}
+                                      >
+                                        <Checkbox
+                                          checked={on}
+                                          disabled={atLimit}
+                                          onCheckedChange={(v) =>
+                                            setAppetizerQty(
+                                              cat.label,
+                                              item.name,
+                                              v === true ? 1 : 0,
+                                            )
+                                          }
+                                        />
+                                        <span>{item.name}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">
+                                  Servings
+                                </Label>
+                                <p className="text-xs text-gray-500">
+                                  {fmt(cat.servingPack.pricePerServing)}{" "}
+                                  per serving
+                                </p>
+                                {renderLotSelector(servings, (v) =>
+                                  setAppetizerQty(cat.label, "__servings", v),
+                                )}
+                                {servings > 0 && (
+                                  <p className="text-sm text-gray-600">
+                                    {servings} servings ×{" "}
+                                    {fmt(cat.servingPack.pricePerServing)} ={" "}
+                                    <strong>
+                                      {fmt(
+                                        cat.servingPack.pricePerServing *
+                                          servings,
+                                      )}
+                                    </strong>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      ) : (
                       <div className="space-y-3">
                         {cat.items.map((item) => {
                           const qty = selections[item.name] || 0;
@@ -3622,6 +3762,7 @@ export default function Inquire() {
                           );
                         })}
                       </div>
+                      )}
                     </AccordionContent>
                   </AccordionItem>
                 );
