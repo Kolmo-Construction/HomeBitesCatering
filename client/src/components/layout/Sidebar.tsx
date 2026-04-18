@@ -45,7 +45,9 @@ import {
   RotateCcw,
   MessageCircleQuestion,
   TrendingUp,
+  Inbox as InboxIcon,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 // Full nav, with a `chef` flag on items kitchen staff should see. Items without
 // the flag are sales/admin territory and get hidden for chef users.
@@ -69,6 +71,7 @@ const ALL_NAV: NavItem[] = [
     href: "/sales",
     icon: TrendingUp,
     submenu: [
+      { name: "Follow-ups", href: "/follow-ups", icon: InboxIcon },
       { name: "Leads", href: "/raw-leads", icon: Inbox },
       { name: "Pipeline", href: "/pipeline", icon: Columns3 },
       { name: "Quote Requests", href: "/inquiries", icon: MessageSquareQuote },
@@ -116,12 +119,15 @@ function SortableNavItem({
   isExpanded,
   location,
   onToggleSubmenu,
+  badges,
 }: {
   item: NavItem;
   isActive: boolean;
   isExpanded: boolean;
   location: string;
   onToggleSubmenu: (name: string) => void;
+  /** Map of href → badge count. Used to flag the Follow-ups submenu item. */
+  badges?: Record<string, number>;
 }) {
   const {
     attributes,
@@ -166,6 +172,17 @@ function SortableNavItem({
               </div>
               <item.icon className="w-5 h-5 md:mr-3 text-center shrink-0" />
               <span className="hidden md:inline truncate">{item.name}</span>
+              {(() => {
+                const groupBadge = (item.submenu || []).reduce(
+                  (sum, sub) => sum + (badges?.[sub.href] || 0),
+                  0,
+                );
+                return groupBadge > 0 ? (
+                  <span className="hidden md:inline ml-2 text-[10px] font-semibold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">
+                    {groupBadge}
+                  </span>
+                ) : null;
+              })()}
             </div>
             <div className="hidden md:block">
               {isExpanded ? (
@@ -197,6 +214,11 @@ function SortableNavItem({
                         <span className="hidden md:inline text-sm">
                           {subItem.name}
                         </span>
+                        {badges?.[subItem.href] ? (
+                          <span className="hidden md:inline ml-auto text-[10px] font-semibold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">
+                            {badges[subItem.href]}
+                          </span>
+                        ) : null}
                       </div>
                     </Link>
                   </li>
@@ -242,6 +264,27 @@ export default function Sidebar() {
   const isChef = useIsChef();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [navOrder, setNavOrder] = useState<string[]>(() => getSavedOrder() || DEFAULT_ORDER);
+
+  // Follow-ups count — drives the badge on the Sales parent + the Follow-ups
+  // submenu entry. Chefs don't see Sales at all, but the query is cheap and
+  // runs for everyone; the backend returns 0s if nothing matches.
+  const { data: followUpCounts } = useQuery<{
+    p0: number;
+    p1: number;
+    p2: number;
+    p3: number;
+    total: number;
+  }>({
+    queryKey: ["/api/follow-ups/count"],
+    queryFn: async () => {
+      const res = await fetch("/api/follow-ups/count", { credentials: "include" });
+      if (!res.ok) return { p0: 0, p1: 0, p2: 0, p3: 0, total: 0 };
+      return res.json();
+    },
+    refetchInterval: 120_000,
+    enabled: !isChef,
+  });
+  const followUpUrgent = (followUpCounts?.p0 ?? 0) + (followUpCounts?.p1 ?? 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -348,6 +391,7 @@ export default function Sidebar() {
                     isExpanded={isExpanded}
                     location={location}
                     onToggleSubmenu={toggleSubmenu}
+                    badges={{ "/follow-ups": followUpUrgent }}
                   />
                 );
               })}

@@ -1711,3 +1711,46 @@ export const inquiryRelations = relations(inquiries, ({ one }) => ({
 export const venueRelations = relations(venues, ({ many }) => ({
   inquiries: many(inquiries),
 }));
+
+// ============================================================================
+// Follow-up inbox state (per-user overlay)
+// ============================================================================
+//
+// The Follow-ups inbox is computed on the fly by unioning 16 source queries
+// across inquiries / quotes / events / contracts / tastings / communications /
+// follow_up_drafts / raw_leads / opportunities. This table stores ONLY the
+// per-user state that can't be derived from sources: snooze, dismiss, pin,
+// and quick-notes. item_key uniquely identifies a source item (e.g.
+// "change_request:47", "quote_unviewed:12", "inquiry_unread:8").
+
+export const followUpStateEnum = pgEnum("follow_up_state", [
+  "snoozed",
+  "dismissed",
+  "in_progress",
+]);
+
+export const followUpStates = pgTable(
+  "follow_up_states",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    itemKey: text("item_key").notNull(),
+    state: followUpStateEnum("state").notNull(),
+    snoozeUntil: timestamp("snooze_until"),
+    note: text("note"),
+    // When dismissing, we capture the source record's last-modified marker so
+    // we can auto-re-surface the item if the source changes. For "snoozed" /
+    // "in_progress" this is ignored.
+    dismissedAtSource: text("dismissed_at_source"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    userItemUnique: unique("follow_up_states_user_item_uq").on(t.userId, t.itemKey),
+  }),
+);
+
+export type FollowUpState = typeof followUpStates.$inferSelect;
+export type InsertFollowUpState = typeof followUpStates.$inferInsert;

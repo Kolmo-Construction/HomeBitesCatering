@@ -392,13 +392,70 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "list_followups",
+      description:
+        "Return the admin's follow-up inbox — everything waiting on Mike. Supports filters by urgency (P0/P1/P2/P3) and type. Use this to answer 'what's on my plate?', 'who should I call back first?', 'anything overdue?'.",
+      parameters: {
+        type: "object",
+        properties: {
+          urgency: {
+            type: "array",
+            items: { type: "string", enum: ["P0", "P1", "P2", "P3"] },
+            description: "Subset of urgency tiers to include (omit for all).",
+          },
+          limit: { type: "number", description: "Cap rows returned (default 20)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "draft_followup_reply",
+      description:
+        "Given a follow-up item key (returned by list_followups), generate a draft reply tailored to the item type. Returns the suggested reply text and subject for Mike to review. Does NOT send.",
+      parameters: {
+        type: "object",
+        properties: {
+          itemKey: { type: "string", description: "Item key like 'change_request_open:47' or 'quote_unviewed:12'." },
+          tone: {
+            type: "string",
+            enum: ["friendly", "brief", "formal"],
+            description: "Optional tone override (default: friendly).",
+          },
+        },
+        required: ["itemKey"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resolve_followup",
+      description:
+        "Mark a follow-up item as handled / dismissed. Use this after Mike confirms the item is addressed. Changes state to dismissed for the calling admin user.",
+      parameters: {
+        type: "object",
+        properties: {
+          itemKey: { type: "string" },
+        },
+        required: ["itemKey"],
+      },
+    },
+  },
 ];
 
 // ============================================================================
 // Tool handlers
 // ============================================================================
 
-type ToolHandler = (args: any) => Promise<any>;
+interface ToolContext {
+  userId: number;
+}
+type ToolHandler = (args: any, ctx?: ToolContext) => Promise<any>;
 
 const toolHandlers: Record<string, ToolHandler> = {
   async list_upcoming_events({ limit = 10 }) {
@@ -1061,6 +1118,114 @@ const toolHandlers: Record<string, ToolHandler> = {
       link: `/recipes/${breakdown.recipeId}`,
     };
   },
+
+  async list_followups(args, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated for follow-up lookup." };
+    const { listFollowUps } = await import("./services/followUps");
+    const urgency = Array.isArray(args?.urgency) && args.urgency.length > 0 ? args.urgency : undefined;
+    const limit = typeof args?.limit === "number" ? args.limit : 20;
+    const result = await listFollowUps({ userId: ctx.userId, urgency });
+    return {
+      counts: result.counts,
+      items: result.items.slice(0, Math.min(limit, 50)).map((i) => ({
+        key: i.key,
+        type: i.type,
+        urgency: i.urgency,
+        title: i.title,
+        subtitle: i.subtitle,
+        ageHours: Math.round(i.ageSeconds / 3600),
+        link: i.links.primary,
+      })),
+      note:
+        result.counts.total === 0
+          ? "Inbox zero — nothing needs Mike right now."
+          : `${result.counts.p0} urgent · ${result.counts.p1} this week · ${result.counts.p2 + result.counts.p3} low priority.`,
+    };
+  },
+
+  async draft_followup_reply(args, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated." };
+    const { listFollowUps } = await import("./services/followUps");
+    const { items } = await listFollowUps({ userId: ctx.userId });
+    const target = items.find((i) => i.key === args?.itemKey);
+    if (!target) return { error: `Item ${args?.itemKey} not found in the open inbox.` };
+    const tone = (args?.tone as string) || "friendly";
+    // Return a structured draft; the agent will phrase it in natural language.
+    // Keep this deterministic rather than inventing details — the agent can
+    // personalize in its final reply based on the returned fields.
+    const draftByType: Record<string, { subject: string; body: string }> = {
+      change_request_open: {
+        subject: "We got your change request",
+        body: `Thanks for sending this over — we've noted the change and will confirm once we've updated the event details. If anything else comes up, reply to this and we'll take care of it.`,
+      },
+      quote_unviewed: {
+        subject: "Just making sure you got our proposal",
+        body: `Checking in — we sent over the proposal a few days ago and I want to make sure it landed. Happy to walk you through it on a quick call if easier.`,
+      },
+      quote_viewed_no_action: {
+        subject: "Any questions on the proposal?",
+        body: `Wanted to check in on the proposal. Happy to tweak anything, swap menu items, or hop on a quick call to run through details.`,
+      },
+      info_requested: {
+        subject: "Let's hop on a call",
+        body: `Thanks for flagging you'd like more info. I'm available [TIME] or [TIME] — would either of those work, or is a different time better for you?`,
+      },
+      contract_unsigned: {
+        subject: "Contract ready for signature",
+        body: `Just a reminder — the contract is still waiting on your signature. Once it's signed we can lock in your date. Let me know if you have any questions.`,
+      },
+      deposit_overdue: {
+        subject: "Deposit invoice",
+        body: `Sending over the payment link for your deposit — once that comes through, your date is officially locked in and we'll kick off prep planning.`,
+      },
+      balance_due_window: {
+        subject: "Final balance for your event",
+        body: `We're a few days out — here's the link for your final balance. Once paid we're all set for the big day.`,
+      },
+      review_not_requested: {
+        subject: "How was your event?",
+        body: `Hope your event went beautifully. If you enjoyed working with us, we'd love a quick review — it genuinely helps a small business like ours. [REVIEW_LINK]`,
+      },
+      lost_lead_nurture: {
+        subject: "Thinking about you",
+        body: `Circling back — if your plans have shifted or you're ready to revisit, just reply and I can pull something together in a day. Otherwise, all good. Hope you're well.`,
+      },
+    };
+    const draft = draftByType[target.type] || {
+      subject: "Quick follow-up",
+      body: `Hi [NAME], just following up on this. Let me know if you need anything from our side.`,
+    };
+    const toneAdjust =
+      tone === "brief"
+        ? " (keep reply to 1-2 sentences)"
+        : tone === "formal"
+          ? " (use formal register)"
+          : " (friendly and direct)";
+    return {
+      itemKey: target.key,
+      type: target.type,
+      title: target.title,
+      subtitle: target.subtitle,
+      suggestedSubject: draft.subject,
+      suggestedBody: draft.body + toneAdjust,
+      link: target.links.primary,
+      note: "Review and personalize before sending — this is a starting point, not a final draft.",
+    };
+  },
+
+  async resolve_followup(args, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated." };
+    const { listFollowUps, dismissItem } = await import("./services/followUps");
+    const { items } = await listFollowUps({ userId: ctx.userId });
+    const target = items.find((i) => i.key === args?.itemKey);
+    if (!target) return { error: `Item ${args?.itemKey} not found or already resolved.` };
+    await dismissItem(ctx.userId, target.key, target.sourceAge);
+    return {
+      ok: true,
+      itemKey: target.key,
+      message: `Dismissed "${target.title}". It will re-appear if the underlying record changes.`,
+    };
+  },
 };
 
 // ============================================================================
@@ -1077,6 +1242,10 @@ You can:
 - Search recipes by dietary tags (vegan, gluten_free, etc).
 - Get per-serving and scaled recipe cost (ingredient + labor).
 - Create new menus, menu items, and base ingredients.
+- **Manage Mike's follow-up inbox** — list pending items (list_followups), draft replies
+  (draft_followup_reply), and dismiss handled items (resolve_followup). Use these when
+  the chef asks "what do I need to follow up on?", "who am I behind on?", "what's
+  urgent today?", or similar.
 
 Rules:
 - Always call the appropriate tool for live data; never invent prices, ids, or dates.
@@ -1132,6 +1301,7 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
     history.push({ role: "user", content: schema.message });
   }
 
+  const toolCtx: ToolContext = { userId: (req.session as any)?.userId ?? 0 };
   const toolLog: Array<{ name: string; args: any; resultPreview: string }> = [];
   const MAX_TOOL_ROUNDS = 6;
 
@@ -1171,7 +1341,7 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
                 result = { error: `Unknown tool ${name}` };
               } else {
                 try {
-                  result = await handler(args);
+                  result = await handler(args, toolCtx);
                 } catch (err: any) {
                   result = { error: err?.message || String(err) };
                 }
@@ -1273,6 +1443,7 @@ router.post("/stream", isAuthenticated, async (req: Request, res: Response) => {
   }
   if (schema.message) history.push({ role: "user", content: schema.message });
 
+  const toolCtx: ToolContext = { userId: (req.session as any)?.userId ?? 0 };
   const toolLog: Array<{ name: string; args: any; resultPreview: string }> = [];
   const MAX_TOOL_ROUNDS = 6;
 
@@ -1362,7 +1533,7 @@ router.post("/stream", isAuthenticated, async (req: Request, res: Response) => {
                 result = { error: `Unknown tool ${t.name}` };
               } else {
                 try {
-                  result = await handler(args);
+                  result = await handler(args, toolCtx);
                 } catch (err: any) {
                   result = { error: err?.message || String(err) };
                 }

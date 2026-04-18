@@ -73,6 +73,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <FollowUpsWidget />
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard 
@@ -142,5 +144,51 @@ export default function Dashboard() {
         <MenuMarginsCard />
       </div>
     </div>
+  );
+}
+
+// Small banner at the top of the dashboard that shows the current count of
+// urgent follow-ups (P0 + P1) and links to the inbox. Hidden when empty.
+function FollowUpsWidget() {
+  const { data } = useQuery<{
+    p0: number;
+    p1: number;
+    p2: number;
+    p3: number;
+    total: number;
+  }>({
+    queryKey: ["/api/follow-ups/count"],
+    queryFn: async () => {
+      const res = await fetch("/api/follow-ups/count", { credentials: "include" });
+      if (!res.ok) return { p0: 0, p1: 0, p2: 0, p3: 0, total: 0 };
+      return res.json();
+    },
+    refetchInterval: 60_000,
+  });
+  const urgent = (data?.p0 ?? 0) + (data?.p1 ?? 0);
+  if (urgent === 0) return null;
+  return (
+    <Link href="/follow-ups">
+      <div className="mb-6 rounded-xl border border-red-200 bg-gradient-to-r from-red-50 via-orange-50 to-white px-4 py-3 flex items-center justify-between hover:shadow-sm transition cursor-pointer">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-red-500 text-white flex items-center justify-center text-lg font-bold">
+            {urgent}
+          </div>
+          <div>
+            <div className="font-semibold text-red-900">
+              {urgent === 1
+                ? "1 follow-up needs you"
+                : `${urgent} follow-ups need you`}
+            </div>
+            <div className="text-xs text-red-700/80">
+              {(data?.p0 ?? 0)} urgent today · {(data?.p1 ?? 0)} this week
+            </div>
+          </div>
+        </div>
+        <div className="text-sm text-red-700 hover:text-red-900">
+          Open inbox →
+        </div>
+      </div>
+    </Link>
   );
 }

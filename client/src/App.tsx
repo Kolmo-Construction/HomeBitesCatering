@@ -7,6 +7,7 @@ import { queryClient } from "./lib/queryClient"; // Assuming this path is correc
 import Login from "@/pages/login"; // Assuming this path is correct
 import Dashboard from "@/pages/dashboard";
 import Opportunities from "@/pages/opportunities";
+import FollowUps from "@/pages/FollowUps";
 import Pipeline from "@/pages/Pipeline";
 import Clients from "@/pages/clients";
 import Quotes from "@/pages/quotes";
@@ -208,6 +209,7 @@ function AppContent() {
         ) : (
           <Switch>
           <Route path="/" component={Dashboard} />
+          <Route path="/follow-ups" component={FollowUps} />
           <Route path="/pipeline" component={Pipeline} />
           <Route path="/opportunities" component={Opportunities} />
           <Route path="/opportunities/new" component={Opportunities} />

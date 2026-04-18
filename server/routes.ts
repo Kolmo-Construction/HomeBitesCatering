@@ -5138,9 +5138,276 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ═══════════════ Follow-ups inbox cron jobs ═════════════════════════════
+  //
+  // Three separate endpoints so they can be scheduled independently:
+  //   follow-up-digest:    morning email to admin(s) with top-line count
+  //   follow-up-sla:       SMS when a P0 has been sitting unacted > 24h
+  //   follow-up-cleanup:   nightly orphan state cleanup
+  //
+  // All three share the same auth check as the other cron routes
+  // (X-Cron-Secret header against CRON_SECRET env).
+
+  app.post('/api/cron/follow-up-digest', async (req: Request, res: Response) => {
+    try {
+      const emailCfg = getEmailConfig();
+      if (!emailCfg.cronSecret) return res.status(503).json({ message: 'CRON_SECRET not configured' });
+      if (req.get('x-cron-secret') !== emailCfg.cronSecret) return res.status(401).json({ message: 'Invalid cron secret' });
+
+      const { listFollowUps } = await import('./services/followUps');
+
+      const admins = (await storage.listUsers()).filter((u) => u.role === 'admin' || u.role === 'user');
+      const sent: Array<{ userId: number; email: string; total: number }> = [];
+
+      for (const admin of admins) {
+        if (!admin.email) continue;
+        const { items, counts } = await listFollowUps({ userId: admin.id, urgency: ['P0', 'P1'] });
+        if (counts.total === 0) continue;
+
+        const host = emailCfg.publicBaseUrl.replace(/\/$/, '');
+        const previewRows = items.slice(0, 5).map((i) => `
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid #eee;vertical-align:top">
+              <div style="font-weight:600;color:#1a1a1a">${i.title}</div>
+              <div style="font-size:13px;color:#666">${i.subtitle}</div>
+            </td>
+            <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;vertical-align:top;font-size:12px;color:#888">
+              ${i.urgency}
+            </td>
+          </tr>`).join('');
+
+        const html = `
+          <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:24px;color:#333">
+            <h2 style="color:#8B7355;margin:0 0 4px 0">Your morning follow-up digest</h2>
+            <p style="color:#666;margin:0 0 20px 0">
+              <strong>${counts.p0}</strong> urgent today · <strong>${counts.p1}</strong> this week
+            </p>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px">${previewRows}</table>
+            <a href="${host}/follow-ups" style="display:inline-block;background:#8B7355;color:white;padding:10px 20px;border-radius:999px;text-decoration:none;font-weight:600">
+              Open follow-ups inbox
+            </a>
+            <p style="color:#999;font-size:12px;margin-top:20px">
+              This digest runs each morning when you have open follow-ups. It won't send when your inbox is empty.
+            </p>
+          </div>`;
+
+        sendEmailInBackground({
+          to: admin.email,
+          subject: `${counts.total} follow-up${counts.total === 1 ? '' : 's'} waiting · ${counts.p0} urgent`,
+          html,
+          text: `${counts.total} follow-ups waiting. ${counts.p0} urgent today. Open: ${host}/follow-ups`,
+          templateKey: 'follow_up_digest',
+        });
+        sent.push({ userId: admin.id, email: admin.email, total: counts.total });
+      }
+
+      return res.json({ ok: true, sentCount: sent.length, sent });
+    } catch (error) {
+      console.error('Error running follow-up digest cron:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/cron/follow-up-sla', async (req: Request, res: Response) => {
+    try {
+      const emailCfg = getEmailConfig();
+      if (!emailCfg.cronSecret) return res.status(503).json({ message: 'CRON_SECRET not configured' });
+      if (req.get('x-cron-secret') !== emailCfg.cronSecret) return res.status(401).json({ message: 'Invalid cron secret' });
+
+      const { listFollowUps } = await import('./services/followUps');
+      const SLA_BREACH_SECONDS = 24 * 3600; // 24h
+
+      // Aggregate across admin users — only ping owner SMS once per breach
+      // item regardless of how many admins have it open. Use a simple Set.
+      const admins = (await storage.listUsers()).filter((u) => u.role === 'admin' || u.role === 'user');
+      const alerted: Set<string> = new Set();
+      const breaches: Array<{ key: string; title: string; ageHours: number }> = [];
+
+      for (const admin of admins) {
+        const { items } = await listFollowUps({ userId: admin.id, urgency: ['P0'] });
+        for (const item of items) {
+          if (item.userState.state !== 'open') continue;
+          if (item.ageSeconds < SLA_BREACH_SECONDS) continue;
+          if (alerted.has(item.key)) continue;
+          alerted.add(item.key);
+          breaches.push({ key: item.key, title: item.title, ageHours: Math.floor(item.ageSeconds / 3600) });
+        }
+      }
+
+      if (breaches.length > 0) {
+        const body =
+          `⚠ ${breaches.length} urgent follow-up${breaches.length === 1 ? '' : 's'} past 24h:\n` +
+          breaches
+            .slice(0, 3)
+            .map((b) => `• ${b.title} (${b.ageHours}h)`)
+            .join('\n') +
+          (breaches.length > 3 ? `\n…and ${breaches.length - 3} more.` : '') +
+          `\n${emailCfg.publicBaseUrl}/follow-ups`;
+
+        sendOwnerSmsInBackground({
+          body,
+          templateKey: 'follow_up_sla_breach',
+        });
+      }
+
+      return res.json({ ok: true, breachCount: breaches.length, breaches });
+    } catch (error) {
+      console.error('Error running follow-up SLA cron:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  app.post('/api/cron/follow-up-cleanup', async (req: Request, res: Response) => {
+    try {
+      const emailCfg = getEmailConfig();
+      if (!emailCfg.cronSecret) return res.status(503).json({ message: 'CRON_SECRET not configured' });
+      if (req.get('x-cron-secret') !== emailCfg.cronSecret) return res.status(401).json({ message: 'Invalid cron secret' });
+      const { cleanupOrphanStates } = await import('./services/followUps');
+      const result = await cleanupOrphanStates();
+      return res.json({ ok: true, ...result });
+    } catch (error) {
+      console.error('Error running follow-up cleanup cron:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // ─── Tier 1: Follow-Up Draft Management (CRUD) ────────────────────────────
 
   // List follow-up drafts (optionally filter by status)
+  // ═══════════════ Follow-ups inbox ═══════════════════════════════════════
+  // Unified inbox of everything waiting on the admin. Computed from 16
+  // source queries each request. Per-user state overlay (snooze / dismiss /
+  // in-progress / note) lives in follow_up_states.
+  {
+    const {
+      listFollowUps,
+      snoozeItem,
+      dismissItem,
+      pinItem,
+      unpinItem,
+      setItemNote,
+    } = await import('./services/followUps');
+
+    const parseUrgency = (v: unknown): any[] | undefined => {
+      if (!v) return undefined;
+      const s = String(v).toLowerCase();
+      const out = s
+        .split(',')
+        .map((x) => x.trim().toUpperCase())
+        .filter((x) => ['P0', 'P1', 'P2', 'P3'].includes(x));
+      return out.length ? out : undefined;
+    };
+
+    app.get('/api/follow-ups', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const urgency = parseUrgency(req.query.urgency);
+        const types = req.query.type
+          ? String(req.query.type).split(',').map((s) => s.trim()).filter(Boolean)
+          : undefined;
+        const includeSnoozed = req.query.includeSnoozed === 'true';
+        const includeDismissed = req.query.includeDismissed === 'true';
+        const result = await listFollowUps({
+          userId,
+          urgency,
+          types: types as any,
+          includeSnoozed,
+          includeDismissed,
+        });
+        res.json(result);
+      } catch (error) {
+        console.error('Error listing follow-ups:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    app.get('/api/follow-ups/count', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const { counts } = await listFollowUps({
+          userId,
+          urgency: ['P0', 'P1'],
+        });
+        res.json(counts);
+      } catch (error) {
+        console.error('Error counting follow-ups:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    app.post('/api/follow-ups/:itemKey/snooze', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const { itemKey } = req.params;
+        const { snoozeUntil, note } = req.body || {};
+        if (!snoozeUntil) return res.status(400).json({ message: 'snoozeUntil required' });
+        const when = new Date(snoozeUntil);
+        if (isNaN(when.getTime())) return res.status(400).json({ message: 'Invalid snoozeUntil' });
+        if (when.getTime() <= Date.now()) return res.status(400).json({ message: 'snoozeUntil must be in the future' });
+        await snoozeItem(userId, itemKey, when, typeof note === 'string' ? note : undefined);
+        res.json({ ok: true });
+      } catch (error) {
+        console.error('Error snoozing follow-up:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    app.post('/api/follow-ups/:itemKey/dismiss', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const { itemKey } = req.params;
+        const { sourceAge, note } = req.body || {};
+        if (!sourceAge || typeof sourceAge !== 'string') {
+          return res.status(400).json({ message: 'sourceAge required (ISO timestamp from the item)' });
+        }
+        await dismissItem(userId, itemKey, sourceAge, typeof note === 'string' ? note : undefined);
+        res.json({ ok: true });
+      } catch (error) {
+        console.error('Error dismissing follow-up:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    app.post('/api/follow-ups/:itemKey/in-progress', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const { itemKey } = req.params;
+        const { note } = req.body || {};
+        await pinItem(userId, itemKey, typeof note === 'string' ? note : undefined);
+        res.json({ ok: true });
+      } catch (error) {
+        console.error('Error pinning follow-up:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    app.delete('/api/follow-ups/:itemKey/in-progress', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const { itemKey } = req.params;
+        await unpinItem(userId, itemKey);
+        res.json({ ok: true });
+      } catch (error) {
+        console.error('Error unpinning follow-up:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+
+    app.post('/api/follow-ups/:itemKey/note', isAuthenticated, async (req: Request, res: Response) => {
+      try {
+        const userId = req.session.userId!;
+        const { itemKey } = req.params;
+        const { note } = req.body || {};
+        if (typeof note !== 'string') return res.status(400).json({ message: 'note required' });
+        await setItemNote(userId, itemKey, note.slice(0, 2000));
+        res.json({ ok: true });
+      } catch (error) {
+        console.error('Error saving follow-up note:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
+    });
+  }
+
   app.get('/api/follow-up-drafts', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const status = req.query.status as string | undefined;
