@@ -597,6 +597,11 @@ async function sourceDripPausedStuck(): Promise<FollowUpItem[]> {
 
 async function sourceUnmatchedEmail(): Promise<FollowUpItem[]> {
   const cutoff = new Date(Date.now() - SLA.UNMATCHED_HOURS * 3_600_000);
+  // Only surface raw leads that still need attention — specifically those
+  // that haven't been promoted to an opportunity. `status='new'` alone isn't
+  // enough because legacy leads may have been processed without the status
+  // ever flipping (the admin "Process" action creates the opportunity but
+  // doesn't update raw_leads.status).
   const rows = await db
     .select({
       id: rawLeads.id,
@@ -609,6 +614,7 @@ async function sourceUnmatchedEmail(): Promise<FollowUpItem[]> {
     .where(
       and(
         inArray(rawLeads.status, ["needs_manual_review", "new"]),
+        isNull(rawLeads.createdOpportunityId),
         lte(rawLeads.receivedAt, cutoff),
       ),
     )
