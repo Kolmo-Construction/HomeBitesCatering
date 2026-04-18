@@ -10,7 +10,6 @@ import {
   MicOff,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/contexts/AuthContext";
 
 type ChatMessage = {
@@ -48,7 +47,7 @@ function renderMarkdown(text: string): React.ReactNode {
       <a
         key={`lnk-${key++}`}
         href={href}
-        className="text-purple-700 underline hover:text-purple-900"
+        className="text-[#8B7355] underline decoration-[#c9b089]/60 hover:text-[#E28C0A] hover:decoration-[#E28C0A]/60 underline-offset-2"
       >
         {label}
       </a>,
@@ -305,60 +304,87 @@ export default function ChatAgentWidget() {
         <button
           aria-label="Open kitchen assistant"
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-purple-800 text-white shadow-lg hover:scale-105 transition-transform"
+          className="fixed bottom-6 right-6 z-50 group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-br from-[#8B7355] via-[#a67c5a] to-[#E28C0A] text-white pl-4 pr-5 py-3 shadow-[0_8px_24px_-8px_rgba(139,115,85,0.55)] hover:shadow-[0_12px_28px_-6px_rgba(226,140,10,0.5)] hover:scale-[1.02] transition-all duration-300 ring-1 ring-white/20"
         >
-          <MessageCircle className="h-6 w-6" />
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>
+          <span
+            className="text-sm font-medium tracking-wide"
+            style={{ fontFamily: "Georgia, serif" }}
+          >
+            Ask the kitchen
+          </span>
           <span className="sr-only">Open kitchen assistant</span>
         </button>
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 flex h-[600px] max-h-[85vh] w-[400px] max-w-[95vw] flex-col rounded-xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between bg-gradient-to-r from-purple-700 to-purple-900 text-white px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              <div>
-                <div className="text-sm font-semibold">Kitchen Assistant</div>
-                <div className="text-xs text-purple-200">
-                  DeepSeek-powered · {messages.length} msgs
+        <div className="fixed bottom-6 right-6 z-50 flex h-[640px] max-h-[88vh] w-[420px] max-w-[95vw] flex-col rounded-[28px] bg-[#fbf6ea] shadow-[0_24px_64px_-16px_rgba(45,24,16,0.35)] ring-1 ring-[#e0d0b3] overflow-hidden backdrop-blur-sm">
+          {/* Header — cream + brand accents, serif display */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#fbf6ea] via-[#fdf8ec] to-[#f7efda] border-b border-[#e8ddc8] px-5 py-4">
+            <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br from-[#E28C0A]/10 to-transparent blur-2xl pointer-events-none" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#E28C0A] to-[#8B7355] text-white shadow-sm shrink-0">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div
+                    className="text-base font-semibold text-stone-900 leading-tight truncate"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    Kitchen Assistant
+                  </div>
+                  <div className="text-[11px] text-[#8B7355] tracking-wide">
+                    {messages.length > 0
+                      ? `${messages.length} message${messages.length === 1 ? "" : "s"}`
+                      : "How can I help today?"}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={clear}
-                className="p-1.5 rounded hover:bg-white/10"
-                title="Clear conversation"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-1.5 rounded hover:bg-white/10"
-                title="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={clear}
+                  className="p-1.5 rounded-full text-[#8B7355] hover:bg-[#e8ddc8]/60 transition"
+                  title="Clear conversation"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-1.5 rounded-full text-[#8B7355] hover:bg-[#e8ddc8]/60 transition"
+                  title="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
+          {/* Scroll area */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50"
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-[#fbf6ea] to-[#fdfaf1]"
           >
             {messages.length === 0 && (
               <div className="space-y-3">
-                <div className="rounded-lg bg-white border border-gray-200 p-3 text-sm text-gray-700">
+                <div className="rounded-2xl bg-white/80 backdrop-blur-sm border border-[#e8ddc8] p-4 text-sm text-stone-700 leading-relaxed shadow-sm">
+                  <span
+                    className="block text-[11px] uppercase tracking-[0.2em] text-[#8B7355] font-semibold mb-1.5"
+                  >
+                    Chef's helper
+                  </span>
                   Hi chef — I can look up events, menus, ingredients, recipes,
                   generate shopping lists, flag ingredient gaps, and create new
-                  items. Try one of these:
+                  items. Here are a few things to try:
                 </div>
                 <div className="flex flex-col gap-1.5">
                   {QUICK_PROMPTS.map((p) => (
                     <button
                       key={p}
                       onClick={() => void send(p)}
-                      className="text-left text-xs px-3 py-2 rounded-md bg-white border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition"
+                      className="text-left text-xs px-4 py-2.5 rounded-full bg-white/70 border border-[#e8ddc8] text-stone-700 hover:bg-[#E28C0A]/10 hover:border-[#E28C0A]/40 hover:text-stone-900 transition shadow-sm"
                     >
                       {p}
                     </button>
@@ -373,10 +399,10 @@ export default function ChatAgentWidget() {
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                  className={`max-w-[85%] px-4 py-2.5 text-sm whitespace-pre-wrap leading-relaxed shadow-sm ${
                     m.role === "user"
-                      ? "bg-purple-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-800"
+                      ? "bg-gradient-to-br from-[#8B7355] to-[#a67c5a] text-white rounded-[22px] rounded-br-md"
+                      : "bg-white/90 border border-[#e8ddc8] text-stone-800 rounded-[22px] rounded-bl-md"
                   }`}
                 >
                   {m.role === "assistant"
@@ -384,7 +410,7 @@ export default function ChatAgentWidget() {
                       ? renderMarkdown(m.content)
                       : streaming && i === messages.length - 1
                         ? (
-                          <span className="inline-flex items-center gap-2 text-gray-400">
+                          <span className="inline-flex items-center gap-2 text-[#8B7355]/70">
                             <Loader2 className="h-3 w-3 animate-spin" />
                             Thinking…
                           </span>
@@ -396,20 +422,20 @@ export default function ChatAgentWidget() {
             ))}
 
             {lastTools && lastTools.length > 0 && (
-              <details className="text-xs text-gray-500 px-1">
-                <summary className="cursor-pointer hover:text-gray-700">
+              <details className="text-[11px] text-[#8B7355]/80 px-1">
+                <summary className="cursor-pointer hover:text-[#8B7355]">
                   {lastTools.length} tool call
                   {lastTools.length === 1 ? "" : "s"} used
                 </summary>
-                <ul className="mt-1 space-y-1">
+                <ul className="mt-1.5 space-y-1">
                   {lastTools.map((t, i) => (
                     <li
                       key={i}
-                      className="bg-white border border-gray-200 rounded px-2 py-1 font-mono"
+                      className="bg-white/80 border border-[#e8ddc8] rounded-xl px-2.5 py-1.5 font-mono"
                     >
-                      <div className="font-semibold text-gray-700">{t.name}</div>
+                      <div className="font-semibold text-stone-700">{t.name}</div>
                       {Object.keys(t.args || {}).length > 0 && (
-                        <div className="text-gray-500">
+                        <div className="text-[#8B7355]/80 truncate">
                           {JSON.stringify(t.args)}
                         </div>
                       )}
@@ -420,9 +446,10 @@ export default function ChatAgentWidget() {
             )}
           </div>
 
+          {/* Input — pill-shaped */}
           <form
             onSubmit={onSubmit}
-            className="border-t border-gray-200 bg-white p-2 flex gap-2"
+            className="border-t border-[#e8ddc8] bg-[#fbf6ea]/90 backdrop-blur-sm p-3 flex items-center gap-2"
           >
             {speechSupported && (
               <button
@@ -430,10 +457,10 @@ export default function ChatAgentWidget() {
                 onClick={toggleListening}
                 disabled={streaming}
                 title={listening ? "Stop listening" : "Voice input"}
-                className={`h-9 w-9 flex items-center justify-center rounded-md border transition ${
+                className={`h-10 w-10 flex items-center justify-center rounded-full border transition shrink-0 ${
                   listening
-                    ? "bg-red-500 text-white border-red-500 animate-pulse"
-                    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                    ? "bg-red-500 text-white border-red-500 animate-pulse shadow-md"
+                    : "bg-white text-[#8B7355] border-[#e0d0b3] hover:bg-[#E28C0A]/10 hover:border-[#E28C0A]/40"
                 } disabled:opacity-50`}
               >
                 {listening ? (
@@ -452,19 +479,19 @@ export default function ChatAgentWidget() {
                   : "Ask about events, menus, ingredients…"
               }
               disabled={streaming}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
+              className="flex-1 rounded-full border border-[#e0d0b3] bg-white px-4 py-2.5 text-sm text-stone-800 placeholder:text-[#8B7355]/50 focus:outline-none focus:ring-2 focus:ring-[#E28C0A]/30 focus:border-[#E28C0A]/60 disabled:opacity-50 transition"
             />
-            <Button
+            <button
               type="submit"
               disabled={streaming || !input.trim()}
-              size="icon"
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-gradient-to-br from-[#8B7355] to-[#E28C0A] text-white shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
             >
               {streaming ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
-            </Button>
+            </button>
           </form>
         </div>
       )}
