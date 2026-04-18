@@ -818,6 +818,25 @@ export class DatabaseStorage implements IStorage {
   // Raw Leads methods
   async createRawLead(lead: InsertRawLead): Promise<RawLead> {
     const [createdLead] = await db.insert(rawLeads).values(lead as any).returning();
+
+    // Auto-match against existing clients/opportunities. Best-effort — any
+    // failure is logged and swallowed so ingestion never breaks. If a match
+    // is found, the raw lead row is updated (status, createdOpportunityId)
+    // and a communication is logged on the matched client's timeline; we
+    // re-read here so the returned row reflects the post-match state.
+    try {
+      const { autoMatchRawLead } = await import("./services/rawLeadMatcher");
+      const result = await autoMatchRawLead(createdLead);
+      if (result.matched) {
+        const [refreshed] = await db
+          .select()
+          .from(rawLeads)
+          .where(eq(rawLeads.id, createdLead.id));
+        if (refreshed) return refreshed;
+      }
+    } catch (err) {
+      console.error("[createRawLead] auto-match failed (non-fatal):", err);
+    }
     return createdLead;
   }
 

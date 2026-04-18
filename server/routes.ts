@@ -7295,6 +7295,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin-triggered batch re-matcher. Runs the same auto-matcher that fires
+  // on ingestion across every raw lead that's currently 'new' /
+  // 'needs_manual_review' with no linked opportunity. One-shot cleanup.
+  app.post('/api/raw-leads/rematch', isAdminOrUser, async (req: Request, res: Response) => {
+    try {
+      const { autoMatchRawLead } = await import('./services/rawLeadMatcher');
+      const candidates = await db
+        .select()
+        .from(rawLeads)
+        .where(
+          and(
+            inArray(rawLeads.status, ['new', 'needs_manual_review']),
+            isNull(rawLeads.createdOpportunityId),
+          ),
+        );
+
+      const matched: number[] = [];
+      const skipped: number[] = [];
+      for (const lead of candidates) {
+        const r = await autoMatchRawLead(lead);
+        if (r.matched) matched.push(lead.id);
+        else skipped.push(lead.id);
+      }
+      return res.json({
+        ok: true,
+        total: candidates.length,
+        matchedCount: matched.length,
+        skippedCount: skipped.length,
+        matchedIds: matched,
+      });
+    } catch (error) {
+      console.error('Error running raw-lead rematch:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Process a raw lead into an opportunity
   app.post('/api/raw-leads/:id/process', isAuthenticated, async (req: Request, res: Response) => {
     try {
