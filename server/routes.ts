@@ -7,7 +7,7 @@ import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import session from "express-session";
-import { eq, and, isNull, inArray, or } from "drizzle-orm"; // For equality operations
+import { eq, and, isNull, inArray, or, desc } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import pgSession from 'connect-pg-simple';
 import {
@@ -5935,6 +5935,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // pricing and totals). They get all the operational data they need from inquiry
   // and event. This is defense-in-depth — the UI also hides these fields, but stripping
   // on the server means chefs can't craft requests to see pricing.
+  // Lightweight list of customer change requests for an event. Reads from
+  // communications where source='portal_change_request'. No write endpoint
+  // yet — Mike handles each via the normal communication channels. Full
+  // lifecycle (status, reply path) is backlog item #7.
+  app.get('/api/events/:id/change-requests', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) return res.status(400).json({ message: 'Invalid event ID' });
+      const rows = await db
+        .select({
+          id: communications.id,
+          subject: communications.subject,
+          bodyRaw: communications.bodyRaw,
+          bodySummary: communications.bodySummary,
+          metaData: communications.metaData,
+          timestamp: communications.timestamp,
+        })
+        .from(communications)
+        .where(
+          and(
+            eq(communications.eventId, eventId),
+            eq(communications.source, 'portal_change_request'),
+          ),
+        )
+        .orderBy(desc(communications.timestamp));
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching change requests:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   app.get('/api/events/:id/full', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const eventId = parseInt(req.params.id);

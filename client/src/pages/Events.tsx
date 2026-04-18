@@ -44,6 +44,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import ShoppingList from "@/components/shopping/ShoppingList";
+import { cn } from "@/lib/utils";
 
 import {
   CalendarCheck,
@@ -68,6 +69,7 @@ import {
   Share2,
   Copy,
   Link as LinkIcon,
+  MessageSquare,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -521,6 +523,94 @@ function EmptyState() {
   );
 }
 
+// ─── Customer change requests (inline card on OverviewTab) ────────────────
+
+interface PortalChangeRequest {
+  id: number;
+  subject: string | null;
+  bodyRaw: string | null;
+  bodySummary: string | null;
+  metaData: { category?: string; channel?: string } | null;
+  timestamp: string;
+}
+
+const CHANGE_CATEGORY_COLORS: Record<string, string> = {
+  headcount: "bg-orange-100 text-orange-800",
+  menu: "bg-purple-100 text-purple-800",
+  timeline: "bg-sky-100 text-sky-800",
+  venue: "bg-amber-100 text-amber-800",
+  other: "bg-stone-100 text-stone-800",
+};
+
+function ChangeRequestsCard({ eventId }: { eventId: number }) {
+  const { data = [], isLoading } = useQuery<PortalChangeRequest[]>({
+    queryKey: [`/api/events/${eventId}/change-requests`],
+  });
+
+  if (isLoading || data.length === 0) return null;
+
+  return (
+    <Card className="md:col-span-2 border-[#E28C0A]/40 bg-gradient-to-br from-[#fff6e6] to-white">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-[#8B7355]" />
+            <h3 className="font-semibold text-stone-900">
+              Customer change requests
+            </h3>
+            <Badge className="bg-[#E28C0A] text-white hover:bg-[#E28C0A]">
+              {data.length}
+            </Badge>
+          </div>
+          <p className="text-xs text-stone-500 hidden sm:block">
+            From the client portal
+          </p>
+        </div>
+        <ul className="space-y-2">
+          {data.map((req) => {
+            const category = req.metaData?.category || "other";
+            const when = new Date(req.timestamp);
+            const relative = daysAgoLabel(when);
+            return (
+              <li
+                key={req.id}
+                className="flex gap-3 rounded-lg bg-white border border-stone-200 px-3 py-2"
+              >
+                <Badge
+                  className={cn(
+                    "shrink-0 capitalize text-[11px] px-2 py-0.5 border-0",
+                    CHANGE_CATEGORY_COLORS[category] || CHANGE_CATEGORY_COLORS.other,
+                  )}
+                >
+                  {category.replace(/_/g, " ")}
+                </Badge>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-stone-800 whitespace-pre-wrap break-words">
+                    {req.bodyRaw || req.bodySummary || "(empty request)"}
+                  </p>
+                  <p className="text-[11px] text-stone-400 mt-0.5">{relative}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function daysAgoLabel(d: Date): string {
+  const diffMs = Date.now() - d.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString();
+}
+
 // ─── Detail container (fetches full payload) ───────────────────────────────
 
 function EventDetail({ eventId }: { eventId: number }) {
@@ -820,6 +910,7 @@ function OverviewTab({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <ChangeRequestsCard eventId={event.id} />
       {hasDietaryRedFlags && (
         <Card className="md:col-span-2 border-red-300 bg-red-50">
           <CardContent className="p-4">
