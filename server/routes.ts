@@ -7,7 +7,7 @@ import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import session from "express-session";
-import { eq, and, isNull, inArray } from "drizzle-orm"; // For equality operations
+import { eq, and, isNull, inArray, or } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import pgSession from 'connect-pg-simple';
 import {
@@ -5370,26 +5370,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Step 3: Get portal data (all events, quotes, preferences for the logged-in client)
+  // Session-auth middleware factory for portal endpoints. Returns the
+  // validated client + session or sends a 401.
+  async function requirePortalSession(
+    req: Request,
+    res: Response,
+  ): Promise<{ clientId: number } | null> {
+    const authHeader = req.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return null;
+    }
+    const sessionToken = authHeader.slice(7);
+    const { clientSessions } = await import('@shared/schema');
+    const [session] = await db
+      .select()
+      .from(clientSessions)
+      .where(eq(clientSessions.token, sessionToken));
+    if (!session) {
+      res.status(401).json({ message: 'Invalid session' });
+      return null;
+    }
+    if (new Date() > new Date(session.expiresAt)) {
+      res.status(401).json({ message: 'Session expired' });
+      return null;
+    }
+    return { clientId: session.clientId };
+  }
+
   app.get('/api/public/portal/data', async (req: Request, res: Response) => {
     try {
-      const authHeader = req.get('Authorization');
-      if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
+      const ctx = await requirePortalSession(req, res);
+      if (!ctx) return;
 
-      const sessionToken = authHeader.slice(7);
-      const { clientSessions } = await import("@shared/schema");
-
-      const [session] = await db.select().from(clientSessions).where(eq(clientSessions.token, sessionToken));
-      if (!session) return res.status(401).json({ message: 'Invalid session' });
-      if (new Date() > new Date(session.expiresAt)) return res.status(401).json({ message: 'Session expired' });
-
-      const client = await storage.getClient(session.clientId);
+      const client = await storage.getClient(ctx.clientId);
       if (!client) return res.status(404).json({ message: 'Client not found' });
 
-      // Get all events for this client
+      // Get all events and all quotes for this client up-front so the
+      // per-event builder below can look up the quote view-token for PDF links.
       const allEvents = await storage.listEvents();
-      const clientEvents = allEvents
-        .filter(e => e.clientId === client.id && e.status !== 'cancelled')
-        .map(e => ({
+      const allQuotesRaw = await storage.listQuotes();
+      const clientEventRows = allEvents.filter(
+        (e) => e.clientId === client.id && e.status !== 'cancelled',
+      );
+
+      // Get contracts for these events (by eventId OR quoteId)
+      const eventIds = clientEventRows.map((e) => e.id);
+      const quoteIdsFromEvents = clientEventRows
+        .map((e) => e.quoteId)
+        .filter((x): x is number => typeof x === 'number');
+
+      let contractRows: (typeof contracts.$inferSelect)[] = [];
+      if (eventIds.length > 0 || quoteIdsFromEvents.length > 0) {
+        const conds: any[] = [];
+        if (eventIds.length > 0) conds.push(inArray(contracts.eventId, eventIds));
+        if (quoteIdsFromEvents.length > 0) conds.push(inArray(contracts.quoteId, quoteIdsFromEvents));
+        contractRows = await db
+          .select()
+          .from(contracts)
+          .where(conds.length > 1 ? or(...conds) : conds[0]);
+      }
+
+      const findContract = (e: typeof events.$inferSelect) => {
+        const byEvent = contractRows.find((c) => c.eventId === e.id);
+        if (byEvent) return byEvent;
+        if (e.quoteId) return contractRows.find((c) => c.quoteId === e.quoteId);
+        return undefined;
+      };
+
+      const DAY_MS = 86_400_000;
+      const now = Date.now();
+
+      const clientEvents = clientEventRows.map((e) => {
+        const contract = findContract(e);
+        const eventMs = new Date(e.eventDate).getTime();
+        const daysToEvent = Math.ceil((eventMs - now) / DAY_MS);
+
+        const depositPaid = !!e.depositPaidAt;
+        const balancePaid = !!e.balancePaidAt;
+        const contractSigned = contract?.status === 'signed';
+        const contractSent = !!contract && ['sent', 'viewed'].includes(contract.status);
+
+        // Final-headcount rule: due when within 14 days of the event and
+        // balance isn't yet paid; locked (done) once balance is paid or we're
+        // within 7 days of the event.
+        const headcountDue = daysToEvent <= 14 && !balancePaid;
+        const headcountLocked = balancePaid || daysToEvent <= 7;
+
+        type MilestoneStatus = 'done' | 'current' | 'pending' | 'overdue';
+        const mk = (
+          key: string,
+          label: string,
+          status: MilestoneStatus,
+          hint?: string,
+        ) => ({ key, label, status, hint });
+
+        // Walk through each milestone in order, advancing "current" until we
+        // hit an incomplete one. Anything past "current" stays "pending".
+        const steps: Array<{ key: string; label: string; done: boolean; hint?: string }> = [
+          { key: 'booked', label: 'Booked', done: true, hint: 'Your date is locked in.' },
+          {
+            key: 'contract',
+            label: 'Contract signed',
+            done: contractSigned,
+            hint: contractSigned
+              ? contract?.signedAt
+                ? `Signed ${new Date(contract.signedAt).toLocaleDateString()}`
+                : 'Signed'
+              : contractSent
+                ? 'Check your email — the contract is ready to sign.'
+                : "We'll send the contract shortly.",
+          },
+          {
+            key: 'deposit',
+            label: 'Deposit paid',
+            done: depositPaid,
+            hint: depositPaid
+              ? e.depositPaidAt
+                ? `Paid ${new Date(e.depositPaidAt).toLocaleDateString()}`
+                : 'Paid'
+              : e.depositAmountCents
+                ? `Deposit: $${(e.depositAmountCents / 100).toLocaleString()}`
+                : undefined,
+          },
+          {
+            key: 'headcount',
+            label: 'Final headcount confirmed',
+            done: headcountLocked,
+            hint: headcountLocked
+              ? 'Locked in.'
+              : headcountDue
+                ? `Please confirm by ${new Date(eventMs - 14 * DAY_MS).toLocaleDateString()}`
+                : `Due ~2 weeks before the event.`,
+          },
+          {
+            key: 'balance',
+            label: 'Balance paid',
+            done: balancePaid,
+            hint: balancePaid
+              ? e.balancePaidAt
+                ? `Paid ${new Date(e.balancePaidAt).toLocaleDateString()}`
+                : 'Paid'
+              : e.balanceAmountCents
+                ? `Balance: $${(e.balanceAmountCents / 100).toLocaleString()} · due the day before`
+                : 'Due the day before your event',
+          },
+          {
+            key: 'event',
+            label: 'Event day',
+            done: daysToEvent <= 0,
+            hint: daysToEvent > 0 ? `${daysToEvent} day${daysToEvent === 1 ? '' : 's'} away` : 'Today!',
+          },
+        ];
+
+        let currentAssigned = false;
+        const milestones = steps.map((s) => {
+          if (s.done) return mk(s.key, s.label, 'done', s.hint);
+          if (!currentAssigned) {
+            currentAssigned = true;
+            return mk(s.key, s.label, 'current', s.hint);
+          }
+          return mk(s.key, s.label, 'pending', s.hint);
+        });
+
+        // Next-step action — one concrete call to action the portal can surface.
+        let nextStep: { label: string; cta: string; url: string | null } | null = null;
+        if (!contractSigned && contract?.signingUrl) {
+          nextStep = { label: 'Sign the contract', cta: 'Sign now', url: contract.signingUrl };
+        } else if (!contractSigned) {
+          nextStep = { label: 'Waiting on your contract', cta: "We'll email it shortly", url: null };
+        } else if (!depositPaid && e.depositSquarePaymentLinkUrl) {
+          nextStep = {
+            label: `Pay your deposit ($${((e.depositAmountCents || 0) / 100).toLocaleString()})`,
+            cta: 'Pay deposit',
+            url: e.depositSquarePaymentLinkUrl,
+          };
+        } else if (!depositPaid) {
+          nextStep = { label: 'Deposit payment link coming up', cta: "We'll email the link", url: null };
+        } else if (!headcountLocked && headcountDue) {
+          nextStep = {
+            label: 'Confirm your final headcount',
+            cta: 'Request a change',
+            url: null,
+          };
+        } else if (!balancePaid && e.balanceSquarePaymentLinkUrl) {
+          nextStep = {
+            label: `Pay your balance ($${((e.balanceAmountCents || 0) / 100).toLocaleString()})`,
+            cta: 'Pay balance',
+            url: e.balanceSquarePaymentLinkUrl,
+          };
+        } else if (!balancePaid && daysToEvent <= 3) {
+          nextStep = { label: 'Balance payment link coming up', cta: "We'll email the link", url: null };
+        }
+
+        // Documents — signed contract, quote PDF, receipts. Anything with a
+        // public URL we can safely hand the customer.
+        type Doc = { label: string; url: string; kind: 'contract' | 'quote' | 'receipt' };
+        const documents: Doc[] = [];
+        if (contract?.pdfUrl) {
+          documents.push({ label: 'Signed contract (PDF)', url: contract.pdfUrl, kind: 'contract' });
+        }
+        if (e.quoteId) {
+          const q = allQuotesRaw.find((q) => q.id === e.quoteId);
+          if (q?.viewToken) {
+            documents.push({
+              label: 'Quote (PDF)',
+              url: `/api/public/quote/${q.viewToken}/pdf`,
+              kind: 'quote',
+            });
+          }
+        }
+        // Square receipts aren't stored; we skip those.
+
+        return {
           id: e.id,
           eventType: e.eventType,
           eventDate: e.eventDate,
@@ -5399,13 +5592,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           venue: e.venue,
           status: e.status,
           viewToken: e.viewToken,
-        }));
+          daysToEvent,
+          totalCents:
+            (e.depositAmountCents || 0) + (e.balanceAmountCents || 0) || null,
+          payment: {
+            depositAmountCents: e.depositAmountCents,
+            depositPercent: e.depositPercent,
+            depositPaidAt: e.depositPaidAt,
+            depositPayUrl: e.depositSquarePaymentLinkUrl,
+            balanceAmountCents: e.balanceAmountCents,
+            balancePaidAt: e.balancePaidAt,
+            balancePayUrl: e.balanceSquarePaymentLinkUrl,
+          },
+          contract: contract
+            ? {
+                status: contract.status,
+                signingUrl: contract.signingUrl,
+                signedAt: contract.signedAt,
+                pdfUrl: contract.pdfUrl,
+              }
+            : null,
+          milestones,
+          nextStep,
+          documents,
+        };
+      });
 
-      // Get all quotes for this client
-      const allQuotes = await storage.listQuotes();
-      const clientQuotes = allQuotes
-        .filter(e => e.clientId === client.id)
-        .map(e => ({
+      // Surface every quote for the client so the portal can still show
+      // pending proposals that haven't been converted to events.
+      const clientQuotes = allQuotesRaw
+        .filter((e) => e.clientId === client.id)
+        .map((e) => ({
           id: e.id,
           eventType: e.eventType,
           eventDate: e.eventDate,
@@ -5433,6 +5650,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error fetching portal data:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Portal: customer-initiated change request. Creates a communications row
+  // (type: note, direction: incoming) tied to the event/client, and notifies
+  // the owner by SMS so Mike sees it immediately.
+  app.post('/api/public/portal/events/:id/change-request', async (req: Request, res: Response) => {
+    try {
+      const ctx = await requirePortalSession(req, res);
+      if (!ctx) return;
+
+      const eventId = parseInt(req.params.id, 10);
+      if (isNaN(eventId)) return res.status(400).json({ message: 'Invalid event id' });
+
+      const { category, message } = req.body || {};
+      const trimmed = (message ?? '').toString().trim();
+      if (!trimmed) return res.status(400).json({ message: 'Message is required' });
+      if (trimmed.length > 5000) return res.status(400).json({ message: 'Message too long' });
+
+      // Verify the event belongs to this client
+      const event = await storage.getEvent(eventId);
+      if (!event || event.clientId !== ctx.clientId) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      const client = await storage.getClient(ctx.clientId);
+      const categoryLabel = typeof category === 'string' && category
+        ? category.slice(0, 40)
+        : 'general';
+
+      const subject = `Change request: ${categoryLabel} · ${client?.firstName ?? ''} ${client?.lastName ?? ''}`.trim();
+      const [comm] = await db
+        .insert(communications)
+        .values({
+          clientId: ctx.clientId,
+          eventId: event.id,
+          opportunityId: null,
+          type: 'note',
+          direction: 'incoming',
+          source: 'portal_change_request',
+          timestamp: new Date(),
+          subject,
+          bodyRaw: trimmed,
+          bodySummary: trimmed.length > 280 ? trimmed.slice(0, 277) + '…' : trimmed,
+          metaData: { category: categoryLabel, channel: 'client_portal' },
+        })
+        .returning();
+
+      // Fire-and-forget SMS to owner
+      try {
+        const body =
+          `📝 Change request from ${client?.firstName ?? 'a customer'} for event #${event.id}` +
+          ` (${categoryLabel}): ${trimmed.slice(0, 160)}${trimmed.length > 160 ? '…' : ''}`;
+        sendOwnerSmsInBackground({
+          body,
+          templateKey: 'portal_change_request_owner',
+          clientId: ctx.clientId,
+          eventId: event.id,
+        });
+      } catch {
+        // SMS is best-effort; the DB record is the source of truth.
+      }
+
+      res.status(201).json({ ok: true, communicationId: comm.id });
+    } catch (error) {
+      console.error('Error recording portal change request:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
