@@ -46,14 +46,14 @@ export default function Clients() {
     enabled: (mode === "edit" || mode === "view") && !!selectedClientId,
   });
 
-  // Fetch estimates for the client if viewing
-  const { data: clientEstimates = [], isLoading: isLoadingEstimates } = useQuery({
-    queryKey: ["/api/estimates", selectedClientId],
+  // Fetch quotes for the client if viewing
+  const { data: clientQuotes = [], isLoading: isLoadingQuotes } = useQuery({
+    queryKey: ["/api/quotes", selectedClientId],
     queryFn: async () => {
-      const res = await fetch('/api/estimates');
-      if (!res.ok) throw new Error('Failed to fetch estimates');
+      const res = await fetch('/api/quotes');
+      if (!res.ok) throw new Error('Failed to fetch quotes');
       const data = await res.json();
-      return data.filter((estimate: any) => estimate.clientId === selectedClientId);
+      return data.filter((quote: any) => quote.clientId === selectedClientId);
     },
     enabled: mode === "view" && !!selectedClientId,
   });
@@ -109,7 +109,7 @@ export default function Clients() {
             <Tabs defaultValue="timeline">
               <TabsList>
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="estimates">Estimates ({clientEstimates.length})</TabsTrigger>
+                <TabsTrigger value="quotes">Quotes ({clientQuotes.length})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="timeline" className="mt-4">
@@ -120,27 +120,27 @@ export default function Clients() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="estimates" className="mt-4">
+              <TabsContent value="quotes" className="mt-4">
                 <Card>
                   <CardContent className="pt-6">
-                    {isLoadingEstimates ? (
-                      <p className="text-sm text-gray-500">Loading estimates...</p>
-                    ) : clientEstimates.length > 0 ? (
+                    {isLoadingQuotes ? (
+                      <p className="text-sm text-gray-500">Loading quotes...</p>
+                    ) : clientQuotes.length > 0 ? (
                       <ul className="space-y-3">
-                        {clientEstimates.map((estimate: any) => (
-                          <li key={estimate.id} className="p-3 border rounded-lg hover:bg-gray-50">
-                            <a href={`/estimates/${estimate.id}/view`} className="block">
+                        {clientQuotes.map((quote: any) => (
+                          <li key={quote.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                            <a href={`/quotes/${quote.id}/view`} className="block">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-primary-purple">
-                                  {estimate.eventType} - {formatDate(new Date(estimate.createdAt))}
+                                  {quote.eventType} - {formatDate(new Date(quote.createdAt))}
                                 </span>
                                 <Badge variant="outline" className="capitalize text-xs">
-                                  {estimate.status}
+                                  {quote.status}
                                 </Badge>
                               </div>
-                              {estimate.total && (
+                              {quote.total && (
                                 <span className="text-xs text-gray-500">
-                                  ${(estimate.total / 100).toLocaleString()}
+                                  ${(quote.total / 100).toLocaleString()}
                                 </span>
                               )}
                             </a>
@@ -148,7 +148,7 @@ export default function Clients() {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-gray-500">No estimates yet</p>
+                      <p className="text-sm text-gray-500">No quotes yet</p>
                     )}
                   </CardContent>
                 </Card>

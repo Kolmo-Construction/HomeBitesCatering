@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
 import { Button } from "@/components/ui/button";
-import { Estimate } from "@shared/schema";
+import { Quote } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { EyeIcon, PenIcon, PlusIcon, TrashIcon, SendIcon } from "lucide-react";
 import { useCanWrite, useCanViewFinancials } from "@/hooks/usePermissions";
@@ -24,19 +24,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-export default function EstimateList() {
+export default function QuoteList() {
   const canWrite = useCanWrite();
   const canViewFinancials = useCanViewFinancials();
-  const { data: estimates = [], isLoading } = useQuery<Estimate[]>({
-    queryKey: ["/api/estimates"],
+  const { data: quotes = [], isLoading } = useQuery<Quote[]>({
+    queryKey: ["/api/quotes"],
   });
 
   const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
 
-  const [estimateToDelete, setEstimateToDelete] = useState<Estimate | null>(null);
-  const [estimateToSend, setEstimateToSend] = useState<Estimate | null>(null);
+  const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
+  const [quoteToSend, setQuoteToSend] = useState<Quote | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -49,15 +49,15 @@ export default function EstimateList() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/estimates/${id}`);
+      await apiRequest("DELETE", `/api/quotes/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Quote deleted",
         description: "The quote has been deleted successfully."
       });
-      setEstimateToDelete(null);
+      setQuoteToDelete(null);
     },
     onError: (error) => {
       toast({
@@ -68,45 +68,45 @@ export default function EstimateList() {
     },
   });
 
-  // Send estimate mutation
+  // Send quote mutation
   const sendMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("PATCH", `/api/estimates/${id}`, {
+      await apiRequest("PATCH", `/api/quotes/${id}`, {
         status: "sent",
         sentAt: new Date()
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Quote sent",
         description: "The quote has been sent to the client."
       });
-      setEstimateToSend(null);
+      setQuoteToSend(null);
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to send estimate: ${error.message}`,
+        description: `Failed to send quote: ${error.message}`,
         variant: "destructive",
       });
     },
   });
 
   const handleDelete = () => {
-    if (estimateToDelete) {
-      deleteMutation.mutate(estimateToDelete.id);
+    if (quoteToDelete) {
+      deleteMutation.mutate(quoteToDelete.id);
     }
   };
 
   const handleSend = () => {
-    if (estimateToSend) {
-      sendMutation.mutate(estimateToSend.id);
+    if (quoteToSend) {
+      sendMutation.mutate(quoteToSend.id);
     }
   };
 
-  const columns: ColumnDef<Estimate>[] = useMemo(() => {
-    const baseColumns: ColumnDef<Estimate>[] = [
+  const columns: ColumnDef<Quote>[] = useMemo(() => {
+    const baseColumns: ColumnDef<Quote>[] = [
       {
         accessorKey: "client",
         header: "Client",
@@ -176,14 +176,14 @@ export default function EstimateList() {
 
           return (
             <div className="flex items-center space-x-2">
-              <Link to={`/estimates/${row.original.id}/view`}>
+              <Link to={`/quotes/${row.original.id}/view`}>
                 <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
                   <EyeIcon className="h-4 w-4" />
                 </div>
               </Link>
 
               {isEditable && (
-                <Link to={`/estimates/${row.original.id}/edit`}>
+                <Link to={`/quotes/${row.original.id}/edit`}>
                   <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
                     <PenIcon className="h-4 w-4" />
                   </div>
@@ -193,7 +193,7 @@ export default function EstimateList() {
               {isSendable && (
                 <button
                   className="text-primary-purple hover:text-primary-blue transition"
-                  onClick={() => setEstimateToSend(row.original)}
+                  onClick={() => setQuoteToSend(row.original)}
                 >
                   <SendIcon className="h-4 w-4" />
                 </button>
@@ -202,7 +202,7 @@ export default function EstimateList() {
               {isEditable && (
                 <button
                   className="text-red-500 hover:text-red-700 transition"
-                  onClick={() => setEstimateToDelete(row.original)}
+                  onClick={() => setQuoteToDelete(row.original)}
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>
@@ -221,7 +221,7 @@ export default function EstimateList() {
       <div className="flex justify-between items-center">
         <h1 className="font-poppins text-2xl font-bold text-neutral-900">Quotes</h1>
         {canWrite && (
-          <Link href="/estimates/new">
+          <Link href="/quotes/new">
             <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
               <PlusIcon className="mr-1 h-4 w-4" />
               New Quote
@@ -232,13 +232,13 @@ export default function EstimateList() {
 
       <DataTable 
         columns={columns} 
-        data={estimates} 
+        data={quotes} 
         searchKey="client"
         loading={isLoading}
         emptyMessage="No quotes found. Create your first quote to get started."
       />
 
-      <AlertDialog open={!!estimateToDelete}>
+      <AlertDialog open={!!quoteToDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -247,7 +247,7 @@ export default function EstimateList() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setEstimateToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setQuoteToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDelete}
               className="bg-red-500 hover:bg-red-600"
@@ -258,7 +258,7 @@ export default function EstimateList() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!estimateToSend}>
+      <AlertDialog open={!!quoteToSend}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Send Quote</AlertDialogTitle>
@@ -267,7 +267,7 @@ export default function EstimateList() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setEstimateToSend(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setQuoteToSend(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleSend}
               className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"

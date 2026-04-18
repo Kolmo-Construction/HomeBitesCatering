@@ -1,15 +1,15 @@
 // server/storage.ts
 import { Pool } from '@neondatabase/serverless';
 import {
-  users, opportunities, menuItems, menus, clients, estimates, events, contactIdentifiers, communications,
+  users, opportunities, menuItems, menus, clients, quotes, events, contactIdentifiers, communications,
   opportunityPriorityEnum, rawLeadStatusEnum, rawLeads, gmailSyncState, processedEmails,
-  opportunityEmailThreads, followUpDrafts, estimateVersions,
+  opportunityEmailThreads, followUpDrafts, quoteVersions,
   type User, type InsertUser,
   type Opportunity, type InsertOpportunity,
   type MenuItem, type InsertMenuItem,
   type Menu as DrizzleMenu, type InsertMenu,
   type Client, type InsertClient,
-  type Estimate, type InsertEstimate,
+  type Quote, type InsertQuote,
   type Event, type InsertEvent,
   type ContactIdentifier, type InsertContactIdentifier,
   type Communication, type InsertCommunication,
@@ -18,7 +18,7 @@ import {
   type ProcessedEmail, type InsertProcessedEmail,
   type OpportunityEmailThread, type InsertOpportunityEmailThread,
   type FollowUpDraft, type InsertFollowUpDraft,
-  type EstimateVersion, type InsertEstimateVersion,
+  type QuoteVersion, type InsertQuoteVersion,
   auditLog,
   type AuditLogEntry,
 } from "@shared/schema";
@@ -78,12 +78,12 @@ export interface IStorage {
   deleteClient(id: number): Promise<boolean>;
   listClients(): Promise<Client[]>;
 
-  // Estimates
-  getEstimate(id: number): Promise<Estimate | undefined>;
-  createEstimate(estimate: InsertEstimate): Promise<Estimate>;
-  updateEstimate(id: number, estimate: Partial<Estimate>): Promise<Estimate | undefined>;
-  deleteEstimate(id: number): Promise<boolean>;
-  listEstimates(): Promise<Estimate[]>;
+  // Quotes
+  getQuote(id: number): Promise<Quote | undefined>;
+  createQuote(quote: InsertQuote): Promise<Quote>;
+  updateQuote(id: number, quote: Partial<Quote>): Promise<Quote | undefined>;
+  deleteQuote(id: number): Promise<boolean>;
+  listQuotes(): Promise<Quote[]>;
 
   // Events
   getEvent(id: number): Promise<Event | undefined>;
@@ -139,12 +139,12 @@ export interface IStorage {
   updateFollowUpDraft(id: number, data: Partial<FollowUpDraft>): Promise<FollowUpDraft | undefined>;
   deleteFollowUpDraft(id: number): Promise<boolean>;
   getFollowUpDraftsForOpportunity(opportunityId: number): Promise<FollowUpDraft[]>;
-  getFollowUpDraftsForEstimate(estimateId: number): Promise<FollowUpDraft[]>;
+  getFollowUpDraftsForQuote(quoteId: number): Promise<FollowUpDraft[]>;
 
-  // Estimate Versions (Tier 3)
-  createEstimateVersion(version: InsertEstimateVersion): Promise<EstimateVersion>;
-  getEstimateVersions(estimateId: number): Promise<EstimateVersion[]>;
-  getEstimateVersion(id: number): Promise<EstimateVersion | undefined>;
+  // Quote Versions (Tier 3)
+  createQuoteVersion(version: InsertQuoteVersion): Promise<QuoteVersion>;
+  getQuoteVersions(quoteId: number): Promise<QuoteVersion[]>;
+  getQuoteVersion(id: number): Promise<QuoteVersion | undefined>;
 }
 
 // DatabaseStorage implementation using PostgreSQL
@@ -446,37 +446,37 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(clients).where(isNull(clients.deletedAt));
   }
 
-  // Estimate methods
-  async getEstimate(id: number): Promise<Estimate | undefined> {
-    const [estimate] = await db.select().from(estimates).where(eq(estimates.id, id));
-    return estimate;
+  // Quote methods
+  async getQuote(id: number): Promise<Quote | undefined> {
+    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+    return quote;
   }
 
-  async createEstimate(estimate: InsertEstimate): Promise<Estimate> {
-    const [createdEstimate] = await db.insert(estimates).values(estimate).returning();
-    return createdEstimate;
+  async createQuote(quote: InsertQuote): Promise<Quote> {
+    const [createdQuote] = await db.insert(quotes).values(quote).returning();
+    return createdQuote;
   }
 
-  async updateEstimate(id: number, estimate: Partial<Estimate>): Promise<Estimate | undefined> {
-    const [updatedEstimate] = await db
-      .update(estimates)
-      .set({ ...estimate, updatedAt: new Date() })
-      .where(eq(estimates.id, id))
+  async updateQuote(id: number, quote: Partial<Quote>): Promise<Quote | undefined> {
+    const [updatedQuote] = await db
+      .update(quotes)
+      .set({ ...quote, updatedAt: new Date() })
+      .where(eq(quotes.id, id))
       .returning();
-    return updatedEstimate;
+    return updatedQuote;
   }
 
-  async deleteEstimate(id: number): Promise<boolean> {
+  async deleteQuote(id: number): Promise<boolean> {
     const [softDeleted] = await db
-      .update(estimates)
+      .update(quotes)
       .set({ deletedAt: new Date() })
-      .where(eq(estimates.id, id))
-      .returning({ id: estimates.id });
+      .where(eq(quotes.id, id))
+      .returning({ id: quotes.id });
     return !!softDeleted;
   }
 
-  async listEstimates(): Promise<Estimate[]> {
-    return await db.select().from(estimates).where(isNull(estimates.deletedAt));
+  async listQuotes(): Promise<Quote[]> {
+    return await db.select().from(quotes).where(isNull(quotes.deletedAt));
   }
 
   // Event methods
@@ -1051,27 +1051,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(followUpDrafts.createdAt));
   }
 
-  async getFollowUpDraftsForEstimate(estimateId: number): Promise<FollowUpDraft[]> {
+  async getFollowUpDraftsForQuote(quoteId: number): Promise<FollowUpDraft[]> {
     return await db.select().from(followUpDrafts)
-      .where(eq(followUpDrafts.estimateId, estimateId))
+      .where(eq(followUpDrafts.quoteId, quoteId))
       .orderBy(desc(followUpDrafts.createdAt));
   }
 
-  // ─── Estimate Versions (Tier 3) ────────────────────────────────────────────
+  // ─── Quote Versions (Tier 3) ────────────────────────────────────────────
 
-  async createEstimateVersion(version: InsertEstimateVersion): Promise<EstimateVersion> {
-    const [created] = await db.insert(estimateVersions).values(version).returning();
+  async createQuoteVersion(version: InsertQuoteVersion): Promise<QuoteVersion> {
+    const [created] = await db.insert(quoteVersions).values(version).returning();
     return created;
   }
 
-  async getEstimateVersions(estimateId: number): Promise<EstimateVersion[]> {
-    return await db.select().from(estimateVersions)
-      .where(eq(estimateVersions.estimateId, estimateId))
-      .orderBy(desc(estimateVersions.version));
+  async getQuoteVersions(quoteId: number): Promise<QuoteVersion[]> {
+    return await db.select().from(quoteVersions)
+      .where(eq(quoteVersions.quoteId, quoteId))
+      .orderBy(desc(quoteVersions.version));
   }
 
-  async getEstimateVersion(id: number): Promise<EstimateVersion | undefined> {
-    const [version] = await db.select().from(estimateVersions).where(eq(estimateVersions.id, id));
+  async getQuoteVersion(id: number): Promise<QuoteVersion | undefined> {
+    const [version] = await db.select().from(quoteVersions).where(eq(quoteVersions.id, id));
     return version;
   }
 
@@ -1118,8 +1118,8 @@ export class DatabaseStorage implements IStorage {
     return !!restored;
   }
 
-  async restoreEstimate(id: number): Promise<boolean> {
-    const [restored] = await db.update(estimates).set({ deletedAt: null }).where(eq(estimates.id, id)).returning({ id: estimates.id });
+  async restoreQuote(id: number): Promise<boolean> {
+    const [restored] = await db.update(quotes).set({ deletedAt: null }).where(eq(quotes.id, id)).returning({ id: quotes.id });
     return !!restored;
   }
 

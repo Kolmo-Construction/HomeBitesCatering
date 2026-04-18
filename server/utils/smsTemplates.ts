@@ -81,7 +81,7 @@ export function newInquiryOwnerSms(args: NewInquiryOwnerSmsArgs): SmsTemplateRes
 interface ContractSignedOwnerSmsArgs {
   customerName: string;
   eventDate?: Date | string | null;
-  estimateId?: number | null;
+  quoteId?: number | null;
   opportunityId?: number | null;
   baseUrl?: string;
 }
@@ -93,8 +93,8 @@ export function contractSignedOwnerSms(args: ContractSignedOwnerSmsArgs): SmsTem
   const date = formatShortDate(args.eventDate);
   const path = args.opportunityId
     ? `/opportunities/${args.opportunityId}`
-    : args.estimateId
-    ? `/estimates/${args.estimateId}`
+    : args.quoteId
+    ? `/quotes/${args.quoteId}`
     : "/pipeline";
   const url = `${baseUrl.replace(/\/$/, "")}${path}`;
   const body = `🖋️ ${name} signed contract (${date}). Deposit link queued. ${url}`;
@@ -204,7 +204,7 @@ interface QuoteDeclinedOwnerSmsArgs {
   customerName: string;
   eventDate?: Date | string | null;
   reason?: string | null;
-  estimateId: number;
+  quoteId: number;
   baseUrl?: string;
 }
 
@@ -214,7 +214,7 @@ export function quoteDeclinedOwnerSms(args: QuoteDeclinedOwnerSmsArgs): SmsTempl
   const name = clip(args.customerName || "Client", 30);
   const date = formatShortDate(args.eventDate);
   const reason = args.reason ? `: "${clip(args.reason, 50)}"` : "";
-  const url = `${baseUrl.replace(/\/$/, "")}/estimates/${args.estimateId}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/quotes/${args.quoteId}`;
 
   const body = `Declined: ${name} (${date})${reason}. ${url}`;
 
@@ -226,7 +226,7 @@ export function quoteDeclinedOwnerSms(args: QuoteDeclinedOwnerSmsArgs): SmsTempl
 interface DeclineFeedbackOwnerSmsArgs {
   customerName: string;
   category: string;
-  estimateId: number;
+  quoteId: number;
   baseUrl?: string;
 }
 
@@ -235,7 +235,7 @@ export function declineFeedbackOwnerSms(args: DeclineFeedbackOwnerSmsArgs): SmsT
   const baseUrl = args.baseUrl || cfg.publicBaseUrl;
   const name = clip(args.customerName || "Client", 30);
   const cat = clip(args.category, 20);
-  const url = `${baseUrl.replace(/\/$/, "")}/estimates/${args.estimateId}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/quotes/${args.quoteId}`;
 
   const body = `Decline feedback from ${name}: ${cat}. ${url}`;
 
@@ -248,7 +248,7 @@ interface InfoRequestedOwnerSmsArgs {
   customerName: string;
   eventDate?: Date | string | null;
   note?: string | null;
-  estimateId: number;
+  quoteId: number;
   baseUrl?: string;
 }
 
@@ -257,7 +257,7 @@ export function infoRequestedOwnerSms(args: InfoRequestedOwnerSmsArgs): SmsTempl
   const baseUrl = args.baseUrl || cfg.publicBaseUrl;
   const name = clip(args.customerName || "Client", 30);
   const date = formatShortDate(args.eventDate);
-  const url = `${baseUrl.replace(/\/$/, "")}/estimates/${args.estimateId}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/quotes/${args.quoteId}`;
 
   const noteSnippet = args.note ? `: "${clip(args.note, 50)}"` : "";
   const body = `Info requested by ${name} (${date})${noteSnippet}. ${url}`;
@@ -270,7 +270,7 @@ export function infoRequestedOwnerSms(args: InfoRequestedOwnerSmsArgs): SmsTempl
 interface ConsultationBookedOwnerSmsArgs {
   customerName: string;
   scheduledAt: Date | string;
-  estimateId: number;
+  quoteId: number;
   baseUrl?: string;
 }
 
@@ -288,7 +288,7 @@ export function consultationBookedOwnerSms(args: ConsultationBookedOwnerSmsArgs)
       minute: "2-digit",
     });
   })();
-  const url = `${baseUrl.replace(/\/$/, "")}/estimates/${args.estimateId}`;
+  const url = `${baseUrl.replace(/\/$/, "")}/quotes/${args.quoteId}`;
 
   const body = `Consultation booked: ${name}, ${when}. ${url}`;
 

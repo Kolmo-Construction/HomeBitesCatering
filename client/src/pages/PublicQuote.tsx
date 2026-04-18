@@ -7,9 +7,9 @@ import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { XCircle, Loader2 } from "lucide-react";
 import type { Proposal } from "@shared/proposal";
-import QuoteProposalView from "@/components/quote/QuoteProposalView";
+import QuoteProposalView from "@/components/quotes/QuoteProposalView";
 
-interface PublicEstimate {
+interface PublicQuoteData {
   id: number;
   status: "draft" | "sent" | "viewed" | "accepted" | "declined";
   sentAt: string | null;
@@ -37,7 +37,7 @@ interface PublicClient {
 }
 
 interface PublicQuotePayload {
-  estimate: PublicEstimate;
+  quote: PublicQuoteData;
   client: PublicClient | null;
   proposal: Proposal;
 }
@@ -70,7 +70,7 @@ export default function PublicQuote() {
   useEffect(() => {
     if (!token || !data) return;
     fetch(`/api/public/quote/${token}/view`, { method: "POST" }).catch(() => undefined);
-  }, [token, data?.estimate.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, data?.quote.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pull Cal.com booking config once the quote loads. Cheap GET — safe to run
   // even if the user never clicks "Need More Info."
@@ -82,12 +82,12 @@ export default function PublicQuote() {
         if (cfg) setBookingConfig(cfg);
       })
       .catch(() => undefined);
-  }, [token, data?.estimate.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, data?.quote.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!data) return;
-    if (data.estimate.status === "accepted") setLocalStatus("accepted");
-    else if (data.estimate.status === "declined") setLocalStatus("declined");
+    if (data.quote.status === "accepted") setLocalStatus("accepted");
+    else if (data.quote.status === "declined") setLocalStatus("declined");
   }, [data]);
 
   const acceptMutation = useMutation({
@@ -127,7 +127,7 @@ export default function PublicQuote() {
       }
       const payload = (await res.json()) as { bookingUrl: string | null };
       setInfoFlowState("submitted");
-      // Refetch so the sanitized estimate reflects infoRequestedAt
+      // Refetch so the sanitized quote reflects infoRequestedAt
       refetch();
       return { bookingUrl: payload.bookingUrl };
     } catch (e: any) {
@@ -193,7 +193,7 @@ export default function PublicQuote() {
     <>
       <QuoteProposalView
         proposal={data.proposal}
-        estimateStatus={data.estimate.status}
+        quoteStatus={data.quote.status}
         mode="public"
         acceptFlowState={localStatus}
         acceptedEventUrl={eventPublicUrl}
@@ -201,9 +201,9 @@ export default function PublicQuote() {
         onDecline={(payload) => declineMutation.mutate(payload)}
         onRequestInfo={handleRequestInfo}
         infoFlowState={infoFlowState}
-        infoRequestedAt={data.estimate.infoRequestedAt ?? null}
-        consultationBookedAt={data.estimate.consultationBookedAt ?? null}
-        consultationMeetingUrl={data.estimate.consultationMeetingUrl ?? null}
+        infoRequestedAt={data.quote.infoRequestedAt ?? null}
+        consultationBookedAt={data.quote.consultationBookedAt ?? null}
+        consultationMeetingUrl={data.quote.consultationMeetingUrl ?? null}
         resolvedBookingUrl={bookingConfig?.consultationUrl ?? null}
       />
       {/* Tier 3: PDF download for customer */}

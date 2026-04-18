@@ -542,7 +542,7 @@ function fmt(n: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RequestQuote() {
+export default function Inquire() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>({ ...initialFormState });
   const [submitted, setSubmitted] = useState(false);
@@ -814,7 +814,7 @@ export default function RequestQuote() {
     let perPersonFood = 0;
     let appetizerTotal = 0;
     let dessertTotal = 0;
-    let beverageEstimate = 0;
+    let beverageQuote = 0;
     let equipmentTotal = 0;
 
     // Per-person food cost — from the selected tier in the database
@@ -857,13 +857,13 @@ export default function RequestQuote() {
       dessertTotal += item.price * qty;
     });
 
-    // Beverage estimate (rough)
+    // Beverage quote (rough)
     const drinkGuests =
       typeof form.drinkingGuestCount === "number"
         ? form.drinkingGuestCount
         : 0;
     if (form.beverageType === "non_alcoholic" || form.beverageType === "both") {
-      beverageEstimate += 5 * guestCount; // $5 pp non-alcoholic base
+      beverageQuote += 5 * guestCount; // $5 pp non-alcoholic base
     }
     if (form.beverageType === "alcoholic" || form.beverageType === "both") {
       const durationHours = parseFloat(form.barDuration) || 3;
@@ -874,17 +874,17 @@ export default function RequestQuote() {
           : form.liquorQuality === "mid_shelf"
             ? 1.25
             : 1;
-      beverageEstimate +=
+      beverageQuote +=
         baseRate * qualityMultiplier * durationHours * (drinkGuests || guestCount);
     }
     if (form.tableWaterService) {
-      beverageEstimate += 6.5 * guestCount;
+      beverageQuote += 6.5 * guestCount;
     }
     if (form.coffeTeaService) {
-      beverageEstimate += 4 * guestCount;
+      beverageQuote += 4 * guestCount;
     }
     if (form.needsGlassware) {
-      beverageEstimate += 2 * guestCount;
+      beverageQuote += 2 * guestCount;
     }
 
     // Equipment
@@ -901,7 +901,7 @@ export default function RequestQuote() {
     });
 
     const subtotal =
-      foodSubtotal + appetizerTotal + dessertTotal + beverageEstimate + equipmentTotal;
+      foodSubtotal + appetizerTotal + dessertTotal + beverageQuote + equipmentTotal;
 
     // Service fee
     let serviceFeeRate = 0;
@@ -926,7 +926,7 @@ export default function RequestQuote() {
       foodSubtotal,
       appetizerTotal,
       dessertTotal,
-      beverageEstimate,
+      beverageQuote,
       equipmentTotal,
       subtotal,
       serviceFeeRate,
@@ -1033,7 +1033,7 @@ export default function RequestQuote() {
       // Strip fields the backend schema doesn't understand / that have
       // type mismatches with FormState, then reshape the rest to match.
       const {
-        // Fields to drop: not in quoteRequests schema
+        // Fields to drop: not in inquiries schema
         referralSources: _referralSources,
         promoCode: _promoCode,
         promoValid: _promoValid,
@@ -1123,7 +1123,7 @@ export default function RequestQuote() {
       }
       const res = await apiRequest(
         "POST",
-        "/api/quotes/quote-requests",
+        "/api/inquiries",
         payload,
       );
       return res.json();
@@ -3099,11 +3099,11 @@ export default function RequestQuote() {
                   </span>
                 </div>
               )}
-              {pricing.beverageEstimate > 0 && (
+              {pricing.beverageQuote > 0 && (
                 <div className="flex justify-between">
-                  <span>Beverages (estimate)</span>
+                  <span>Beverages (quote)</span>
                   <span className="font-medium">
-                    {fmt(pricing.beverageEstimate)}
+                    {fmt(pricing.beverageQuote)}
                   </span>
                 </div>
               )}
@@ -3142,7 +3142,7 @@ export default function RequestQuote() {
                 <span>{fmt(pricing.estimatedTotal)}</span>
               </div>
               <p className="text-xs text-gray-400 mt-2">
-                This is an estimate. Final pricing will be confirmed by our team.
+                This is an quote. Final pricing will be confirmed by our team.
               </p>
             </div>
           </CardContent>
@@ -3247,10 +3247,10 @@ export default function RequestQuote() {
               <span>{fmt(pricing.dessertTotal)}</span>
             </div>
           )}
-          {pricing.beverageEstimate > 0 && (
+          {pricing.beverageQuote > 0 && (
             <div className="flex justify-between">
               <span className="text-gray-600">Beverages</span>
-              <span>{fmt(pricing.beverageEstimate)}</span>
+              <span>{fmt(pricing.beverageQuote)}</span>
             </div>
           )}
           {pricing.equipmentTotal > 0 && (
@@ -3276,7 +3276,7 @@ export default function RequestQuote() {
           )}
           <Separator />
           <div className="flex justify-between font-bold text-base">
-            <span>Estimate</span>
+            <span>Quote</span>
             <span>{fmt(pricing.estimatedTotal)}</span>
           </div>
           <p className="text-xs text-gray-400">

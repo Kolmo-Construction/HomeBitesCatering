@@ -11,8 +11,8 @@ export default function QuickActions() {
       color: "text-primary-purple"
     },
     {
-      name: "Create Estimate",
-      href: "/estimates/new",
+      name: "Create Quote",
+      href: "/quotes/new",
       icon: FileTextIcon,
       color: "text-primary-blue"
     },

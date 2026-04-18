@@ -1,7 +1,7 @@
 /**
  * Tier 3, Item 12: PDF Quote Generation
  *
- * Generates a downloadable PDF from a Proposal + Estimate using PDFKit.
+ * Generates a downloadable PDF from a Proposal + Quote using PDFKit.
  * Returns a Buffer that can be piped to the response.
  */
 import PDFDocument from "pdfkit";
@@ -22,7 +22,7 @@ function titleCase(s: string): string {
   return s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export async function generateQuotePDF(proposal: Proposal, estimate: any, client: any): Promise<Buffer> {
+export async function generateQuotePDF(proposal: Proposal, quote: any, client: any): Promise<Buffer> {
   const config = getSiteConfig();
 
   return new Promise((resolve, reject) => {
@@ -48,7 +48,7 @@ export async function generateQuotePDF(proposal: Proposal, estimate: any, client
     doc.moveDown(1);
 
     // ─── Proposal Title ────────────────────────────────────────────────────
-    const eventLabel = titleCase(proposal.eventType || estimate.eventType || "Event");
+    const eventLabel = titleCase(proposal.eventType || quote.eventType || "Event");
     const personName = [proposal.firstName, proposal.lastName].filter(Boolean).join(" ");
     doc.fontSize(18).font("Helvetica-Bold").fillColor("#111")
       .text(`Quote for ${personName}'s ${eventLabel}`, { align: "center" });

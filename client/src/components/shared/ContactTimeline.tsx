@@ -49,8 +49,8 @@ const TYPE_COLORS: Record<string, string> = {
   communication: "bg-blue-500",
   status_change: "bg-purple-500",
   quote_submitted: "bg-orange-500",
-  estimate_sent: "bg-yellow-500",
-  estimate_accepted: "bg-green-500",
+  quote_sent: "bg-yellow-500",
+  quote_accepted: "bg-green-500",
   event_created: "bg-emerald-600",
   system: "bg-gray-400",
 };
@@ -60,9 +60,9 @@ function getEntityLink(entry: TimelineEntry): string | null {
   switch (entry.entityType) {
     case "opportunity": return `/opportunities/${entry.entityId}`;
     case "client": return `/clients/${entry.entityId}`;
-    case "estimate": return `/estimates/${entry.entityId}/view`;
+    case "quote": return `/quotes/${entry.entityId}/view`;
     case "event": return `/events/${entry.entityId}`;
-    case "quoteRequest": return `/quote-requests`;
+    case "inquiry": return `/inquiries`;
     default: return null;
   }
 }
@@ -70,8 +70,8 @@ function getEntityLink(entry: TimelineEntry): string | null {
 function TimelineIcon({ entry }: { entry: TimelineEntry }) {
   const Icon = ICON_MAP[entry.icon || "system"] || Zap;
 
-  if (entry.type === "estimate_accepted") return <CheckCircle className="h-3.5 w-3.5 text-white" />;
-  if (entry.type === "estimate_sent") return <Send className="h-3.5 w-3.5 text-white" />;
+  if (entry.type === "quote_accepted") return <CheckCircle className="h-3.5 w-3.5 text-white" />;
+  if (entry.type === "quote_sent") return <Send className="h-3.5 w-3.5 text-white" />;
   if (entry.type === "event_created") return <Calendar className="h-3.5 w-3.5 text-white" />;
   if (entry.type === "quote_submitted") return <FileText className="h-3.5 w-3.5 text-white" />;
   if (entry.type === "status_change") return <ArrowRightCircle className="h-3.5 w-3.5 text-white" />;
@@ -131,7 +131,7 @@ export default function ContactTimeline({ email }: { email: string }) {
                   <div className={cn(
                     "p-2.5 rounded-lg border transition",
                     link ? "hover:bg-gray-50 cursor-pointer" : "",
-                    entry.type === "estimate_accepted" && "bg-green-50 border-green-200",
+                    entry.type === "quote_accepted" && "bg-green-50 border-green-200",
                     entry.type === "event_created" && "bg-emerald-50 border-emerald-200"
                   )}>
                     <div className="flex items-center justify-between">

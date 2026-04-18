@@ -27,74 +27,74 @@ export default function ClientPortal() {
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false);
   const [isDeclineDialogOpen, setIsDeclineDialogOpen] = useState(false);
   
-  // Decode token to get client and estimate info
-  // For demo purposes, we'll just extract the estimate ID from the token
+  // Decode token to get client and quote info
+  // For demo purposes, we'll just extract the quote ID from the token
   // In a real app, this would involve JWT verification
-  const estimateId = parseInt(token || "0", 10);
+  const quoteId = parseInt(token || "0", 10);
   
-  // Fetch estimate data
-  const { data: estimate, isLoading } = useQuery({
-    queryKey: ["/api/estimates", estimateId],
+  // Fetch quote data
+  const { data: quote, isLoading } = useQuery({
+    queryKey: ["/api/quotes", quoteId],
     queryFn: async ({ queryKey }) => {
-      const res = await fetch(`/api/estimates/${queryKey[1]}?client=true`, {
+      const res = await fetch(`/api/quotes/${queryKey[1]}?client=true`, {
         credentials: 'include'
       });
-      if (!res.ok) throw new Error('Failed to fetch estimate');
+      if (!res.ok) throw new Error('Failed to fetch quote');
       return res.json();
     },
   });
   
   // Fetch client data
   const { data: client } = useQuery({
-    queryKey: ["/api/clients", estimate?.clientId],
-    enabled: !!estimate?.clientId,
+    queryKey: ["/api/clients", quote?.clientId],
+    enabled: !!quote?.clientId,
   });
   
   // Fetch menu data
   const { data: menu } = useQuery<any>({
-    queryKey: ["/api/menus", estimate?.menuId],
-    enabled: !!estimate?.menuId,
+    queryKey: ["/api/menus", quote?.menuId],
+    enabled: !!quote?.menuId,
   });
   
-  // Accept estimate mutation
-  const acceptEstimate = async () => {
+  // Accept quote mutation
+  const acceptQuote = async () => {
     try {
-      await apiRequest("POST", `/api/estimates/${estimateId}/accept`);
+      await apiRequest("POST", `/api/quotes/${quoteId}/accept`);
       toast({
-        title: "Estimate Accepted",
-        description: "Thank you for accepting our estimate. We'll be in touch soon to finalize details.",
+        title: "Quote Accepted",
+        description: "Thank you for accepting our quote. We'll be in touch soon to finalize details.",
       });
       setIsAcceptDialogOpen(false);
-      // Refetch estimate to update UI
+      // Refetch quote to update UI
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Unable to accept estimate. Please try again.",
+        description: "Unable to accept quote. Please try again.",
         variant: "destructive",
       });
     }
   };
   
-  // Decline estimate mutation
-  const declineEstimate = async () => {
+  // Decline quote mutation
+  const declineQuote = async () => {
     try {
-      await apiRequest("POST", `/api/estimates/${estimateId}/decline`);
+      await apiRequest("POST", `/api/quotes/${quoteId}/decline`);
       toast({
-        title: "Estimate Declined",
-        description: "We're sorry to hear you've declined our estimate. Please contact us if you have any questions.",
+        title: "Quote Declined",
+        description: "We're sorry to hear you've declined our quote. Please contact us if you have any questions.",
       });
       setIsDeclineDialogOpen(false);
-      // Refetch estimate to update UI
+      // Refetch quote to update UI
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Unable to decline estimate. Please try again.",
+        description: "Unable to decline quote. Please try again.",
         variant: "destructive",
       });
     }
@@ -105,22 +105,22 @@ export default function ClientPortal() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your estimate...</p>
+          <p className="mt-4 text-gray-600">Loading your quote...</p>
         </div>
       </div>
     );
   }
   
-  if (!estimate || !estimateId) {
+  if (!quote || !quoteId) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
         <div className="text-center max-w-md">
           <div className="text-red-500 mb-4">
             <XIcon className="h-16 w-16 mx-auto" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Estimate Not Found</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Quote Not Found</h2>
           <p className="text-gray-600 mb-4">
-            The estimate you're looking for doesn't exist or has expired. Please contact Home Bites for assistance.
+            The quote you're looking for doesn't exist or has expired. Please contact Home Bites for assistance.
           </p>
           <a 
             href="https://www.homebites.net/contact"
@@ -134,7 +134,7 @@ export default function ClientPortal() {
   }
   
   // Parse custom items if any
-  const customItems = estimate.items ? JSON.parse(estimate.items) : [];
+  const customItems = quote.items ? JSON.parse(quote.items) : [];
   
   // Get menu items if available
   const menuItems = menu?.items || [];
@@ -142,8 +142,8 @@ export default function ClientPortal() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Helmet>
-        <title>Home Bites Catering - Your Estimate</title>
-        <meta name="description" content="View and respond to your catering estimate from Home Bites" />
+        <title>Home Bites Catering - Your Quote</title>
+        <meta name="description" content="View and respond to your catering quote from Home Bites" />
       </Helmet>
       
       <header className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] text-white shadow-md">
@@ -164,10 +164,10 @@ export default function ClientPortal() {
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
           <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Your Estimate</h2>
-              <p className="text-sm text-gray-500">Created on {formatDate(new Date(estimate.createdAt))}</p>
+              <h2 className="text-xl font-bold text-gray-800">Your Quote</h2>
+              <p className="text-sm text-gray-500">Created on {formatDate(new Date(quote.createdAt))}</p>
             </div>
-            <BadgeStatus status={estimate.status} />
+            <BadgeStatus status={quote.status} />
           </div>
           
           <div className="p-6">
@@ -177,8 +177,8 @@ export default function ClientPortal() {
                 <div>
                   <p className="text-sm text-gray-500">Event Date</p>
                   <p className="font-medium">
-                    {estimate.eventDate 
-                      ? formatDate(new Date(estimate.eventDate)) 
+                    {quote.eventDate 
+                      ? formatDate(new Date(quote.eventDate)) 
                       : "To be determined"}
                   </p>
                 </div>
@@ -188,7 +188,7 @@ export default function ClientPortal() {
                 <UsersIcon className="h-5 w-5 text-gray-400 mr-2" />
                 <div>
                   <p className="text-sm text-gray-500">Guest Count</p>
-                  <p className="font-medium">{estimate.guestCount || "—"}</p>
+                  <p className="font-medium">{quote.guestCount || "—"}</p>
                 </div>
               </div>
               
@@ -196,7 +196,7 @@ export default function ClientPortal() {
                 <MapPinIcon className="h-5 w-5 text-gray-400 mr-2" />
                 <div>
                   <p className="text-sm text-gray-500">Location</p>
-                  <p className="font-medium">{estimate.venue || "To be determined"}</p>
+                  <p className="font-medium">{quote.venue || "To be determined"}</p>
                 </div>
               </div>
             </div>
@@ -302,23 +302,23 @@ export default function ClientPortal() {
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex justify-between mb-2">
                     <span className="font-medium">Subtotal:</span>
-                    <span>{formatCurrency(estimate.subtotal / 100)}</span>
+                    <span>{formatCurrency(quote.subtotal / 100)}</span>
                   </div>
                   <div className="flex justify-between mb-2">
                     <span className="font-medium">Tax (9.5%):</span>
-                    <span>{formatCurrency(estimate.tax / 100)}</span>
+                    <span>{formatCurrency(quote.tax / 100)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>{formatCurrency(estimate.total / 100)}</span>
+                    <span>{formatCurrency(quote.total / 100)}</span>
                   </div>
                 </div>
                 
-                {estimate.notes && (
+                {quote.notes && (
                   <div className="mt-6">
                     <h3 className="text-lg font-medium mb-2">Notes</h3>
                     <div className="bg-gray-50 p-4 rounded-md text-gray-700 whitespace-pre-wrap">
-                      {estimate.notes}
+                      {quote.notes}
                     </div>
                   </div>
                 )}
@@ -327,12 +327,12 @@ export default function ClientPortal() {
           </div>
         </div>
         
-        {estimate.status === "sent" && (
+        {quote.status === "sent" && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
               <h3 className="text-lg font-medium mb-4">Your Response</h3>
               <p className="text-gray-600 mb-6">
-                Please review this estimate and let us know if you would like to proceed. If you have any questions or would like to discuss modifications, please contact us directly.
+                Please review this quote and let us know if you would like to proceed. If you have any questions or would like to discuss modifications, please contact us directly.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -342,21 +342,21 @@ export default function ClientPortal() {
                   onClick={() => setIsDeclineDialogOpen(true)}
                 >
                   <XIcon className="mr-2 h-4 w-4" />
-                  Decline Estimate
+                  Decline Quote
                 </Button>
                 <Button 
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => setIsAcceptDialogOpen(true)}
                 >
                   <CheckIcon className="mr-2 h-4 w-4" />
-                  Accept Estimate
+                  Accept Quote
                 </Button>
               </div>
             </div>
           </div>
         )}
         
-        {estimate.status === "accepted" && (
+        {quote.status === "accepted" && (
           <div className="bg-green-50 border border-green-200 rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
               <div className="flex items-start gap-3">
@@ -364,9 +364,9 @@ export default function ClientPortal() {
                   <CheckIcon className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-green-800 mb-2">Estimate Accepted</h3>
+                  <h3 className="text-lg font-medium text-green-800 mb-2">Quote Accepted</h3>
                   <p className="text-green-700">
-                    Thank you for accepting our estimate! Our team will be in touch with you shortly to discuss next steps and finalize the details for your event.
+                    Thank you for accepting our quote! Our team will be in touch with you shortly to discuss next steps and finalize the details for your event.
                   </p>
                 </div>
               </div>
@@ -374,7 +374,7 @@ export default function ClientPortal() {
           </div>
         )}
         
-        {estimate.status === "declined" && (
+        {quote.status === "declined" && (
           <div className="bg-red-50 border border-red-200 rounded-lg shadow-md overflow-hidden">
             <div className="p-6">
               <div className="flex items-start gap-3">
@@ -382,9 +382,9 @@ export default function ClientPortal() {
                   <XIcon className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-red-800 mb-2">Estimate Declined</h3>
+                  <h3 className="text-lg font-medium text-red-800 mb-2">Quote Declined</h3>
                   <p className="text-red-700">
-                    You have declined this estimate. If you'd like to request changes or discuss other options, please contact us.
+                    You have declined this quote. If you'd like to request changes or discuss other options, please contact us.
                   </p>
                   <a 
                     href="mailto:info@homebites.net"
@@ -417,19 +417,19 @@ export default function ClientPortal() {
       <AlertDialog open={isAcceptDialogOpen} onOpenChange={setIsAcceptDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Accept Estimate</AlertDialogTitle>
+            <AlertDialogTitle>Accept Quote</AlertDialogTitle>
             <AlertDialogDescription>
-              By accepting this estimate, you agree to the services and prices listed. 
+              By accepting this quote, you agree to the services and prices listed. 
               We'll contact you to finalize the details and schedule your event.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={acceptEstimate}
+              onClick={acceptQuote}
               className="bg-green-600 hover:bg-green-700"
             >
-              Accept Estimate
+              Accept Quote
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -439,19 +439,19 @@ export default function ClientPortal() {
       <AlertDialog open={isDeclineDialogOpen} onOpenChange={setIsDeclineDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Decline Estimate</AlertDialogTitle>
+            <AlertDialogTitle>Decline Quote</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to decline this estimate? 
+              Are you sure you want to decline this quote? 
               If you'd like to request changes instead, please contact us directly.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={declineEstimate}
+              onClick={declineQuote}
               className="bg-red-500 hover:bg-red-600"
             >
-              Decline Estimate
+              Decline Quote
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

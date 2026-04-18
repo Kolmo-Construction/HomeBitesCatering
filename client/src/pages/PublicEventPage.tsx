@@ -43,7 +43,7 @@ interface PublicClient {
   company: string | null;
 }
 
-interface PublicQuoteRequest {
+interface PublicInquiry {
   partnerFirstName: string | null;
   partnerLastName: string | null;
   menuTheme: string | null;
@@ -105,7 +105,7 @@ interface SiteConfig {
 interface PublicEventPayload {
   event: PublicEvent;
   client: PublicClient | null;
-  quoteRequest: PublicQuoteRequest | null;
+  inquiry: PublicInquiry | null;
   menu: PublicMenu | null;
   siteConfig: SiteConfig;
 }
@@ -229,7 +229,7 @@ export default function PublicEventPage() {
     );
   }
 
-  const { event, client, quoteRequest, menu, siteConfig } = data;
+  const { event, client, inquiry, menu, siteConfig } = data;
   const days = daysUntil(event.eventDate);
   const hasPassed = days < 0;
   const isCompleted = event.status === "completed";
@@ -240,13 +240,13 @@ export default function PublicEventPage() {
   const themeStyles = applyThemeCSS(theme);
 
   // Build the personalized title
-  const personTitle = buildPersonTitle(client, quoteRequest);
+  const personTitle = buildPersonTitle(client, inquiry);
   const eventTitle = personTitle
     ? `${personTitle}'s ${titleCase(event.eventType)}`
     : `Your ${titleCase(event.eventType)}`;
 
-  const themeLabel = quoteRequest?.menuTheme
-    ? THEME_NAMES[quoteRequest.menuTheme] ?? titleCase(quoteRequest.menuTheme)
+  const themeLabel = inquiry?.menuTheme
+    ? THEME_NAMES[inquiry.menuTheme] ?? titleCase(inquiry.menuTheme)
     : menu?.name || "Your menu";
 
   return (
@@ -343,7 +343,7 @@ export default function PublicEventPage() {
       )}
 
       {/* ─── The menu ─────────────────────────────────────────────────── */}
-      {quoteRequest && (
+      {inquiry && (
         <Card className="mb-6 bg-white shadow-sm">
           <CardContent className="py-10 px-6 md:px-12">
             <div className="text-center mb-8">
@@ -354,47 +354,47 @@ export default function PublicEventPage() {
               </p>
             </div>
 
-            <TastingMenu quoteRequest={quoteRequest} />
+            <TastingMenu inquiry={inquiry} />
           </CardContent>
         </Card>
       )}
 
       {/* ─── Flow of the day ──────────────────────────────────────────── */}
-      {quoteRequest && !hasPassed && (
+      {inquiry && !hasPassed && (
         <Card className="mb-6 bg-white/80">
           <CardContent className="py-8 px-6">
             <h3 className="font-serif text-2xl text-center text-stone-900 mb-6">
               The flow of your day
             </h3>
-            <EventTimeline event={event} quoteRequest={quoteRequest} />
+            <EventTimeline event={event} inquiry={inquiry} />
           </CardContent>
         </Card>
       )}
 
       {/* ─── Dietary reassurance ──────────────────────────────────────── */}
-      {quoteRequest?.dietary &&
-        ((quoteRequest.dietary.allergies?.length ?? 0) > 0 ||
-          (quoteRequest.dietary.restrictions?.length ?? 0) > 0) && (
+      {inquiry?.dietary &&
+        ((inquiry.dietary.allergies?.length ?? 0) > 0 ||
+          (inquiry.dietary.restrictions?.length ?? 0) > 0) && (
           <Card className="mb-6 bg-emerald-50/40 border-emerald-200">
             <CardContent className="py-6 px-6">
               <h3 className="font-serif text-xl text-stone-900 mb-3 text-center">
                 We've got everyone covered
               </h3>
-              {(quoteRequest.dietary.allergies?.length ?? 0) > 0 && (
+              {(inquiry.dietary.allergies?.length ?? 0) > 0 && (
                 <p className="text-sm text-stone-700 font-serif text-center">
                   Allergies on our radar:{" "}
                   <span className="font-semibold">
-                    {quoteRequest.dietary.allergies!.map(titleCase).join(", ")}
+                    {inquiry.dietary.allergies!.map(titleCase).join(", ")}
                   </span>
                   . All dishes will be clearly labeled at service, and our prep surfaces
                   are sanitized end-to-end. If anything changes, just let us know.
                 </p>
               )}
-              {(quoteRequest.dietary.restrictions?.length ?? 0) > 0 && (
+              {(inquiry.dietary.restrictions?.length ?? 0) > 0 && (
                 <p className="text-sm text-stone-700 font-serif text-center mt-3">
                   Dietary preferences noted:{" "}
                   <span className="font-semibold">
-                    {quoteRequest.dietary.restrictions!.map(titleCase).join(", ")}
+                    {inquiry.dietary.restrictions!.map(titleCase).join(", ")}
                   </span>
                   .
                 </p>
@@ -475,11 +475,11 @@ export default function PublicEventPage() {
               Need to change something?
             </h3>
             <div className="space-y-3 text-center font-serif text-stone-700">
-              {quoteRequest?.quoteViewToken && (
+              {inquiry?.quoteViewToken && (
                 <p>
                   Want to adjust the menu, pricing, or logistics?{" "}
                   <a
-                    href={`/quote/${quoteRequest.quoteViewToken}`}
+                    href={`/quote/${inquiry.quoteViewToken}`}
                     className="text-amber-700 underline underline-offset-2 hover:text-amber-900"
                   >
                     View your quote
@@ -513,30 +513,30 @@ export default function PublicEventPage() {
 
 function buildPersonTitle(
   client: PublicClient | null,
-  quoteRequest: PublicQuoteRequest | null
+  inquiry: PublicInquiry | null
 ): string {
   if (!client) return "";
-  const partner = quoteRequest?.partnerFirstName;
+  const partner = inquiry?.partnerFirstName;
   if (partner) {
     return `${client.firstName} & ${partner}`;
   }
   return client.firstName;
 }
 
-function TastingMenu({ quoteRequest }: { quoteRequest: PublicQuoteRequest }) {
+function TastingMenu({ inquiry }: { inquiry: PublicInquiry }) {
   // Group main menu selections by category
   const grouped: Record<string, string[]> = {};
-  for (const sel of quoteRequest.menuSelections ?? []) {
+  for (const sel of inquiry.menuSelections ?? []) {
     if (!grouped[sel.category]) grouped[sel.category] = [];
     grouped[sel.category].push(sel.name);
   }
 
   const sections: Array<{ title: string; items: string[] }> = [];
 
-  if (quoteRequest.appetizers?.selections?.length) {
+  if (inquiry.appetizers?.selections?.length) {
     sections.push({
       title: "Antipasti · To Begin",
-      items: quoteRequest.appetizers.selections.map((a) => a.itemName),
+      items: inquiry.appetizers.selections.map((a) => a.itemName),
     });
   }
 
@@ -558,10 +558,10 @@ function TastingMenu({ quoteRequest }: { quoteRequest: PublicQuoteRequest }) {
     sections.push({ title: CATEGORY_TITLES[cat] ?? titleCase(cat), items });
   }
 
-  if (quoteRequest.desserts?.length) {
+  if (inquiry.desserts?.length) {
     sections.push({
       title: "Dolci · Something Sweet",
-      items: quoteRequest.desserts.map((d) => d.itemName),
+      items: inquiry.desserts.map((d) => d.itemName),
     });
   }
 
@@ -590,16 +590,16 @@ function TastingMenu({ quoteRequest }: { quoteRequest: PublicQuoteRequest }) {
         </div>
       ))}
 
-      {quoteRequest.beverages &&
-        (quoteRequest.beverages.hasNonAlcoholic || quoteRequest.beverages.hasAlcoholic) && (
+      {inquiry.beverages &&
+        (inquiry.beverages.hasNonAlcoholic || inquiry.beverages.hasAlcoholic) && (
           <div className="text-center pt-2">
             <p className="font-serif text-xs uppercase tracking-[0.25em] text-stone-400 mb-3">
               ⸻ Beverages ⸻
             </p>
             <p className="font-serif text-stone-700 italic">
-              {quoteRequest.beverages.hasAlcoholic && quoteRequest.beverages.hasNonAlcoholic
+              {inquiry.beverages.hasAlcoholic && inquiry.beverages.hasNonAlcoholic
                 ? "Full bar service · non-alcoholic selections"
-                : quoteRequest.beverages.hasAlcoholic
+                : inquiry.beverages.hasAlcoholic
                 ? "Full bar service"
                 : "Non-alcoholic selections"}
             </p>
@@ -611,22 +611,22 @@ function TastingMenu({ quoteRequest }: { quoteRequest: PublicQuoteRequest }) {
 
 function EventTimeline({
   event,
-  quoteRequest,
+  inquiry,
 }: {
   event: PublicEvent;
-  quoteRequest: PublicQuoteRequest;
+  inquiry: PublicInquiry;
 }) {
   const entries: Array<{ time: string; label: string; icon: "sparkle" | "chef" | "heart" }> = [];
 
-  if (quoteRequest.hasCocktailHour && quoteRequest.cocktailStartTime) {
+  if (inquiry.hasCocktailHour && inquiry.cocktailStartTime) {
     entries.push({
-      time: quoteRequest.cocktailStartTime,
+      time: inquiry.cocktailStartTime,
       label: "Welcome cocktails & canapés",
       icon: "sparkle",
     });
   }
 
-  const mealStart = quoteRequest.mainMealStartTime || formatTimeOfDay(event.startTime);
+  const mealStart = inquiry.mainMealStartTime || formatTimeOfDay(event.startTime);
   if (mealStart) {
     entries.push({
       time: mealStart,
@@ -635,8 +635,8 @@ function EventTimeline({
     });
   }
 
-  if (quoteRequest.desserts?.length) {
-    const mealEnd = quoteRequest.mainMealEndTime;
+  if (inquiry.desserts?.length) {
+    const mealEnd = inquiry.mainMealEndTime;
     if (mealEnd) {
       entries.push({
         time: mealEnd,

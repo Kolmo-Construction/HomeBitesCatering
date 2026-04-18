@@ -1,13 +1,13 @@
 // Data filtering utilities to remove financial information for non-admin users
 
-// Remove financial fields from estimate for non-admin users
-export function filterEstimate(estimate: any, userRole: string): any {
+// Remove financial fields from quote for non-admin users
+export function filterQuote(quote: any, userRole: string): any {
   if (userRole === 'admin') {
-    return estimate; // Return full data for admins
+    return quote; // Return full data for admins
   }
 
   // Create a copy without financial data
-  const { subtotal, tax, total, items, additionalServices, ...filtered } = estimate;
+  const { subtotal, tax, total, items, additionalServices, ...filtered } = quote;
 
   return {
     ...filtered,
@@ -27,9 +27,9 @@ export function filterMenuItem(item: any, userRole: string): any {
   return filtered;
 }
 
-// Filter array of estimates
-export function filterEstimates(estimates: any[], userRole: string): any[] {
-  return estimates.map(estimate => filterEstimate(estimate, userRole));
+// Filter array of quotes
+export function filterQuotes(quotes: any[], userRole: string): any[] {
+  return quotes.map(quote => filterQuote(quote, userRole));
 }
 
 // Filter array of menu items

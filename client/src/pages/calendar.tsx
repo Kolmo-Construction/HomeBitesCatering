@@ -24,7 +24,7 @@ import {
 const localizer = momentLocalizer(moment);
 
 // Define event source types for color coding
-type EventSourceType = 'lead' | 'confirmedEvent' | 'estimate';
+type EventSourceType = 'lead' | 'confirmedEvent' | 'quote';
 
 // Event object structure for the calendar
 interface CalendarEvent {
@@ -53,7 +53,7 @@ const eventStyleGetter = (event: CalendarEvent) => {
       backgroundColor = '#c8facd';
       borderColor = '#00a152';
       break;
-    case 'estimate':
+    case 'quote':
       backgroundColor = '#fff7cd';
       borderColor = '#b78103';
       break;
@@ -97,9 +97,9 @@ const Calendar = () => {
     queryKey: ['/api/events'],
   });
 
-  // Fetch estimates
-  const { data: estimates = [] } = useQuery<any[]>({
-    queryKey: ['/api/estimates'],
+  // Fetch quotes
+  const { data: quotes = [] } = useQuery<any[]>({
+    queryKey: ['/api/quotes'],
   });
 
   // Convert API data to calendar events
@@ -149,25 +149,25 @@ const Calendar = () => {
       }
     });
 
-    // Add estimates
-    estimates.forEach((estimate: any) => {
-      if (estimate.eventDate && isValid(new Date(estimate.eventDate))) {
-        const eventDate = new Date(estimate.eventDate);
+    // Add quotes
+    quotes.forEach((quote: any) => {
+      if (quote.eventDate && isValid(new Date(quote.eventDate))) {
+        const eventDate = new Date(quote.eventDate);
         allEvents.push({
-          id: estimate.id,
-          title: `Estimate: ${estimate.clientId ? `Client #${estimate.clientId}` : 'No Client'}`,
+          id: quote.id,
+          title: `Quote: ${quote.clientId ? `Client #${quote.clientId}` : 'No Client'}`,
           start: eventDate,
           end: new Date(eventDate.getTime() + 1 * 60 * 60 * 1000),
-          sourceType: 'estimate',
-          sourceId: estimate.id,
+          sourceType: 'quote',
+          sourceId: quote.id,
           allDay: false,
-          status: estimate.status,
+          status: quote.status,
         });
       }
     });
 
     return allEvents;
-  }, [leads, events, estimates]);
+  }, [leads, events, quotes]);
 
   // Handle event selection
   const handleEventSelect = (event: CalendarEvent) => {
@@ -186,8 +186,8 @@ const Calendar = () => {
       case 'confirmedEvent':
         navigate(`/events/${selectedEvent.sourceId}`);
         break;
-      case 'estimate':
-        navigate(`/estimates/${selectedEvent.sourceId}`);
+      case 'quote':
+        navigate(`/quotes/${selectedEvent.sourceId}`);
         break;
     }
     setDialogOpen(false);
@@ -218,7 +218,7 @@ const Calendar = () => {
               Confirmed Events
             </Badge>
             <Badge variant="outline" className="bg-[#fff7cd] text-[#b78103] border-[#b78103]">
-              Estimates
+              Quotes
             </Badge>
           </div>
         </CardHeader>

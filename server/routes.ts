@@ -16,7 +16,7 @@ import {
   insertMenuItemSchema,
   insertMenuSchema,
   insertClientSchema,
-  insertEstimateSchema,
+  insertQuoteSchema,
   insertEventSchema,
   insertContactIdentifierSchema, // New
   insertCommunicationSchema,     // New
@@ -25,13 +25,13 @@ import {
   opportunities,                  // for send-inquiry endpoint
   communications,                // table for drizzle updates
   opportunityEmailThreads,       // table for thread migration
-  quoteRequests,                 // for promote-to-quote-request endpoint
-  rawLeads,                      // for promote-to-quote-request endpoint
-  estimates,                     // for accept-estimate endpoint
+  inquiries,                 // for promote-to-inquiry endpoint
+  rawLeads,                      // for promote-to-inquiry endpoint
+  quotes,                     // for accept-quote endpoint
   followUpDrafts,                // for follow-up engine
-  estimateVersions,              // for quote versioning
+  quoteVersions,              // for quote versioning
   contactIdentifiers,            // for duplicate merge
-  clients,                       // for accept-estimate endpoint (prospect→customer graduation)
+  clients,                       // for accept-quote endpoint (prospect→customer graduation)
   events,                        // for auto-create event on accept and /full endpoint
   menus,                         // for /api/events/:id/full aggregate endpoint
   tastings,                      // P1-1: tasting bookings
@@ -47,8 +47,8 @@ import {
   isAdminOrUser,
   hasChefOrAboveWriteAccess,
 } from './middleware/permissions';
-import { filterEstimate, filterEstimates, filterMenuItem, filterMenuItems } from './utils/dataFilters';
-import { buildProposalFromQuoteRequest, buildProposalFromEstimateAlone } from './lib/proposalFromQuoteRequest';
+import { filterQuote, filterQuotes, filterMenuItem, filterMenuItems } from './utils/dataFilters';
+import { buildProposalFromInquiry, buildProposalFromQuoteAlone } from './lib/proposalFromInquiry';
 import type { Proposal } from '@shared/proposal';
 import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent } from './utils/siteConfig';
 import { createCheckoutLink, verifySquareWebhook } from './services/paymentService';
@@ -602,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (entityType) {
         case 'opportunity': restored = await storage.restoreOpportunity(entityId); break;
         case 'client': restored = await storage.restoreClient(entityId); break;
-        case 'estimate': restored = await storage.restoreEstimate(entityId); break;
+        case 'quote': restored = await storage.restoreQuote(entityId); break;
         case 'event': restored = await storage.restoreEvent(entityId); break;
         default: return res.status(400).json({ message: 'Invalid entity type' });
       }
@@ -696,9 +696,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(contactIdentifiers.opportunityId, secondaryId));
 
         // Move quote requests
-        await db.update(quoteRequests)
+        await db.update(inquiries)
           .set({ opportunityId: primaryId })
-          .where(eq(quoteRequests.opportunityId, secondaryId));
+          .where(eq(inquiries.opportunityId, secondaryId));
 
         // Move follow-up drafts
         await db.update(followUpDrafts)
@@ -726,11 +726,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const secondary = await storage.getClient(secondaryId);
         if (!primary || !secondary) return res.status(404).json({ message: 'One or both clients not found' });
 
-        // Move estimates
-        const allEstimates = await storage.listEstimates();
-        for (const est of allEstimates) {
+        // Move quotes
+        const allQuotes = await storage.listQuotes();
+        for (const est of allQuotes) {
           if (est.clientId === secondaryId) {
-            await storage.updateEstimate(est.id, { clientId: primaryId });
+            await storage.updateQuote(est.id, { clientId: primaryId });
           }
         }
 
@@ -823,7 +823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/estimates/bulk-action', isAdminOrUser, async (req: Request, res: Response) => {
+  app.post('/api/quotes/bulk-action', isAdminOrUser, async (req: Request, res: Response) => {
     try {
       const { ids, action } = req.body as { ids: number[]; action: string };
       if (!ids?.length) return res.status(400).json({ message: 'No IDs provided' });
@@ -832,25 +832,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const id of ids) {
         switch (action) {
           case 'delete':
-            await storage.deleteEstimate(id);
+            await storage.deleteQuote(id);
             processed++;
             break;
           case 'expire':
-            await storage.updateEstimate(id, { status: 'declined' as any });
+            await storage.updateQuote(id, { status: 'declined' as any });
             processed++;
             break;
         }
       }
 
       await storage.writeAuditLog({
-        entityType: 'estimate',
+        entityType: 'quote',
         entityId: 0,
         action: action === 'delete' ? 'deleted' : 'updated',
         userId: req.session.userId,
         metadata: { bulkAction: action, ids, processed },
       });
 
-      res.status(200).json({ message: `${processed} estimates processed`, processed });
+      res.status(200).json({ message: `${processed} quotes processed`, processed });
     } catch (error) {
       console.error('Error in bulk action:', error);
       res.status(500).json({ message: 'Server error' });
@@ -890,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/reports/funnel', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const allOpps = await storage.listOpportunities();
-      const allEstimates = await storage.listEstimates();
+      const allQuotes = await storage.listQuotes();
       const allEvents = await storage.listEvents();
 
       // Count by opportunity status
@@ -915,9 +915,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Estimate counts by status
+      // Quote counts by status
       const estCounts: Record<string, number> = {};
-      for (const est of allEstimates) {
+      for (const est of allQuotes) {
         estCounts[est.status] = (estCounts[est.status] || 0) + 1;
       }
 
@@ -928,8 +928,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalLeads = allOpps.length;
       const contacted = allOpps.filter(o => ['contacted', 'qualified', 'proposal', 'booked'].includes(o.status)).length;
       const qualified = allOpps.filter(o => ['qualified', 'proposal', 'booked'].includes(o.status)).length;
-      const quotesSent = allEstimates.filter(e => ['sent', 'viewed', 'accepted', 'declined'].includes(e.status)).length;
-      const accepted = allEstimates.filter(e => e.status === 'accepted').length;
+      const quotesSent = allQuotes.filter(e => ['sent', 'viewed', 'accepted', 'declined'].includes(e.status)).length;
+      const accepted = allQuotes.filter(e => e.status === 'accepted').length;
       const booked = eventCount;
 
       const stages = [
@@ -950,24 +950,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 100,
       }));
 
-      // Average time to close (first contact to booked) from accepted estimates
-      const acceptedEstimates = allEstimates.filter(e => e.status === 'accepted' && e.acceptedAt);
+      // Average time to close (first contact to booked) from accepted quotes
+      const acceptedQuotes = allQuotes.filter(e => e.status === 'accepted' && e.acceptedAt);
       let avgDaysToClose = 0;
-      if (acceptedEstimates.length > 0) {
-        const totalDays = acceptedEstimates.reduce((sum, e) => {
+      if (acceptedQuotes.length > 0) {
+        const totalDays = acceptedQuotes.reduce((sum, e) => {
           return sum + (new Date(e.acceptedAt!).getTime() - new Date(e.createdAt).getTime()) / (1000 * 60 * 60 * 24);
         }, 0);
-        avgDaysToClose = Math.round(totalDays / acceptedEstimates.length);
+        avgDaysToClose = Math.round(totalDays / acceptedQuotes.length);
       }
 
       // Revenue this month vs last month
-      const thisMonthRevenue = allEstimates
+      const thisMonthRevenue = allQuotes
         .filter(e => e.status === 'accepted' && e.acceptedAt &&
           new Date(e.acceptedAt).getMonth() === thisMonth &&
           new Date(e.acceptedAt).getFullYear() === thisYear)
         .reduce((sum, e) => sum + e.total, 0);
 
-      const lastMonthRevenue = allEstimates
+      const lastMonthRevenue = allQuotes
         .filter(e => e.status === 'accepted' && e.acceptedAt &&
           new Date(e.acceptedAt).getMonth() === lastMonth &&
           new Date(e.acceptedAt).getFullYear() === lastMonthYear)
@@ -975,14 +975,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // P2-3: Break down the funnel by source/campaign.
       // For each opportunitySource we report: count of opportunities, count of
-      // those that resulted in an accepted estimate (booked), and total revenue.
+      // those that resulted in an accepted quote (booked), and total revenue.
       // Sources with zero bookings still appear so Mike can see where the noise is.
-      const estimatesByOpp = new Map<number, any[]>();
-      for (const e of allEstimates) {
+      const quotesByOpp = new Map<number, any[]>();
+      for (const e of allQuotes) {
         if (e.opportunityId != null) {
-          const arr = estimatesByOpp.get(e.opportunityId) || [];
+          const arr = quotesByOpp.get(e.opportunityId) || [];
           arr.push(e);
-          estimatesByOpp.set(e.opportunityId, arr);
+          quotesByOpp.set(e.opportunityId, arr);
         }
       }
       const bySource: Record<string, { count: number; booked: number; revenue: number; utmCampaigns: Record<string, number> }> = {};
@@ -994,7 +994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bySource[src].utmCampaigns[opp.utmCampaign] =
             (bySource[src].utmCampaigns[opp.utmCampaign] || 0) + 1;
         }
-        const ests = estimatesByOpp.get(opp.id) || [];
+        const ests = quotesByOpp.get(opp.id) || [];
         const accepted = ests.find((e) => e.status === 'accepted');
         if (accepted) {
           bySource[src].booked += 1;
@@ -1432,7 +1432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = opp.inquiryToken || randomBytes(24).toString('base64url');
       const proto = req.headers['x-forwarded-proto'] || req.protocol;
       const host = req.headers['x-forwarded-host'] || req.get('host');
-      const inquiryUrl = `${proto}://${host}/request-quote?opp=${token}`;
+      const inquiryUrl = `${proto}://${host}/inquire?opp=${token}`;
 
       const template = inquiryInvitationEmail({
         customerFirstName: opp.firstName,
@@ -1501,7 +1501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, oppId));
       if (!opp) return res.status(404).json({ message: 'Not found' });
 
-      const linkedInquiries = await db.select().from(quoteRequests).where(eq(quoteRequests.opportunityId, oppId));
+      const linkedInquiries = await db.select().from(inquiries).where(eq(inquiries.opportunityId, oppId));
       const inquiry = linkedInquiries[0] || null;
 
       return res.json({
@@ -1911,96 +1911,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // ===== Estimates Routes =====
+  // ===== Quotes Routes =====
   
-  // Get all estimates
-  app.get('/api/estimates', isAuthenticated, async (req: Request, res: Response) => {
+  // Get all quotes
+  app.get('/api/quotes', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const estimates = await storage.listEstimates();
+      const quotes = await storage.listQuotes();
 
       // Filter financial data for non-admin users
       const user = await storage.getUser(req.session.userId!);
-      const filtered = filterEstimates(estimates, user!.role);
+      const filtered = filterQuotes(quotes, user!.role);
 
       res.status(200).json(filtered);
     } catch (error) {
-      console.error('Error getting estimates:', error);
+      console.error('Error getting quotes:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
-  // Get a specific estimate
-  app.get('/api/estimates/:id', isAuthenticated, async (req: Request, res: Response) => {
+  // Get a specific quote
+  app.get('/api/quotes/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
+      const quoteId = parseInt(req.params.id);
       
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
       
-      const estimate = await storage.getEstimate(estimateId);
+      const quote = await storage.getQuote(quoteId);
 
-      if (!estimate) {
-        return res.status(404).json({ message: 'Estimate not found' });
+      if (!quote) {
+        return res.status(404).json({ message: 'Quote not found' });
       }
 
       // Filter financial data for non-admin users
       const user = await storage.getUser(req.session.userId!);
-      const filtered = filterEstimate(estimate, user!.role);
+      const filtered = filterQuote(quote, user!.role);
 
       res.status(200).json(filtered);
     } catch (error) {
-      console.error('Error getting estimate:', error);
+      console.error('Error getting quote:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
   
   // Admin preview of the customer-facing quote page. Returns the same
-  // { estimate, client, proposal } shape as the public token endpoint so the
+  // { quote, client, proposal } shape as the public token endpoint so the
   // admin UI can render the identical QuoteProposalView component. Auth-gated
   // to any logged-in user; no view token required.
-  app.get('/api/estimates/:id/preview', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/quotes/:id/preview', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
-      if (!estimate) {
-        return res.status(404).json({ message: 'Estimate not found' });
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+      if (!quote) {
+        return res.status(404).json({ message: 'Quote not found' });
       }
 
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
-      const proposal = await resolveProposalForEstimate(estimate, client ?? null);
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+      const proposal = await resolveProposalForQuote(quote, client ?? null);
 
       return res.status(200).json({
-        estimate: sanitizeEstimateForPublic(estimate),
+        quote: sanitizeQuoteForPublic(quote),
         client: client ? sanitizeClientForPublic(client) : null,
         proposal,
       });
     } catch (error) {
-      console.error('Error fetching estimate preview:', error);
+      console.error('Error fetching quote preview:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });
 
   // Tier 3: Admin PDF download
-  app.get('/api/estimates/:id/pdf', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/quotes/:id/pdf', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) return res.status(400).json({ message: 'Invalid quote ID' });
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
-      if (!estimate) return res.status(404).json({ message: 'Estimate not found' });
-      if (!estimate.proposal) return res.status(400).json({ message: 'No proposal to generate PDF from' });
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+      if (!quote) return res.status(404).json({ message: 'Quote not found' });
+      if (!quote.proposal) return res.status(400).json({ message: 'No proposal to generate PDF from' });
 
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
       const { generateQuotePDF } = await import('./services/pdfGenerator');
-      const pdf = await generateQuotePDF(estimate.proposal as any, estimate, client);
+      const pdf = await generateQuotePDF(quote.proposal as any, quote, client);
 
       const lastName = client?.lastName || 'Quote';
-      const dateStr = estimate.eventDate ? new Date(estimate.eventDate).toISOString().split('T')[0] : 'undated';
+      const dateStr = quote.eventDate ? new Date(quote.eventDate).toISOString().split('T')[0] : 'undated';
       const filename = `HomeBites-Quote-${lastName}-${dateStr}.pdf`;
 
       res.setHeader('Content-Type', 'application/pdf');
@@ -2012,14 +2012,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: save just the proposal blob for an estimate. Used by the customize
+  // Admin: save just the proposal blob for an quote. Used by the customize
   // drawer. Separate from the generic PATCH to avoid tangling with the legacy
-  // EstimateForm's line-item-focused save path.
-  app.patch('/api/estimates/:id/proposal', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  // QuoteForm's line-item-focused save path.
+  app.patch('/api/quotes/:id/proposal', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
 
       const proposal = req.body.proposal ?? req.body;
@@ -2030,14 +2030,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Tier 3: Snapshot current version before overwriting
-      const [existing] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      const [existing] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
       if (!existing) {
-        return res.status(404).json({ message: 'Estimate not found' });
+        return res.status(404).json({ message: 'Quote not found' });
       }
 
       if (existing.proposal) {
-        await storage.createEstimateVersion({
-          estimateId,
+        await storage.createQuoteVersion({
+          quoteId,
           version: existing.currentVersion,
           proposal: existing.proposal,
           subtotalCents: existing.subtotal,
@@ -2051,7 +2051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nextVersion = (existing.currentVersion || 1) + 1;
 
       const [updated] = await db
-        .update(estimates)
+        .update(quotes)
         .set({
           proposal: proposal as any,
           subtotal: proposal.pricing.subtotalCents,
@@ -2067,11 +2067,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentVersion: nextVersion,
           updatedAt: new Date(),
         })
-        .where(eq(estimates.id, estimateId))
+        .where(eq(quotes.id, quoteId))
         .returning();
 
       return res.status(200).json({
-        estimate: sanitizeEstimateForPublic(updated),
+        quote: sanitizeQuoteForPublic(updated),
         proposal: updated.proposal,
         version: nextVersion,
       });
@@ -2081,35 +2081,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tier 3: Get version history for an estimate
-  app.get('/api/estimates/:id/versions', isAuthenticated, async (req: Request, res: Response) => {
+  // Tier 3: Get version history for an quote
+  app.get('/api/quotes/:id/versions', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) return res.status(400).json({ message: 'Invalid quote ID' });
 
-      const versions = await storage.getEstimateVersions(estimateId);
-      const estimate = await storage.getEstimate(estimateId);
+      const versions = await storage.getQuoteVersions(quoteId);
+      const quote = await storage.getQuote(quoteId);
 
       res.status(200).json({
-        currentVersion: estimate?.currentVersion || 1,
+        currentVersion: quote?.currentVersion || 1,
         versions,
       });
     } catch (error) {
-      console.error('Error getting estimate versions:', error);
+      console.error('Error getting quote versions:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
 
-  // Create a new estimate
-  app.post('/api/estimates', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  // Create a new quote
+  app.post('/api/quotes', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateData = insertEstimateSchema.parse(req.body);
+      const quoteData = insertQuoteSchema.parse(req.body);
       
-      const newEstimate = await storage.createEstimate(estimateData);
+      const newQuote = await storage.createQuote(quoteData);
       
-      res.status(201).json(newEstimate);
+      res.status(201).json(newQuote);
     } catch (error) {
-      console.error('Error creating estimate:', error);
+      console.error('Error creating quote:', error);
       
       if (error instanceof ZodError) {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
@@ -2119,26 +2119,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update an estimate
-  app.patch('/api/estimates/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  // Update an quote
+  app.patch('/api/quotes/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
+      const quoteId = parseInt(req.params.id);
       
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
       
       const updateData = req.body;
       
-      const updatedEstimate = await storage.updateEstimate(estimateId, updateData);
+      const updatedQuote = await storage.updateQuote(quoteId, updateData);
       
-      if (!updatedEstimate) {
-        return res.status(404).json({ message: 'Estimate not found' });
+      if (!updatedQuote) {
+        return res.status(404).json({ message: 'Quote not found' });
       }
       
-      res.status(200).json(updatedEstimate);
+      res.status(200).json(updatedQuote);
     } catch (error) {
-      console.error('Error updating estimate:', error);
+      console.error('Error updating quote:', error);
       
       if (error instanceof ZodError) {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
@@ -2148,34 +2148,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Accept an estimate — graduates the linked client from 'prospect' to 'customer'
+  // Accept an quote — graduates the linked client from 'prospect' to 'customer'
   // and auto-creates a confirmed Event row so the chef has a prep surface the moment
-  // the deal closes. Idempotent: if an event already exists for this estimate, we skip
+  // the deal closes. Idempotent: if an event already exists for this quote, we skip
   // the creation step and return the existing one.
-  app.post('/api/estimates/:id/accept', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.post('/api/quotes/:id/accept', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
-      if (!estimate) {
-        return res.status(404).json({ message: 'Estimate not found' });
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+      if (!quote) {
+        return res.status(404).json({ message: 'Quote not found' });
       }
 
       const now = new Date();
-      const [updatedEstimate] = await db
-        .update(estimates)
+      const [updatedQuote] = await db
+        .update(quotes)
         .set({ status: 'accepted', acceptedAt: now, updatedAt: now })
-        .where(eq(estimates.id, estimateId))
+        .where(eq(quotes.id, quoteId))
         .returning();
 
       // Graduate the linked client from prospect → customer
       const [updatedClient] = await db
         .update(clients)
         .set({ type: 'customer', updatedAt: now })
-        .where(eq(clients.id, estimate.clientId))
+        .where(eq(clients.id, quote.clientId))
         .returning();
 
       // Ensure contact identifiers exist for matching engine
@@ -2183,24 +2183,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           await storage.seedClientIdentifiers(updatedClient.id, updatedClient.email, updatedClient.phone);
         } catch (seedErr) {
-          console.error('Warning: failed to seed identifiers on estimate accept:', seedErr);
+          console.error('Warning: failed to seed identifiers on quote accept:', seedErr);
         }
       }
 
-      // Auto-create (or fetch existing) Event row for this estimate
-      const [existingEvent] = await db.select().from(events).where(eq(events.estimateId, estimateId));
+      // Auto-create (or fetch existing) Event row for this quote
+      const [existingEvent] = await db.select().from(events).where(eq(events.quoteId, quoteId));
       let createdEvent = existingEvent ?? null;
 
       if (!existingEvent) {
         // Find the originating quote request so we can use its time/venue details
         const [originatingQuote] = await db
           .select()
-          .from(quoteRequests)
-          .where(eq(quoteRequests.estimateId, estimateId));
+          .from(inquiries)
+          .where(eq(inquiries.quoteId, quoteId));
 
         // Compose start/end timestamps. Quote request stores them as text ("14:00") — combine
         // with the event date to get real timestamps. Fall back to noon + 4h if missing.
-        const eventDate = estimate.eventDate ?? now;
+        const eventDate = quote.eventDate ?? now;
         const composeTime = (base: Date, hhmm?: string | null, fallbackHours: number = 12): Date => {
           const d = new Date(base);
           if (hhmm && /^\d{1,2}:\d{2}/.test(hhmm)) {
@@ -2220,26 +2220,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const venueText =
-          estimate.venue ||
+          quote.venue ||
           originatingQuote?.venueName ||
           (originatingQuote?.venueAddress as any)?.street ||
           'Venue TBD';
-        const guestCount = estimate.guestCount ?? originatingQuote?.guestCount ?? 1;
+        const guestCount = quote.guestCount ?? originatingQuote?.guestCount ?? 1;
 
         [createdEvent] = await db
           .insert(events)
           .values({
-            clientId: estimate.clientId,
-            estimateId: estimate.id,
+            clientId: quote.clientId,
+            quoteId: quote.id,
             eventDate,
             startTime,
             endTime,
-            eventType: estimate.eventType,
+            eventType: quote.eventType,
             guestCount,
             venue: venueText,
-            menuId: estimate.menuId ?? null,
+            menuId: quote.menuId ?? null,
             status: 'confirmed',
-            notes: estimate.notes ?? null,
+            notes: quote.notes ?? null,
             completedTasks: [],
             viewToken: randomBytes(24).toString('base64url'),
           } as any)
@@ -2248,15 +2248,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json({
         message: existingEvent
-          ? 'Estimate re-accepted; existing event retained'
-          : 'Estimate accepted; client graduated to customer and event created',
-        estimate: updatedEstimate,
+          ? 'Quote re-accepted; existing event retained'
+          : 'Quote accepted; client graduated to customer and event created',
+        quote: updatedQuote,
         client: updatedClient,
         event: createdEvent,
         eventAlreadyExisted: !!existingEvent,
       });
     } catch (error) {
-      console.error('Error accepting estimate:', error);
+      console.error('Error accepting quote:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });
@@ -2266,30 +2266,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // and (if RESEND_API_KEY is configured) fires an automated email with the
   // public URL. When Resend is not configured, the response still includes
   // publicUrl and the UI falls back to the mailto draft flow.
-  app.post('/api/estimates/:id/send', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.post('/api/quotes/:id/send', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
-      if (!estimate) {
-        return res.status(404).json({ message: 'Estimate not found' });
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+      if (!quote) {
+        return res.status(404).json({ message: 'Quote not found' });
       }
 
       const now = new Date();
-      const viewToken = estimate.viewToken || randomBytes(24).toString('base64url');
+      const viewToken = quote.viewToken || randomBytes(24).toString('base64url');
 
       const [updated] = await db
-        .update(estimates)
+        .update(quotes)
         .set({
           status: 'sent',
-          sentAt: estimate.sentAt ?? now,
+          sentAt: quote.sentAt ?? now,
           viewToken,
           updatedAt: now,
         })
-        .where(eq(estimates.id, estimateId))
+        .where(eq(quotes.id, quoteId))
         .returning();
 
       // Build the public URL using the request's own origin so it works in any env
@@ -2298,7 +2298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const publicUrl = `${proto}://${host}/quote/${viewToken}`;
 
       // Fetch the client so we can send the email
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
 
       let emailSent = false;
       let emailSkipped = true;
@@ -2307,9 +2307,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emailRecipient = client.email;
         const template = quoteSentEmail({
           customerFirstName: client.firstName || 'there',
-          eventType: estimate.eventType,
-          eventDate: estimate.eventDate,
-          guestCount: estimate.guestCount,
+          eventType: quote.eventType,
+          eventDate: quote.eventDate,
+          guestCount: quote.guestCount,
           publicQuoteUrl: publicUrl,
         });
         const result = await sendEmail({
@@ -2325,46 +2325,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       return res.status(200).json({
-        estimate: updated,
+        quote: updated,
         publicUrl,
         emailSent,
         emailSkipped,
         emailRecipient,
       });
     } catch (error) {
-      console.error('Error sending estimate:', error);
+      console.error('Error sending quote:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });
 
-  // Decline an estimate (admin-triggered — e.g. Mike declines on behalf of a customer
+  // Decline an quote (admin-triggered — e.g. Mike declines on behalf of a customer
   // who responded by email instead of clicking the public link)
-  app.post('/api/estimates/:id/decline', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.post('/api/quotes/:id/decline', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
 
       const now = new Date();
       const [updated] = await db
-        .update(estimates)
+        .update(quotes)
         .set({
           status: 'declined',
           declinedAt: now,
           declinedReason: typeof req.body?.reason === 'string' ? req.body.reason : null,
           updatedAt: now,
         })
-        .where(eq(estimates.id, estimateId))
+        .where(eq(quotes.id, quoteId))
         .returning();
 
       if (!updated) {
-        return res.status(404).json({ message: 'Estimate not found' });
+        return res.status(404).json({ message: 'Quote not found' });
       }
 
       return res.status(200).json(updated);
     } catch (error) {
-      console.error('Error declining estimate:', error);
+      console.error('Error declining quote:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });
@@ -2387,11 +2387,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     zip: c.zip,
   });
 
-  // Sanitize an estimate row for public consumption. Strips internal fields
+  // Sanitize an quote row for public consumption. Strips internal fields
   // like createdBy. Intentionally does NOT include the proposal blob — that's
   // returned as a separate top-level field on the response so the client
   // treats it as the source of truth for rendering.
-  const sanitizeEstimateForPublic = (e: typeof estimates.$inferSelect) => ({
+  const sanitizeQuoteForPublic = (e: typeof quotes.$inferSelect) => ({
     id: e.id,
     eventType: e.eventType,
     eventDate: e.eventDate,
@@ -2419,33 +2419,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     consultationMeetingUrl: e.consultationMeetingUrl,
   });
 
-  // Resolve (and lazily hydrate) the proposal for an estimate. New estimates
-  // have estimate.proposal populated at creation time; legacy estimates don't,
-  // so we fall back to building one from the originating quote_request (or
-  // from the estimate alone if there isn't one) and persist the result so
+  // Resolve (and lazily hydrate) the proposal for an quote. New quotes
+  // have quote.proposal populated at creation time; legacy quotes don't,
+  // so we fall back to building one from the originating inquiry (or
+  // from the quote alone if there isn't one) and persist the result so
   // subsequent reads are cheap and the admin can edit it.
-  async function resolveProposalForEstimate(
-    estimate: typeof estimates.$inferSelect,
+  async function resolveProposalForQuote(
+    quote: typeof quotes.$inferSelect,
     client: typeof clients.$inferSelect | null,
   ): Promise<Proposal> {
-    if (estimate.proposal) {
-      return estimate.proposal as Proposal;
+    if (quote.proposal) {
+      return quote.proposal as Proposal;
     }
 
     const [originatingQuote] = await db
       .select()
-      .from(quoteRequests)
-      .where(eq(quoteRequests.estimateId, estimate.id));
+      .from(inquiries)
+      .where(eq(inquiries.quoteId, quote.id));
 
     const proposal = originatingQuote
-      ? buildProposalFromQuoteRequest(originatingQuote, estimate)
-      : buildProposalFromEstimateAlone(estimate, client);
+      ? buildProposalFromInquiry(originatingQuote, quote)
+      : buildProposalFromQuoteAlone(quote, client);
 
     // Persist so future reads (and admin edits) use the same blob.
     await db
-      .update(estimates)
+      .update(quotes)
       .set({ proposal: proposal as any, updatedAt: new Date() })
-      .where(eq(estimates.id, estimate.id));
+      .where(eq(quotes.id, quote.id));
 
     return proposal;
   }
@@ -2458,16 +2458,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = req.params.token;
       if (!token || token.length < 10) return res.status(400).json({ message: 'Invalid token' });
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) return res.status(404).json({ message: 'Quote not found' });
-      if (!estimate.proposal) return res.status(400).json({ message: 'No proposal available' });
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) return res.status(404).json({ message: 'Quote not found' });
+      if (!quote.proposal) return res.status(400).json({ message: 'No proposal available' });
 
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
       const { generateQuotePDF } = await import('./services/pdfGenerator');
-      const pdf = await generateQuotePDF(estimate.proposal as any, estimate, client);
+      const pdf = await generateQuotePDF(quote.proposal as any, quote, client);
 
       const lastName = client?.lastName || 'Quote';
-      const dateStr = estimate.eventDate ? new Date(estimate.eventDate).toISOString().split('T')[0] : 'undated';
+      const dateStr = quote.eventDate ? new Date(quote.eventDate).toISOString().split('T')[0] : 'undated';
       const filename = `HomeBites-Quote-${lastName}-${dateStr}.pdf`;
 
       res.setHeader('Content-Type', 'application/pdf');
@@ -2479,7 +2479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Returns the Proposal blob stored on estimate.proposal — this is the
+  // Returns the Proposal blob stored on quote.proposal — this is the
   // single source of truth for the customer-facing page.
   app.get('/api/public/quote/:token', async (req: Request, res: Response) => {
     try {
@@ -2488,16 +2488,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid token' });
       }
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) {
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
 
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
-      const proposal = await resolveProposalForEstimate(estimate, client ?? null);
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+      const proposal = await resolveProposalForQuote(quote, client ?? null);
 
       return res.status(200).json({
-        estimate: sanitizeEstimateForPublic(estimate),
+        quote: sanitizeQuoteForPublic(quote),
         client: client ? sanitizeClientForPublic(client) : null,
         proposal,
       });
@@ -2513,28 +2513,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/public/quote/:token/view', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) {
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
 
-      const isFirstView = !estimate.viewedAt;
+      const isFirstView = !quote.viewedAt;
 
       // First-view-wins: don't overwrite an existing viewedAt so we track the initial open time
       if (isFirstView) {
         await db
-          .update(estimates)
+          .update(quotes)
           .set({ viewedAt: new Date(), updatedAt: new Date() })
-          .where(eq(estimates.id, estimate.id));
+          .where(eq(quotes.id, quote.id));
 
         // P1-2: Drip clock starts when the customer FIRST views the quote.
         // We stamp followUpSequenceStartedAt on the linked opportunity (if any)
         // the first time this happens. Subsequent views are no-ops.
-        if (estimate.opportunityId) {
+        if (quote.opportunityId) {
           const [opp] = await db
             .select()
             .from(opportunities)
-            .where(eq(opportunities.id, estimate.opportunityId));
+            .where(eq(opportunities.id, quote.opportunityId));
           if (opp && !opp.followUpSequenceStartedAt) {
             await db
               .update(opportunities)
@@ -2545,14 +2545,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Fire the admin notification in the background. Don't block the customer's page load.
         try {
-          const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+          const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
           const emailCfg = getEmailConfig();
-          const adminQuoteUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}/view`;
+          const adminQuoteUrl = `${emailCfg.publicBaseUrl}/quotes/${quote.id}/view`;
           const template = quoteViewedAdminEmail({
             customerName: client ? `${client.firstName} ${client.lastName}` : 'A customer',
-            eventType: estimate.eventType,
-            eventDate: estimate.eventDate,
-            totalCents: estimate.total,
+            eventType: quote.eventType,
+            eventDate: quote.eventDate,
+            totalCents: quote.total,
             adminQuoteUrl,
           });
           sendEmailInBackground({
@@ -2560,7 +2560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             subject: template.subject,
             html: template.html,
             text: template.text,
-            clientId: estimate.clientId,
+            clientId: quote.clientId,
             templateKey: 'quote_viewed_admin',
           });
         } catch (notifyError) {
@@ -2580,48 +2580,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/public/quote/:token/accept', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) {
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
 
-      if (estimate.status === 'declined') {
+      if (quote.status === 'declined') {
         return res.status(400).json({ message: 'This quote has already been declined.' });
       }
 
       const now = new Date();
-      const [updatedEstimate] = await db
-        .update(estimates)
-        .set({ status: 'accepted', acceptedAt: estimate.acceptedAt ?? now, updatedAt: now })
-        .where(eq(estimates.id, estimate.id))
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({ status: 'accepted', acceptedAt: quote.acceptedAt ?? now, updatedAt: now })
+        .where(eq(quotes.id, quote.id))
         .returning();
 
       // P1-2: pause drip — client accepted the quote
-      await pauseOpportunityDrip(estimate.opportunityId, 'quote_accepted');
+      await pauseOpportunityDrip(quote.opportunityId, 'quote_accepted');
 
       // P2-1: auto-create a draft contract so the admin can "Send contract"
       // without an extra click. Errors are logged but don't block the accept.
       try {
-        await ensureContractForEstimate(estimate.id);
+        await ensureContractForQuote(quote.id);
       } catch (contractErr) {
-        console.warn(`[p2-1] failed to auto-create contract for estimate ${estimate.id}:`, contractErr);
+        console.warn(`[p2-1] failed to auto-create contract for quote ${quote.id}:`, contractErr);
       }
 
       // Graduate the client → customer
       await db
         .update(clients)
         .set({ type: 'customer', updatedAt: now })
-        .where(eq(clients.id, estimate.clientId));
+        .where(eq(clients.id, quote.clientId));
 
-      // Auto-create an event if one doesn't already exist for this estimate
-      const [existingEvent] = await db.select().from(events).where(eq(events.estimateId, estimate.id));
+      // Auto-create an event if one doesn't already exist for this quote
+      const [existingEvent] = await db.select().from(events).where(eq(events.quoteId, quote.id));
       if (!existingEvent) {
         const [originatingQuote] = await db
           .select()
-          .from(quoteRequests)
-          .where(eq(quoteRequests.estimateId, estimate.id));
+          .from(inquiries)
+          .where(eq(inquiries.quoteId, quote.id));
 
-        const eventDate = estimate.eventDate ?? now;
+        const eventDate = quote.eventDate ?? now;
         const composeTime = (base: Date, hhmm?: string | null, fallbackHours: number = 12): Date => {
           const d = new Date(base);
           if (hhmm && /^\d{1,2}:\d{2}/.test(hhmm)) {
@@ -2639,17 +2639,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         await db.insert(events).values({
-          clientId: estimate.clientId,
-          estimateId: estimate.id,
+          clientId: quote.clientId,
+          quoteId: quote.id,
           eventDate,
           startTime,
           endTime,
-          eventType: estimate.eventType,
-          guestCount: estimate.guestCount ?? originatingQuote?.guestCount ?? 1,
-          venue: estimate.venue || originatingQuote?.venueName || 'Venue TBD',
-          menuId: estimate.menuId ?? null,
+          eventType: quote.eventType,
+          guestCount: quote.guestCount ?? originatingQuote?.guestCount ?? 1,
+          venue: quote.venue || originatingQuote?.venueName || 'Venue TBD',
+          menuId: quote.menuId ?? null,
           status: 'confirmed',
-          notes: estimate.notes ?? null,
+          notes: quote.notes ?? null,
           completedTasks: [],
           viewToken: randomBytes(24).toString('base64url'),
         } as any);
@@ -2659,7 +2659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [eventForResponse] = await db
         .select()
         .from(events)
-        .where(eq(events.estimateId, estimate.id));
+        .where(eq(events.quoteId, quote.id));
 
       // Compose the customer event URL from the request origin
       const host = req.get('host');
@@ -2671,12 +2671,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fire customer + admin notifications. Fire-and-forget so the customer's
       // response isn't delayed by email latency.
       try {
-        const [acceptingClient] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+        const [acceptingClient] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
         if (acceptingClient?.email) {
           const customerTemplate = quoteAcceptedCustomerEmail({
             customerFirstName: acceptingClient.firstName || 'there',
-            eventType: estimate.eventType,
-            eventDate: estimate.eventDate,
+            eventType: quote.eventType,
+            eventDate: quote.eventDate,
             publicEventUrl: eventPublicUrl,
           });
           sendEmailInBackground({
@@ -2699,9 +2699,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? `${acceptingClient.firstName} ${acceptingClient.lastName}`
             : 'A customer',
           customerEmail: acceptingClient?.email || 'unknown',
-          eventType: estimate.eventType,
-          eventDate: estimate.eventDate,
-          totalCents: estimate.total,
+          eventType: quote.eventType,
+          eventDate: quote.eventDate,
+          totalCents: quote.total,
           adminEventUrl,
         });
         sendEmailInBackground({
@@ -2709,7 +2709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subject: adminTemplate.subject,
           html: adminTemplate.html,
           text: adminTemplate.text,
-          clientId: estimate.clientId,
+          clientId: quote.clientId,
           eventId: eventForResponse?.id ?? null,
           templateKey: 'quote_accepted_admin',
         });
@@ -2719,7 +2719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json({
         ok: true,
-        estimate: sanitizeEstimateForPublic(updatedEstimate),
+        quote: sanitizeQuoteForPublic(updatedQuote),
         eventPublicUrl,
       });
     } catch (error) {
@@ -2732,12 +2732,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/public/quote/:token/decline', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) {
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
 
-      if (estimate.status === 'accepted') {
+      if (quote.status === 'accepted') {
         return res.status(400).json({ message: 'This quote has already been accepted.' });
       }
 
@@ -2760,10 +2760,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // P0-3: always mint a feedback magic-link token so /decline-feedback/:token
       // still resolves even when feedback was submitted up-front (backward-compat
       // for anyone clicking an older decline email).
-      const feedbackToken = estimate.declineFeedbackToken || randomBytes(24).toString('base64url');
+      const feedbackToken = quote.declineFeedbackToken || randomBytes(24).toString('base64url');
 
       const [updated] = await db
-        .update(estimates)
+        .update(quotes)
         .set({
           status: 'declined',
           declinedAt: now,
@@ -2779,15 +2779,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : {}),
           updatedAt: now,
         })
-        .where(eq(estimates.id, estimate.id))
+        .where(eq(quotes.id, quote.id))
         .returning();
 
       // P1-2: pause drip — client declined the quote
-      await pauseOpportunityDrip(estimate.opportunityId, 'quote_declined');
+      await pauseOpportunityDrip(quote.opportunityId, 'quote_declined');
 
       // Notifications (fire-and-forget)
       try {
-        const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+        const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
         const emailCfg = getEmailConfig();
         const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
 
@@ -2798,7 +2798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const feedbackUrl = `${emailCfg.publicBaseUrl}/decline-feedback/${feedbackToken}`;
           const clientTemplate = quoteDeclinedFeedbackEmail({
             customerFirstName: client.firstName || 'there',
-            eventType: estimate.eventType,
+            eventType: quote.eventType,
             feedbackUrl,
           });
           sendEmailInBackground({
@@ -2807,7 +2807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             html: clientTemplate.html,
             text: clientTemplate.text,
             clientId: client.id,
-            opportunityId: estimate.opportunityId ?? null,
+            opportunityId: quote.opportunityId ?? null,
             templateKey: 'quote_declined_feedback',
           });
         }
@@ -2816,47 +2816,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sendOwnerSmsInBackground({
           ...quoteDeclinedOwnerSms({
             customerName,
-            eventDate: estimate.eventDate,
+            eventDate: quote.eventDate,
             reason: category ? `${category}${notes ? ` — ${notes}` : ''}` : reason,
-            estimateId: estimate.id,
+            quoteId: quote.id,
           }),
           templateKey: 'quote_declined_owner_alert',
-          clientId: estimate.clientId,
-          opportunityId: estimate.opportunityId ?? null,
+          clientId: quote.clientId,
+          opportunityId: quote.opportunityId ?? null,
         });
 
         // When structured feedback came in up-front, also fire the owner's
         // "consider re-engaging" email immediately (it would normally fire
         // only after the customer submitted the magic-link form).
         if (hasStructuredFeedback && category) {
-          const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+          const adminUrl = `${emailCfg.publicBaseUrl}/quotes/${quote.id}`;
           const ownerTemplate = declineFeedbackOwnerEmail({
             customerName,
             customerEmail: client?.email || 'unknown',
-            eventType: estimate.eventType,
-            eventDate: estimate.eventDate,
+            eventType: quote.eventType,
+            eventDate: quote.eventDate,
             category,
             notes,
-            adminEstimateUrl: adminUrl,
+            adminQuoteUrl: adminUrl,
           });
           sendEmailInBackground({
             to: emailCfg.adminNotificationEmail,
             subject: ownerTemplate.subject,
             html: ownerTemplate.html,
             text: ownerTemplate.text,
-            clientId: estimate.clientId,
-            opportunityId: estimate.opportunityId ?? null,
+            clientId: quote.clientId,
+            opportunityId: quote.opportunityId ?? null,
             templateKey: 'decline_feedback_owner_alert',
           });
           sendOwnerSmsInBackground({
             ...declineFeedbackOwnerSms({
               customerName,
               category,
-              estimateId: estimate.id,
+              quoteId: quote.id,
             }),
             templateKey: 'decline_feedback_owner_alert',
-            clientId: estimate.clientId,
-            opportunityId: estimate.opportunityId ?? null,
+            clientId: quote.clientId,
+            opportunityId: quote.opportunityId ?? null,
           });
         }
       } catch (notifyError) {
@@ -2865,7 +2865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json({
         ok: true,
-        estimate: sanitizeEstimateForPublic(updated),
+        quote: sanitizeQuoteForPublic(updated),
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -2882,20 +2882,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/public/decline-feedback/:token', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
-      const [estimate] = await db
+      const [quote] = await db
         .select()
-        .from(estimates)
-        .where(eq(estimates.declineFeedbackToken, token));
-      if (!estimate) {
+        .from(quotes)
+        .where(eq(quotes.declineFeedbackToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Not found' });
       }
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
       return res.json({
         firstName: client?.firstName || null,
-        eventType: estimate.eventType,
-        eventDate: estimate.eventDate,
-        alreadySubmitted: !!estimate.declineFeedbackSubmittedAt,
-        category: estimate.declineCategory,
+        eventType: quote.eventType,
+        eventDate: quote.eventDate,
+        alreadySubmitted: !!quote.declineFeedbackSubmittedAt,
+        category: quote.declineCategory,
       });
     } catch (error) {
       console.error('Error fetching decline feedback:', error);
@@ -2913,49 +2913,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const { category, notes } = bodySchema.parse(req.body || {});
 
-      const [estimate] = await db
+      const [quote] = await db
         .select()
-        .from(estimates)
-        .where(eq(estimates.declineFeedbackToken, token));
-      if (!estimate) {
+        .from(quotes)
+        .where(eq(quotes.declineFeedbackToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Not found' });
       }
 
       const now = new Date();
       await db
-        .update(estimates)
+        .update(quotes)
         .set({
           declineCategory: category,
-          declinedReason: notes ?? estimate.declinedReason ?? null,
+          declinedReason: notes ?? quote.declinedReason ?? null,
           declineFeedbackSubmittedAt: now,
           updatedAt: now,
         })
-        .where(eq(estimates.id, estimate.id));
+        .where(eq(quotes.id, quote.id));
 
       // Fire owner notification — email + SMS. Re-engage CTA surfaces in the
       // email body when the category is pricing/menu.
       try {
-        const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+        const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
         const emailCfg = getEmailConfig();
         const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
-        const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+        const adminUrl = `${emailCfg.publicBaseUrl}/quotes/${quote.id}`;
 
         const ownerTemplate = declineFeedbackOwnerEmail({
           customerName,
           customerEmail: client?.email || 'unknown',
-          eventType: estimate.eventType,
-          eventDate: estimate.eventDate,
+          eventType: quote.eventType,
+          eventDate: quote.eventDate,
           category,
           notes: notes ?? null,
-          adminEstimateUrl: adminUrl,
+          adminQuoteUrl: adminUrl,
         });
         sendEmailInBackground({
           to: emailCfg.adminNotificationEmail,
           subject: ownerTemplate.subject,
           html: ownerTemplate.html,
           text: ownerTemplate.text,
-          clientId: estimate.clientId,
-          opportunityId: estimate.opportunityId ?? null,
+          clientId: quote.clientId,
+          opportunityId: quote.opportunityId ?? null,
           templateKey: 'decline_feedback_owner_alert',
         });
 
@@ -2963,11 +2963,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...declineFeedbackOwnerSms({
             customerName,
             category,
-            estimateId: estimate.id,
+            quoteId: quote.id,
           }),
           templateKey: 'decline_feedback_owner_alert',
-          clientId: estimate.clientId,
-          opportunityId: estimate.opportunityId ?? null,
+          clientId: quote.clientId,
+          opportunityId: quote.opportunityId ?? null,
         });
       } catch (notifyError) {
         console.warn('Failed to fire decline-feedback notifications:', notifyError);
@@ -3001,15 +3001,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/public/quote/:token/booking-config', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) {
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
       const cal = getCalComConfig();
 
       // Build a pre-filled booking URL: pass name + email + a metadata flag
-      // `estimateToken` so the webhook can round-trip back to the right estimate.
+      // `quoteToken` so the webhook can round-trip back to the right quote.
       const buildUrl = (base: string | null): string | null => {
         if (!base) return null;
         try {
@@ -3017,7 +3017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (client?.firstName) u.searchParams.set('name', `${client.firstName} ${client.lastName || ''}`.trim());
           if (client?.email) u.searchParams.set('email', client.email);
           // Cal.com custom fields come through as query params that become form metadata
-          u.searchParams.set('estimateToken', token);
+          u.searchParams.set('quoteToken', token);
           return u.toString();
         } catch {
           // If base isn't a valid URL, return it raw
@@ -3028,9 +3028,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         consultationUrl: buildUrl(cal.consultationEmbedUrl),
         tastingUrl: buildUrl(cal.tastingEmbedUrl),
-        infoRequestedAt: estimate.infoRequestedAt,
-        consultationBookedAt: estimate.consultationBookedAt,
-        consultationMeetingUrl: estimate.consultationMeetingUrl,
+        infoRequestedAt: quote.infoRequestedAt,
+        consultationBookedAt: quote.consultationBookedAt,
+        consultationMeetingUrl: quote.consultationMeetingUrl,
       });
     } catch (error) {
       console.error('Error fetching booking config:', error);
@@ -3047,34 +3047,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bodySchema = z.object({ note: z.string().max(2000).optional().nullable() });
       const { note } = bodySchema.parse(req.body || {});
 
-      const [estimate] = await db.select().from(estimates).where(eq(estimates.viewToken, token));
-      if (!estimate) {
+      const [quote] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+      if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
 
-      if (estimate.status === 'accepted' || estimate.status === 'declined') {
+      if (quote.status === 'accepted' || quote.status === 'declined') {
         return res.status(400).json({
-          message: `This quote has already been ${estimate.status}.`,
+          message: `This quote has already been ${quote.status}.`,
         });
       }
 
       const now = new Date();
       const [updated] = await db
-        .update(estimates)
+        .update(quotes)
         .set({
           // Don't change status — stays 'viewed' so downstream logic (follow-up engine)
           // can see this as a pause-trigger without treating it as a terminal state.
-          infoRequestedAt: estimate.infoRequestedAt ?? now,
-          infoRequestNote: note ?? estimate.infoRequestNote ?? null,
+          infoRequestedAt: quote.infoRequestedAt ?? now,
+          infoRequestNote: note ?? quote.infoRequestNote ?? null,
           updatedAt: now,
         })
-        .where(eq(estimates.id, estimate.id))
+        .where(eq(quotes.id, quote.id))
         .returning();
 
       // P1-2: pause drip — client asked for more info (active engagement)
-      await pauseOpportunityDrip(estimate.opportunityId, 'info_requested');
+      await pauseOpportunityDrip(quote.opportunityId, 'info_requested');
 
-      const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+      const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
       const cal = getCalComConfig();
       const emailCfg = getEmailConfig();
 
@@ -3085,7 +3085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const u = new URL(cal.consultationEmbedUrl);
           if (client?.firstName) u.searchParams.set('name', `${client.firstName} ${client.lastName || ''}`.trim());
           if (client?.email) u.searchParams.set('email', client.email);
-          u.searchParams.set('estimateToken', token);
+          u.searchParams.set('quoteToken', token);
           bookingUrl = u.toString();
         } catch {
           bookingUrl = cal.consultationEmbedUrl;
@@ -3096,7 +3096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (client?.email && bookingUrl) {
         const clientTemplate = infoRequestedClientAckEmail({
           customerFirstName: client.firstName || 'there',
-          eventType: estimate.eventType,
+          eventType: quote.eventType,
           bookingUrl,
           note: note ?? null,
         });
@@ -3106,44 +3106,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           html: clientTemplate.html,
           text: clientTemplate.text,
           clientId: client.id,
-          opportunityId: estimate.opportunityId ?? null,
+          opportunityId: quote.opportunityId ?? null,
           templateKey: 'info_requested_client_ack',
         });
       }
 
       // Fire owner email + SMS alert (fire-and-forget)
       try {
-        const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+        const adminUrl = `${emailCfg.publicBaseUrl}/quotes/${quote.id}`;
         const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
         const ownerTemplate = infoRequestedOwnerEmail({
           customerName,
           customerEmail: client?.email || 'unknown',
           customerPhone: client?.phone || null,
-          eventType: estimate.eventType,
-          eventDate: estimate.eventDate,
+          eventType: quote.eventType,
+          eventDate: quote.eventDate,
           note: note ?? null,
-          adminEstimateUrl: adminUrl,
+          adminQuoteUrl: adminUrl,
         });
         sendEmailInBackground({
           to: emailCfg.adminNotificationEmail,
           subject: ownerTemplate.subject,
           html: ownerTemplate.html,
           text: ownerTemplate.text,
-          clientId: estimate.clientId,
-          opportunityId: estimate.opportunityId ?? null,
+          clientId: quote.clientId,
+          opportunityId: quote.opportunityId ?? null,
           templateKey: 'info_requested_owner_alert',
         });
 
         sendOwnerSmsInBackground({
           ...infoRequestedOwnerSms({
             customerName,
-            eventDate: estimate.eventDate,
+            eventDate: quote.eventDate,
             note: note ?? null,
-            estimateId: estimate.id,
+            quoteId: quote.id,
           }),
           templateKey: 'info_requested_owner_alert',
-          clientId: estimate.clientId,
-          opportunityId: estimate.opportunityId ?? null,
+          clientId: quote.clientId,
+          opportunityId: quote.opportunityId ?? null,
         });
       } catch (notifyError) {
         console.warn('Failed to fire info-requested notifications:', notifyError);
@@ -3151,7 +3151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json({
         ok: true,
-        estimate: sanitizeEstimateForPublic(updated),
+        quote: sanitizeQuoteForPublic(updated),
         bookingUrl,
       });
     } catch (error) {
@@ -3438,26 +3438,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(200).json({ ok: true, ignored: true, reason: `tasting: unhandled ${triggerEvent}` });
       }
 
-      // Extract estimateToken from Cal's metadata / responses. Cal.com puts
+      // Extract quoteToken from Cal's metadata / responses. Cal.com puts
       // query-param prefills inside payload.responses or payload.metadata.
-      const estimateToken: string | undefined =
-        payload.metadata?.estimateToken ||
-        payload.responses?.estimateToken?.value ||
-        payload.responses?.estimateToken ||
-        payload.additionalNotes?.estimateToken;
+      const quoteToken: string | undefined =
+        payload.metadata?.quoteToken ||
+        payload.responses?.quoteToken?.value ||
+        payload.responses?.quoteToken ||
+        payload.additionalNotes?.quoteToken;
 
-      if (!estimateToken) {
-        console.warn(`[cal] webhook ${triggerEvent} without estimateToken — ignoring`);
-        return res.status(200).json({ ok: true, ignored: true, reason: 'no estimateToken' });
+      if (!quoteToken) {
+        console.warn(`[cal] webhook ${triggerEvent} without quoteToken — ignoring`);
+        return res.status(200).json({ ok: true, ignored: true, reason: 'no quoteToken' });
       }
 
-      const [estimate] = await db
+      const [quote] = await db
         .select()
-        .from(estimates)
-        .where(eq(estimates.viewToken, estimateToken));
-      if (!estimate) {
-        console.warn(`[cal] webhook ${triggerEvent} for unknown estimateToken ${estimateToken}`);
-        return res.status(200).json({ ok: true, ignored: true, reason: 'estimate not found' });
+        .from(quotes)
+        .where(eq(quotes.viewToken, quoteToken));
+      if (!quote) {
+        console.warn(`[cal] webhook ${triggerEvent} for unknown quoteToken ${quoteToken}`);
+        return res.status(200).json({ ok: true, ignored: true, reason: 'quote not found' });
       }
 
       if (triggerEvent === 'BOOKING_CREATED' || triggerEvent === 'BOOKING_RESCHEDULED') {
@@ -3466,16 +3466,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payload.location?.link || payload.metadata?.videoCallUrl || payload.videoCallUrl || null;
 
         await db
-          .update(estimates)
+          .update(quotes)
           .set({
             consultationBookedAt: scheduledAt,
             consultationMeetingUrl: meetingUrl,
             updatedAt: now,
           })
-          .where(eq(estimates.id, estimate.id));
+          .where(eq(quotes.id, quote.id));
 
         // P1-2: pause drip — client booked a consultation (definite engagement)
-        await pauseOpportunityDrip(estimate.opportunityId, 'consultation_booked');
+        await pauseOpportunityDrip(quote.opportunityId, 'consultation_booked');
 
         // Log the booking as a communication (meeting type)
         try {
@@ -3487,8 +3487,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             externalId: payload.uid || payload.id || null,
             subject: `Consultation: ${payload.title || 'Booked via Cal.com'}`,
             bodySummary: payload.additionalNotes || null,
-            clientId: estimate.clientId,
-            opportunityId: estimate.opportunityId ?? null,
+            clientId: quote.clientId,
+            opportunityId: quote.opportunityId ?? null,
             metaData: {
               calTriggerEvent: triggerEvent,
               scheduledAt: scheduledAt.toISOString(),
@@ -3502,24 +3502,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Owner SMS + email alert
         try {
-          const [client] = await db.select().from(clients).where(eq(clients.id, estimate.clientId));
+          const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
           const emailCfg = getEmailConfig();
           const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
-          const adminUrl = `${emailCfg.publicBaseUrl}/estimates/${estimate.id}`;
+          const adminUrl = `${emailCfg.publicBaseUrl}/quotes/${quote.id}`;
 
           const ownerEmail = consultationBookedOwnerEmail({
             customerName,
             scheduledAt,
             meetingUrl,
-            adminEstimateUrl: adminUrl,
+            adminQuoteUrl: adminUrl,
           });
           sendEmailInBackground({
             to: emailCfg.adminNotificationEmail,
             subject: ownerEmail.subject,
             html: ownerEmail.html,
             text: ownerEmail.text,
-            clientId: estimate.clientId,
-            opportunityId: estimate.opportunityId ?? null,
+            clientId: quote.clientId,
+            opportunityId: quote.opportunityId ?? null,
             templateKey: 'consultation_booked_owner',
           });
 
@@ -3527,29 +3527,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...consultationBookedOwnerSms({
               customerName,
               scheduledAt,
-              estimateId: estimate.id,
+              quoteId: quote.id,
             }),
             templateKey: 'consultation_booked_owner',
-            clientId: estimate.clientId,
-            opportunityId: estimate.opportunityId ?? null,
+            clientId: quote.clientId,
+            opportunityId: quote.opportunityId ?? null,
           });
         } catch (notifyError) {
           console.warn('[cal] failed to fire booking notifications:', notifyError);
         }
 
-        return res.status(200).json({ ok: true, estimateId: estimate.id });
+        return res.status(200).json({ ok: true, quoteId: quote.id });
       }
 
       if (triggerEvent === 'BOOKING_CANCELLED') {
         await db
-          .update(estimates)
+          .update(quotes)
           .set({
             consultationBookedAt: null,
             consultationMeetingUrl: null,
             updatedAt: now,
           })
-          .where(eq(estimates.id, estimate.id));
-        return res.status(200).json({ ok: true, estimateId: estimate.id, cleared: true });
+          .where(eq(quotes.id, quote.id));
+        return res.status(200).json({ ok: true, quoteId: quote.id, cleared: true });
       }
 
       // Unknown trigger — acknowledge but don't act
@@ -3880,10 +3880,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (ev.depositSquarePaymentLinkUrl) return { url: ev.depositSquarePaymentLinkUrl };
 
     const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
-    const [est] = ev.estimateId
-      ? await db.select().from(estimates).where(eq(estimates.id, ev.estimateId))
+    const [est] = ev.quoteId
+      ? await db.select().from(quotes).where(eq(quotes.id, ev.quoteId))
       : [null as any];
-    if (!est) return { url: null, error: "no estimate — cannot determine amount" };
+    if (!est) return { url: null, error: "no quote — cannot determine amount" };
 
     const depositPercent = ev.depositPercent ?? getDepositPercent();
     const depositCents = Math.round((est.total * depositPercent) / 100);
@@ -3942,10 +3942,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (ev.balanceSquarePaymentLinkUrl) return { url: ev.balanceSquarePaymentLinkUrl };
 
     const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
-    const [est] = ev.estimateId
-      ? await db.select().from(estimates).where(eq(estimates.id, ev.estimateId))
+    const [est] = ev.quoteId
+      ? await db.select().from(quotes).where(eq(quotes.id, ev.quoteId))
       : [null as any];
-    if (!est) return { url: null, error: "no estimate — cannot determine balance" };
+    if (!est) return { url: null, error: "no quote — cannot determine balance" };
 
     const depositPercent = ev.depositPercent ?? getDepositPercent();
     const depositCents = ev.depositAmountCents ?? Math.round((est.total * depositPercent) / 100);
@@ -3997,22 +3997,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { url: link.paymentLinkUrl };
   }
 
-  // Admin: create-or-reuse a draft contract for an estimate. Auto-called on
+  // Admin: create-or-reuse a draft contract for an quote. Auto-called on
   // quote accept (no-op if one exists), and also callable manually.
-  async function ensureContractForEstimate(estimateId: number): Promise<{ id: number } | { error: string }> {
-    const [est] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
-    if (!est) return { error: "estimate not found" };
-    const [existing] = await db.select().from(contracts).where(eq(contracts.estimateId, estimateId));
+  async function ensureContractForQuote(quoteId: number): Promise<{ id: number } | { error: string }> {
+    const [est] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+    if (!est) return { error: "quote not found" };
+    const [existing] = await db.select().from(contracts).where(eq(contracts.quoteId, quoteId));
     if (existing) return { id: existing.id };
     const [client] = await db.select().from(clients).where(eq(clients.id, est.clientId));
     if (!client) return { error: "client not found" };
-    const [ev] = await db.select().from(events).where(eq(events.estimateId, estimateId));
+    const [ev] = await db.select().from(events).where(eq(events.quoteId, quoteId));
 
     const [inserted] = await db
       .insert(contracts)
       .values({
         clientId: client.id,
-        estimateId: est.id,
+        quoteId: est.id,
         eventId: ev?.id ?? null,
         status: "draft",
         contractSnapshot: est.proposal,
@@ -4021,12 +4021,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { id: inserted.id };
   }
 
-  // GET contract(s) by estimate — used by the admin UI
-  app.get('/api/estimates/:id/contract', isAuthenticated, async (req: Request, res: Response) => {
+  // GET contract(s) by quote — used by the admin UI
+  app.get('/api/quotes/:id/contract', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
-      const [c] = await db.select().from(contracts).where(eq(contracts.estimateId, estimateId));
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) return res.status(400).json({ message: 'Invalid quote ID' });
+      const [c] = await db.select().from(contracts).where(eq(contracts.quoteId, quoteId));
       return res.json(c || null);
     } catch (error) {
       console.error('Error fetching contract:', error);
@@ -4035,18 +4035,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin action: generate contract HTML, send via BoldSign, stamp sentAt
-  app.post('/api/estimates/:id/send-contract', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.post('/api/quotes/:id/send-contract', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
-      if (isNaN(estimateId)) return res.status(400).json({ message: 'Invalid estimate ID' });
+      const quoteId = parseInt(req.params.id);
+      if (isNaN(quoteId)) return res.status(400).json({ message: 'Invalid quote ID' });
 
-      const [est] = await db.select().from(estimates).where(eq(estimates.id, estimateId));
-      if (!est) return res.status(404).json({ message: 'Estimate not found' });
+      const [est] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+      if (!est) return res.status(404).json({ message: 'Quote not found' });
       const [client] = await db.select().from(clients).where(eq(clients.id, est.clientId));
       if (!client?.email) return res.status(400).json({ message: 'Client has no email address' });
 
       // Ensure the contract row exists
-      const ensured = await ensureContractForEstimate(estimateId);
+      const ensured = await ensureContractForQuote(quoteId);
       if ("error" in ensured) return res.status(400).json({ message: ensured.error });
       const contractId = ensured.id;
 
@@ -4160,15 +4160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // On signed: fire deposit + owner alerts
       if (status === 'signed') {
         const [client] = await db.select().from(clients).where(eq(clients.id, c.clientId));
-        const [est] = c.estimateId
-          ? await db.select().from(estimates).where(eq(estimates.id, c.estimateId))
+        const [est] = c.quoteId
+          ? await db.select().from(quotes).where(eq(quotes.id, c.quoteId))
           : [null as any];
         const [ev] = c.eventId
           ? await db.select().from(events).where(eq(events.id, c.eventId))
           : [null as any];
         const customerName = client ? `${client.firstName} ${client.lastName || ''}`.trim() : 'A client';
         const emailCfg = getEmailConfig();
-        const adminUrl = est ? `${emailCfg.publicBaseUrl}/estimates/${est.id}` : emailCfg.publicBaseUrl;
+        const adminUrl = est ? `${emailCfg.publicBaseUrl}/quotes/${est.id}` : emailCfg.publicBaseUrl;
 
         sendEmailInBackground({
           to: emailCfg.adminNotificationEmail,
@@ -4188,7 +4188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...contractSignedOwnerSms({
             customerName,
             eventDate: est?.eventDate || ev?.eventDate || null,
-            estimateId: c.estimateId,
+            quoteId: c.quoteId,
             opportunityId: est?.opportunityId,
           }),
           templateKey: 'contract_signed_owner',
@@ -4546,14 +4546,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
 
-        // Find the linked estimate for quote URL (most recent sent one)
-        const [estimate] = await db
+        // Find the linked quote for quote URL (most recent sent one)
+        const [quote] = await db
           .select()
-          .from(estimates)
-          .where(eq(estimates.opportunityId, opp.id));
+          .from(quotes)
+          .where(eq(quotes.opportunityId, opp.id));
 
-        const quoteUrl = estimate?.viewToken
-          ? `${emailCfg.publicBaseUrl}/quote/${estimate.viewToken}`
+        const quoteUrl = quote?.viewToken
+          ? `${emailCfg.publicBaseUrl}/quote/${quote.viewToken}`
           : `${emailCfg.publicBaseUrl}/opportunities/${opp.id}`;
 
         const buildCalUrl = (base: string | null): string | null => {
@@ -4562,7 +4562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const u = new URL(base);
             if (opp.firstName) u.searchParams.set('name', `${opp.firstName} ${opp.lastName || ''}`.trim());
             if (opp.email) u.searchParams.set('email', opp.email);
-            if (estimate?.viewToken) u.searchParams.set('estimateToken', estimate.viewToken);
+            if (quote?.viewToken) u.searchParams.set('quoteToken', quote.viewToken);
             return u.toString();
           } catch {
             return base;
@@ -4643,7 +4643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.insert(followUpDrafts).values({
             type: 'drip_phone_call',
             opportunityId: opp.id,
-            estimateId: estimate?.id ?? null,
+            quoteId: quote?.id ?? null,
             recipientEmail: opp.email,
             recipientName: `${opp.firstName} ${opp.lastName || ''}`.trim(),
             subject,
@@ -4707,7 +4707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Tier 1: Follow-Up Engine (creates DRAFTS only — never auto-sends) ──────
-  // Scans for stalled opportunities and estimates, creates follow-up email drafts
+  // Scans for stalled opportunities and quotes, creates follow-up email drafts
   // in the follow_up_drafts table. Admin reviews and sends each draft manually.
   // Intended to run daily via Railway cron or external scheduler.
   app.post('/api/cron/follow-up-engine', async (req: Request, res: Response) => {
@@ -4746,7 +4746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingDrafts = await storage.getFollowUpDraftsForOpportunity(opp.id);
         if (existingDrafts.some(d => d.type === 'inquiry_not_opened' && (d.status === 'pending' || d.status === 'edited'))) continue;
 
-        const inquiryUrl = `${baseUrl}/request-quote?opp=${opp.inquiryToken}`;
+        const inquiryUrl = `${baseUrl}/inquire?opp=${opp.inquiryToken}`;
         const email = followUpInquiryNotOpened({
           customerFirstName: opp.firstName,
           eventType: opp.eventType,
@@ -4768,7 +4768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created.push(draft.id);
       }
 
-      // 2. Inquiry opened but not submitted (72h+ since viewed, no linked quoteRequest)
+      // 2. Inquiry opened but not submitted (72h+ since viewed, no linked inquiry)
       for (const opp of allOpps) {
         if (opp.status === 'archived' || opp.status === 'booked' || opp.status === 'lost') continue;
         if (!opp.inquiryViewedAt) continue;
@@ -4776,13 +4776,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (opp.lastFollowUpAt && now.getTime() - new Date(opp.lastFollowUpAt).getTime() < MIN_FOLLOW_UP_GAP_MS) continue;
 
         // Check if they actually submitted a quote request
-        const linkedQR = await db.select().from(quoteRequests).where(eq(quoteRequests.opportunityId, opp.id));
+        const linkedQR = await db.select().from(inquiries).where(eq(inquiries.opportunityId, opp.id));
         if (linkedQR.length > 0) continue;
 
         const existingDrafts = await storage.getFollowUpDraftsForOpportunity(opp.id);
         if (existingDrafts.some(d => d.type === 'inquiry_not_submitted' && (d.status === 'pending' || d.status === 'edited'))) continue;
 
-        const inquiryUrl = `${baseUrl}/request-quote?opp=${opp.inquiryToken}`;
+        const inquiryUrl = `${baseUrl}/inquire?opp=${opp.inquiryToken}`;
         const email = followUpInquiryNotSubmitted({
           customerFirstName: opp.firstName,
           eventType: opp.eventType,
@@ -4805,14 +4805,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 3. Quote sent but not viewed (48h+ since sentAt, viewedAt null)
-      const allEstimates = await storage.listEstimates();
-      for (const est of allEstimates) {
+      const allQuotes = await storage.listQuotes();
+      for (const est of allQuotes) {
         if (est.status !== 'sent') continue;
         if (!est.sentAt || est.viewedAt) continue;
         if (now.getTime() - new Date(est.sentAt).getTime() < TWO_DAYS_MS) continue;
         if (!est.viewToken) continue;
 
-        const existingDrafts = await storage.getFollowUpDraftsForEstimate(est.id);
+        const existingDrafts = await storage.getFollowUpDraftsForQuote(est.id);
         if (existingDrafts.some(d => d.type === 'quote_not_viewed' && (d.status === 'pending' || d.status === 'edited'))) continue;
 
         const client = await storage.getClient(est.clientId);
@@ -4828,7 +4828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const draft = await storage.createFollowUpDraft({
           type: 'quote_not_viewed',
-          estimateId: est.id,
+          quoteId: est.id,
           recipientEmail: client.email,
           recipientName: `${client.firstName} ${client.lastName}`,
           subject: email.subject,
@@ -4841,13 +4841,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 4. Quote viewed but no action (5d+ since viewedAt, status still 'viewed')
-      for (const est of allEstimates) {
+      for (const est of allQuotes) {
         if (est.status !== 'viewed') continue;
         if (!est.viewedAt) continue;
         if (now.getTime() - new Date(est.viewedAt).getTime() < FIVE_DAYS_MS) continue;
         if (!est.viewToken) continue;
 
-        const existingDrafts = await storage.getFollowUpDraftsForEstimate(est.id);
+        const existingDrafts = await storage.getFollowUpDraftsForQuote(est.id);
         if (existingDrafts.some(d => d.type === 'quote_no_action' && (d.status === 'pending' || d.status === 'edited'))) continue;
 
         const client = await storage.getClient(est.clientId);
@@ -4863,7 +4863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const draft = await storage.createFollowUpDraft({
           type: 'quote_no_action',
-          estimateId: est.id,
+          quoteId: est.id,
           recipientEmail: client.email,
           recipientName: `${client.firstName} ${client.lastName}`,
           subject: email.subject,
@@ -4876,13 +4876,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 5. Quote expiring within 3 days
-      for (const est of allEstimates) {
+      for (const est of allQuotes) {
         if (est.status === 'accepted' || est.status === 'declined') continue;
         if (!est.expiresAt || !est.viewToken) continue;
         const daysUntilExpiry = (new Date(est.expiresAt).getTime() - now.getTime()) / (24*60*60*1000);
         if (daysUntilExpiry < 0 || daysUntilExpiry > 3) continue;
 
-        const existingDrafts = await storage.getFollowUpDraftsForEstimate(est.id);
+        const existingDrafts = await storage.getFollowUpDraftsForQuote(est.id);
         if (existingDrafts.some(d => d.type === 'quote_expiring_soon' && (d.status === 'pending' || d.status === 'edited'))) continue;
 
         const client = await storage.getClient(est.clientId);
@@ -4898,7 +4898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const draft = await storage.createFollowUpDraft({
           type: 'quote_expiring_soon',
-          estimateId: est.id,
+          quoteId: est.id,
           recipientEmail: client.email,
           recipientName: `${client.firstName} ${client.lastName}`,
           subject: email.subject,
@@ -5194,7 +5194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Step 3: Get portal data (all events, estimates, preferences for the logged-in client)
+  // Step 3: Get portal data (all events, quotes, preferences for the logged-in client)
   app.get('/api/public/portal/data', async (req: Request, res: Response) => {
     try {
       const authHeader = req.get('Authorization');
@@ -5226,9 +5226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           viewToken: e.viewToken,
         }));
 
-      // Get all estimates for this client
-      const allEstimates = await storage.listEstimates();
-      const clientEstimates = allEstimates
+      // Get all quotes for this client
+      const allQuotes = await storage.listQuotes();
+      const clientQuotes = allQuotes
         .filter(e => e.clientId === client.id)
         .map(e => ({
           id: e.id,
@@ -5254,7 +5254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: client.type,
         },
         events: clientEvents,
-        estimates: clientEstimates,
+        quotes: clientQuotes,
       });
     } catch (error) {
       console.error('Error fetching portal data:', error);
@@ -5280,16 +5280,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [client] = await db.select().from(clients).where(eq(clients.id, event.clientId));
 
-      let quoteRequest: typeof quoteRequests.$inferSelect | null = null;
-      let estimate: typeof estimates.$inferSelect | null = null;
-      if (event.estimateId) {
-        const [e] = await db.select().from(estimates).where(eq(estimates.id, event.estimateId));
-        estimate = e ?? null;
+      let inquiry: typeof inquiries.$inferSelect | null = null;
+      let quote: typeof quotes.$inferSelect | null = null;
+      if (event.quoteId) {
+        const [e] = await db.select().from(quotes).where(eq(quotes.id, event.quoteId));
+        quote = e ?? null;
         const [qr] = await db
           .select()
-          .from(quoteRequests)
-          .where(eq(quoteRequests.estimateId, event.estimateId));
-        quoteRequest = qr ?? null;
+          .from(inquiries)
+          .where(eq(inquiries.quoteId, event.quoteId));
+        inquiry = qr ?? null;
       }
 
       let menu: typeof menus.$inferSelect | null = null;
@@ -5319,26 +5319,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         : null;
 
-      const publicQuoteRequest = quoteRequest
+      const publicInquiry = inquiry
         ? {
-            partnerFirstName: quoteRequest.partnerFirstName,
-            partnerLastName: quoteRequest.partnerLastName,
-            menuTheme: quoteRequest.menuTheme,
-            menuTier: quoteRequest.menuTier,
-            menuSelections: quoteRequest.menuSelections,
-            appetizers: quoteRequest.appetizers,
-            desserts: quoteRequest.desserts,
-            beverages: quoteRequest.beverages,
-            dietary: quoteRequest.dietary,
-            hasCocktailHour: quoteRequest.hasCocktailHour,
-            cocktailStartTime: quoteRequest.cocktailStartTime,
-            cocktailEndTime: quoteRequest.cocktailEndTime,
-            mainMealStartTime: quoteRequest.mainMealStartTime,
-            mainMealEndTime: quoteRequest.mainMealEndTime,
-            specialRequests: quoteRequest.specialRequests,
-            serviceStyle: quoteRequest.serviceStyle,
+            partnerFirstName: inquiry.partnerFirstName,
+            partnerLastName: inquiry.partnerLastName,
+            menuTheme: inquiry.menuTheme,
+            menuTier: inquiry.menuTier,
+            menuSelections: inquiry.menuSelections,
+            appetizers: inquiry.appetizers,
+            desserts: inquiry.desserts,
+            beverages: inquiry.beverages,
+            dietary: inquiry.dietary,
+            hasCocktailHour: inquiry.hasCocktailHour,
+            cocktailStartTime: inquiry.cocktailStartTime,
+            cocktailEndTime: inquiry.cocktailEndTime,
+            mainMealStartTime: inquiry.mainMealStartTime,
+            mainMealEndTime: inquiry.mainMealEndTime,
+            specialRequests: inquiry.specialRequests,
+            serviceStyle: inquiry.serviceStyle,
             // Link back to the quote page in case the customer wants to renegotiate
-            quoteViewToken: estimate?.viewToken ?? null,
+            quoteViewToken: quote?.viewToken ?? null,
           }
         : null;
 
@@ -5353,7 +5353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json({
         event: publicEvent,
         client: publicClient,
-        quoteRequest: publicQuoteRequest,
+        inquiry: publicInquiry,
         menu: publicMenu,
         siteConfig: getSiteConfig(),
       });
@@ -5363,24 +5363,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete an estimate
-  app.delete('/api/estimates/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  // Delete an quote
+  app.delete('/api/quotes/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
-      const estimateId = parseInt(req.params.id);
+      const quoteId = parseInt(req.params.id);
       
-      if (isNaN(estimateId)) {
-        return res.status(400).json({ message: 'Invalid estimate ID' });
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: 'Invalid quote ID' });
       }
       
-      const success = await storage.deleteEstimate(estimateId);
+      const success = await storage.deleteQuote(quoteId);
       
       if (!success) {
-        return res.status(404).json({ message: 'Estimate not found' });
+        return res.status(404).json({ message: 'Quote not found' });
       }
       
-      res.status(200).json({ message: 'Estimate deleted successfully' });
+      res.status(200).json({ message: 'Quote deleted successfully' });
     } catch (error) {
-      console.error('Error deleting estimate:', error);
+      console.error('Error deleting quote:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -5426,13 +5426,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event Command Center payload — returns everything the event detail page needs
-  // in a single request: the event itself, its client, its estimate (with line items),
+  // in a single request: the event itself, its client, its quote (with line items),
   // the originating quote request (menu selections, dietary, equipment, beverages,
   // appetizers, AI analysis), and the menu metadata. Any of the joined objects may be
   // null if the data isn't linked — the UI handles missing pieces gracefully.
   //
-  // Role-based filtering: chefs never see the estimate object (it contains line-item
-  // pricing and totals). They get all the operational data they need from quoteRequest
+  // Role-based filtering: chefs never see the quote object (it contains line-item
+  // pricing and totals). They get all the operational data they need from inquiry
   // and event. This is defense-in-depth — the UI also hides these fields, but stripping
   // on the server means chefs can't craft requests to see pricing.
   app.get('/api/events/:id/full', isAuthenticated, async (req: Request, res: Response) => {
@@ -5449,16 +5449,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [client] = await db.select().from(clients).where(eq(clients.id, event.clientId));
 
-      let estimate: typeof estimates.$inferSelect | null = null;
-      let quoteRequest: typeof quoteRequests.$inferSelect | null = null;
-      if (event.estimateId) {
-        const [e] = await db.select().from(estimates).where(eq(estimates.id, event.estimateId));
-        estimate = e ?? null;
+      let quote: typeof quotes.$inferSelect | null = null;
+      let inquiry: typeof inquiries.$inferSelect | null = null;
+      if (event.quoteId) {
+        const [e] = await db.select().from(quotes).where(eq(quotes.id, event.quoteId));
+        quote = e ?? null;
         const [qr] = await db
           .select()
-          .from(quoteRequests)
-          .where(eq(quoteRequests.estimateId, event.estimateId));
-        quoteRequest = qr ?? null;
+          .from(inquiries)
+          .where(eq(inquiries.quoteId, event.quoteId));
+        inquiry = qr ?? null;
       }
 
       let menu: typeof menus.$inferSelect | null = null;
@@ -5468,15 +5468,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Strip financial data for non-admins. The events tab reads menu/dietary/
-      // equipment from quoteRequest; estimate is only needed for pricing displays.
+      // equipment from inquiry; quote is only needed for pricing displays.
       const viewerRole = await getSessionRole(req);
       const canSeeFinancials = viewerRole === 'admin';
 
       return res.status(200).json({
         event,
         client: client ?? null,
-        estimate: canSeeFinancials ? estimate : null,
-        quoteRequest,
+        quote: canSeeFinancials ? quote : null,
+        inquiry,
         menu,
       });
     } catch (error) {
@@ -5546,7 +5546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Update an event — chefs, users, and admins can all edit operational fields
   // (status, notes, completedTasks). Only admins can touch commercial fields
-  // (clientId, estimateId, menuId, eventDate, venue, guestCount, startTime, endTime).
+  // (clientId, quoteId, menuId, eventDate, venue, guestCount, startTime, endTime).
   // A chef submitting a commercial field gets it silently dropped from the update.
   app.patch('/api/events/:id', isAuthenticated, hasChefOrAboveWriteAccess, async (req: Request, res: Response) => {
     try {
@@ -5885,13 +5885,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Tier 2, Item 8: Unified Contact Timeline ────────────────────────────
   // Aggregates all touchpoints across the funnel for a given email address.
   // Returns a chronological list of events: communications, status changes,
-  // quote submissions, estimate sent/viewed/accepted, event milestones.
+  // quote submissions, quote sent/viewed/accepted, event milestones.
   app.get('/api/contacts/:email/timeline', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const email = decodeURIComponent(req.params.email).toLowerCase();
       const timeline: Array<{
         id: string;
-        type: string; // communication, status_change, quote_submitted, estimate_sent, estimate_accepted, event_created
+        type: string; // communication, status_change, quote_submitted, quote_sent, quote_accepted, event_created
         timestamp: string;
         title: string;
         detail?: string;
@@ -5984,7 +5984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 2. Quote request submissions
-      const allQR = await db.select().from(quoteRequests);
+      const allQR = await db.select().from(inquiries);
       const matchingQR = allQR.filter(qr => qr.email?.toLowerCase() === email);
       for (const qr of matchingQR) {
         if (qr.submittedAt) {
@@ -5994,7 +5994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             timestamp: new Date(qr.submittedAt).toISOString(),
             title: `Quote request submitted (${qr.eventType})`,
             detail: qr.menuTheme ? `Menu: ${qr.menuTheme} ${qr.menuTier || ''}` : undefined,
-            entityType: 'quoteRequest',
+            entityType: 'inquiry',
             entityId: qr.id,
             icon: 'system',
           });
@@ -6004,26 +6004,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: `qr-converted-${qr.id}`,
             type: 'system',
             timestamp: new Date(qr.convertedAt).toISOString(),
-            title: 'Quote request converted to estimate',
-            entityType: 'quoteRequest',
+            title: 'Quote request converted to quote',
+            entityType: 'inquiry',
             entityId: qr.id,
             icon: 'system',
           });
         }
       }
 
-      // 3. Estimate milestones
-      const allEst = await storage.listEstimates();
+      // 3. Quote milestones
+      const allEst = await storage.listQuotes();
       for (const clientId of matchingClientIds) {
-        const clientEstimates = allEst.filter(e => e.clientId === clientId);
-        for (const est of clientEstimates) {
+        const clientQuotes = allEst.filter(e => e.clientId === clientId);
+        for (const est of clientQuotes) {
           if (est.sentAt) {
             timeline.push({
               id: `est-sent-${est.id}`,
-              type: 'estimate_sent',
+              type: 'quote_sent',
               timestamp: new Date(est.sentAt).toISOString(),
               title: `Quote sent ($${(est.total / 100).toLocaleString()})`,
-              entityType: 'estimate',
+              entityType: 'quote',
               entityId: est.id,
               icon: 'system',
             });
@@ -6034,7 +6034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: 'system',
               timestamp: new Date(est.viewedAt).toISOString(),
               title: 'Customer viewed quote',
-              entityType: 'estimate',
+              entityType: 'quote',
               entityId: est.id,
               icon: 'system',
             });
@@ -6042,10 +6042,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (est.acceptedAt) {
             timeline.push({
               id: `est-accepted-${est.id}`,
-              type: 'estimate_accepted',
+              type: 'quote_accepted',
               timestamp: new Date(est.acceptedAt).toISOString(),
               title: 'Quote accepted!',
-              entityType: 'estimate',
+              entityType: 'quote',
               entityId: est.id,
               icon: 'system',
             });
@@ -6056,7 +6056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: 'system',
               timestamp: new Date(est.declinedAt).toISOString(),
               title: `Quote declined${est.declinedReason ? `: ${est.declinedReason}` : ''}`,
-              entityType: 'estimate',
+              entityType: 'quote',
               entityId: est.id,
               icon: 'system',
             });
@@ -6097,7 +6097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Unified Client Timeline (by client ID) ──────────────────────────────
-  // Aggregates all communications, estimates, events, and status changes for a client.
+  // Aggregates all communications, quotes, events, and status changes for a client.
   app.get('/api/clients/:id/timeline', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const clientId = parseInt(req.params.id);
@@ -6195,16 +6195,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // 3. Estimate milestones
-      const allEstimates = await storage.listEstimates();
-      const clientEstimates = allEstimates.filter(e => e.clientId === clientId);
-      for (const est of clientEstimates) {
+      // 3. Quote milestones
+      const allQuotes = await storage.listQuotes();
+      const clientQuotes = allQuotes.filter(e => e.clientId === clientId);
+      for (const est of clientQuotes) {
         timeline.push({
           id: `est-created-${est.id}`,
           type: 'milestone',
           timestamp: new Date(est.createdAt).toISOString(),
           title: `Quote created ($${(est.total / 100).toLocaleString()})`,
-          entityType: 'estimate',
+          entityType: 'quote',
           entityId: est.id,
         });
         if (est.sentAt) {
@@ -6213,7 +6213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'milestone',
             timestamp: new Date(est.sentAt).toISOString(),
             title: `Quote sent ($${(est.total / 100).toLocaleString()})`,
-            entityType: 'estimate',
+            entityType: 'quote',
             entityId: est.id,
           });
         }
@@ -6223,7 +6223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'milestone',
             timestamp: new Date(est.viewedAt).toISOString(),
             title: 'Customer viewed quote',
-            entityType: 'estimate',
+            entityType: 'quote',
             entityId: est.id,
           });
         }
@@ -6233,7 +6233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'milestone',
             timestamp: new Date(est.acceptedAt).toISOString(),
             title: 'Quote accepted!',
-            entityType: 'estimate',
+            entityType: 'quote',
             entityId: est.id,
           });
         }
@@ -6243,7 +6243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'milestone',
             timestamp: new Date(est.declinedAt).toISOString(),
             title: `Quote declined${est.declinedReason ? `: ${est.declinedReason}` : ''}`,
-            entityType: 'estimate',
+            entityType: 'quote',
             entityId: est.id,
           });
         }
@@ -6267,7 +6267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 5. Quote requests linked via opportunity
       const oppIds = clientOpps.map(o => o.id);
       if (oppIds.length > 0) {
-        const allQR = await db.select().from(quoteRequests);
+        const allQR = await db.select().from(inquiries);
         const linkedQR = allQR.filter(qr => qr.opportunityId && oppIds.includes(qr.opportunityId));
         for (const qr of linkedQR) {
           if (qr.submittedAt) {
@@ -6276,7 +6276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: 'milestone',
               timestamp: new Date(qr.submittedAt).toISOString(),
               title: `Quote request submitted (${qr.eventType})`,
-              entityType: 'quoteRequest',
+              entityType: 'inquiry',
               entityId: qr.id,
             });
           }
@@ -6479,8 +6479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Promote a raw lead to a quote request (structured, priced stage of the funnel).
   // Pre-fills the quote request from extracted lead fields so Mike can finish the details
-  // in the QuoteRequests admin view (or send the customer a link to complete it themselves).
-  app.post('/api/raw-leads/:id/promote-to-quote-request', isAuthenticated, async (req: Request, res: Response) => {
+  // in the Inquiries admin view (or send the customer a link to complete it themselves).
+  app.post('/api/raw-leads/:id/promote-to-inquiry', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const leadId = parseInt(req.params.id);
       if (isNaN(leadId)) {
@@ -6493,11 +6493,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Idempotent: if already promoted, return the existing quote request
-      const existing = await db.select().from(quoteRequests).where(eq(quoteRequests.rawLeadId, leadId));
+      const existing = await db.select().from(inquiries).where(eq(inquiries.rawLeadId, leadId));
       if (existing.length > 0) {
         return res.status(200).json({
           message: 'Lead was already promoted to a quote request',
-          quoteRequest: existing[0],
+          inquiry: existing[0],
           alreadyExisted: true,
         });
       }
@@ -6518,7 +6518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!isNaN(parsed.getTime())) eventDate = parsed;
       }
 
-      const [quoteRequest] = await db.insert(quoteRequests).values({
+      const [inquiry] = await db.insert(inquiries).values({
         firstName,
         lastName,
         email: lead.extractedProspectEmail || 'unknown@example.com',
@@ -6543,7 +6543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(201).json({
         message: 'Raw lead promoted to quote request',
-        quoteRequest,
+        inquiry,
       });
     } catch (error) {
       console.error('Error promoting raw lead to quote request:', error);

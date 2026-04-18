@@ -3,17 +3,17 @@ import { db } from "./db";
 import {
   venues,
   promoCodes,
-  quoteRequests,
+  inquiries,
   menus,
   insertVenueSchema,
   insertPromoCodeSchema,
-  insertQuoteRequestSchema,
+  insertInquirySchema,
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike, isNull } from "drizzle-orm";
-import { analyzeQuoteRequest } from "./services/quoteAiService";
+import { analyzeInquiry } from "./services/quoteAiService";
 import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
 import { calculateMenuMargin, calculateMenuMarginDetail } from "./utils/menuMargin";
-import { calculateShoppingListForQuoteRequest } from "./utils/shoppingList";
+import { calculateShoppingListForInquiry } from "./utils/shoppingList";
 import { getEmailConfig } from "./utils/siteConfig";
 import { sendEmailInBackground } from "./utils/email";
 import { sendOwnerSmsInBackground } from "./services/smsService";
@@ -23,9 +23,13 @@ import {
   newInquiryCustomerAckEmail,
   newInquiryAdminEmail,
 } from "./utils/emailTemplates";
-import { buildProposalFromQuoteRequest } from "./lib/proposalFromQuoteRequest";
+import { buildProposalFromInquiry } from "./lib/proposalFromInquiry";
 
 const router = Router();
+
+// Sub-router for inquiry endpoints — mounted at /api/inquiries in index.ts.
+// Paths inside are relative to that mount (e.g. "/" for list, "/:id" for one).
+export const inquiryRouter = Router();
 
 // ============================================
 // PUBLIC MENUS (for quote form)
@@ -146,19 +150,19 @@ function sanitizeShoppingListForRole(list: any, role: string) {
 
 // Get aggregated shopping list for a specific quote request
 // Returns all ingredients needed (scaled to guest count) grouped by category
-router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Response) => {
+inquiryRouter.get("/:id/shopping-list", async (req: Request, res: Response) => {
   try {
     const role = await requireStaffSession(req, res);
     if (!role) return;
 
-    const quoteRequestId = parseInt(req.params.id);
-    if (isNaN(quoteRequestId)) return res.status(400).json({ message: "Invalid quote request ID" });
+    const inquiryId = parseInt(req.params.id);
+    if (isNaN(inquiryId)) return res.status(400).json({ message: "Invalid quote request ID" });
 
     // Optional override for portion multiplier (e.g., ?multiplier=0.8)
     const multiplierParam = req.query.multiplier;
     const portionMultiplier = multiplierParam ? parseFloat(multiplierParam as string) : undefined;
 
-    const shoppingList = await calculateShoppingListForQuoteRequest(quoteRequestId, {
+    const shoppingList = await calculateShoppingListForInquiry(inquiryId, {
       portionMultiplier,
     });
 
@@ -170,7 +174,7 @@ router.get("/quote-requests/:id/shopping-list", async (req: Request, res: Respon
   }
 });
 
-// Get shopping list for an event (looks up the originating quote request via estimate link)
+// Get shopping list for an event (looks up the originating quote request via quote link)
 router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
   try {
     const role = await requireStaffSession(req, res);
@@ -179,22 +183,22 @@ router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
     const eventId = parseInt(req.params.id);
     if (isNaN(eventId)) return res.status(400).json({ message: "Invalid event ID" });
 
-    // Find the event's estimate, then find the originating quote request
+    // Find the event's quote, then find the originating quote request
     const { events } = await import("@shared/schema");
     const [event] = await db.select().from(events).where(eq(events.id, eventId));
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    if (!event.estimateId) {
+    if (!event.quoteId) {
       return res.status(404).json({
-        message: "Event is not linked to an estimate — cannot generate shopping list",
+        message: "Event is not linked to an quote — cannot generate shopping list",
       });
     }
 
-    // Find the quote request that was converted to this estimate
+    // Find the quote request that was converted to this quote
     const [originatingQuote] = await db
       .select()
-      .from(quoteRequests)
-      .where(eq(quoteRequests.estimateId, event.estimateId));
+      .from(inquiries)
+      .where(eq(inquiries.quoteId, event.quoteId));
 
     if (!originatingQuote) {
       return res.status(404).json({
@@ -205,7 +209,7 @@ router.get("/events/:id/shopping-list", async (req: Request, res: Response) => {
     const multiplierParam = req.query.multiplier;
     const portionMultiplier = multiplierParam ? parseFloat(multiplierParam as string) : undefined;
 
-    const shoppingList = await calculateShoppingListForQuoteRequest(originatingQuote.id, {
+    const shoppingList = await calculateShoppingListForInquiry(originatingQuote.id, {
       portionMultiplier,
     });
 
@@ -345,23 +349,23 @@ router.post("/promo-codes", async (req: Request, res: Response) => {
 // ============================================
 
 // List quote requests (admin)
-router.get("/quote-requests", async (req: Request, res: Response) => {
+inquiryRouter.get("/", async (req: Request, res: Response) => {
   try {
     const { status, eventType } = req.query;
     const conditions = [];
 
     if (status && status !== "all") {
-      conditions.push(eq(quoteRequests.status, status as any));
+      conditions.push(eq(inquiries.status, status as any));
     }
     if (eventType && eventType !== "all") {
-      conditions.push(eq(quoteRequests.eventType, eventType as string));
+      conditions.push(eq(inquiries.eventType, eventType as string));
     }
 
     const requests = await db
       .select()
-      .from(quoteRequests)
+      .from(inquiries)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(quoteRequests.createdAt));
+      .orderBy(desc(inquiries.createdAt));
 
     return res.json(requests);
   } catch (error) {
@@ -371,12 +375,12 @@ router.get("/quote-requests", async (req: Request, res: Response) => {
 });
 
 // Get single quote request
-router.get("/quote-requests/:id", async (req: Request, res: Response) => {
+inquiryRouter.get("/:id", async (req: Request, res: Response) => {
   try {
     const [request] = await db
       .select()
-      .from(quoteRequests)
-      .where(eq(quoteRequests.id, parseInt(req.params.id)));
+      .from(inquiries)
+      .where(eq(inquiries.id, parseInt(req.params.id)));
     if (!request) return res.status(404).json({ message: "Quote request not found" });
     return res.json(request);
   } catch (error) {
@@ -385,9 +389,9 @@ router.get("/quote-requests/:id", async (req: Request, res: Response) => {
 });
 
 // Submit a new quote request (PUBLIC — no auth required)
-router.post("/quote-requests", async (req: Request, res: Response) => {
+inquiryRouter.post("/", async (req: Request, res: Response) => {
   try {
-    const parsed = insertQuoteRequestSchema.safeParse(req.body);
+    const parsed = insertInquirySchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
         message: "Invalid quote request data",
@@ -410,7 +414,7 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
     const pricing = calculateQuotePricing(parsed.data);
 
     const [request] = await db
-      .insert(quoteRequests)
+      .insert(inquiries)
       .values({
         ...parsed.data,
         discountPercent: parsed.data.discountPercent?.toString() ?? null,
@@ -428,15 +432,15 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
       .returning();
 
     // Fire-and-forget: run AI analysis in background, then try auto-quote
-    analyzeQuoteRequest(request)
+    analyzeInquiry(request)
       .then(async (analysis) => {
         await db
-          .update(quoteRequests)
+          .update(inquiries)
           .set({ aiAnalysis: analysis as any, updatedAt: new Date() })
-          .where(eq(quoteRequests.id, request.id));
+          .where(eq(inquiries.id, request.id));
         console.log(`AI analysis completed for quote #${request.id}`);
 
-        // Tier 1: Auto-Quote — if the request is standard, auto-create a draft estimate.
+        // Tier 1: Auto-Quote — if the request is standard, auto-create a draft quote.
         // Admin MUST review and send manually. Nothing goes to the customer automatically.
         try {
           await tryAutoQuote(request, analysis);
@@ -466,7 +470,7 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
       });
 
       // Admin notification
-      const adminInquiryUrl = `${emailCfg.publicBaseUrl}/quote-requests?id=${request.id}`;
+      const adminInquiryUrl = `${emailCfg.publicBaseUrl}/inquiries?id=${request.id}`;
       const adminTemplate = newInquiryAdminEmail({
         customerName: `${request.firstName} ${request.lastName}`,
         customerEmail: request.email,
@@ -513,10 +517,10 @@ router.post("/quote-requests", async (req: Request, res: Response) => {
 });
 
 // Re-calculate pricing for an existing quote request (admin)
-router.post("/quote-requests/:id/recalculate-pricing", async (req: Request, res: Response) => {
+inquiryRouter.post("/:id/recalculate-pricing", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
+    const [request] = await db.select().from(inquiries).where(eq(inquiries.id, id));
     if (!request) return res.status(404).json({ message: "Quote request not found" });
 
     if (request.menuTheme) {
@@ -524,7 +528,7 @@ router.post("/quote-requests/:id/recalculate-pricing", async (req: Request, res:
     }
     const pricing = calculateQuotePricing(request);
     const [updated] = await db
-      .update(quoteRequests)
+      .update(inquiries)
       .set({
         estimatedPerPersonCents: pricing.perPersonCents,
         estimatedSubtotalCents: pricing.subtotalCents,
@@ -533,7 +537,7 @@ router.post("/quote-requests/:id/recalculate-pricing", async (req: Request, res:
         estimatedTotalCents: pricing.totalCents,
         updatedAt: new Date(),
       })
-      .where(eq(quoteRequests.id, id))
+      .where(eq(inquiries.id, id))
       .returning();
 
     return res.json({ ...updated, pricingBreakdown: pricing });
@@ -544,17 +548,17 @@ router.post("/quote-requests/:id/recalculate-pricing", async (req: Request, res:
 });
 
 // Re-run AI analysis on a quote request (admin)
-router.post("/quote-requests/:id/analyze", async (req: Request, res: Response) => {
+inquiryRouter.post("/:id/analyze", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
+    const [request] = await db.select().from(inquiries).where(eq(inquiries.id, id));
     if (!request) return res.status(404).json({ message: "Quote request not found" });
 
-    const analysis = await analyzeQuoteRequest(request);
+    const analysis = await analyzeInquiry(request);
     const [updated] = await db
-      .update(quoteRequests)
+      .update(inquiries)
       .set({ aiAnalysis: analysis as any, updatedAt: new Date() })
-      .where(eq(quoteRequests.id, id))
+      .where(eq(inquiries.id, id))
       .returning();
 
     return res.json(updated);
@@ -565,7 +569,7 @@ router.post("/quote-requests/:id/analyze", async (req: Request, res: Response) =
 });
 
 // Update quote request (admin — status changes, internal notes, AI analysis)
-router.patch("/quote-requests/:id", async (req: Request, res: Response) => {
+inquiryRouter.patch("/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const updateData: any = { ...req.body, updatedAt: new Date() };
@@ -576,9 +580,9 @@ router.patch("/quote-requests/:id", async (req: Request, res: Response) => {
     }
 
     const [updated] = await db
-      .update(quoteRequests)
+      .update(inquiries)
       .set(updateData)
-      .where(eq(quoteRequests.id, id))
+      .where(eq(inquiries.id, id))
       .returning();
 
     if (!updated) return res.status(404).json({ message: "Quote request not found" });
@@ -589,27 +593,27 @@ router.patch("/quote-requests/:id", async (req: Request, res: Response) => {
   }
 });
 
-// Convert quote request → Client + Opportunity + Estimate (full pipeline)
-router.post("/quote-requests/:id/convert", async (req: Request, res: Response) => {
+// Convert quote request → Client + Opportunity + Quote (full pipeline)
+inquiryRouter.post("/:id/convert", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const [request] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
+    const [request] = await db.select().from(inquiries).where(eq(inquiries.id, id));
     if (!request) return res.status(404).json({ message: "Quote request not found" });
 
     // Belt-and-suspenders guard: refuse if this inquiry has ANY downstream rows
     // already linked, regardless of the admin-editable status field. Previously we
     // only checked status === "converted", which could be defeated by flipping the
     // status dropdown back to "reviewing" in the admin UI — that produced duplicate
-    // client/opportunity/estimate rows on the second convert.
-    if (request.status === "converted" || request.opportunityId || request.estimateId) {
+    // client/opportunity/quote rows on the second convert.
+    if (request.status === "converted" || request.opportunityId || request.quoteId) {
       return res.status(400).json({
         message: "This inquiry has already been converted to a quote.",
         opportunityId: request.opportunityId,
-        estimateId: request.estimateId,
+        quoteId: request.quoteId,
       });
     }
 
-    const { opportunities, clients, estimates } = await import("@shared/schema");
+    const { opportunities, clients, quotes } = await import("@shared/schema");
 
     // 1. Create or reuse client (dedup by email)
     const billingAddr = request.billingAddress as any;
@@ -670,7 +674,7 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       clientId: client.id,
     } as any).returning();
 
-    // 3. Build estimate line items from structured quote data
+    // 3. Build quote line items from structured quote data
     const lineItems: Array<{ id: string; name: string; quantity: number; price: number }> = [];
     let itemCounter = 1;
 
@@ -761,9 +765,9 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
       });
     }
 
-    // 4. Create the estimate
+    // 4. Create the quote
     const venueAddr = request.venueAddress as any;
-    const [estimate] = await db.insert(estimates).values({
+    const [quote] = await db.insert(quotes).values({
       clientId: client.id,
       opportunityId: opportunity.id,
       eventType: request.eventType,
@@ -791,31 +795,31 @@ router.post("/quote-requests/:id/convert", async (req: Request, res: Response) =
     // Build and persist the full customer-facing Proposal blob. This is the
     // single source of truth for the public quote page — everything the couple
     // sees is rendered from this field. Admin edits go through PATCH on the
-    // estimate and overwrite this blob directly.
-    const proposal = buildProposalFromQuoteRequest(request, estimate);
-    const [estimateWithProposal] = await db
-      .update(estimates)
+    // quote and overwrite this blob directly.
+    const proposal = buildProposalFromInquiry(request, quote);
+    const [quoteWithProposal] = await db
+      .update(quotes)
       .set({ proposal: proposal as any, updatedAt: new Date() })
-      .where(eq(estimates.id, estimate.id))
+      .where(eq(quotes.id, quote.id))
       .returning();
 
     // 5. Update quote request with all links
     await db
-      .update(quoteRequests)
+      .update(inquiries)
       .set({
         status: "converted",
         opportunityId: opportunity.id,
-        estimateId: estimate.id,
+        quoteId: quote.id,
         convertedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(quoteRequests.id, id));
+      .where(eq(inquiries.id, id));
 
     return res.json({
       client,
       opportunity,
-      estimate: estimateWithProposal,
-      message: "Quote request converted: client, opportunity, and estimate created",
+      quote: quoteWithProposal,
+      message: "Quote request converted: client, opportunity, and quote created",
     });
   } catch (error) {
     console.error("Error converting quote request:", error);
@@ -842,8 +846,8 @@ function capitalize(s: string): string {
 
 // ─── Tier 1: Auto-Quote Draft Generation ─────────────────────────────────────
 // Evaluates whether a submitted quote request is "standard" enough to auto-generate
-// a draft estimate. The estimate is created with status="draft" and autoGenerated=true.
-// Admin sees it in the estimates list, reviews it, and sends manually.
+// a draft quote. The quote is created with status="draft" and autoGenerated=true.
+// Admin sees it in the quotes list, reviews it, and sends manually.
 async function tryAutoQuote(request: any, analysis: any): Promise<void> {
   // Eligibility check — all must pass
   const complexity = analysis?.eventComplexityScore;
@@ -870,14 +874,14 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
   }
 
   // Already converted?
-  if (request.estimateId || request.opportunityId) {
+  if (request.quoteId || request.opportunityId) {
     console.log(`Auto-quote skipped for quote #${request.id}: already converted`);
     return;
   }
 
   console.log(`Auto-quote eligible for quote #${request.id} — generating draft...`);
 
-  const { opportunities, clients, estimates } = await import("@shared/schema");
+  const { opportunities, clients, quotes } = await import("@shared/schema");
 
   // 1. Create or reuse client (dedup by email)
   const billingAddr = request.billingAddress as any;
@@ -992,9 +996,9 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
     lineItems.push({ id: `item_${itemCounter++}`, name: `Discount (${request.discountPercent}%)`, quantity: 1, price: -discountCents });
   }
 
-  // 4. Create draft estimate (autoGenerated = true)
+  // 4. Create draft quote (autoGenerated = true)
   const venueAddr = request.venueAddress as any;
-  const [estimate] = await db.insert(estimates).values({
+  const [quote] = await db.insert(quotes).values({
     clientId: client.id,
     opportunityId: opportunity.id,
     eventType: request.eventType,
@@ -1022,23 +1026,23 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
   }).returning();
 
   // Build proposal blob
-  const proposal = buildProposalFromQuoteRequest(request, estimate);
-  await db.update(estimates)
+  const proposal = buildProposalFromInquiry(request, quote);
+  await db.update(quotes)
     .set({ proposal: proposal as any, updatedAt: new Date() })
-    .where(eq(estimates.id, estimate.id));
+    .where(eq(quotes.id, quote.id));
 
   // 5. Link quote request to created records
-  await db.update(quoteRequests)
+  await db.update(inquiries)
     .set({
       status: "converted",
       opportunityId: opportunity.id,
-      estimateId: estimate.id,
+      quoteId: quote.id,
       convertedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(quoteRequests.id, request.id));
+    .where(eq(inquiries.id, request.id));
 
-  console.log(`Auto-quote generated: quote #${request.id} → client #${client.id}, opportunity #${opportunity.id}, estimate #${estimate.id} (DRAFT)`);
+  console.log(`Auto-quote generated: quote #${request.id} → client #${client.id}, opportunity #${opportunity.id}, quote #${quote.id} (DRAFT)`);
 }
 
 export default router;

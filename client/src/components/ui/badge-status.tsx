@@ -19,7 +19,7 @@ export default function BadgeStatus({ status, children }: BadgeStatusProps) {
     lost: { color: "bg-red-100 text-red-800", label: "Lost" },
     archived: { color: "bg-neutral-100 text-neutral-800", label: "Archived" },
     
-    // Estimate statuses
+    // Quote statuses
     draft: { color: "bg-yellow-100 text-yellow-800", label: "Draft" },
     sent: { color: "bg-blue-100 text-blue-800", label: "Sent" },
     viewed: { color: "bg-purple-100 text-purple-800", label: "Viewed" },

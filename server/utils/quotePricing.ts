@@ -1,4 +1,4 @@
-import type { QuoteRequest, InsertQuoteRequest, MenuPackageTier, MenuCategoryItem } from "@shared/schema";
+import type { Inquiry, InsertInquiry, MenuPackageTier, MenuCategoryItem } from "@shared/schema";
 import { db } from "../db";
 import { menus } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -80,7 +80,7 @@ export interface PricingBreakdown {
  * Reads tier prices from the menu cache (call refreshMenuPricingCache first).
  */
 export function calculateQuotePricing(
-  quote: InsertQuoteRequest | QuoteRequest
+  quote: InsertInquiry | Inquiry
 ): PricingBreakdown {
   const guestCount = quote.guestCount || 0;
 
@@ -118,7 +118,7 @@ export function calculateQuotePricing(
     return sum + Math.round(subtotalDollars * 100);
   }, 0);
 
-  // 4. Beverages — rough estimate based on type
+  // 4. Beverages — rough quote based on type
   const beverages = quote.beverages as any;
   let beverageSubtotalCents = 0;
   if (beverages?.hasAlcoholic && beverages.bartendingType && beverages.bartendingDurationHours) {

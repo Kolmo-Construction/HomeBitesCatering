@@ -147,7 +147,7 @@ export interface TierMarginAnalysis {
 
 /**
  * Calculate food cost and margin for each tier of a menu.
- * Uses the linked recipes (via categoryItems[].recipeId) to estimate actual cost.
+ * Uses the linked recipes (via categoryItems[].recipeId) to quote actual cost.
  */
 export async function calculateMenuMargin(menuId: number): Promise<TierMarginAnalysis[]> {
   const [menu] = await db.select().from(menus).where(eq(menus.id, menuId));
@@ -170,7 +170,7 @@ export async function calculateMenuMargin(menuId: number): Promise<TierMarginAna
     recipeCosts.set(rid, await getRecipeCostPerServing(rid));
   }
 
-  // For each tier, estimate food cost
+  // For each tier, quote food cost
   const results: TierMarginAnalysis[] = [];
 
   for (const tier of packages) {

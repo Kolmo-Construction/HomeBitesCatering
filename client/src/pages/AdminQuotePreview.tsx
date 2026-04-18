@@ -20,13 +20,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import QuoteProposalView from "@/components/quote/QuoteProposalView";
-import ProposalEditDrawer from "@/components/quote/ProposalEditDrawer";
-import VersionHistory from "@/components/estimates/VersionHistory";
+import QuoteProposalView from "@/components/quotes/QuoteProposalView";
+import ProposalEditDrawer from "@/components/quotes/ProposalEditDrawer";
+import VersionHistory from "@/components/quotes/VersionHistory";
 import type { Proposal } from "@shared/proposal";
 
 interface PreviewPayload {
-  estimate: {
+  quote: {
     id: number;
     status: "draft" | "sent" | "viewed" | "accepted" | "declined";
     sentAt: string | null;
@@ -46,7 +46,7 @@ interface Props {
   id: number;
 }
 
-export default function AdminEstimatePreview({ id }: Props) {
+export default function AdminQuotePreview({ id }: Props) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -59,9 +59,9 @@ export default function AdminEstimatePreview({ id }: Props) {
   const [sentEmailRecipient, setSentEmailRecipient] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery<PreviewPayload>({
-    queryKey: ["/api/estimates", id, "preview"],
+    queryKey: ["/api/quotes", id, "preview"],
     queryFn: async () => {
-      const res = await fetch(`/api/estimates/${id}/preview`, { credentials: "include" });
+      const res = await fetch(`/api/quotes/${id}/preview`, { credentials: "include" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(err.message || "Failed to load preview");
@@ -76,14 +76,14 @@ export default function AdminEstimatePreview({ id }: Props) {
     mutationFn: async (proposal: Proposal) => {
       const res = await apiRequest(
         "PATCH",
-        `/api/estimates/${id}/proposal`,
+        `/api/quotes/${id}/proposal`,
         proposal,
       );
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, "preview"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", id, "preview"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({ title: "Saved", description: "Proposal updated." });
       setDrawerOpen(false);
     },
@@ -98,7 +98,7 @@ export default function AdminEstimatePreview({ id }: Props) {
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/estimates/${id}/send`);
+      const res = await apiRequest("POST", `/api/quotes/${id}/send`);
       return res.json() as Promise<{
         publicUrl: string;
         emailSent: boolean;
@@ -106,8 +106,8 @@ export default function AdminEstimatePreview({ id }: Props) {
       }>;
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, "preview"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", id, "preview"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       setSentPublicUrl(result.publicUrl);
       setSentEmailAuto(result.emailSent === true);
       setSentEmailRecipient(result.emailRecipient ?? null);
@@ -172,7 +172,7 @@ export default function AdminEstimatePreview({ id }: Props) {
           <XCircle className="h-12 w-12 text-rose-400 mx-auto mb-3" />
           <h2 className="text-xl font-serif font-semibold mb-1">Couldn&rsquo;t load preview</h2>
           <p className="text-stone-600">{error instanceof Error ? error.message : "Unknown error"}</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/estimates")}>
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/quotes")}>
             Back to Quotes
           </Button>
         </div>
@@ -180,20 +180,20 @@ export default function AdminEstimatePreview({ id }: Props) {
     );
   }
 
-  const canSend = data.estimate.status !== "accepted" && data.estimate.status !== "declined";
+  const canSend = data.quote.status !== "accepted" && data.quote.status !== "declined";
   const sendLabel =
-    data.estimate.status === "draft"
+    data.quote.status === "draft"
       ? "Send to customer"
       : "Resend / Copy link";
 
   const previewSubtitle =
-    data.estimate.status === "sent"
+    data.quote.status === "sent"
       ? "Quote sent — this is the live customer view."
-      : data.estimate.status === "viewed"
+      : data.quote.status === "viewed"
       ? "Customer has viewed this."
-      : data.estimate.status === "accepted"
+      : data.quote.status === "accepted"
       ? "Accepted — couple is booked."
-      : data.estimate.status === "declined"
+      : data.quote.status === "declined"
       ? "Customer declined."
       : "Draft — not sent yet. This is exactly what the customer will see.";
 
@@ -201,10 +201,10 @@ export default function AdminEstimatePreview({ id }: Props) {
     <>
       <QuoteProposalView
         proposal={data.proposal}
-        estimateStatus={data.estimate.status}
+        quoteStatus={data.quote.status}
         mode="preview"
         previewSubtitle={previewSubtitle}
-        onBack={() => navigate("/estimates")}
+        onBack={() => navigate("/quotes")}
         onEdit={() => setDrawerOpen(true)}
         onSend={canSend ? () => setSendDialogOpen(true) : undefined}
         sendLabel={sendLabel}
@@ -217,13 +217,13 @@ export default function AdminEstimatePreview({ id }: Props) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`/api/estimates/${id}/pdf`, '_blank')}
+            onClick={() => window.open(`/api/quotes/${id}/pdf`, '_blank')}
           >
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
         </div>
-        <VersionHistory estimateId={id} currentTotal={data.proposal?.pricing?.totalCents} />
+        <VersionHistory quoteId={id} currentTotal={data.proposal?.pricing?.totalCents} />
       </div>
 
       <ProposalEditDrawer

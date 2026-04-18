@@ -40,17 +40,17 @@ const communicationSchema = z.object({
 });
 
 // P2-1: Contract panel — shows current e-sign status + a "Send contract" button.
-// Only useful once an estimate has been accepted (that's when we auto-create a
-// draft contract row). Per linked estimate.
+// Only useful once an quote has been accepted (that's when we auto-create a
+// draft contract row). Per linked quote.
 function ContractPanel({ opportunityId }: { opportunityId: number }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Find the first accepted estimate for this opportunity
+  // Find the first accepted quote for this opportunity
   const { data: est } = useQuery<any>({
-    queryKey: ["/api/estimates/contract-candidate", opportunityId],
+    queryKey: ["/api/quotes/contract-candidate", opportunityId],
     queryFn: async () => {
-      const res = await fetch(`/api/estimates?opportunityId=${opportunityId}`);
+      const res = await fetch(`/api/quotes?opportunityId=${opportunityId}`);
       if (!res.ok) return null;
       const all: any[] = await res.json();
       const candidates = all.filter((e) => e.opportunityId === opportunityId);
@@ -65,10 +65,10 @@ function ContractPanel({ opportunityId }: { opportunityId: number }) {
   });
 
   const { data: contract } = useQuery<any>({
-    queryKey: ["/api/estimates", est?.id, "contract"],
+    queryKey: ["/api/quotes", est?.id, "contract"],
     queryFn: async () => {
       if (!est?.id) return null;
-      const res = await fetch(`/api/estimates/${est.id}/contract`);
+      const res = await fetch(`/api/quotes/${est.id}/contract`);
       if (!res.ok) return null;
       return res.json();
     },
@@ -77,8 +77,8 @@ function ContractPanel({ opportunityId }: { opportunityId: number }) {
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      if (!est?.id) throw new Error("No estimate available");
-      const res = await fetch(`/api/estimates/${est.id}/send-contract`, { method: "POST" });
+      if (!est?.id) throw new Error("No quote available");
+      const res = await fetch(`/api/quotes/${est.id}/send-contract`, { method: "POST" });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message || "Failed");
       return body;
@@ -90,7 +90,7 @@ function ContractPanel({ opportunityId }: { opportunityId: number }) {
           ? "BoldSign not configured — contract generated but not e-signed. Send manually for now."
           : "E-sign email dispatched to the customer.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", est?.id, "contract"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", est?.id, "contract"] });
     },
     onError: (e: Error) =>
       toast({ title: "Failed to send contract", description: e.message, variant: "destructive" }),
@@ -299,11 +299,11 @@ function DripPanel({ opportunityId }: { opportunityId: number }) {
   );
 }
 
-function LinkedEstimates({ opportunityId }: { opportunityId: number }) {
-  const { data: estimates = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/estimates", { opportunityId }],
+function LinkedQuotes({ opportunityId }: { opportunityId: number }) {
+  const { data: quotes = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/quotes", { opportunityId }],
     queryFn: async () => {
-      const res = await fetch(`/api/estimates?opportunityId=${opportunityId}`);
+      const res = await fetch(`/api/quotes?opportunityId=${opportunityId}`);
       if (!res.ok) return [];
       const all = await res.json();
       return Array.isArray(all) ? all.filter((e: any) => e.opportunityId === opportunityId) : [];
@@ -312,7 +312,7 @@ function LinkedEstimates({ opportunityId }: { opportunityId: number }) {
 
   if (isLoading) return <p className="text-sm text-gray-500">Loading quotes...</p>;
 
-  if (estimates.length === 0) {
+  if (quotes.length === 0) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-sm text-gray-500">
@@ -324,7 +324,7 @@ function LinkedEstimates({ opportunityId }: { opportunityId: number }) {
 
   return (
     <div className="space-y-3">
-      {estimates.map((est: any) => (
+      {quotes.map((est: any) => (
         <Card key={est.id}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
@@ -342,7 +342,7 @@ function LinkedEstimates({ opportunityId }: { opportunityId: number }) {
                 )}>
                   {est.status}
                 </Badge>
-                <a href={`/estimates/${est.id}/view`} className="text-sm text-blue-600 hover:underline">
+                <a href={`/quotes/${est.id}/view`} className="text-sm text-blue-600 hover:underline">
                   View
                 </a>
               </div>
@@ -815,7 +815,7 @@ export default function OpportunityDetailPage() {
             </div>
             {inquiryStatus.submitted && inquiryStatus.inquiryId && (
               <div className="mt-3 pt-3 border-t">
-                <Button size="sm" variant="outline" onClick={() => navigate(`/quote-requests?id=${inquiryStatus.inquiryId}`)}>
+                <Button size="sm" variant="outline" onClick={() => navigate(`/inquiries?id=${inquiryStatus.inquiryId}`)}>
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                   View Inquiry
                 </Button>
@@ -1244,7 +1244,7 @@ export default function OpportunityDetailPage() {
 
         {/* Quotes Tab */}
         <TabsContent value="quotes" className="space-y-4">
-          <LinkedEstimates opportunityId={opportunityId} />
+          <LinkedQuotes opportunityId={opportunityId} />
         </TabsContent>
 
         {/* Communications Tab */}

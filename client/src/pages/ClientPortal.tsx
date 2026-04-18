@@ -44,7 +44,7 @@ interface PortalEvent {
   viewToken: string | null;
 }
 
-interface PortalEstimate {
+interface PortalQuote {
   id: number;
   eventType: string;
   eventDate: string | null;
@@ -70,7 +70,7 @@ interface PortalClient {
 interface PortalData {
   client: PortalClient;
   events: PortalEvent[];
-  estimates: PortalEstimate[];
+  quotes: PortalQuote[];
 }
 
 // ─── Login screen ────────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ function PortalDashboard({ data, onLogout }: { data: PortalData; onLogout: () =>
   const pastEvents = data.events
     .filter(e => new Date(e.eventDate) < new Date() || e.status === "completed")
     .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
-  const pendingQuotes = data.estimates.filter(e => e.status === "sent" || e.status === "viewed");
+  const pendingQuotes = data.quotes.filter(e => e.status === "sent" || e.status === "viewed");
 
   return (
     <div className="min-h-screen bg-[#FBF6EA]">

@@ -1,7 +1,7 @@
 /**
  * Tier 2, Item 7: Stale Deals / Time-in-Stage Alert Widget
  *
- * Shows opportunities and estimates that have been sitting in a stage too long.
+ * Shows opportunities and quotes that have been sitting in a stage too long.
  * Configurable thresholds per stage.
  */
 import { useMemo } from "react";
@@ -18,7 +18,7 @@ const STAGE_THRESHOLDS: Record<string, number> = {
   contacted: 7,
   qualified: 5,
   proposal: 10,
-  // Estimates
+  // Quotes
   draft: 3,
   sent: 5,
   viewed: 3,
@@ -30,7 +30,7 @@ interface StaleItem {
   status: string;
   daysInStage: number;
   threshold: number;
-  type: "opportunity" | "estimate";
+  type: "opportunity" | "quote";
   href: string;
   severity: "warning" | "critical"; // warning = over threshold, critical = 2x threshold
 }
@@ -39,8 +39,8 @@ export default function StaleDealsAlert() {
   const { data: opportunities = [] } = useQuery<any[]>({
     queryKey: ["/api/opportunities"],
   });
-  const { data: estimates = [] } = useQuery<any[]>({
-    queryKey: ["/api/estimates"],
+  const { data: quotes = [] } = useQuery<any[]>({
+    queryKey: ["/api/quotes"],
   });
 
   const staleItems = useMemo(() => {
@@ -69,8 +69,8 @@ export default function StaleDealsAlert() {
       }
     }
 
-    // Check estimates
-    for (const est of estimates) {
+    // Check quotes
+    for (const est of quotes) {
       if (est.status === "accepted" || est.status === "declined") continue;
       const threshold = STAGE_THRESHOLDS[est.status];
       if (!threshold) continue;
@@ -80,12 +80,12 @@ export default function StaleDealsAlert() {
       if (days >= threshold) {
         items.push({
           id: est.id,
-          name: `Estimate #${est.id}`,
+          name: `Quote #${est.id}`,
           status: est.status,
           daysInStage: days,
           threshold,
-          type: "estimate",
-          href: `/estimates/${est.id}/view`,
+          type: "quote",
+          href: `/quotes/${est.id}/view`,
           severity: days >= threshold * 2 ? "critical" : "warning",
         });
       }
@@ -98,7 +98,7 @@ export default function StaleDealsAlert() {
     });
 
     return items;
-  }, [opportunities, estimates]);
+  }, [opportunities, quotes]);
 
   const criticalCount = staleItems.filter((i) => i.severity === "critical").length;
 

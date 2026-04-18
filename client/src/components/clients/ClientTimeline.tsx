@@ -1,7 +1,7 @@
 /**
  * Client Timeline: Unified communication history for a client.
  * Shows all interactions (email, call, SMS, in-person, web chat, hand-written notes, WhatsApp)
- * plus milestones (estimates, events, status changes) in one chronological feed.
+ * plus milestones (quotes, events, status changes) in one chronological feed.
  */
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -82,9 +82,9 @@ function getEntityLink(entry: TimelineEntry): string | null {
   if (!entry.entityType || !entry.entityId) return null;
   switch (entry.entityType) {
     case "opportunity": return `/opportunities/${entry.entityId}`;
-    case "estimate": return `/estimates/${entry.entityId}/view`;
+    case "quote": return `/quotes/${entry.entityId}/view`;
     case "event": return `/events/${entry.entityId}`;
-    case "quoteRequest": return `/quote-requests`;
+    case "inquiry": return `/inquiries`;
     default: return null;
   }
 }

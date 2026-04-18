@@ -36,9 +36,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Helmet } from "react-helmet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type Estimate as EstimateType } from "@shared/schema";
+import { type Quote as QuoteType } from "@shared/schema";
 
-interface EstimateViewerProps {
+interface QuoteViewerProps {
   id: number;
   isClient?: boolean;
 }
@@ -66,7 +66,7 @@ interface ClientType {
 }
 
 
-export default function EstimateViewer({ id, isClient = false }: EstimateViewerProps) {
+export default function QuoteViewer({ id, isClient = false }: QuoteViewerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const canViewFinancials = useCanViewFinancials();
@@ -78,21 +78,21 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   const [sentEmailAuto, setSentEmailAuto] = useState<boolean>(false);
   const [sentEmailRecipient, setSentEmailRecipient] = useState<string | null>(null);
 
-  const { data: estimate, isLoading, isError, error } = useQuery<EstimateType, Error>({
-    queryKey: ["/api/estimates", id, isClient], // Added isClient to queryKey to differentiate cache if needed
+  const { data: quote, isLoading, isError, error } = useQuery<QuoteType, Error>({
+    queryKey: ["/api/quotes", id, isClient], // Added isClient to queryKey to differentiate cache if needed
     queryFn: async ({ queryKey }) => {
       const currentId = queryKey[1];
       const clientViewing = queryKey[2];
-      const url = `/api/estimates/${currentId}${clientViewing ? '?client=true' : ''}`;
-      console.log(`EstimateViewer: Fetching estimate from ${url}`);
+      const url = `/api/quotes/${currentId}${clientViewing ? '?client=true' : ''}`;
+      console.log(`QuoteViewer: Fetching quote from ${url}`);
       const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: `HTTP error! status: ${res.status}` }));
-        console.error("EstimateViewer: API error response:", errorData);
-        throw new Error(errorData.message || `Failed to fetch estimate ${currentId}`);
+        console.error("QuoteViewer: API error response:", errorData);
+        throw new Error(errorData.message || `Failed to fetch quote ${currentId}`);
       }
       const jsonData = await res.json();
-      console.log(`EstimateViewer: Successfully fetched estimate ${currentId}:`, jsonData);
+      console.log(`QuoteViewer: Successfully fetched quote ${currentId}:`, jsonData);
       return jsonData;
     },
     enabled: !!id,
@@ -102,52 +102,52 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   });
 
   const { data: client } = useQuery<ClientType>({
-    queryKey: ["/api/clients", estimate?.clientId],
+    queryKey: ["/api/clients", quote?.clientId],
     queryFn: async ({ queryKey }) => {
         if (!queryKey[1]) return null;
         const res = await fetch(`/api/clients/${queryKey[1]}`, {credentials: 'include'});
         if (!res.ok) throw new Error('Failed to fetch client details');
         return res.json();
     },
-    enabled: !!estimate?.clientId,
+    enabled: !!quote?.clientId,
   });
 
   const { data: menu } = useQuery<any>({ 
-    queryKey: ["/api/menus", estimate?.menuId],
+    queryKey: ["/api/menus", quote?.menuId],
      queryFn: async ({ queryKey }) => {
         if (!queryKey[1]) return null;
         const res = await fetch(`/api/menus/${queryKey[1]}`, {credentials: 'include'});
         if (!res.ok) throw new Error('Failed to fetch menu details');
         return res.json();
     },
-    enabled: !!estimate?.menuId,
+    enabled: !!quote?.menuId,
   });
 
   const acceptMutation = useMutation({
-    mutationFn: async () => apiRequest("POST", `/api/estimates/${id}/accept`),
+    mutationFn: async () => apiRequest("POST", `/api/quotes/${id}/accept`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
-      toast({ title: "Estimate accepted", description: "The estimate has been accepted successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", id, isClient] });
+      toast({ title: "Quote accepted", description: "The quote has been accepted successfully." });
       setIsAcceptDialogOpen(false);
     },
-    onError: (err: Error) => toast({ title: "Error", description: `Failed to accept estimate: ${err.message}`, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error", description: `Failed to accept quote: ${err.message}`, variant: "destructive" }),
   });
 
   const declineMutation = useMutation({
-    mutationFn: async () => apiRequest("POST", `/api/estimates/${id}/decline`),
+    mutationFn: async () => apiRequest("POST", `/api/quotes/${id}/decline`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
-      toast({ title: "Estimate declined", description: "The estimate has been declined." });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", id, isClient] });
+      toast({ title: "Quote declined", description: "The quote has been declined." });
       setIsDeclineDialogOpen(false);
     },
-    onError: (err: Error) => toast({ title: "Error", description: `Failed to decline estimate: ${err.message}`, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error", description: `Failed to decline quote: ${err.message}`, variant: "destructive" }),
   });
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/estimates/${id}/send`);
+      const res = await apiRequest("POST", `/api/quotes/${id}/send`);
       return res.json() as Promise<{
-        estimate: EstimateType;
+        quote: QuoteType;
         publicUrl: string;
         emailSent: boolean;
         emailSkipped: boolean;
@@ -155,8 +155,8 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
       }>;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates", id, isClient] });
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", id, isClient] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       setSentPublicUrl(data.publicUrl);
       setSentEmailAuto(data.emailSent === true);
       setSentEmailRecipient(data.emailRecipient ?? null);
@@ -175,7 +175,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
       }
     },
     onError: (err: Error) =>
-      toast({ title: "Error", description: `Failed to send estimate: ${err.message}`, variant: "destructive" }),
+      toast({ title: "Error", description: `Failed to send quote: ${err.message}`, variant: "destructive" }),
   });
 
   const handleCopyLink = async () => {
@@ -207,17 +207,17 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-purple mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your estimate...</p>
+          <p className="mt-4 text-gray-600">Loading your quote...</p>
         </div>
       </div>
     );
   }
 
-  if (isError || !estimate) {
+  if (isError || !quote) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
         <Helmet>
-          <title>Error Loading Estimate</title>
+          <title>Error Loading Quote</title>
         </Helmet>
         <div className="text-center max-w-md">
            <div className="text-red-500 mb-4">
@@ -227,7 +227,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
           <p className="text-gray-600 mb-4">
             {error?.message || "There was an error loading the quote data. Please try again or contact support."}
           </p>
-          <Link href={isClient ? "/" : "/estimates"}>
+          <Link href={isClient ? "/" : "/quotes"}>
             <Button variant="outline">
               <ArrowLeftIcon className="w-4 h-4 mr-2" />
               {isClient ? "Back to Home" : "Back to Quotes"}
@@ -239,24 +239,24 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   }
 
   let customItems: CustomItem[] = [];
-  if (estimate.items) {
-    if (typeof estimate.items === 'string') {
+  if (quote.items) {
+    if (typeof quote.items === 'string') {
       try {
-        if (estimate.items.trim() === "") {
+        if (quote.items.trim() === "") {
           customItems = [];
         } else {
-          const parsed = JSON.parse(estimate.items);
+          const parsed = JSON.parse(quote.items);
           customItems = Array.isArray(parsed) ? parsed.map((item: any) => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 })) : [];
         }
       } catch (e) {
-        console.error("EstimateViewer: Error parsing estimate.items JSON string:", e, "Value was:", estimate.items);
+        console.error("QuoteViewer: Error parsing quote.items JSON string:", e, "Value was:", quote.items);
         customItems = [];
       }
-    } else if (Array.isArray(estimate.items)) {
-      console.log("EstimateViewer: estimate.items is already an array:", estimate.items);
-      customItems = estimate.items.map((item: any) => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 }));
+    } else if (Array.isArray(quote.items)) {
+      console.log("QuoteViewer: quote.items is already an array:", quote.items);
+      customItems = quote.items.map((item: any) => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 }));
     } else {
-      console.warn("EstimateViewer: estimate.items was neither a string nor an array:", estimate.items);
+      console.warn("QuoteViewer: quote.items was neither a string nor an array:", quote.items);
     }
   }
 
@@ -274,19 +274,19 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
   };
 
   // Construct title string safely
-  const pageTitle = `Estimate #${estimate.id} - ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() : "Home Bites Catering"}`;
+  const pageTitle = `Quote #${quote.id} - ${client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() : "Home Bites Catering"}`;
 
   return (
     <div className={`max-w-4xl mx-auto ${isClient ? 'py-8' : ''}`}>
       <Helmet>
         {/* Corrected: Ensure title content is a single string expression */}
         <title>{pageTitle}</title>
-        <meta name="description" content={`Details for estimate #${estimate.id}`} />
+        <meta name="description" content={`Details for quote #${quote.id}`} />
       </Helmet>
 
       {!isClient && (
         <div className="flex justify-between items-center mb-6 print:hidden">
-          <Link href="/estimates">
+          <Link href="/quotes">
             <Button variant="outline">
               <ArrowLeftIcon className="mr-2 h-4 w-4" />
               Back to Quotes
@@ -294,7 +294,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
           </Link>
 
           <div className="flex items-center gap-2">
-            {estimate.status !== "accepted" && estimate.status !== "declined" && (
+            {quote.status !== "accepted" && quote.status !== "declined" && (
               <Button
                 variant="outline"
                 className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
@@ -304,12 +304,12 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                 <SendIcon className="mr-2 h-4 w-4" />
                 {sendMutation.isPending
                   ? "Preparing..."
-                  : estimate.status === "draft"
+                  : quote.status === "draft"
                   ? "Send Quote"
                   : "Resend / Copy Link"}
               </Button>
             )}
-            {estimate.status !== "accepted" && estimate.status !== "declined" && (
+            {quote.status !== "accepted" && quote.status !== "declined" && (
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => setIsAcceptDialogOpen(true)}
@@ -340,21 +340,21 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                   className="h-16 w-auto print:h-14"
                 />
               </div>
-              <CardTitle className="text-2xl print:text-xl">Estimate #{estimate.id}</CardTitle>
+              <CardTitle className="text-2xl print:text-xl">Quote #{quote.id}</CardTitle>
               <p className="text-sm text-gray-500 print:text-xs">
-                Created: {formatDate(new Date(estimate.createdAt))}
+                Created: {formatDate(new Date(quote.createdAt))}
               </p>
             </div>
 
             <div className="text-left sm:text-right">
               <div className="flex items-center justify-start sm:justify-end mb-2">
-                <BadgeStatus status={estimate.status} />
+                <BadgeStatus status={quote.status} />
               </div>
-              {estimate.sentAt && <p className="text-sm text-gray-500 print:text-xs">Sent: {formatDate(new Date(estimate.sentAt))}</p>}
-              {estimate.viewedAt && <p className="text-sm text-gray-500 print:text-xs">Viewed: {formatDate(new Date(estimate.viewedAt))}</p>}
-              {estimate.expiresAt && <p className="text-sm text-gray-500 print:text-xs">Expires: {formatDate(new Date(estimate.expiresAt))}</p>}
-              {estimate.acceptedAt && <p className="text-sm text-green-600 font-medium print:text-xs">Accepted: {formatDate(new Date(estimate.acceptedAt))}</p>}
-              {estimate.declinedAt && <p className="text-sm text-red-600 font-medium print:text-xs">Declined: {formatDate(new Date(estimate.declinedAt))}</p>}
+              {quote.sentAt && <p className="text-sm text-gray-500 print:text-xs">Sent: {formatDate(new Date(quote.sentAt))}</p>}
+              {quote.viewedAt && <p className="text-sm text-gray-500 print:text-xs">Viewed: {formatDate(new Date(quote.viewedAt))}</p>}
+              {quote.expiresAt && <p className="text-sm text-gray-500 print:text-xs">Expires: {formatDate(new Date(quote.expiresAt))}</p>}
+              {quote.acceptedAt && <p className="text-sm text-green-600 font-medium print:text-xs">Accepted: {formatDate(new Date(quote.acceptedAt))}</p>}
+              {quote.declinedAt && <p className="text-sm text-red-600 font-medium print:text-xs">Declined: {formatDate(new Date(quote.declinedAt))}</p>}
             </div>
           </div>
         </CardHeader>
@@ -399,7 +399,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                 <div>
                   <p className="text-xs text-gray-500">Event Date</p>
                   <p className="font-medium">
-                    {estimate.eventDate ? formatDate(new Date(estimate.eventDate)) : "To be determined"}
+                    {quote.eventDate ? formatDate(new Date(quote.eventDate)) : "To be determined"}
                   </p>
                 </div>
               </div>
@@ -407,15 +407,15 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                 <UsersIcon className="h-5 w-5 text-gray-400 mr-2 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs text-gray-500">Guest Count</p>
-                  <p className="font-medium">{estimate.guestCount || "N/A"}</p>
+                  <p className="font-medium">{quote.guestCount || "N/A"}</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <MapPinIcon className="h-5 w-5 text-gray-400 mr-2 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs text-gray-500">Location / Venue</p>
-                  <p className="font-medium">{estimate.venue || "To be determined"}</p>
-                  {estimate.zipCode && <p className="text-xs text-gray-500">Zip: {estimate.zipCode}</p>}
+                  <p className="font-medium">{quote.venue || "To be determined"}</p>
+                  {quote.zipCode && <p className="text-xs text-gray-500">Zip: {quote.zipCode}</p>}
                 </div>
               </div>
             </div>
@@ -502,7 +502,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
             )}
 
             {(!menu || menuItemsToDisplay.length === 0) && customItems.length === 0 && (
-                <p className="text-sm text-gray-500">No menu items or custom services listed for this estimate.</p>
+                <p className="text-sm text-gray-500">No menu items or custom services listed for this quote.</p>
             )}
 
             <div className="border-t border-gray-200 pt-4 mt-6 print:border-gray-300">
@@ -510,15 +510,15 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                 <div className="max-w-xs ml-auto text-sm">
                   <div className="flex justify-between mb-1">
                     <span className="font-medium">Subtotal:</span>
-                    <span>{formatCurrency(estimate.subtotal / 100)}</span>
+                    <span>{formatCurrency(quote.subtotal / 100)}</span>
                   </div>
                   <div className="flex justify-between mb-1">
                     <span className="font-medium">Tax:</span>
-                    <span>{formatCurrency(estimate.tax / 100)}</span>
+                    <span>{formatCurrency(quote.tax / 100)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
                     <span>Total:</span>
-                    <span>{formatCurrency(estimate.total / 100)}</span>
+                    <span>{formatCurrency(quote.total / 100)}</span>
                   </div>
                 </div>
               ) : (
@@ -529,26 +529,26 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
             </div>
           </div>
 
-          {estimate.notes && (
+          {quote.notes && (
             <div className="mb-6 px-6 pb-6">
               <h3 className="text-lg font-semibold mb-2 print:text-base">Notes</h3>
               <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap text-sm print:bg-white print:border print:border-gray-200">
-                {estimate.notes}
+                {quote.notes}
               </div>
             </div>
           )}
 
           <div className="border-t border-gray-200 pt-4 px-6 pb-6 text-center text-xs text-gray-500 print:border-gray-300">
-            <p>This estimate is valid for 30 days from the date of creation, unless otherwise stated.</p>
+            <p>This quote is valid for 30 days from the date of creation, unless otherwise stated.</p>
             <p>Questions? Contact us at info@homebites.net or (206) 555-1234</p>
           </div>
         </CardContent>
 
-        {isClient && estimate.status === "sent" && (
+        {isClient && quote.status === "sent" && (
           <CardFooter className="border-t p-6 print:hidden">
             <div className="w-full flex flex-col sm:flex-row justify-center items-center gap-4">
                <p className="text-sm text-gray-700 text-center sm:text-left mb-4 sm:mb-0 flex-grow">
-                Please review this estimate. If you have questions or wish to modify, contact us directly.
+                Please review this quote. If you have questions or wish to modify, contact us directly.
               </p>
               <div className="flex gap-4">
                 <Button 
@@ -558,7 +558,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                   disabled={declineMutation.isPending || acceptMutation.isPending}
                 >
                   <XIcon className="mr-2 h-4 w-4" />
-                  Decline Estimate
+                  Decline Quote
                 </Button>
                 <Button 
                   className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
@@ -566,20 +566,20 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
                   disabled={acceptMutation.isPending || declineMutation.isPending}
                 >
                   <CheckIcon className="mr-2 h-4 w-4" />
-                  Accept Estimate
+                  Accept Quote
                 </Button>
               </div>
             </div>
           </CardFooter>
         )}
-         {isClient && (estimate.status === "accepted" || estimate.status === "declined") && (
+         {isClient && (quote.status === "accepted" || quote.status === "declined") && (
           <CardFooter className="border-t p-6 print:hidden">
             <div className="w-full text-center">
-              {estimate.status === "accepted" && estimate.acceptedAt && (
-                <p className="text-green-600 font-medium">You accepted this estimate on {formatDate(new Date(estimate.acceptedAt))}. We will be in touch shortly!</p>
+              {quote.status === "accepted" && quote.acceptedAt && (
+                <p className="text-green-600 font-medium">You accepted this quote on {formatDate(new Date(quote.acceptedAt))}. We will be in touch shortly!</p>
               )}
-              {estimate.status === "declined" && estimate.declinedAt && (
-                <p className="text-red-600 font-medium">You declined this estimate on {formatDate(new Date(estimate.declinedAt))}. Please contact us if you have any questions.</p>
+              {quote.status === "declined" && quote.declinedAt && (
+                <p className="text-red-600 font-medium">You declined this quote on {formatDate(new Date(quote.declinedAt))}. Please contact us if you have any questions.</p>
               )}
             </div>
           </CardFooter>
@@ -590,9 +590,9 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
       <AlertDialog open={isAcceptDialogOpen} onOpenChange={setIsAcceptDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Accept Estimate?</AlertDialogTitle>
+            <AlertDialogTitle>Accept Quote?</AlertDialogTitle>
             <AlertDialogDescription>
-              By accepting this estimate, you agree to the services and prices listed. 
+              By accepting this quote, you agree to the services and prices listed. 
               We'll contact you to finalize the details and schedule your event.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -603,7 +603,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
               className="bg-green-600 hover:bg-green-700"
               disabled={acceptMutation.isPending}
             >
-              {acceptMutation.isPending ? "Processing..." : "Yes, Accept Estimate"}
+              {acceptMutation.isPending ? "Processing..." : "Yes, Accept Quote"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -612,9 +612,9 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
       <AlertDialog open={isDeclineDialogOpen} onOpenChange={setIsDeclineDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Decline Estimate?</AlertDialogTitle>
+            <AlertDialogTitle>Decline Quote?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to decline this estimate? 
+              Are you sure you want to decline this quote? 
               If you'd like to request changes instead, please contact us directly.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -625,7 +625,7 @@ export default function EstimateViewer({ id, isClient = false }: EstimateViewerP
               className="bg-red-500 hover:bg-red-600"
               disabled={declineMutation.isPending}
             >
-              {declineMutation.isPending ? "Processing..." : "Yes, Decline Estimate"}
+              {declineMutation.isPending ? "Processing..." : "Yes, Decline Quote"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

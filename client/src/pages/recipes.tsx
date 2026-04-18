@@ -2008,7 +2008,7 @@ export default function RecipesPage() {
                 <p>
                   Put 1 <strong>{fixingConversion.recipeUnit}</strong> of
                   &ldquo;{fixingConversion.ingredientName}&rdquo; on a scale
-                  (or estimate). How many{" "}
+                  (or quote). How many{" "}
                   <strong>{fixingConversion.purchaseUnit}</strong> is it?
                 </p>
                 {fixingConversion.recipeUnit.toLowerCase() === "each" && (

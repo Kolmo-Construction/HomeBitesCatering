@@ -615,7 +615,7 @@ export function infoRequestedOwnerEmail(args: {
   eventType: string;
   eventDate: string | Date | null;
   note?: string | null;
-  adminEstimateUrl: string;
+  adminQuoteUrl: string;
 }): TemplateResult {
   const eventTypeLabel = args.eventType.replace(/_/g, " ");
   const subject = `${args.customerName} wants more info before deciding`;
@@ -633,7 +633,7 @@ export function infoRequestedOwnerEmail(args: {
        <tr><td style="color:#6b7280;">Event</td><td>${eventTypeLabel} on ${formatDate(args.eventDate)}</td></tr>
      </table>
      ${paragraph(`They've been shown a Cal.com link to book a call. You'll get another alert when they book.`)}
-     ${btn("Open in Admin", args.adminEstimateUrl)}`,
+     ${btn("Open in Admin", args.adminQuoteUrl)}`,
     `${args.customerName} wants to talk before deciding — book alert to follow.`
   );
 
@@ -645,7 +645,7 @@ Event: ${eventTypeLabel} on ${formatDate(args.eventDate)}
 
 They've been given a Cal.com link — booking alert will follow.
 
-Admin: ${args.adminEstimateUrl}`;
+Admin: ${args.adminQuoteUrl}`;
 
   return { subject, html, text };
 }
@@ -707,7 +707,7 @@ export function declineFeedbackOwnerEmail(args: {
   eventDate: string | Date | null;
   category: string;
   notes: string | null;
-  adminEstimateUrl: string;
+  adminQuoteUrl: string;
 }): TemplateResult {
   const eventTypeLabel = args.eventType.replace(/_/g, " ");
   const categoryLabel: Record<string, string> = {
@@ -730,7 +730,7 @@ export function declineFeedbackOwnerEmail(args: {
      </table>
      ${args.notes ? `<div style="background:#faf7f2;border-left:3px solid #9a7d3d;padding:12px 16px;margin:14px 0;color:#374151;font-style:italic;">${args.notes}</div>` : ""}
      ${reEngage ? paragraph(`<strong>Consider re-engaging</strong> — this feedback category often converts when the proposal is adjusted.`) : ""}
-     ${btn("Open in Admin", args.adminEstimateUrl)}`,
+     ${btn("Open in Admin", args.adminQuoteUrl)}`,
     `${args.customerName} left decline feedback — ${catNice}.`
   );
 
@@ -741,7 +741,7 @@ Event: ${eventTypeLabel} on ${formatDate(args.eventDate)}
 Contact: ${args.customerEmail}
 ${args.notes ? `\nNotes: ${args.notes}\n` : ""}
 ${reEngage ? "Consider re-engaging — this feedback category often converts when the proposal is adjusted.\n" : ""}
-Admin: ${args.adminEstimateUrl}`;
+Admin: ${args.adminQuoteUrl}`;
 
   return { subject, html, text };
 }
@@ -752,7 +752,7 @@ export function consultationBookedOwnerEmail(args: {
   customerName: string;
   scheduledAt: string | Date;
   meetingUrl: string | null;
-  adminEstimateUrl: string;
+  adminQuoteUrl: string;
 }): TemplateResult {
   const when = formatDate(args.scheduledAt);
   const subject = `${args.customerName} booked a consultation`;
@@ -761,13 +761,13 @@ export function consultationBookedOwnerEmail(args: {
     `${heading(`Consultation booked`)}
      ${paragraph(`<strong>${args.customerName}</strong> just booked a call for <strong>${when}</strong>.`)}
      ${args.meetingUrl ? btn("Join Meeting", args.meetingUrl) : ""}
-     ${btn("Open in Admin", args.adminEstimateUrl)}`,
+     ${btn("Open in Admin", args.adminQuoteUrl)}`,
     `${args.customerName} booked a call for ${when}.`
   );
 
   const text = `${args.customerName} booked a consultation for ${when}.
 ${args.meetingUrl ? `\nMeeting: ${args.meetingUrl}` : ""}
-Admin: ${args.adminEstimateUrl}`;
+Admin: ${args.adminQuoteUrl}`;
 
   return { subject, html, text };
 }

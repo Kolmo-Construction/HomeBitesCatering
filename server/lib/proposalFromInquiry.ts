@@ -1,15 +1,15 @@
-// Builds the customer-facing Proposal blob from a quote_request row plus an
-// estimate row. This is the ONE place that translates lead data into the
+// Builds the customer-facing Proposal blob from a inquiry row plus an
+// quote row. This is the ONE place that translates lead data into the
 // customer-facing shape; used at conversion time AND as a fallback hydrator
-// for legacy estimates that don't yet have estimate.proposal populated.
+// for legacy quotes that don't yet have quote.proposal populated.
 
 import type { Proposal, ProposalLineItem, ProposalMenuItem } from "@shared/proposal";
-import type { estimates, quoteRequests } from "@shared/schema";
+import type { quotes, inquiries } from "@shared/schema";
 
-type QuoteRequestRow = typeof quoteRequests.$inferSelect;
-type EstimateRow = typeof estimates.$inferSelect;
+type InquiryRow = typeof inquiries.$inferSelect;
+type QuoteRow = typeof quotes.$inferSelect;
 
-// Coerce whatever is stored in estimate.items (JSONB or JSON-stringified blob)
+// Coerce whatever is stored in quote.items (JSONB or JSON-stringified blob)
 // into a clean ProposalLineItem[].
 function coerceLineItems(raw: unknown): ProposalLineItem[] {
   if (!raw) return [];
@@ -32,9 +32,9 @@ function coerceLineItems(raw: unknown): ProposalLineItem[] {
     }));
 }
 
-export function buildProposalFromQuoteRequest(
-  q: QuoteRequestRow,
-  e: EstimateRow,
+export function buildProposalFromInquiry(
+  q: InquiryRow,
+  e: QuoteRow,
 ): Proposal {
   const venueAddr = (q.venueAddress as any) || {};
   const menuSelections = Array.isArray(q.menuSelections)
@@ -124,12 +124,12 @@ export function buildProposalFromQuoteRequest(
 }
 
 /**
- * Build a bare-bones Proposal from an estimate alone, for estimates that have
- * no originating quote_request (manually-created estimates). The customer
+ * Build a bare-bones Proposal from an quote alone, for quotes that have
+ * no originating inquiry (manually-created quotes). The customer
  * still gets a coherent page, just without rich wedding details.
  */
-export function buildProposalFromEstimateAlone(
-  e: EstimateRow,
+export function buildProposalFromQuoteAlone(
+  e: QuoteRow,
   client: { firstName?: string | null; lastName?: string | null } | null,
 ): Proposal {
   return {

@@ -7,7 +7,7 @@ import StatCard from "@/components/dashboard/StatCard";
 import RecentOpportunitiesTable from "@/components/dashboard/RecentOpportunitiesTable";
 import UpcomingEventsList from "@/components/dashboard/UpcomingEventsList";
 import QuickActions from "@/components/dashboard/QuickActions";
-import RecentEstimatesTable from "@/components/dashboard/RecentEstimatesTable";
+import RecentQuotesTable from "@/components/dashboard/RecentQuotesTable";
 import MenuMarginsCard from "@/components/dashboard/MenuMarginsCard";
 import PendingFollowUps from "@/components/dashboard/PendingFollowUps";
 import FunnelChart from "@/components/dashboard/FunnelChart";
@@ -19,8 +19,8 @@ export default function Dashboard() {
     queryKey: ["/api/opportunities"],
   });
 
-  const { data: estimates = [] } = useQuery<any[]>({
-    queryKey: ["/api/estimates"],
+  const { data: quotes = [] } = useQuery<any[]>({
+    queryKey: ["/api/quotes"],
   });
 
   const { data: events = [] } = useQuery<any[]>({
@@ -32,24 +32,24 @@ export default function Dashboard() {
     opportunity.status !== "archived" && opportunity.status !== "booked"
   ).length;
   
-  const pendingEstimates = estimates.filter((estimate: any) => 
-    estimate.status === "draft" || estimate.status === "sent"
+  const pendingQuotes = quotes.filter((quote: any) => 
+    quote.status === "draft" || quote.status === "sent"
   ).length;
   
   const upcomingEvents = events.length;
   
-  // Calculate revenue (from accepted estimates in the current month)
+  // Calculate revenue (from accepted quotes in the current month)
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
-  const monthlyRevenue = estimates
-    .filter((estimate: any) => {
-      if (estimate.status !== "accepted") return false;
-      const estimateDate = new Date(estimate.acceptedAt || estimate.createdAt);
-      return estimateDate.getMonth() === currentMonth && 
-             estimateDate.getFullYear() === currentYear;
+  const monthlyRevenue = quotes
+    .filter((quote: any) => {
+      if (quote.status !== "accepted") return false;
+      const quoteDate = new Date(quote.acceptedAt || quote.createdAt);
+      return quoteDate.getMonth() === currentMonth && 
+             quoteDate.getFullYear() === currentYear;
     })
-    .reduce((sum: number, estimate: any) => sum + estimate.total, 0);
+    .reduce((sum: number, quote: any) => sum + quote.total, 0);
   
   return (
     <div>
@@ -84,8 +84,8 @@ export default function Dashboard() {
         />
         
         <StatCard 
-          title="Pending Estimates" 
-          value={pendingEstimates} 
+          title="Pending Quotes" 
+          value={pendingQuotes} 
           icon={<svg className="text-accent h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>}
@@ -131,10 +131,10 @@ export default function Dashboard() {
         <StaleDealsAlert />
       </div>
 
-      {/* Quick Access & Recent Estimates */}
+      {/* Quick Access & Recent Quotes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <QuickActions />
-        <RecentEstimatesTable />
+        <RecentQuotesTable />
       </div>
 
       {/* Menu Margins */}

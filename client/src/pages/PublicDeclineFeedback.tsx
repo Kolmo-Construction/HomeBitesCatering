@@ -1,6 +1,6 @@
 // Public magic-link page the client lands on from the decline-feedback email.
 // Captures the reason (pricing / menu / timing / other) + optional notes and
-// stores it on the estimate so Mike can re-engage the solvable ones.
+// stores it on the quote so Mike can re-engage the solvable ones.
 
 import { useEffect, useState } from "react";
 import { useRoute } from "wouter";

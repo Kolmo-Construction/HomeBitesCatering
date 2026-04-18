@@ -1,76 +1,76 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import EstimateList from "@/components/estimates/EstimateList";
-import EstimateForm from "@/components/estimates/EstimateForm";
-import AdminEstimatePreview from "@/pages/AdminEstimatePreview";
+import QuoteList from "@/components/quotes/QuoteList";
+import QuoteForm from "@/components/quotes/QuoteForm";
+import AdminQuotePreview from "@/pages/AdminQuotePreview";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button"; // Added for "Not Found" case
 import { ArrowLeftIcon } from "lucide-react"; // Added for "Not Found" case
 import { Link } from "wouter"; // Added for "Not Found" case
 
 
-export default function Estimates() {
+export default function Quotes() {
   const [location] = useLocation();
   const [mode, setMode] = useState<"list" | "new" | "edit" | "view">("list");
-  const [selectedEstimateId, setSelectedEstimateId] = useState<number | null>(null);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
 
   // Extract mode and ID from location
   useEffect(() => {
-    if (location === "/estimates") {
+    if (location === "/quotes") {
       setMode("list");
-      setSelectedEstimateId(null);
-    } else if (location === "/estimates/new") {
+      setSelectedQuoteId(null);
+    } else if (location === "/quotes/new") {
       setMode("new");
-      setSelectedEstimateId(null);
-    } else if (location.match(/^\/estimates\/\d+\/edit$/)) {
+      setSelectedQuoteId(null);
+    } else if (location.match(/^\/quotes\/\d+\/edit$/)) {
       setMode("edit");
-      setSelectedEstimateId(parseInt(location.split("/")[2], 10));
-    } else if (location.match(/^\/estimates\/\d+\/view$/)) {
+      setSelectedQuoteId(parseInt(location.split("/")[2], 10));
+    } else if (location.match(/^\/quotes\/\d+\/view$/)) {
       setMode("view");
-      setSelectedEstimateId(parseInt(location.split("/")[2], 10));
+      setSelectedQuoteId(parseInt(location.split("/")[2], 10));
     }
   }, [location]);
 
-  // Fetch estimate data only for the legacy edit form. The view mode delegates
-  // to AdminEstimatePreview which owns its own fetch against /preview.
-  const { data: rawEstimateData, isLoading, isError, error } = useQuery<any, Error>({
-    queryKey: ["/api/estimates", selectedEstimateId],
+  // Fetch quote data only for the legacy edit form. The view mode delegates
+  // to AdminQuotePreview which owns its own fetch against /preview.
+  const { data: rawQuoteData, isLoading, isError, error } = useQuery<any, Error>({
+    queryKey: ["/api/quotes", selectedQuoteId],
     queryFn: async ({ queryKey }) => {
       if (!queryKey[1]) return null;
-      const res = await fetch(`/api/estimates/${queryKey[1]}`);
+      const res = await fetch(`/api/quotes/${queryKey[1]}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(errorData.message || `Failed to fetch estimate ${queryKey[1]}`);
+        throw new Error(errorData.message || `Failed to fetch quote ${queryKey[1]}`);
       }
       return res.json();
     },
-    enabled: mode === "edit" && !!selectedEstimateId,
+    enabled: mode === "edit" && !!selectedQuoteId,
     staleTime: 0,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     retry: 1,
   });
 
-  // Derive the actual estimate object, handling the case where it might be an array
-  const estimate = rawEstimateData && Array.isArray(rawEstimateData) && rawEstimateData.length === 1
-                    ? rawEstimateData[0]
-                    : rawEstimateData;
+  // Derive the actual quote object, handling the case where it might be an array
+  const quote = rawQuoteData && Array.isArray(rawQuoteData) && rawQuoteData.length === 1
+                    ? rawQuoteData[0]
+                    : rawQuoteData;
 
   // Render appropriate component based on mode
   if (mode === "list") {
-    return <EstimateList />;
+    return <QuoteList />;
   }
 
   if (mode === "new") {
-    return <EstimateForm />;
+    return <QuoteForm />;
   }
 
-  // View mode is owned entirely by AdminEstimatePreview
+  // View mode is owned entirely by AdminQuotePreview
   if (mode === "view") {
-    if (!selectedEstimateId) {
-      return <div className="text-center p-8 text-red-500">Error: No estimate ID provided for viewing.</div>;
+    if (!selectedQuoteId) {
+      return <div className="text-center p-8 text-red-500">Error: No quote ID provided for viewing.</div>;
     }
-    return <AdminEstimatePreview id={selectedEstimateId} />;
+    return <AdminQuotePreview id={selectedQuoteId} />;
   }
 
   if (isLoading && mode === "edit") {
@@ -87,7 +87,7 @@ export default function Estimates() {
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Quote</h2>
         <p className="text-gray-600 mb-4">{error?.message || "There was an error loading the quote. Please try again."}</p>
-        <Link to="/estimates">
+        <Link to="/quotes">
             <Button variant="outline">
                 <ArrowLeftIcon className="w-4 h-4 mr-2" />
                 Back to Quotes
@@ -98,12 +98,12 @@ export default function Estimates() {
   }
 
   if (mode === "edit") {
-    if (!estimate) {
+    if (!quote) {
       return (
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Quote Not Found</h2>
-          <p className="text-gray-600 mb-4">The quote you're looking for (ID: {selectedEstimateId}) doesn't exist or could not be loaded for editing.</p>
-          <Link to="/estimates">
+          <p className="text-gray-600 mb-4">The quote you're looking for (ID: {selectedQuoteId}) doesn't exist or could not be loaded for editing.</p>
+          <Link to="/quotes">
             <Button variant="outline">
                 <ArrowLeftIcon className="w-4 h-4 mr-2" />
                 Back to Quotes
@@ -112,20 +112,20 @@ export default function Estimates() {
         </div>
       );
     }
-    // Ensure 'estimate' is an object before passing
-    if (Array.isArray(estimate)) {
-        console.error("CRITICAL: Estimate data is still an array in edit mode just before rendering EstimateForm. This should have been handled.", estimate);
+    // Ensure 'quote' is an object before passing
+    if (Array.isArray(quote)) {
+        console.error("CRITICAL: Quote data is still an array in edit mode just before rendering QuoteForm. This should have been handled.", quote);
         // As a fallback, try to use the first element if it's the only one.
         // This indicates a deeper issue if the server is sending an array for a single GET.
-        if (estimate.length === 1) {
-            console.warn("Attempting to use the first element of the estimate array for the form.");
-            return <EstimateForm estimate={estimate[0]} isEditing={true} />;
+        if (quote.length === 1) {
+            console.warn("Attempting to use the first element of the quote array for the form.");
+            return <QuoteForm quote={quote[0]} isEditing={true} />;
         } else {
              return <div className="text-center py-12"><h2 className="text-2xl font-bold text-red-600 mb-2">Data Error</h2><p className="text-gray-600">Received unexpected data format for the quote.</p></div>;
         }
     }
-    console.log("Rendering EstimateForm for editing ID:", selectedEstimateId, "with data:", estimate);
-    return <EstimateForm estimate={estimate} isEditing={true} />;
+    console.log("Rendering QuoteForm for editing ID:", selectedQuoteId, "with data:", quote);
+    return <QuoteForm quote={quote} isEditing={true} />;
   }
 
   // Fallback for any unhandled state, though ideally, all paths should be covered.
@@ -133,7 +133,7 @@ export default function Estimates() {
     <div className="text-center py-12">
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Invalid State</h2>
       <p className="text-gray-600 mb-4">Could not determine the correct view for quotes.</p>
-      <Link to="/estimates">
+      <Link to="/quotes">
           <Button variant="outline">
             <ArrowLeftIcon className="w-4 h-4 mr-2" />
             Back to Quotes

@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
 import { History, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
-interface EstimateVersion {
+interface QuoteVersion {
   id: number;
-  estimateId: number;
+  quoteId: number;
   version: number;
   proposal: any;
   subtotalCents: number;
@@ -28,7 +28,7 @@ interface EstimateVersion {
 
 interface VersionHistoryData {
   currentVersion: number;
-  versions: EstimateVersion[];
+  versions: QuoteVersion[];
 }
 
 function formatCents(cents: number): string {
@@ -54,17 +54,17 @@ function PriceDiff({ label, oldCents, newCents }: { label: string; oldCents: num
   );
 }
 
-export default function VersionHistory({ estimateId, currentTotal }: { estimateId: number; currentTotal?: number }) {
+export default function VersionHistory({ quoteId, currentTotal }: { quoteId: number; currentTotal?: number }) {
   const [expanded, setExpanded] = useState(false);
 
   const { data, isLoading } = useQuery<VersionHistoryData>({
-    queryKey: ["/api/estimates", estimateId, "versions"],
+    queryKey: ["/api/quotes", quoteId, "versions"],
     queryFn: async () => {
-      const res = await fetch(`/api/estimates/${estimateId}/versions`);
+      const res = await fetch(`/api/quotes/${quoteId}/versions`);
       if (!res.ok) throw new Error("Failed to fetch versions");
       return res.json();
     },
-    enabled: !!estimateId,
+    enabled: !!quoteId,
   });
 
   if (isLoading || !data || data.versions.length === 0) return null;

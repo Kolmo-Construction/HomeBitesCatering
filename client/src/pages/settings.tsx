@@ -548,7 +548,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Company Information</CardTitle>
               <CardDescription>
-                Update your company details that appear on estimates and client communications.
+                Update your company details that appear on quotes and client communications.
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -138,7 +138,7 @@ export const opportunityPriorityEnum = pgEnum("opportunity_priority", ['hot', 'h
 export const opportunityStatusEnum = pgEnum("opportunity_status", [
   'new', 'contacted', 'qualified', 'proposal', 'booked', 'lost', 'archived'
 ]);
-export const estimateStatusEnum = pgEnum("estimate_status", [
+export const quoteStatusEnum = pgEnum("quote_status", [
   'draft', 'sent', 'viewed', 'accepted', 'declined'
 ]);
 export const eventStatusEnum = pgEnum("event_status", [
@@ -310,7 +310,7 @@ export const insertMenuSchema = createInsertSchema(menus, {
   updatedAt: true
 });
 
-// Client type — prospect (has quote/estimate but hasn't paid) vs customer (accepted estimate or booked event)
+// Client type — prospect (has quote/quote but hasn't paid) vs customer (accepted quote or booked event)
 export const clientTypeEnum = pgEnum("client_type", ["prospect", "customer"]);
 
 // Clients
@@ -345,8 +345,8 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   updatedAt: true
 });
 
-// Estimates/Proposals
-export const estimates = pgTable("estimates", {
+// Quotes/Proposals
+export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
   opportunityId: integer("opportunity_id").references(() => opportunities.id),
@@ -368,13 +368,13 @@ export const estimates = pgTable("estimates", {
   // Full customer-facing wedding proposal payload. When present, this is the
   // single source of truth for the public quote page — couple names, timeline,
   // menu selections, appetizers, desserts, beverages, dietary, special requests,
-  // venue, pricing. Populated at quote_request → estimate conversion and edited
+  // venue, pricing. Populated at inquiry → quote conversion and edited
   // by the admin before send. See shared/proposal.ts for the Proposal type.
   proposal: jsonb("proposal"),
   subtotal: integer("subtotal").notNull(), // stored in cents
   tax: integer("tax").notNull(), // stored in cents
   total: integer("total").notNull(), // stored in cents
-  status: estimateStatusEnum("status").default("draft").notNull(),
+  status: quoteStatusEnum("status").default("draft").notNull(),
   notes: text("notes"),
   expiresAt: timestamp("expires_at"),
   sentAt: timestamp("sent_at"),
@@ -401,7 +401,7 @@ export const estimates = pgTable("estimates", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertEstimateSchema = createInsertSchema(estimates, {
+export const insertQuoteSchema = createInsertSchema(quotes, {
   eventDate: z.coerce.date().nullable(),
   sentAt: z.coerce.date().nullable(),
   expiresAt: z.coerce.date().nullable(),
@@ -420,10 +420,10 @@ export const insertEstimateSchema = createInsertSchema(estimates, {
   updatedAt: true
 });
 
-// Tier 3: Estimate Versions — snapshot of each proposal revision
-export const estimateVersions = pgTable("estimate_versions", {
+// Tier 3: Quote Versions — snapshot of each proposal revision
+export const quoteVersions = pgTable("quote_versions", {
   id: serial("id").primaryKey(),
-  estimateId: integer("estimate_id").references(() => estimates.id, { onDelete: 'cascade' }).notNull(),
+  quoteId: integer("quote_id").references(() => quotes.id, { onDelete: 'cascade' }).notNull(),
   version: integer("version").notNull(), // 1-based
   proposal: jsonb("proposal").notNull(), // Full proposal snapshot
   subtotalCents: integer("subtotal_cents").notNull(),
@@ -434,13 +434,13 @@ export const estimateVersions = pgTable("estimate_versions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertEstimateVersionSchema = createInsertSchema(estimateVersions).omit({
+export const insertQuoteVersionSchema = createInsertSchema(quoteVersions).omit({
   id: true,
   createdAt: true,
 });
 
-export type EstimateVersion = typeof estimateVersions.$inferSelect;
-export type InsertEstimateVersion = z.infer<typeof insertEstimateVersionSchema>;
+export type QuoteVersion = typeof quoteVersions.$inferSelect;
+export type InsertQuoteVersion = z.infer<typeof insertQuoteVersionSchema>;
 
 // Tier 3: Client magic-link tokens for portal access
 export const clientMagicLinks = pgTable("client_magic_links", {
@@ -468,7 +468,7 @@ export const auditLogActionEnum = pgEnum("audit_log_action", [
 
 export const auditLog = pgTable("audit_log", {
   id: serial("id").primaryKey(),
-  entityType: text("entity_type").notNull(), // opportunity, client, estimate, event, quoteRequest
+  entityType: text("entity_type").notNull(), // opportunity, client, quote, event, inquiry
   entityId: integer("entity_id").notNull(),
   action: auditLogActionEnum("action").notNull(),
   userId: integer("user_id").references(() => users.id),
@@ -483,7 +483,7 @@ export type AuditLogEntry = typeof auditLog.$inferSelect;
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
-  estimateId: integer("estimate_id").references(() => estimates.id),
+  quoteId: integer("quote_id").references(() => quotes.id),
   eventDate: timestamp("event_date").notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
@@ -551,7 +551,7 @@ export const tastings = pgTable("tastings", {
   // Optional links — tastings can be booked by new leads with no opportunity yet.
   opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'set null' }),
   clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }),
-  estimateId: integer("estimate_id").references(() => estimates.id, { onDelete: 'set null' }),
+  quoteId: integer("quote_id").references(() => quotes.id, { onDelete: 'set null' }),
 
   // Contact info — duplicated so we can reach them even without a linked opp/client
   firstName: text("first_name"),
@@ -612,7 +612,7 @@ export const contractStatusEnum = pgEnum("contract_status", [
 export const contracts = pgTable("contracts", {
   id: serial("id").primaryKey(),
   eventId: integer("event_id").references(() => events.id, { onDelete: 'set null' }),
-  estimateId: integer("estimate_id").references(() => estimates.id, { onDelete: 'set null' }),
+  quoteId: integer("quote_id").references(() => quotes.id, { onDelete: 'set null' }),
   clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }).notNull(),
   // BoldSign/Dropbox Sign integration fields
   providerDocId: text("provider_doc_id"), // BoldSign documentId
@@ -738,7 +738,7 @@ export const followUpDrafts = pgTable("follow_up_drafts", {
   type: followUpDraftTypeEnum("type").notNull(),
   // Which entity triggered this draft
   opportunityId: integer("opportunity_id").references(() => opportunities.id, { onDelete: 'cascade' }),
-  estimateId: integer("estimate_id").references(() => estimates.id, { onDelete: 'cascade' }),
+  quoteId: integer("quote_id").references(() => quotes.id, { onDelete: 'cascade' }),
   // Email content (editable by admin before send)
   recipientEmail: text("recipient_email").notNull(),
   recipientName: text("recipient_name"),
@@ -802,8 +802,8 @@ export type InsertMenu = z.infer<typeof insertMenuSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 
-export type Estimate = typeof estimates.$inferSelect;
-export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
@@ -1216,11 +1216,11 @@ export type PromoCode = typeof promoCodes.$inferSelect;
 export type InsertPromoCode = z.infer<typeof insertPromoCodeSchema>;
 
 // --- Quote Request Status Enum ---
-export const quoteRequestStatusEnum = pgEnum("quote_request_status", [
+export const inquiryStatusEnum = pgEnum("inquiry_status", [
   "draft",        // Customer started but hasn't submitted
   "submitted",    // Customer submitted the form
   "reviewing",    // Staff is reviewing
-  "quoted",       // Estimate has been generated
+  "quoted",       // Quote has been generated
   "converted",    // Converted to opportunity/booking
   "disqualified", // Not a real fit — out of area, spam, wrong date, ghosted. Captures reason separately.
   "expired",      // Quote expired without action
@@ -1247,7 +1247,7 @@ export const serviceStyleEnum = pgEnum("service_style", [
   "full_service",
 ]);
 
-// --- Structured JSONB types for quote_requests ---
+// --- Structured JSONB types for inquiries ---
 
 export interface QuoteAddress {
   street?: string;
@@ -1320,18 +1320,18 @@ export interface QuoteAiAnalysis {
   suggestedUpsells?: Array<{ item: string; reason: string; estimatedValue: number }>;
   suggestedAlternatives?: Array<{ original: string; suggestion: string; reason: string }>;
   pricingConfidence?: number;          // 0-1 confidence in the auto-calculated price
-  marginEstimate?: number;             // estimated margin percentage
-  similarPastEvents?: number[];        // IDs of similar past quote_requests for reference
+  marginQuote?: number;             // estimated margin percentage
+  similarPastEvents?: number[];        // IDs of similar past inquiries for reference
   autoGeneratedNotes?: string;         // AI summary for the sales team
   analyzedAt?: string;                 // ISO timestamp of when AI analysis ran
 }
 
 // --- Quote Requests ---
-export const quoteRequests = pgTable("quote_requests", {
+export const inquiries = pgTable("inquiries", {
   id: serial("id").primaryKey(),
 
   // Status & Workflow
-  status: quoteRequestStatusEnum("status").default("draft").notNull(),
+  status: inquiryStatusEnum("status").default("draft").notNull(),
 
   // Source & Attribution
   source: text("source"),                        // website, wedding_wire, the_knot, zola, google, referral, etc.
@@ -1426,7 +1426,7 @@ export const quoteRequests = pgTable("quote_requests", {
 
   // Links to other entities (set when converted)
   opportunityId: integer("opportunity_id").references(() => opportunities.id),
-  estimateId: integer("estimate_id").references(() => estimates.id),
+  quoteId: integer("quote_id").references(() => quotes.id),
 
   // Timestamps
   submittedAt: timestamp("submitted_at"),
@@ -1435,7 +1435,7 @@ export const quoteRequests = pgTable("quote_requests", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertQuoteRequestSchema = createInsertSchema(quoteRequests, {
+export const insertInquirySchema = createInsertSchema(inquiries, {
   eventDate: z.coerce.date().nullable().optional(),
   guestCount: z.coerce.number().int().positive(),
   discountPercent: z.coerce.number().min(0).max(100).optional(),
@@ -1452,7 +1452,7 @@ export const insertQuoteRequestSchema = createInsertSchema(quoteRequests, {
   submittedAt: true,
   convertedAt: true,
   opportunityId: true,
-  estimateId: true,
+  quoteId: true,
   aiAnalysis: true,
   estimatedPerPersonCents: true,
   estimatedSubtotalCents: true,
@@ -1460,13 +1460,13 @@ export const insertQuoteRequestSchema = createInsertSchema(quoteRequests, {
   estimatedTaxCents: true,
 });
 
-export type QuoteRequest = typeof quoteRequests.$inferSelect;
-export type InsertQuoteRequest = z.infer<typeof insertQuoteRequestSchema>;
+export type Inquiry = typeof inquiries.$inferSelect;
+export type InsertInquiry = z.infer<typeof insertInquirySchema>;
 
 // Define the relationships between tables
 export const userRelations = relations(users, ({ many }) => ({
   opportunities: many(opportunities, { relationName: 'assignedOpportunities' }),
-  estimates: many(estimates),
+  quotes: many(quotes),
   rawLeads: many(rawLeads, { relationName: 'assignedRawLeads' }),
 }));
 
@@ -1500,33 +1500,33 @@ export const clientRelations = relations(clients, ({ one, many }) => ({
     fields: [clients.opportunityId],
     references: [opportunities.id]
   }),
-  estimates: many(estimates),
+  quotes: many(quotes),
   events: many(events),
 }));
 
-export const estimateRelations = relations(estimates, ({ one, many }) => ({
+export const quoteRelations = relations(quotes, ({ one, many }) => ({
   client: one(clients, {
-    fields: [estimates.clientId],
+    fields: [quotes.clientId],
     references: [clients.id]
   }),
   createdBy: one(users, {
-    fields: [estimates.createdBy],
+    fields: [quotes.createdBy],
     references: [users.id]
   }),
   menu: one(menus, {
-    fields: [estimates.menuId],
+    fields: [quotes.menuId],
     references: [menus.id]
   }),
-  versions: many(estimateVersions),
+  versions: many(quoteVersions),
 }));
 
-export const estimateVersionRelations = relations(estimateVersions, ({ one }) => ({
-  estimate: one(estimates, {
-    fields: [estimateVersions.estimateId],
-    references: [estimates.id]
+export const quoteVersionRelations = relations(quoteVersions, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [quoteVersions.quoteId],
+    references: [quotes.id]
   }),
   author: one(users, {
-    fields: [estimateVersions.changedBy],
+    fields: [quoteVersions.changedBy],
     references: [users.id]
   }),
 }));
@@ -1536,9 +1536,9 @@ export const eventRelations = relations(events, ({ one, many }) => ({
     fields: [events.clientId],
     references: [clients.id]
   }),
-  estimate: one(estimates, {
-    fields: [events.estimateId],
-    references: [estimates.id]
+  quote: one(quotes, {
+    fields: [events.quoteId],
+    references: [quotes.id]
   }),
   menu: one(menus, {
     fields: [events.menuId],
@@ -1588,7 +1588,7 @@ export const rawLeadRelations = relations(rawLeads, ({ one, many }) => ({
     references: [users.id],
     relationName: 'assignedRawLeads'
   }),
-  promotedQuoteRequests: many(quoteRequests, { relationName: 'promotedFromRawLead' }),
+  promotedInquiries: many(inquiries, { relationName: 'promotedFromRawLead' }),
 }));
 
 export const followUpDraftRelations = relations(followUpDrafts, ({ one }) => ({
@@ -1597,9 +1597,9 @@ export const followUpDraftRelations = relations(followUpDrafts, ({ one }) => ({
     references: [opportunities.id],
     relationName: 'opportunityFollowUps'
   }),
-  estimate: one(estimates, {
-    fields: [followUpDrafts.estimateId],
-    references: [estimates.id],
+  quote: one(quotes, {
+    fields: [followUpDrafts.quoteId],
+    references: [quotes.id],
   }),
   reviewer: one(users, {
     fields: [followUpDrafts.reviewedBy],
@@ -1649,18 +1649,18 @@ export type ProcessedEmail = typeof processedEmails.$inferSelect;
 export type InsertProcessedEmail = z.infer<typeof insertProcessedEmailSchema>;
 
 // Quote Request System Relations
-export const quoteRequestRelations = relations(quoteRequests, ({ one }) => ({
-  venue: one(venues, { fields: [quoteRequests.venueId], references: [venues.id] }),
-  promoCode: one(promoCodes, { fields: [quoteRequests.promoCodeId], references: [promoCodes.id] }),
-  opportunity: one(opportunities, { fields: [quoteRequests.opportunityId], references: [opportunities.id] }),
-  estimate: one(estimates, { fields: [quoteRequests.estimateId], references: [estimates.id] }),
+export const inquiryRelations = relations(inquiries, ({ one }) => ({
+  venue: one(venues, { fields: [inquiries.venueId], references: [venues.id] }),
+  promoCode: one(promoCodes, { fields: [inquiries.promoCodeId], references: [promoCodes.id] }),
+  opportunity: one(opportunities, { fields: [inquiries.opportunityId], references: [opportunities.id] }),
+  quote: one(quotes, { fields: [inquiries.quoteId], references: [quotes.id] }),
   rawLead: one(rawLeads, {
-    fields: [quoteRequests.rawLeadId],
+    fields: [inquiries.rawLeadId],
     references: [rawLeads.id],
     relationName: 'promotedFromRawLead',
   }),
 }));
 
 export const venueRelations = relations(venues, ({ many }) => ({
-  quoteRequests: many(quoteRequests),
+  inquiries: many(inquiries),
 }));

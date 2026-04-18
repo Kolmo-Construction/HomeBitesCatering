@@ -99,9 +99,9 @@ export default function UpcomingEventsList() {
         ) : (
           <div className="text-center py-6 text-neutral-500">
             <p>No upcoming events</p>
-            <Link href="/estimates">
+            <Link href="/quotes">
               <a className="text-primary-purple hover:underline text-sm mt-2 inline-block">
-                Create an estimate to book an event
+                Create an quote to book an event
               </a>
             </Link>
           </div>

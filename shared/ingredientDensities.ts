@@ -6,7 +6,7 @@
 //
 // Densities come from standard culinary references (USDA, King Arthur Baking,
 // and Cook's Illustrated). They are approximations — packing and moisture vary
-// — but are accurate enough for shopping-list rollups and cost estimates.
+// — but are accurate enough for shopping-list rollups and cost quotes.
 
 import { convertUnit, normalizeUnit } from "./unitConversion";
 

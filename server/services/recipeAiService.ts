@@ -378,7 +378,7 @@ function processDraft(
     if (!match) {
       unmatchedIngredients.push(comp.ingredientName);
     } else {
-      // Rough cost estimate (simple version — full conversion happens server-side on save)
+      // Rough cost quote (simple version — full conversion happens server-side on save)
       const price = parseFloat(match.purchasePrice) || 0;
       const purchaseQty = parseFloat(match.purchaseQuantity) || 1;
       const recipeQty = parseFloat(comp.quantity) || 0;
@@ -386,7 +386,7 @@ function processDraft(
       if (match.purchaseUnit.toLowerCase() === (comp.unit || "").toLowerCase()) {
         totalCostCents += Math.round((price / purchaseQty) * recipeQty * 100);
       } else {
-        // Fall back to proportional estimate
+        // Fall back to proportional quote
         totalCostCents += Math.round((price / purchaseQty) * recipeQty * 100);
       }
     }

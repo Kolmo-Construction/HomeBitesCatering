@@ -2,9 +2,9 @@
 // proposal. Used in two places:
 //
 //   1. /quote/:token (public, token-keyed) via PublicQuote.tsx — mode="public"
-//   2. /estimates/:id/view (admin) via AdminEstimatePreview.tsx — mode="preview"
+//   2. /quotes/:id/view (admin) via AdminQuotePreview.tsx — mode="preview"
 //
-// Both paths feed the same Proposal blob from estimate.proposal so the admin
+// Both paths feed the same Proposal blob from quote.proposal so the admin
 // sees pixel-identical output to what the customer will see.
 
 import { useState } from "react";
@@ -49,7 +49,7 @@ const DECLINE_OPTIONS: { value: DeclineCategory; label: string; blurb: string }[
 
 export interface QuoteProposalViewProps {
   proposal: Proposal;
-  estimateStatus: "draft" | "sent" | "viewed" | "accepted" | "declined";
+  quoteStatus: "draft" | "sent" | "viewed" | "accepted" | "declined";
   mode: QuoteViewMode;
 
   // Public mode — accept/decline handlers. The component owns the decline
@@ -256,7 +256,7 @@ function sortCategories(cats: string[]): string[] {
 
 export default function QuoteProposalView({
   proposal,
-  estimateStatus,
+  quoteStatus,
   mode,
   onAccept,
   onDecline,
@@ -283,9 +283,9 @@ export default function QuoteProposalView({
   const [activeBookingUrl, setActiveBookingUrl] = useState<string | null>(resolvedBookingUrl);
 
   const effectiveStatus =
-    acceptFlowState === "accepted" || estimateStatus === "accepted"
+    acceptFlowState === "accepted" || quoteStatus === "accepted"
       ? "accepted"
-      : acceptFlowState === "declined" || estimateStatus === "declined"
+      : acceptFlowState === "declined" || quoteStatus === "declined"
       ? "declined"
       : "pending";
 

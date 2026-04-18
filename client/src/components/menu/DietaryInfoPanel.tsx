@@ -63,8 +63,8 @@ const DietaryInfoPanel: React.FC<DietaryInfoPanelProps> = ({ selectedItems }) =>
     )
   ];
 
-  // Calculate nutritional estimates
-  const nutritionalEstimate = selectedItems.reduce((acc, item) => {
+  // Calculate nutritional quotes
+  const nutritionalQuote = selectedItems.reduce((acc, item) => {
     const nutrition = item.nutritionalHighlights || {};
     
     if (nutrition.calories) {
@@ -141,7 +141,7 @@ const DietaryInfoPanel: React.FC<DietaryInfoPanelProps> = ({ selectedItems }) =>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center py-8">
-            Select menu items to see dietary information and nutritional estimates
+            Select menu items to see dietary information and nutritional quotes
           </p>
         </CardContent>
       </Card>
@@ -246,55 +246,55 @@ const DietaryInfoPanel: React.FC<DietaryInfoPanelProps> = ({ selectedItems }) =>
           </div>
         )}
 
-        {/* Nutritional Estimates */}
+        {/* Nutritional Quotes */}
         <div className="space-y-3">
           <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
             Estimated Nutritional Information
           </h4>
           <div className="grid grid-cols-2 gap-4">
-            {nutritionalEstimate.calories.max > 0 && (
+            {nutritionalQuote.calories.max > 0 && (
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-rose-50 to-pink-50 rounded-lg border">
                 <Zap className="h-5 w-5 text-rose-500" />
                 <div>
                   <p className="text-sm font-medium">Calories</p>
                   <p className="text-lg font-bold text-rose-600">
-                    {nutritionalEstimate.calories.min}-{nutritionalEstimate.calories.max}
+                    {nutritionalQuote.calories.min}-{nutritionalQuote.calories.max}
                   </p>
                 </div>
               </div>
             )}
             
-            {nutritionalEstimate.protein.max > 0 && (
+            {nutritionalQuote.protein.max > 0 && (
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border">
                 <Scale className="h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-sm font-medium">Protein</p>
                   <p className="text-lg font-bold text-blue-600">
-                    {nutritionalEstimate.protein.min}-{nutritionalEstimate.protein.max}g
+                    {nutritionalQuote.protein.min}-{nutritionalQuote.protein.max}g
                   </p>
                 </div>
               </div>
             )}
             
-            {nutritionalEstimate.fat.max > 0 && (
+            {nutritionalQuote.fat.max > 0 && (
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border">
                 <Utensils className="h-5 w-5 text-amber-500" />
                 <div>
                   <p className="text-sm font-medium">Fat</p>
                   <p className="text-lg font-bold text-amber-600">
-                    {nutritionalEstimate.fat.min}-{nutritionalEstimate.fat.max}g
+                    {nutritionalQuote.fat.min}-{nutritionalQuote.fat.max}g
                   </p>
                 </div>
               </div>
             )}
             
-            {nutritionalEstimate.carbs.max > 0 && (
+            {nutritionalQuote.carbs.max > 0 && (
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg border">
                 <Wheat className="h-5 w-5 text-emerald-500" />
                 <div>
                   <p className="text-sm font-medium">Carbs</p>
                   <p className="text-lg font-bold text-emerald-600">
-                    {nutritionalEstimate.carbs.min}-{nutritionalEstimate.carbs.max}g
+                    {nutritionalQuote.carbs.min}-{nutritionalQuote.carbs.max}g
                   </p>
                 </div>
               </div>

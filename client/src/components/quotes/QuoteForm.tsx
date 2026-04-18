@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertEstimateSchema, type Estimate as EstimateType } from "@shared/schema";
+import { insertQuoteSchema, type Quote as QuoteType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useCanViewFinancials } from "@/hooks/usePermissions";
 
@@ -41,20 +41,20 @@ interface CustomItem {
   price: number; // Stored in cents
 }
 
-// Extend the estimate schema for form validation.
+// Extend the quote schema for form validation.
 // Note: 'items' and 'additionalServices' are jsonb in the DB.
 // For this form, 'items' will be managed by the `customItems` state and stringified before API submission.
-// `insertEstimateSchema` already defines fields like `subtotal`, `tax`, `total` as numbers (cents).
-const formSchema = insertEstimateSchema.extend({
+// `insertQuoteSchema` already defines fields like `subtotal`, `tax`, `total` as numbers (cents).
+const formSchema = insertQuoteSchema.extend({
   clientId: z.number({ required_error: "Client is required." }).min(1, "Client is required"),
   eventType: z.string({ required_error: "Event type is required." }).min(1, "Event type is required"),
   guestCount: z.coerce.number().int().positive("Guest count must be positive").optional().nullable(),
   venue: z.string().optional().nullable(),
   eventDate: z.date().optional().nullable(),
-  // subtotal, tax, total are part of insertEstimateSchema, ensure they are numbers (cents)
+  // subtotal, tax, total are part of insertQuoteSchema, ensure they are numbers (cents)
   notes: z.string().optional().nullable(),
   zipCode: z.string().optional().nullable(),
-  // `items` and `additionalServices` from insertEstimateSchema are z.any() or similar for jsonb.
+  // `items` and `additionalServices` from insertQuoteSchema are z.any() or similar for jsonb.
   // We don't need them directly in the form's Zod schema if managed by separate state.
   // However, if they are part of the Zod schema for validation (e.g. as z.string() for JSON),
   // ensure they are handled correctly. For this implementation, we'll omit them from direct
@@ -66,13 +66,13 @@ const formSchema = insertEstimateSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface EstimateFormProps {
-  estimate?: EstimateType; // This is the raw estimate data from the API
+interface QuoteFormProps {
+  quote?: QuoteType; // This is the raw quote data from the API
   isEditing?: boolean;
 }
 
-export default function EstimateForm({ estimate, isEditing = false }: EstimateFormProps) {
-  console.log("EstimateForm received props:", { estimate, isEditing });
+export default function QuoteForm({ quote, isEditing = false }: QuoteFormProps) {
+  console.log("QuoteForm received props:", { quote, isEditing });
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -109,8 +109,8 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     enabled: !!selectedMenuId,
   });
 
-  // Function to safely parse items from the estimate prop
-  const parseEstimateItems = useCallback((itemsData: any): CustomItem[] => {
+  // Function to safely parse items from the quote prop
+  const parseQuoteItems = useCallback((itemsData: any): CustomItem[] => {
     if (!itemsData) return [];
     if (typeof itemsData === 'string') {
       try {
@@ -118,41 +118,41 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
         const parsed = JSON.parse(itemsData);
         return Array.isArray(parsed) ? parsed.map(item => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 })) : [];
       } catch (e) {
-        console.error("Error parsing estimate.items JSON string:", e, "Value was:", itemsData);
+        console.error("Error parsing quote.items JSON string:", e, "Value was:", itemsData);
         return [];
       }
     } else if (Array.isArray(itemsData)) {
       return itemsData.map(item => ({...item, price: Number(item.price) || 0, quantity: Number(item.quantity) || 1 }));
     }
-    console.warn("estimate.items was neither a string nor an array:", itemsData);
+    console.warn("quote.items was neither a string nor an array:", itemsData);
     return [];
   }, []);
 
 
   // Memoized default values function
   const getFormDefaultValues = useCallback((): FormValues => {
-    if (isEditing && estimate) {
-      console.log("EstimateForm - getFormDefaultValues - Populating for editing:", estimate);
+    if (isEditing && quote) {
+      console.log("QuoteForm - getFormDefaultValues - Populating for editing:", quote);
       return {
-        clientId: Number(estimate.clientId) || 0,
-        eventType: estimate.eventType || "",
-        guestCount: estimate.guestCount != null ? Number(estimate.guestCount) : null,
-        venue: estimate.venue || "",
-        eventDate: estimate.eventDate ? new Date(estimate.eventDate) : null,
-        menuId: estimate.menuId != null ? Number(estimate.menuId) : null,
-        subtotal: Number(estimate.subtotal) || 0,
-        tax: Number(estimate.tax) || 0,
-        total: Number(estimate.total) || 0,
-        notes: estimate.notes || "",
-        status: estimate.status || "draft",
-        zipCode: estimate.zipCode || "",
-        createdBy: estimate.createdBy != null ? Number(estimate.createdBy) : undefined,
+        clientId: Number(quote.clientId) || 0,
+        eventType: quote.eventType || "",
+        guestCount: quote.guestCount != null ? Number(quote.guestCount) : null,
+        venue: quote.venue || "",
+        eventDate: quote.eventDate ? new Date(quote.eventDate) : null,
+        menuId: quote.menuId != null ? Number(quote.menuId) : null,
+        subtotal: Number(quote.subtotal) || 0,
+        tax: Number(quote.tax) || 0,
+        total: Number(quote.total) || 0,
+        notes: quote.notes || "",
+        status: quote.status || "draft",
+        zipCode: quote.zipCode || "",
+        createdBy: quote.createdBy != null ? Number(quote.createdBy) : undefined,
         // Dates from schema
-        sentAt: estimate.sentAt ? new Date(estimate.sentAt) : null,
-        expiresAt: estimate.expiresAt ? new Date(estimate.expiresAt) : null,
-        viewedAt: estimate.viewedAt ? new Date(estimate.viewedAt) : null,
-        acceptedAt: estimate.acceptedAt ? new Date(estimate.acceptedAt) : null,
-        declinedAt: estimate.declinedAt ? new Date(estimate.declinedAt) : null,
+        sentAt: quote.sentAt ? new Date(quote.sentAt) : null,
+        expiresAt: quote.expiresAt ? new Date(quote.expiresAt) : null,
+        viewedAt: quote.viewedAt ? new Date(quote.viewedAt) : null,
+        acceptedAt: quote.acceptedAt ? new Date(quote.acceptedAt) : null,
+        declinedAt: quote.declinedAt ? new Date(quote.declinedAt) : null,
       };
     }
     return { // Defaults for a new form
@@ -177,7 +177,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       acceptedAt: null,
       declinedAt: null,
     };
-  }, [estimate, isEditing]);
+  }, [quote, isEditing]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -185,19 +185,19 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
     mode: "onChange",
   });
 
-  // Effect to initialize/reset form and local states when in edit mode and estimate data is available
+  // Effect to initialize/reset form and local states when in edit mode and quote data is available
   useEffect(() => {
-    if (isEditing && estimate) {
-      console.log("EstimateForm: useEffect resetting form with estimate:", estimate);
+    if (isEditing && quote) {
+      console.log("QuoteForm: useEffect resetting form with quote:", quote);
       form.reset(getFormDefaultValues());
 
-      setCustomItems(parseEstimateItems(estimate.items));
-      setSelectedMenuId(estimate.menuId != null ? Number(estimate.menuId) : null);
+      setCustomItems(parseQuoteItems(quote.items));
+      setSelectedMenuId(quote.menuId != null ? Number(quote.menuId) : null);
       
       // Set venue address fields
-      setVenueAddress(estimate.venueAddress || "");
-      setVenueCity(estimate.venueCity || "");
-      setVenueZip(estimate.venueZip || "");
+      setVenueAddress(quote.venueAddress || "");
+      setVenueCity(quote.venueCity || "");
+      setVenueZip(quote.venueZip || "");
       // Financials are set by the calculation useEffect
     } else if (!isEditing) {
       // Reset for new form if needed (e.g., navigating from edit to new)
@@ -208,7 +208,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
       setVenueCity("");
       setVenueZip("");
     }
-  }, [estimate, isEditing, form.reset, getFormDefaultValues, parseEstimateItems]);
+  }, [quote, isEditing, form.reset, getFormDefaultValues, parseQuoteItems]);
 
 
   // Price calculation effect
@@ -281,7 +281,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   }, [selectedMenu, customItems, form, selectedMenuId]); // Added form to dependencies for getValues
 
 
-  // Mutation for creating/updating estimate
+  // Mutation for creating/updating quote
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const itemsJson = JSON.stringify(customItems.map(item => ({
@@ -313,17 +313,17 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
         // createdBy: should be handled by backend or auth context
       };
 
-      console.log('Submitting payload for estimate:', payload);
-      if (isEditing && estimate) {
-        const res = await apiRequest("PATCH", `/api/estimates/${estimate.id}`, payload);
+      console.log('Submitting payload for quote:', payload);
+      if (isEditing && quote) {
+        const res = await apiRequest("PATCH", `/api/quotes/${quote.id}`, payload);
         return res.json();
       } else {
-        const res = await apiRequest("POST", "/api/estimates", payload);
+        const res = await apiRequest("POST", "/api/quotes", payload);
         return res.json();
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       if (data.clientPortalUrl) {
         setClientPortalUrl(data.clientPortalUrl);
         setShowPortalLink(true);
@@ -339,7 +339,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
             : "The new quote has been created successfully."
         });
         if (!data.clientPortalUrl) { // Only navigate if not showing portal link
-            navigate("/estimates");
+            navigate("/quotes");
         }
       }
     },
@@ -386,7 +386,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   const onSubmit = (values: FormValues) => {
     console.log("Form values at onSubmit:", values);
     // The mutation function now handles date stringification and inclusion of calculated financials
-    // Ensure status is correctly passed, especially for new estimates
+    // Ensure status is correctly passed, especially for new quotes
     const submissionValues = {
         ...values,
         status: form.getValues("status") || "draft" // Ensure status is always set
@@ -395,7 +395,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
   };
 
   // Handler for "Save & Send"
-  const handleSendEstimate = () => {
+  const handleSendQuote = () => {
     form.setValue("status", "sent");
     form.setValue("sentAt", new Date()); // Set sentAt when sending
     form.handleSubmit(onSubmit)(); // Trigger the main submit handler
@@ -769,7 +769,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Additional notes for the estimate (e.g., dietary restrictions, special requests)"
+                      placeholder="Additional notes for the quote (e.g., dietary restrictions, special requests)"
                       className="resize-none" 
                       rows={3}
                       {...field} 
@@ -814,7 +814,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
 
             {/* Action Buttons */}
             <CardFooter className="px-0 pt-4 flex justify-between">
-              <Button type="button" variant="outline" onClick={() => navigate("/estimates")}>
+              <Button type="button" variant="outline" onClick={() => navigate("/quotes")}>
                 Cancel
               </Button>
               <div className="flex space-x-2">
@@ -825,7 +825,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                   <Button 
                     type="button" 
                     className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90"
-                    onClick={handleSendEstimate}
+                    onClick={handleSendQuote}
                     disabled={mutation.isPending || (mutation.isSuccess && showPortalLink)}
                   >
                     {mutation.isPending && form.getValues("status") === "sent" ? "Sending..." : (isEditing ? "Update & Send" : "Save & Send")}
@@ -863,7 +863,7 @@ export default function EstimateForm({ estimate, isEditing = false }: EstimateFo
                 <Button variant="outline" size="sm" onClick={() => window.open(clientPortalUrl, '_blank')}>
                   Preview Portal
                 </Button>
-                <Button size="sm" onClick={() => navigate("/estimates")}>
+                <Button size="sm" onClick={() => navigate("/quotes")}>
                   Back to Quotes
                 </Button>
               </div>

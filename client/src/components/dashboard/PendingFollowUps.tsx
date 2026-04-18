@@ -22,7 +22,7 @@ interface FollowUpDraft {
   id: number;
   type: string;
   opportunityId: number | null;
-  estimateId: number | null;
+  quoteId: number | null;
   recipientEmail: string;
   recipientName: string | null;
   subject: string;

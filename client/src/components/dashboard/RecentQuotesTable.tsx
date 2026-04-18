@@ -2,17 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import BadgeStatus from "@/components/ui/badge-status";
-import { Estimate } from "@shared/schema";
+import { Quote } from "@shared/schema";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { EyeIcon, PenIcon } from "lucide-react";
 import { Link } from "wouter";
 
-export default function RecentEstimatesTable() {
-  const { data: estimates = [], isLoading } = useQuery({
-    queryKey: ["/api/estimates"],
+export default function RecentQuotesTable() {
+  const { data: quotes = [], isLoading } = useQuery({
+    queryKey: ["/api/quotes"],
     queryFn: async () => {
-      const res = await fetch('/api/estimates');
-      if (!res.ok) throw new Error('Failed to fetch estimates');
+      const res = await fetch('/api/quotes');
+      if (!res.ok) throw new Error('Failed to fetch quotes');
       return res.json();
     }
   });
@@ -26,8 +26,8 @@ export default function RecentEstimatesTable() {
     }
   });
 
-  // Get only the most recent 3 estimates
-  const recentEstimates = [...estimates].sort((a, b) => {
+  // Get only the most recent 3 quotes
+  const recentQuotes = [...quotes].sort((a, b) => {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   }).slice(0, 3);
 
@@ -37,7 +37,7 @@ export default function RecentEstimatesTable() {
     return client ? `${client.firstName} ${client.lastName}` : "Unknown Client";
   };
 
-  const columns: ColumnDef<Estimate>[] = [
+  const columns: ColumnDef<Quote>[] = [
     {
       accessorKey: "client",
       header: "Client",
@@ -75,12 +75,12 @@ export default function RecentEstimatesTable() {
       header: "Action",
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
-          <Link to={`/estimates/${row.original.id}/view`}>
+          <Link to={`/quotes/${row.original.id}/view`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <EyeIcon className="h-4 w-4" />
             </div>
           </Link>
-          <Link to={`/estimates/${row.original.id}/edit`}>
+          <Link to={`/quotes/${row.original.id}/edit`}>
             <div className="text-primary-purple hover:text-primary-blue transition cursor-pointer">
               <PenIcon className="h-4 w-4" />
             </div>
@@ -93,17 +93,17 @@ export default function RecentEstimatesTable() {
   return (
     <div className="bg-white p-5 rounded-lg shadow col-span-1 lg:col-span-2">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="font-poppins text-lg font-semibold text-neutral-900">Recent Estimates</h2>
-        <Link href="/estimates">
+        <h2 className="font-poppins text-lg font-semibold text-neutral-900">Recent Quotes</h2>
+        <Link href="/quotes">
           <div className="text-sm text-primary-purple hover:underline cursor-pointer">View All</div>
         </Link>
       </div>
       
       <DataTable 
         columns={columns} 
-        data={recentEstimates} 
+        data={recentQuotes} 
         loading={isLoading} 
-        emptyMessage="No estimates found. Create your first estimate to get started."
+        emptyMessage="No quotes found. Create your first quote to get started."
       />
     </div>
   );

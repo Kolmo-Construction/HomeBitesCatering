@@ -9,7 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Opportunities from "@/pages/opportunities";
 import Pipeline from "@/pages/Pipeline";
 import Clients from "@/pages/clients";
-import Estimates from "@/pages/estimates";
+import Quotes from "@/pages/quotes";
 import Menus from "@/pages/menus";
 import BaseIngredients from "@/pages/base-ingredients";
 import StagingBaseIngredients from "@/pages/StagingBaseIngredients";
@@ -39,10 +39,10 @@ import ClientPortal from "@/pages/ClientPortal";
 import DietaryDemo from "@/pages/DietaryDemo";
 
 // Import the public quote request form
-import RequestQuote from "@/pages/RequestQuote";
+import Inquire from "@/pages/Inquire";
 
 // Import the admin Quote Requests inbox
-import QuoteRequests from "@/pages/QuoteRequests";
+import Inquiries from "@/pages/Inquiries";
 
 // Import the Event Command Center (chef one-stop-shop)
 import Events from "@/pages/Events";
@@ -131,14 +131,14 @@ function AppContent() {
   const isWeddingInquiryPage = location === "/wedding-inquiry";
   const isPublicInquiryPage = location === "/event-inquiry";
   // You can add more conditions here for other public forms like /corporate-inquiry, /event-selection etc.
-  const isRequestQuotePage = location === "/request-quote";
+  const isInquirePage = location === "/inquire";
   const isPublicQuotePage = location.startsWith("/quote/");
   const isPublicEventPage = location.startsWith("/event/");
   const isFindMyEventPage = location === "/find-my-event";
   const isClientPortalPage = location.startsWith("/my-events");
   const isDeclineFeedbackPage = location.startsWith("/decline-feedback/");
   const isTastingPage = location === "/tasting" || location.startsWith("/tasting/");
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isRequestQuotePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage || isDeclineFeedbackPage || isTastingPage;
+  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isInquirePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage || isDeclineFeedbackPage || isTastingPage;
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
@@ -148,7 +148,7 @@ function AppContent() {
         <Switch>
           {/* Tier 3: Client portal (magic-link auth) */}
           <Route path="/my-events" component={ClientPortal} />
-          <Route path="/request-quote" component={RequestQuote} />
+          <Route path="/inquire" component={Inquire} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/find-my-event" component={FindMyEvent} />
@@ -218,10 +218,10 @@ function AppContent() {
           <Route path="/clients/:id" component={Clients} />
           <Route path="/clients/:id/edit" component={Clients} />
           <Route path="/unmatched" component={UnmatchedInbox} />
-          <Route path="/estimates" component={Estimates} />
-          <Route path="/estimates/new" component={Estimates} />
-          <Route path="/estimates/:id/view" component={Estimates} />
-          <Route path="/estimates/:id/edit" component={Estimates} />
+          <Route path="/quotes" component={Quotes} />
+          <Route path="/quotes/new" component={Quotes} />
+          <Route path="/quotes/:id/view" component={Quotes} />
+          <Route path="/quotes/:id/edit" component={Quotes} />
           <Route path="/base-ingredients" component={BaseIngredients} />
           <Route path="/admin/staging-base-ingredients" component={StagingBaseIngredients} />
           <Route path="/recipes" component={Recipes} />
@@ -236,13 +236,13 @@ function AppContent() {
           <Route path="/raw-leads" component={RawLeadsPage} />
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
-          <Route path="/quote-requests" component={QuoteRequests} />
+          <Route path="/inquiries" component={Inquiries} />
           <Route path="/events" component={Events} />
           <Route path="/events/:id" component={Events} />
           <Route path="/dietary-demo" component={DietaryDemo} />
 
           {/* Public forms accessible when logged in */}
-          <Route path="/request-quote" component={RequestQuote} />
+          <Route path="/inquire" component={Inquire} />
           <Route path="/quote/:token" component={PublicQuote} />
           <Route path="/event/:token" component={PublicEventPage} />
           <Route path="/find-my-event" component={FindMyEvent} />

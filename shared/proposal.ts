@@ -1,4 +1,4 @@
-// Wedding/event proposal payload — stored on estimates.proposal and rendered
+// Wedding/event proposal payload — stored on quotes.proposal and rendered
 // by the public quote page. This is the single source of truth for what the
 // customer sees. Admin edits go here; the public endpoint reads only this.
 

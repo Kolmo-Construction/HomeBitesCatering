@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import ingredientRoutes from "./ingredientRoutes";
-import quoteRoutes from "./quoteRoutes";
+import quoteRoutes, { inquiryRouter } from "./quoteRoutes";
 import {
   getWeddingMenuThemes,
   getMenuItemsByCategory,
@@ -59,8 +59,11 @@ app.use((req, res, next) => {
   // Register ingredient management routes
   app.use('/api/ingredients', ingredientRoutes);
 
-  // Register quote request routes (venues, promo codes, quote requests)
+  // Register quote-related routes (menus, venues, promo codes)
   app.use('/api/quotes', quoteRoutes);
+
+  // Inquiry routes — mounted separately at /api/inquiries
+  app.use('/api/inquiries', inquiryRouter);
   
   // Register menu questionnaire routes for rich menu data integration
   app.get('/api/questionnaire/wedding-menu-themes', getWeddingMenuThemes);

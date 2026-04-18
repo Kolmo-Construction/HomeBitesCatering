@@ -156,7 +156,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
   
   const promoteMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/raw-leads/${leadId}/promote-to-quote-request`, {
+      const response = await fetch(`/api/raw-leads/${leadId}/promote-to-inquiry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -164,19 +164,19 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
         const errorText = await response.text();
         throw new Error(`Failed to promote lead: ${errorText}`);
       }
-      return response.json() as Promise<{ quoteRequest: { id: number }; alreadyExisted?: boolean }>;
+      return response.json() as Promise<{ inquiry: { id: number }; alreadyExisted?: boolean }>;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/raw-leads/${leadId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/raw-leads'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/quotes/quote-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inquiries'] });
       toast({
         title: data.alreadyExisted ? 'Already promoted' : 'Promoted to inquiry',
         description: data.alreadyExisted
-          ? `This lead is already linked to inquiry #${data.quoteRequest.id}.`
-          : `Draft inquiry #${data.quoteRequest.id} created. Fill in menu/guest details to send a quote.`,
+          ? `This lead is already linked to inquiry #${data.inquiry.id}.`
+          : `Draft inquiry #${data.inquiry.id} created. Fill in menu/guest details to send a quote.`,
       });
-      navigate(`/quote-requests?id=${data.quoteRequest.id}`);
+      navigate(`/inquiries?id=${data.inquiry.id}`);
     },
     onError: (error: Error) => {
       toast({
@@ -1124,7 +1124,7 @@ export default function RawLeadDetail({ leadId }: RawLeadDetailProps) {
                 onClick={() => promoteMutation.mutate()}
                 disabled={promoteMutation.isPending}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-                data-testid="button-promote-to-quote-request"
+                data-testid="button-promote-to-inquiry"
               >
                 <SparklesIcon className="h-4 w-4 mr-2" />
                 {promoteMutation.isPending ? 'Promoting…' : 'Promote to Inquiry'}

@@ -31,12 +31,12 @@ export default function ClientList() {
     }
   });
   
-  // Get estimates to show count per client
-  const { data: estimates = [] } = useQuery({
-    queryKey: ["/api/estimates"],
+  // Get quotes to show count per client
+  const { data: quotes = [] } = useQuery({
+    queryKey: ["/api/quotes"],
     queryFn: async () => {
-      const res = await fetch('/api/estimates');
-      if (!res.ok) throw new Error('Failed to fetch estimates');
+      const res = await fetch('/api/quotes');
+      if (!res.ok) throw new Error('Failed to fetch quotes');
       return res.json();
     }
   });
@@ -73,9 +73,9 @@ export default function ClientList() {
     }
   };
 
-  // Count estimates for each client
-  const getEstimateCount = (clientId: number) => {
-    return estimates.filter((estimate: any) => estimate.clientId === clientId).length;
+  // Count quotes for each client
+  const getQuoteCount = (clientId: number) => {
+    return quotes.filter((quote: any) => quote.clientId === clientId).length;
   };
 
   const columns: ColumnDef<Client>[] = [
@@ -111,14 +111,14 @@ export default function ClientList() {
       },
     },
     {
-      accessorKey: "estimates",
-      header: "Estimates",
+      accessorKey: "quotes",
+      header: "Quotes",
       cell: ({ row }) => {
-        const count = getEstimateCount(row.original.id);
+        const count = getQuoteCount(row.original.id);
         if (count === 0) return "—";
         
         return (
-          <Link href={`/estimates?clientId=${row.original.id}`}>
+          <Link href={`/quotes?clientId=${row.original.id}`}>
             <div className="flex items-center text-primary-purple hover:text-primary-blue cursor-pointer">
               <FileIcon className="h-4 w-4 mr-1" />
               <span>{count}</span>

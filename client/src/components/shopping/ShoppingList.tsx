@@ -36,7 +36,7 @@ interface ShoppingListLine {
 }
 
 interface ShoppingListData {
-  quoteRequestId: number;
+  inquiryId: number;
   eventSummary: {
     eventType: string;
     eventDate: string | null;
@@ -102,17 +102,17 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 interface ShoppingListProps {
   /** Quote request ID to generate shopping list from */
-  quoteRequestId?: number;
+  inquiryId?: number;
   /** Event ID — will look up originating quote request */
   eventId?: number;
 }
 
-export default function ShoppingList({ quoteRequestId, eventId }: ShoppingListProps) {
+export default function ShoppingList({ inquiryId, eventId }: ShoppingListProps) {
   const [multiplier, setMultiplier] = useState<number | null>(null);
   const canViewFinancials = useCanViewFinancials();
 
-  const endpoint = quoteRequestId
-    ? `/api/quotes/quote-requests/${quoteRequestId}/shopping-list`
+  const endpoint = inquiryId
+    ? `/api/inquiries/${inquiryId}/shopping-list`
     : eventId
       ? `/api/quotes/events/${eventId}/shopping-list`
       : null;

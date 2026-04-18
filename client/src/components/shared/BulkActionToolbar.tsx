@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface BulkActionToolbarProps {
   selectedIds: number[];
-  entityType: "opportunity" | "estimate" | "client";
+  entityType: "opportunity" | "quote" | "client";
   onClearSelection: () => void;
   invalidateKeys?: string[];
 }
@@ -40,7 +40,7 @@ export default function BulkActionToolbar({
 
   const bulkMutation = useMutation({
     mutationFn: async ({ action }: { action: string }) => {
-      const res = await fetch(`/api/${entityType === "opportunity" ? "opportunities" : entityType === "estimate" ? "estimates" : "clients"}/bulk-action`, {
+      const res = await fetch(`/api/${entityType === "opportunity" ? "opportunities" : entityType === "quote" ? "quotes" : "clients"}/bulk-action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds, action }),

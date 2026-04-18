@@ -5,9 +5,9 @@ import {
   recipeComponents,
   baseIngredients,
   ingredientPackSizes,
-  quoteRequests,
+  inquiries,
   LABOR_RATE_PER_HOUR_CENTS,
-  type QuoteRequest,
+  type Inquiry,
   type MenuCategoryItem,
   type IngredientPackSize,
 } from "@shared/schema";
@@ -59,7 +59,7 @@ export interface ShoppingListLine {
 }
 
 export interface ShoppingListResult {
-  quoteRequestId: number;
+  inquiryId: number;
   eventSummary: {
     eventType: string;
     eventDate: string | null;
@@ -236,15 +236,15 @@ export function planPacks(
  * scales the recipe by guest count, and aggregates all ingredients across
  * all selected items. Groups by ingredient category for shopping convenience.
  */
-export async function calculateShoppingListForQuoteRequest(
-  quoteRequestId: number,
+export async function calculateShoppingListForInquiry(
+  inquiryId: number,
   options: CalculateOptions = {},
 ): Promise<ShoppingListResult | null> {
   // Load the quote request
   const [quote] = await db
     .select()
-    .from(quoteRequests)
-    .where(eq(quoteRequests.id, quoteRequestId));
+    .from(inquiries)
+    .where(eq(inquiries.id, inquiryId));
 
   if (!quote) return null;
 
@@ -255,7 +255,7 @@ export async function calculateShoppingListForQuoteRequest(
  * Core calculation — takes a quote request object and computes the list.
  */
 export async function calculateShoppingList(
-  quote: QuoteRequest,
+  quote: Inquiry,
   options: CalculateOptions = {},
 ): Promise<ShoppingListResult> {
   const guestCount = quote.guestCount || 0;
@@ -335,7 +335,7 @@ export async function calculateShoppingList(
   // If no recipes to resolve, return empty result
   if (recipeRefs.length === 0) {
     return {
-      quoteRequestId: quote.id,
+      inquiryId: quote.id,
       eventSummary: {
         eventType: quote.eventType,
         eventDate: quote.eventDate ? quote.eventDate.toISOString() : null,
@@ -505,7 +505,7 @@ export async function calculateShoppingList(
       }
     }
 
-    // Estimate cost: sum of ingredient costs across all recipe uses
+    // Quote cost: sum of ingredient costs across all recipe uses
     let estimatedCost = 0;
     for (const [unit, qty] of Array.from(acc.quantityByUnit.entries())) {
       try {
@@ -526,7 +526,7 @@ export async function calculateShoppingList(
 
     // If pack sizes are defined for this ingredient, plan out the actual
     // purchase (which packs, how many, at what total cost). When a plan is
-    // computed, its totalPrice overrides the naive per-unit cost estimate —
+    // computed, its totalPrice overrides the naive per-unit cost quote —
     // it's the real out-of-pocket number for the event.
     const packs = packsByIngredient.get(acc.baseIngredientId) || [];
     let packPlan: ShoppingListLine["packPlan"];
@@ -584,7 +584,7 @@ export async function calculateShoppingList(
   const totalFullyLoadedCost = totalEstimatedCost + totalLaborCost;
 
   return {
-    quoteRequestId: quote.id,
+    inquiryId: quote.id,
     eventSummary: {
       eventType: quote.eventType,
       eventDate: quote.eventDate ? quote.eventDate.toISOString() : null,
@@ -611,7 +611,7 @@ export async function calculateShoppingList(
  * Buffets need less per item because guests sample multiple options;
  * plated meals need more precise portioning.
  */
-function inferDefaultMultiplier(quote: QuoteRequest): number {
+function inferDefaultMultiplier(quote: Inquiry): number {
   const selectionCount = ((quote.menuSelections as any[]) || []).length;
 
   switch (quote.serviceType) {

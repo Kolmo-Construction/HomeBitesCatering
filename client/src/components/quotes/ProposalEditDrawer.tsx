@@ -1,7 +1,7 @@
 // ProposalEditDrawer — the admin's customization surface for a proposal.
-// Opens as a side sheet from AdminEstimatePreview. Every field here maps
-// directly onto the Proposal blob stored on estimates.proposal, which is
-// what the customer-facing page renders. Save → PATCH /api/estimates/:id/proposal.
+// Opens as a side sheet from AdminQuotePreview. Every field here maps
+// directly onto the Proposal blob stored on quotes.proposal, which is
+// what the customer-facing page renders. Save → PATCH /api/quotes/:id/proposal.
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -180,7 +180,7 @@ export default function ProposalEditDrawer({
   // ─── Save ────────────────────────────────────────────────────────────────
   const handleSave = () => {
     // Mirror computed totals onto the blob we ship. The server's PATCH handler
-    // also mirrors these onto the estimate row (subtotal/tax/total).
+    // also mirrors these onto the quote row (subtotal/tax/total).
     const next: Proposal = {
       ...draft,
       pricing: {
