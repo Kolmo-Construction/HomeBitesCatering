@@ -2774,12 +2774,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // P1-2: pause drip — client accepted the quote
       await pauseOpportunityDrip(quote.opportunityId, 'quote_accepted');
 
-      // P2-1: auto-create a draft contract so the admin can "Send contract"
-      // without an extra click. Errors are logged but don't block the accept.
-      try {
-        await ensureContractForQuote(quote.id);
-      } catch (contractErr) {
-        console.warn(`[p2-1] failed to auto-create contract for quote ${quote.id}:`, contractErr);
+      // Advance the linked opportunity to "booked" so the pipeline reflects
+      // reality. Without this, the card is stuck in Qualified even though the
+      // deal is won.
+      if (quote.opportunityId) {
+        await db
+          .update(opportunities)
+          .set({
+            status: 'booked' as any,
+            statusChangedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(opportunities.id, quote.opportunityId));
       }
 
       // Graduate the client → customer
@@ -2836,12 +2842,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(events)
         .where(eq(events.quoteId, quote.id));
 
-      // Compose the customer event URL from the request origin
+      // P2-1: auto-create a draft contract so the admin can "Send contract"
+      // without an extra click. Moved AFTER event creation so the contract's
+      // event_id gets populated. Errors don't block the accept.
+      try {
+        await ensureContractForQuote(quote.id);
+      } catch (contractErr) {
+        console.warn(`[p2-1] failed to auto-create contract for quote ${quote.id}:`, contractErr);
+      }
+
+      // Mint a portal magic-link token so the customer can land directly in
+      // /my-events after accepting (Option A). Email magic links still work in
+      // parallel — this just removes the email dependency from the immediate
+      // post-accept flow.
+      const { clientMagicLinks } = await import('@shared/schema');
+      const portalToken = randomBytes(32).toString('base64url');
+      const portalExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48h
+      try {
+        await db.insert(clientMagicLinks).values({
+          clientId: quote.clientId,
+          token: portalToken,
+          expiresAt: portalExpiresAt,
+        } as any);
+      } catch (linkErr) {
+        console.warn(`[accept] failed to mint portal magic link for quote ${quote.id}:`, linkErr);
+      }
+
+      // Compose the customer event URL + portal URL from the request origin
       const host = req.get('host');
       const proto = req.get('x-forwarded-proto') || req.protocol;
       const eventPublicUrl = eventForResponse?.viewToken
         ? `${proto}://${host}/event/${eventForResponse.viewToken}`
         : null;
+      const portalUrl = `${proto}://${host}/my-events?token=${portalToken}`;
 
       // Fire customer + admin notifications. Fire-and-forget so the customer's
       // response isn't delayed by email latency.
@@ -2896,6 +2929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ok: true,
         quote: sanitizeQuoteForPublic(updatedQuote),
         eventPublicUrl,
+        portalUrl,
       });
     } catch (error) {
       console.error('Error accepting public quote:', error);

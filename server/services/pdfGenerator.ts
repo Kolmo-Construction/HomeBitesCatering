@@ -7,6 +7,7 @@
 import PDFDocument from "pdfkit";
 import { getSiteConfig } from "../utils/siteConfig";
 import type { Proposal } from "@shared/proposal";
+import { getEventCopy } from "@shared/eventCopy";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -95,10 +96,20 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     doc.moveDown(1);
 
     // ─── Proposal Title ────────────────────────────────────────────────────
-    const eventLabel = titleCase(proposal.eventType || quote.eventType || "Event");
-    const personName = [proposal.firstName, proposal.lastName].filter(Boolean).join(" ");
-    doc.fontSize(18).font("Helvetica-Bold").fillColor("#111")
-      .text(`Quote for ${personName}'s ${eventLabel}`, { align: "center" });
+    const copy = getEventCopy(proposal.eventType || quote.eventType);
+    const personContext = {
+      firstName: proposal.firstName,
+      lastName: proposal.lastName,
+      partnerFirstName: proposal.partnerFirstName,
+      partnerLastName: proposal.partnerLastName,
+    };
+    const displayTitle = copy.displayTitle(personContext);
+    // Kicker (e.g., "A Corporate Event Proposal") + title
+    doc.fontSize(10).font("Helvetica").fillColor("#8B7355")
+      .text(copy.proposalKicker.toUpperCase(), { align: "center", characterSpacing: 2 });
+    doc.moveDown(0.3);
+    doc.fontSize(20).font("Helvetica-Bold").fillColor("#111")
+      .text(displayTitle, { align: "center" });
     doc.moveDown(0.5);
 
     // ─── Event Details ─────────────────────────────────────────────────────

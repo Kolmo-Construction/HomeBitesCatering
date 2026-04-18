@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import homebitesLogo from "@assets/homebites-logo.avif";
 import { getEventTheme, applyThemeCSS } from "@/lib/eventThemes";
+import { getEventCopy } from "@shared/eventCopy";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -138,6 +139,23 @@ function formatTimeOfDay(iso: string | null): string {
   });
 }
 
+/**
+ * True when the stored startTime looks like a sentinel the server generates
+ * as a fallback (midnight or "noon local" which becomes 5 AM / 8 PM when
+ * rendered across timezones). Heuristic: UTC hour ∈ {0, 12, 16, 17} AND
+ * minutes = 0. Safe because real event times rarely land on these sentinels.
+ */
+function isDefaultMidnight(iso: string | null): boolean {
+  if (!iso) return true;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return true;
+  const minutes = d.getUTCMinutes();
+  if (minutes !== 0) return false;
+  const hour = d.getUTCHours();
+  // 0 = midnight UTC, 16/17 = noon Pacific in summer/winter, 12 = noon UTC
+  return hour === 0 || hour === 12 || hour === 16 || hour === 17;
+}
+
 function titleCase(s: string | null | undefined): string {
   if (!s) return "";
   return s
@@ -239,11 +257,20 @@ export default function PublicEventPage() {
   const theme = getEventTheme(event.eventType);
   const themeStyles = applyThemeCSS(theme);
 
-  // Build the personalized title
-  const personTitle = buildPersonTitle(client, inquiry);
+  // Build the personalized title + pull event-type copy
+  const copy = getEventCopy(event.eventType);
+  const personTitle = buildPersonTitle(client, inquiry, event.eventType);
   const eventTitle = personTitle
-    ? `${personTitle}'s ${titleCase(event.eventType)}`
+    ? copy.useCoupleTitle
+      ? `${personTitle}'s ${titleCase(event.eventType)}`
+      : personTitle
     : `Your ${titleCase(event.eventType)}`;
+
+  // Use the real meal start time from the inquiry when available; otherwise
+  // skip rendering a time (instead of showing a bogus midnight/noon sentinel
+  // converted to the browser's local timezone).
+  const displayStartTime =
+    inquiry?.mainMealStartTime || (event.startTime && !isDefaultMidnight(event.startTime) ? formatTimeOfDay(event.startTime) : null);
 
   const themeLabel = inquiry?.menuTheme
     ? THEME_NAMES[inquiry.menuTheme] ?? titleCase(inquiry.menuTheme)
@@ -264,7 +291,7 @@ export default function PublicEventPage() {
           {theme.icon}
         </div>
         <p className="italic text-sm mb-2" style={{ color: theme.textSecondary, fontFamily: theme.fontBody }}>
-          A celebration prepared with care
+          {copy.celebrationKicker}
         </p>
         <h1
           className="text-4xl md:text-5xl font-semibold leading-tight"
@@ -274,9 +301,6 @@ export default function PublicEventPage() {
         </h1>
         <p className="text-lg mt-3" style={{ color: theme.textSecondary, fontFamily: theme.fontBody }}>
           {formatDate(event.eventDate)}
-        </p>
-        <p className="mt-1 italic" style={{ color: theme.textSecondary, fontFamily: theme.fontBody }}>
-          We can't wait to cook for you.
         </p>
       </div>
 
@@ -305,10 +329,12 @@ export default function PublicEventPage() {
                 <Users className="h-4 w-4 text-stone-500" />
                 {event.guestCount} guests
               </span>
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-stone-500" />
-                {formatTimeOfDay(event.startTime)}
-              </span>
+              {displayStartTime && (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-stone-500" />
+                  {displayStartTime}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -364,7 +390,7 @@ export default function PublicEventPage() {
         <Card className="mb-6 bg-white/80">
           <CardContent className="py-8 px-6">
             <h3 className="font-serif text-2xl text-center text-stone-900 mb-6">
-              The flow of your day
+              {copy.comingNextLabel}
             </h3>
             <EventTimeline event={event} inquiry={inquiry} />
           </CardContent>
@@ -513,14 +539,18 @@ export default function PublicEventPage() {
 
 function buildPersonTitle(
   client: PublicClient | null,
-  inquiry: PublicInquiry | null
+  inquiry: PublicInquiry | null,
+  eventType: string
 ): string {
   if (!client) return "";
-  const partner = inquiry?.partnerFirstName;
-  if (partner) {
-    return `${client.firstName} & ${partner}`;
-  }
-  return client.firstName;
+  // Delegate to shared event-type copy so wedding/corporate/etc render the
+  // right shape. Never duplicates the same name with an ampersand.
+  return getEventCopy(eventType).displayTitle({
+    firstName: client.firstName,
+    lastName: client.lastName,
+    partnerFirstName: inquiry?.partnerFirstName ?? null,
+    company: client.company,
+  });
 }
 
 function TastingMenu({ inquiry }: { inquiry: PublicInquiry }) {
@@ -725,17 +755,16 @@ function PageShell({
     <div className="min-h-screen bg-gradient-to-b from-amber-50/40 via-stone-50 to-stone-100 pb-12">
       <div className="bg-white/90 backdrop-blur border-b border-stone-200">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <img src={homebitesLogo} alt="Homebites" className="h-10" />
-          <div>
-            <p className="font-serif font-bold text-lg leading-tight">
-              {siteConfig?.businessName || "Homebites Catering"}
+          <img
+            src={homebitesLogo}
+            alt={siteConfig?.businessName || "Homebites Catering"}
+            className="h-10"
+          />
+          {siteConfig?.tagline && (
+            <p className="text-xs text-stone-500 italic font-serif line-clamp-1 hidden sm:block">
+              {siteConfig.tagline}
             </p>
-            {siteConfig?.tagline && (
-              <p className="text-xs text-stone-500 italic font-serif line-clamp-1">
-                {siteConfig.tagline}
-              </p>
-            )}
-          </div>
+          )}
         </div>
       </div>
 

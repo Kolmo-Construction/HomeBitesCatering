@@ -37,6 +37,7 @@ import {
   Quote as QuoteIcon,
 } from "lucide-react";
 import type { Proposal } from "@shared/proposal";
+import { getEventCopy } from "@shared/eventCopy";
 
 // Public-safe site-config slice returned by the quote API.
 export interface QuoteSiteConfig {
@@ -86,6 +87,8 @@ export interface QuoteProposalViewProps {
   onDecline?: (payload: { category: DeclineCategory | null; notes: string }) => void;
   acceptFlowState?: "idle" | "accepting" | "accepted" | "declining" | "declined";
   acceptedEventUrl?: string | null;
+  /** Post-accept portal URL with magic-link token; primary CTA on success. */
+  acceptedPortalUrl?: string | null;
 
   // P0-2: "I need more info" — opens a conversation path. Parent submits the
   // note and returns the Cal.com booking URL, which this component embeds.
@@ -272,12 +275,21 @@ function formatTime(t: string | null | undefined): string {
   return `${h}:${min} ${ampm}`;
 }
 
-function coupleTitle(p: Proposal): string {
-  if (p.partnerFirstName && p.firstName) {
-    return `${p.firstName} & ${p.partnerFirstName}`;
-  }
-  if (p.firstName) return p.firstName;
-  return "there";
+/**
+ * Display title for the customer. Event-type aware: weddings/engagements use
+ * couple framing when both first names are present (and distinct — never
+ * "Pascal & Pascal"); corporate uses company name; everything else falls back
+ * to a solo name. Driven by `getEventCopy(eventType).displayTitle`.
+ */
+function displayTitle(p: Proposal): string {
+  const copy = getEventCopy(p.eventType);
+  return copy.displayTitle({
+    firstName: p.firstName,
+    lastName: p.lastName,
+    partnerFirstName: p.partnerFirstName,
+    partnerLastName: p.partnerLastName,
+    // Proposal doesn't yet carry company; extend if needed
+  });
 }
 
 function groupMenuSelections(
@@ -352,6 +364,7 @@ export default function QuoteProposalView({
   onDecline,
   acceptFlowState = "idle",
   acceptedEventUrl = null,
+  acceptedPortalUrl = null,
   onRequestInfo,
   infoFlowState = "idle",
   infoRequestedAt = null,
@@ -442,10 +455,15 @@ export default function QuoteProposalView({
     if (result?.bookingUrl) setActiveBookingUrl(result.bookingUrl);
   };
 
+  const copy = getEventCopy(proposal.eventType);
+  const title = displayTitle(proposal);
+
   return (
     <PageShell mode={mode}>
       <Helmet>
-        <title>{coupleTitle(proposal)} · Wedding Proposal · Homebites</title>
+        <title>
+          {title} · {copy.proposalKicker} · Homebites
+        </title>
       </Helmet>
 
       {/* ═══════════════ ADMIN PREVIEW BAR ═══════════════ */}
@@ -495,22 +513,30 @@ export default function QuoteProposalView({
         <div className="mb-8 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-8 text-center shadow-sm">
           <CheckCircle2 className="h-14 w-14 text-emerald-600 mx-auto mb-3" />
           <h2 className="font-serif text-3xl font-medium text-emerald-900">
-            We&rsquo;re officially booked!
+            {copy.acceptedHeadline}
           </h2>
           <p className="text-emerald-800 mt-3 max-w-md mx-auto leading-relaxed">
-            Thank you for choosing Homebites to be part of your day. We&rsquo;ll
-            be in touch within 24 hours with the contract and deposit
-            instructions.
+            {copy.acceptedBlurb}
           </p>
-          {acceptedEventUrl && (
-            <a
-              href={acceptedEventUrl}
-              className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-emerald-700 text-white text-sm font-medium rounded-full hover:bg-emerald-800 transition shadow-md"
-            >
-              <Heart className="h-4 w-4 fill-current" />
-              Open your event page
-            </a>
-          )}
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            {acceptedPortalUrl && (
+              <a
+                href={acceptedPortalUrl}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-700 text-white text-sm font-semibold rounded-full hover:bg-emerald-800 transition shadow-md"
+              >
+                Go to your portal
+              </a>
+            )}
+            {acceptedEventUrl && (
+              <a
+                href={acceptedEventUrl}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-emerald-200 text-emerald-800 text-sm font-medium rounded-full hover:bg-emerald-50 transition"
+              >
+                {isWedding && <Heart className="h-3.5 w-3.5 fill-current" />}
+                View celebration page
+              </a>
+            )}
+          </div>
         </div>
       )}
 
@@ -533,21 +559,23 @@ export default function QuoteProposalView({
         <div className="absolute bottom-0 right-0 w-28 h-28 border-b-2 border-r-2 border-[#d4c09a] rounded-br-3xl" />
 
         <div className="relative px-8 py-16 sm:py-20 text-center">
-          {isWedding && (
-            <div className="inline-flex items-center gap-3 text-[#8B7355] text-xs sm:text-sm uppercase tracking-[0.32em] mb-6 font-semibold">
-              <span className="h-px w-10 bg-[#c9b089]" />
+          <div className="inline-flex items-center gap-3 text-[#8B7355] text-xs sm:text-sm uppercase tracking-[0.32em] mb-6 font-semibold">
+            <span className="h-px w-10 bg-[#c9b089]" />
+            {isWedding && (
               <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
-              A Wedding Proposal
+            )}
+            {copy.proposalKicker}
+            {isWedding && (
               <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
-              <span className="h-px w-10 bg-[#c9b089]" />
-            </div>
-          )}
+            )}
+            <span className="h-px w-10 bg-[#c9b089]" />
+          </div>
           <h1
             className="font-serif text-6xl sm:text-7xl md:text-8xl text-stone-900 leading-[1.02] tracking-tight"
             style={{ fontOpticalSizing: "auto", fontVariationSettings: "'opsz' 144" }}
             data-testid="text-couple-title"
           >
-            {coupleTitle(proposal)}
+            {title}
           </h1>
           <div className="flex items-center justify-center gap-5 mt-8">
             <span className="h-px w-16 bg-[#c9b089]" />
@@ -561,18 +589,12 @@ export default function QuoteProposalView({
             </p>
           )}
           <p className="mt-10 max-w-xl mx-auto text-stone-700 leading-relaxed text-lg">
-            {isWedding ? (
-              <>
-                Congratulations on your engagement. It would be our honor to feed
-                your guests on the day you say <em>I do</em>. Here&rsquo;s what
-                we&rsquo;ve put together for you.
-              </>
-            ) : (
-              <>
-                Thank you for thinking of us. Here&rsquo;s the proposal
-                we&rsquo;ve put together for your event.
-              </>
-            )}
+            {copy.proposalLead({
+              firstName: proposal.firstName,
+              lastName: proposal.lastName,
+              partnerFirstName: proposal.partnerFirstName,
+              partnerLastName: proposal.partnerLastName,
+            })}
           </p>
         </div>
       </div>
@@ -1220,13 +1242,7 @@ export default function QuoteProposalView({
 
       {/* ═══════════════ SIGN-OFF ═══════════════ */}
       <div className="mt-14 mb-6 text-center max-w-lg mx-auto">
-        <p className="text-stone-700 text-lg">
-          {isWedding ? (
-            <>Looking forward to celebrating with you,</>
-          ) : (
-            <>Looking forward to working with you,</>
-          )}
-        </p>
+        <p className="text-stone-700 text-lg">{copy.closingSignoff}</p>
         <p
           className="font-serif text-3xl text-stone-900 mt-3"
           style={{ fontVariationSettings: "'opsz' 144" }}

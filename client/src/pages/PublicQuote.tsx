@@ -53,6 +53,7 @@ export default function PublicQuote() {
     "idle" | "accepting" | "accepted" | "declining" | "declined"
   >("idle");
   const [eventPublicUrl, setEventPublicUrl] = useState<string | null>(null);
+  const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [infoFlowState, setInfoFlowState] = useState<"idle" | "submitting" | "submitted">("idle");
   const [bookingConfig, setBookingConfig] = useState<BookingConfig | null>(null);
 
@@ -100,12 +101,17 @@ export default function PublicQuote() {
         const err = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(err.message || "Failed to accept quote");
       }
-      return res.json() as Promise<{ ok: boolean; eventPublicUrl?: string | null }>;
+      return res.json() as Promise<{
+        ok: boolean;
+        eventPublicUrl?: string | null;
+        portalUrl?: string | null;
+      }>;
     },
     onMutate: () => setLocalStatus("accepting"),
     onSuccess: (result) => {
       setLocalStatus("accepted");
       if (result.eventPublicUrl) setEventPublicUrl(result.eventPublicUrl);
+      if (result.portalUrl) setPortalUrl(result.portalUrl);
       refetch();
     },
     onError: (e: Error) => {
@@ -201,6 +207,7 @@ export default function PublicQuote() {
       mode="public"
       acceptFlowState={localStatus}
       acceptedEventUrl={eventPublicUrl}
+      acceptedPortalUrl={portalUrl}
       onAccept={() => acceptMutation.mutate()}
       onDecline={(payload) => declineMutation.mutate(payload)}
       onRequestInfo={handleRequestInfo}
