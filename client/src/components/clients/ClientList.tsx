@@ -5,7 +5,8 @@ import { Link } from "wouter";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Client } from "@shared/schema";
-import { EyeIcon, PenIcon, PlusIcon, TrashIcon, FileIcon } from "lucide-react";
+import { EyeIcon, PenIcon, PlusIcon, TrashIcon, FileIcon, Send } from "lucide-react";
+import SendInquiryDialog from "@/components/clients/SendInquiryDialog";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -157,12 +158,22 @@ export default function ClientList() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="font-poppins text-2xl font-bold text-neutral-900">Clients</h1>
-        <Link href="/clients/new">
-          <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
-            <PlusIcon className="mr-1 h-4 w-4" />
-            New Client
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <SendInquiryDialog
+            trigger={
+              <Button variant="outline">
+                <Send className="mr-1 h-4 w-4" />
+                Send Inquiry
+              </Button>
+            }
+          />
+          <Link href="/clients/new">
+            <Button className="bg-gradient-to-r from-[#8A2BE2] to-[#4169E1] hover:opacity-90">
+              <PlusIcon className="mr-1 h-4 w-4" />
+              New Client
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <DataTable 

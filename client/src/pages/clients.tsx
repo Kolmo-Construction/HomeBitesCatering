@@ -5,13 +5,14 @@ import ClientForm from "@/components/clients/ClientForm";
 import ClientTimeline from "@/components/clients/ClientTimeline";
 import ClientIdentifiers from "@/components/clients/ClientIdentifiers";
 import LogCommunicationDialog from "@/components/clients/LogCommunicationDialog";
+import SendInquiryDialog from "@/components/clients/SendInquiryDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, PenIcon } from "lucide-react";
+import { ArrowLeft, PenIcon, Send } from "lucide-react";
 
 export default function Clients() {
   const [location, navigate] = useLocation();
@@ -97,6 +98,18 @@ export default function Clients() {
           </div>
           <div className="flex items-center gap-2">
             <LogCommunicationDialog clientId={client.id} />
+            <SendInquiryDialog
+              clientId={client.id}
+              prefillFirstName={client.firstName}
+              prefillLastName={client.lastName}
+              prefillEmail={client.email}
+              prefillPhone={client.phone}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Send className="h-4 w-4 mr-1" /> Send Inquiry
+                </Button>
+              }
+            />
             <Button size="sm" variant="outline" onClick={() => navigate(`/clients/${client.id}/edit`)}>
               <PenIcon className="h-4 w-4 mr-1" /> Edit
             </Button>

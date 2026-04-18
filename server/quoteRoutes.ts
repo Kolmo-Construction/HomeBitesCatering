@@ -4,6 +4,7 @@ import {
   venues,
   promoCodes,
   inquiries,
+  inquiryInvites,
   menus,
   insertVenueSchema,
   insertPromoCodeSchema,
@@ -413,6 +414,16 @@ inquiryRouter.post("/", async (req: Request, res: Response) => {
     }
     const pricing = calculateQuotePricing(parsed.data);
 
+    // If submission came from a Mike-initiated invite, resolve the invite row
+    // so we can (a) link the resulting inquiry back, (b) inherit the invite's
+    // clientId, and (c) mark the invite as submitted after insert.
+    let matchedInvite: typeof inquiryInvites.$inferSelect | undefined;
+    const inviteToken = typeof req.body.inviteToken === 'string' ? req.body.inviteToken : undefined;
+    if (inviteToken) {
+      const [row] = await db.select().from(inquiryInvites).where(eq(inquiryInvites.token, inviteToken));
+      if (row && !row.submittedAt) matchedInvite = row;
+    }
+
     const [request] = await db
       .insert(inquiries)
       .values({
@@ -430,6 +441,13 @@ inquiryRouter.post("/", async (req: Request, res: Response) => {
         ...(req.body.opportunityId ? { opportunityId: parseInt(req.body.opportunityId) } : {}),
       } as any)
       .returning();
+
+    // Stamp the invite as submitted and link to the new inquiry row
+    if (matchedInvite) {
+      await db.update(inquiryInvites)
+        .set({ submittedAt: new Date(), submittedInquiryId: request.id })
+        .where(eq(inquiryInvites.id, matchedInvite.id));
+    }
 
     // Fire-and-forget: run AI analysis in background, then try auto-quote
     analyzeInquiry(request)

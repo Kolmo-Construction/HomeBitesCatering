@@ -26,6 +26,7 @@ import {
   communications,                // table for drizzle updates
   opportunityEmailThreads,       // table for thread migration
   inquiries,                 // for promote-to-inquiry endpoint
+  inquiryInvites,            // for Mike-initiated manual inquiry invites
   rawLeads,                      // for promote-to-inquiry endpoint
   quotes,                     // for accept-quote endpoint
   followUpDrafts,                // for follow-up engine
@@ -72,6 +73,7 @@ import {
   tastingPaidOwnerSms,
   contractSignedOwnerSms,
   paymentReceivedOwnerSms,
+  inquiryInviteCustomerSms,
 } from './utils/smsTemplates';
 import { sendSmsInBackground } from './services/smsService';
 import {
@@ -1544,6 +1546,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error fetching public opportunity:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== Inquiry Invites (Mike-initiated manual invitations) =====
+  // Flow: Mike meets a lead offline → fills name/email/phone on /clients →
+  // POST creates an invite row with unguessable token + sends via email and/or SMS.
+  // Customer opens /inquire?invite=<token> → Inquire.tsx prefills + submits
+  // with invite token → backend links the resulting inquiries row to the invite.
+
+  app.post('/api/inquiry-invites', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        firstName: z.string().trim().min(1),
+        lastName: z.string().trim().optional().nullable(),
+        email: z.string().trim().email(),
+        phone: z.string().trim().optional().nullable(),
+        eventType: z.string().trim().optional().nullable(),
+        notes: z.string().trim().optional().nullable(),
+        clientId: z.number().int().optional().nullable(),
+        sendViaEmail: z.boolean().default(true),
+        sendViaSms: z.boolean().default(false),
+        personalNote: z.string().trim().optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid invite payload', errors: parsed.error.format() });
+      }
+      const body = parsed.data;
+      if (body.sendViaSms && !body.phone) {
+        return res.status(400).json({ message: 'Phone required to send via SMS' });
+      }
+      if (!body.sendViaEmail && !body.sendViaSms) {
+        return res.status(400).json({ message: 'Must send via at least one channel' });
+      }
+
+      const token = randomBytes(24).toString('base64url');
+      const proto = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      const inquiryUrl = `${proto}://${host}/inquire?invite=${token}`;
+
+      const [invite] = await db.insert(inquiryInvites).values({
+        token,
+        firstName: body.firstName,
+        lastName: body.lastName || null,
+        email: body.email,
+        phone: body.phone || null,
+        eventType: body.eventType || null,
+        notes: body.notes || null,
+        clientId: body.clientId || null,
+        sentViaEmail: false,
+        sentViaSms: false,
+        createdBy: req.session.userId,
+      }).returning();
+
+      // Fire email (await so we can report delivery status)
+      let emailSent = false;
+      let emailError: string | undefined;
+      if (body.sendViaEmail) {
+        const template = inquiryInvitationEmail({
+          customerFirstName: body.firstName,
+          eventType: body.eventType || 'event',
+          eventDate: null,
+          inquiryUrl,
+          personalNote: body.personalNote,
+        });
+        const result = await sendEmail({
+          to: body.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          templateKey: 'inquiry_invitation_manual',
+          clientId: body.clientId || undefined,
+        });
+        emailSent = result.sent;
+        if (!result.sent && !result.skipped) emailError = result.error;
+      }
+
+      // Fire SMS in background — failures don't block the response
+      let smsQueued = false;
+      if (body.sendViaSms && body.phone) {
+        const sms = inquiryInviteCustomerSms({
+          firstName: body.firstName,
+          inquiryUrl,
+        });
+        sendSmsInBackground({
+          to: body.phone,
+          body: sms.body,
+          templateKey: 'inquiry_invitation_manual',
+          clientId: body.clientId || undefined,
+        });
+        smsQueued = true;
+      }
+
+      // Stamp the invite with the channels that actually fired
+      await db.update(inquiryInvites).set({
+        sentViaEmail: emailSent,
+        sentViaSms: smsQueued,
+      }).where(eq(inquiryInvites.id, invite.id));
+
+      return res.json({
+        id: invite.id,
+        token,
+        inquiryUrl,
+        emailSent,
+        emailError,
+        smsQueued,
+      });
+    } catch (error) {
+      console.error('Error creating inquiry invite:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Admin list — sent invites with view/submit state for dashboard visibility
+  app.get('/api/inquiry-invites', isAuthenticated, async (_req: Request, res: Response) => {
+    try {
+      const rows = await db.select().from(inquiryInvites).orderBy(inquiryInvites.sentAt);
+      return res.json(rows.reverse());
+    } catch (error) {
+      console.error('Error listing inquiry invites:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Public: prefill + mark-viewed on first open
+  app.get('/api/public/inquiry-invite/:token', async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const [invite] = await db.select().from(inquiryInvites).where(eq(inquiryInvites.token, token));
+      if (!invite) return res.status(404).json({ message: 'Invite not found' });
+
+      if (!invite.viewedAt) {
+        await db.update(inquiryInvites).set({ viewedAt: new Date() }).where(eq(inquiryInvites.id, invite.id));
+      }
+
+      return res.json({
+        token: invite.token,
+        firstName: invite.firstName,
+        lastName: invite.lastName,
+        email: invite.email,
+        phone: invite.phone,
+        eventType: invite.eventType,
+        notes: invite.notes,
+        alreadySubmitted: !!invite.submittedAt,
+      });
+    } catch (error) {
+      console.error('Error fetching invite:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   });

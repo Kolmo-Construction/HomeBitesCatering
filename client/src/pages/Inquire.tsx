@@ -622,6 +622,34 @@ export default function Inquire() {
       .catch(() => {});
   }, []);
 
+  // ---------- Pre-fill from invite token (Mike-initiated manual invite) ----------
+  // When Mike sends a customer the inquiry link from /clients, the URL is
+  // /inquire?invite=<token>. We look up the invite to prefill name/email/phone,
+  // and pass the token through to the submit payload so the backend can link
+  // the resulting inquiry row back to the invite.
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite");
+    if (!token) return;
+
+    fetch(`/api/public/inquiry-invite/${token}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setInviteToken(data.token);
+        setForm((prev) => ({
+          ...prev,
+          firstName: data.firstName || prev.firstName,
+          lastName: data.lastName || prev.lastName,
+          email: data.email || prev.email,
+          phone: data.phone || prev.phone,
+          eventType: data.eventType || prev.eventType,
+        }));
+      })
+      .catch(() => {});
+  }, []);
+
   // ---------- Venues query ----------
   const { data: venues = [] } = useQuery<Venue[]>({
     queryKey: ["/api/quotes/venues"],
@@ -1095,6 +1123,7 @@ export default function Inquire() {
             : undefined,
         estimatedTotal: pricing.estimatedTotal,
         ...(opportunityId ? { opportunityId } : {}),
+        ...(inviteToken ? { inviteToken } : {}),
         // P2-3: prefer utm_source over explicit source param, fall back to "website"
         source: attribution.utmSource || attribution.source || "website",
         // Individual UTM columns — used at convert-time to populate the opportunity

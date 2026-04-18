@@ -294,3 +294,24 @@ export function consultationBookedOwnerSms(args: ConsultationBookedOwnerSmsArgs)
 
   return { body };
 }
+
+// ─── Inquiry invite → Customer (manual Mike-initiated) ────────────────────────
+
+interface InquiryInviteCustomerSmsArgs {
+  firstName: string;
+  inquiryUrl: string;
+  baseUrl?: string;
+}
+
+/**
+ * SMS to a customer Mike has invited to fill out the inquiry form. Used when
+ * the lead came in offline (phone, in-person, referral). Target ≤160 chars.
+ */
+export function inquiryInviteCustomerSms(args: InquiryInviteCustomerSmsArgs): SmsTemplateResult {
+  const first = clip(args.firstName || "there", 20);
+  const url = args.inquiryUrl;
+  // Rough budget: "Hi , this is Mike from Home Bites. Share a few event details so I can send a quote: <url>"
+  // ~95 chars of prose + ~50-70 char URL fits under 160 for most short tokens.
+  const body = `Hi ${first}, this is Mike from Home Bites. Share a few event details here so I can put together your quote: ${url}`;
+  return { body };
+}

@@ -1463,6 +1463,53 @@ export const insertInquirySchema = createInsertSchema(inquiries, {
 export type Inquiry = typeof inquiries.$inferSelect;
 export type InsertInquiry = z.infer<typeof insertInquirySchema>;
 
+// --- Inquiry Invites ---
+// Mike-initiated invitations to fill in the customer-facing /inquire form.
+// Used when a lead arrives via phone call, in-person meeting, or referral —
+// i.e. anywhere the customer hasn't self-served the form online. An invite
+// holds prefill data (name/email/phone) and an unguessable token. When the
+// customer submits the linked form, the resulting `inquiries` row is
+// stamped on `submittedInquiryId` so we can see invite → inquiry conversion.
+export const inquiryInvites = pgTable("inquiry_invites", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name"),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  eventType: text("event_type"),
+  notes: text("notes"),
+  // Optional link back to an existing client in the CRM so we can attribute
+  // the eventual submission to them (does NOT require a client to exist).
+  clientId: integer("client_id").references(() => clients.id, { onDelete: 'set null' }),
+  // Channel tracking — a single invite may have been sent via email, SMS, or both.
+  sentViaEmail: boolean("sent_via_email").default(false).notNull(),
+  sentViaSms: boolean("sent_via_sms").default(false).notNull(),
+  // Timestamps for engagement metrics
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  viewedAt: timestamp("viewed_at"),
+  submittedAt: timestamp("submitted_at"),
+  submittedInquiryId: integer("submitted_inquiry_id").references(() => inquiries.id, { onDelete: 'set null' }),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertInquiryInviteSchema = createInsertSchema(inquiryInvites, {
+  sentAt: z.coerce.date().optional(),
+  viewedAt: z.coerce.date().nullable().optional(),
+  submittedAt: z.coerce.date().nullable().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  token: true,
+  submittedInquiryId: true,
+  viewedAt: true,
+  submittedAt: true,
+});
+
+export type InquiryInvite = typeof inquiryInvites.$inferSelect;
+export type InsertInquiryInvite = z.infer<typeof insertInquiryInviteSchema>;
+
 // Define the relationships between tables
 export const userRelations = relations(users, ({ many }) => ({
   opportunities: many(opportunities, { relationName: 'assignedOpportunities' }),
