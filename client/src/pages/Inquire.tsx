@@ -2496,22 +2496,47 @@ export default function Inquire() {
             <RadioGroup
               value={form.eventLocationType}
               onValueChange={(v) => {
-                update("eventLocationType", v);
-                // Our-office / at-home shortcut: pre-fill venue so the user
-                // doesn't have to retype the address they already gave us.
-                if (v === "our_office" && form.eventType === "corporate") {
-                  update("hasVenue", "yes");
-                  update("selectedVenueId", "other");
-                  update("venueAddress", form.companyStreet);
-                  update("venueCity", form.companyCity);
-                  update("venueState", form.companyState);
-                  update("venueZip", form.companyZip);
-                } else if (v === "home" && form.eventType === "birthday") {
-                  update("hasVenue", "yes");
-                  update("selectedVenueId", "other");
-                } else if (v === "not_decided") {
-                  update("hasVenue", "no");
-                }
+                // Picking a location type implicitly answers the "have you
+                // secured a venue?" question — we drive hasVenue directly
+                // so the redundant Y/N step is hidden.
+                setForm((prev) => {
+                  const next: FormState = {
+                    ...prev,
+                    eventLocationType: v,
+                  };
+                  if (v === "our_office" && prev.eventType === "corporate") {
+                    // Pre-fill venue from the company address the customer
+                    // already typed in Step 1 — saves double entry.
+                    next.hasVenue = "yes";
+                    next.selectedVenueId = "other";
+                    next.venueAddress = prev.companyStreet;
+                    next.venueCity = prev.companyCity;
+                    next.venueState = prev.companyState;
+                    next.venueZip = prev.companyZip;
+                  } else if (v === "external_venue") {
+                    // Let them pick from the venue dropdown or enter manually.
+                    next.hasVenue = "yes";
+                    next.selectedVenueId = "";
+                    next.venueAddress = "";
+                    next.venueCity = "";
+                    next.venueState = "";
+                    next.venueZip = "";
+                  } else if (v === "home" && prev.eventType === "birthday") {
+                    // Home address is personal — skip the venue dropdown,
+                    // jump straight to manual address entry.
+                    next.hasVenue = "yes";
+                    next.selectedVenueId = "other";
+                  } else if (v === "venue" && prev.eventType === "birthday") {
+                    next.hasVenue = "yes";
+                    next.selectedVenueId = "";
+                  } else if (v === "outdoor" && prev.eventType === "birthday") {
+                    next.hasVenue = "yes";
+                    next.selectedVenueId = "other";
+                  } else if (v === "not_decided") {
+                    next.hasVenue = "no";
+                  }
+                  return next;
+                });
               }}
               className="grid grid-cols-1 sm:grid-cols-3 gap-3"
             >
@@ -2536,15 +2561,10 @@ export default function Inquire() {
           </div>
         )}
 
-        {/* Have you secured a venue/location? — skip for corporate if they
-            already said "our office" or "not decided", since those answered
-            the question implicitly. */}
-        {!(
-          eventConfig.showLocationTypeBranch &&
-          (form.eventLocationType === "our_office" ||
-            form.eventLocationType === "home" ||
-            form.eventLocationType === "not_decided")
-        ) && (
+        {/* Have you secured a venue/location? — hidden once the customer has
+            answered the location-type card picker above, since that
+            implicitly answers this question. */}
+        {!(eventConfig.showLocationTypeBranch && form.eventLocationType) && (
           <div className="space-y-3">
             <Label className="text-base font-semibold">
               {eventConfig.hasLocationLabel}{" "}
