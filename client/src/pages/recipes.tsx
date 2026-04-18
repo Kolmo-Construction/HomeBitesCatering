@@ -162,6 +162,28 @@ const COMMON_UNITS = [
   { value: "each", label: "Each" },
 ];
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+function linkifyText(text: string) {
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline break-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
+
 export default function RecipesPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -2230,8 +2252,8 @@ export default function RecipesPage() {
                             <Lightbulb className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                             <div>
                               <span className="font-semibold text-yellow-800 dark:text-yellow-200">Chef's Tip:</span>
-                              <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                                {viewingRecipe.preparationSteps[activeStepIndex].tips}
+                              <p className="text-yellow-700 dark:text-yellow-300 mt-1 whitespace-pre-wrap">
+                                {linkifyText(viewingRecipe.preparationSteps[activeStepIndex].tips!)}
                               </p>
                             </div>
                           </div>
@@ -2409,7 +2431,8 @@ function RecipeDetailDialog({
                           ) : null}
                           {(s as any).tips && (
                             <div className="text-xs italic text-amber-700 mt-1 flex gap-1">
-                              <Lightbulb className="h-3 w-3 flex-shrink-0 mt-0.5" /> {(s as any).tips}
+                              <Lightbulb className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                              <span>{linkifyText((s as any).tips)}</span>
                             </div>
                           )}
                         </div>
