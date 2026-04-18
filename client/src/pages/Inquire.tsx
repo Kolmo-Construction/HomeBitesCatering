@@ -1020,31 +1020,39 @@ export default function Inquire() {
   // ---------- Venue selection handler ----------
   const handleVenueSelect = useCallback(
     (venueId: string) => {
-      update("selectedVenueId", venueId);
-      if (venueId && venueId !== "other") {
-        const v = venues.find((x) => String(x.id) === venueId);
-        if (v) {
-          setForm((prev) => ({
-            ...prev,
-            venueAddress: v.address,
-            venueCity: v.city,
-            venueState: v.state,
-            venueZip: v.zip,
-            hasKitchen: v.hasKitchen ? "yes" : "no",
-          }));
+      // Single atomic setForm so selectedVenueId + address fields all update
+      // together — prevents any brief render where the id is set but the
+      // address still carries a stale value from a previous venue.
+      setForm((prev) => {
+        if (venueId && venueId !== "other") {
+          const v = venues.find((x) => String(x.id) === venueId);
+          if (v) {
+            return {
+              ...prev,
+              selectedVenueId: venueId,
+              venueAddress: v.address,
+              venueCity: v.city,
+              venueState: v.state,
+              venueZip: v.zip,
+              hasKitchen: v.hasKitchen ? "yes" : "no",
+            };
+          }
         }
-      } else if (venueId === "other") {
-        setForm((prev) => ({
-          ...prev,
-          venueAddress: "",
-          venueCity: "",
-          venueState: "",
-          venueZip: "",
-          hasKitchen: "",
-        }));
-      }
+        if (venueId === "other") {
+          return {
+            ...prev,
+            selectedVenueId: venueId,
+            venueAddress: "",
+            venueCity: "",
+            venueState: "",
+            venueZip: "",
+            hasKitchen: "",
+          };
+        }
+        return { ...prev, selectedVenueId: venueId };
+      });
     },
-    [venues, update],
+    [venues],
   );
 
   // ---------- Appetizer quantity helpers ----------
@@ -2597,9 +2605,6 @@ export default function Inquire() {
                 value={form.venueAddress}
                 onChange={(e) => update("venueAddress", e.target.value)}
                 placeholder="Street address"
-                disabled={
-                  !!form.selectedVenueId && form.selectedVenueId !== "other"
-                }
               />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -2610,9 +2615,6 @@ export default function Inquire() {
                   value={form.venueCity}
                   onChange={(e) => update("venueCity", e.target.value)}
                   placeholder="City"
-                  disabled={
-                    !!form.selectedVenueId && form.selectedVenueId !== "other"
-                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -2622,9 +2624,6 @@ export default function Inquire() {
                   value={form.venueState}
                   onChange={(e) => update("venueState", e.target.value)}
                   placeholder="State"
-                  disabled={
-                    !!form.selectedVenueId && form.selectedVenueId !== "other"
-                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -2634,9 +2633,6 @@ export default function Inquire() {
                   value={form.venueZip}
                   onChange={(e) => update("venueZip", e.target.value)}
                   placeholder="ZIP code"
-                  disabled={
-                    !!form.selectedVenueId && form.selectedVenueId !== "other"
-                  }
                 />
               </div>
             </div>
