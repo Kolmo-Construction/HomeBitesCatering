@@ -22,16 +22,6 @@ import Users from "@/pages/users";
 import RawLeadsPage from "@/pages/rawLeadsPage";
 import RawLeadFormPage from "@/pages/rawLeadFormPage";
 import RawLeadDetailPage from "@/pages/rawLeadDetailPage";
-// Import the comprehensive wedding inquiry form
-import WeddingInquiryForm from "@/pages/wedding/WeddingInquiryForm";
-import ComprehensiveWeddingInquiry from "@/pages/wedding/ComprehensiveWeddingInquiry";
-// Import the EventTypeSelectionStep if you want a general landing page for event types
-import EventTypeSelectionStep from "@/components/form-steps/EventTypeSelectionStep"; // Assuming this is now a shared component
-import { eventTypes } from "@/data/event-types"; // For the EventTypeSelectionStep props
-import { EventType } from "@/pages/wedding/types/weddingFormTypes"; // Get EventType for onSelectEventType
-
-// Import the new Public Event Inquiry page
-import PublicEventInquiryPage from "@/pages/PublicEventInquiryPage";
 
 // Tier 3: Client portal (magic-link authenticated)
 import ClientPortal from "@/pages/ClientPortal";
@@ -69,49 +59,6 @@ import UnmatchedInbox from "@/pages/UnmatchedInbox";
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
-// Component to handle public form routing logic
-const PublicRoutes = () => {
-  const [location] = useLocation(); // Use wouter's useLocation hook
-
-  // Example: General inquiry landing page showing event type selection
-  if (location === "/inquiry" || location === "/event-selection") {
-    // This is a conceptual landing page. You'd pass a handler to navigate
-    // to specific forms like /wedding-inquiry based on selection.
-    const handleSelectEventType = (type: EventType) => {
-        // For wouter, you might use navigate hook or window.location.href
-        if (type === "Wedding") {
-             // navigate("/wedding-inquiry"); // If using useNavigation hook from wouter
-             window.location.href = "/wedding-inquiry";
-        } else if (type === "Corporate") {
-            // window.location.href = "/corporate-inquiry"; // For future corporate form
-        }
-        // Add other event types
-    };
-    return (
-        <div className="min-h-screen bg-gray-50 pb-12">
-            {/* You might want a simpler header for this page */}
-            <div className="w-full bg-gradient-to-r from-gray-700 to-gray-800 text-white p-6 mb-8">
-                <div className="container mx-auto text-center">
-                <h1 className="text-4xl font-extrabold mb-3">Plan Your Event</h1>
-                <p className="text-lg">Select the type of event you're planning.</p>
-                </div>
-            </div>
-             <EventTypeSelectionStep
-                onSelectEventType={handleSelectEventType}
-                selectedEventType={null} // No pre-selection on this page
-                // Ensure eventTypes data is correctly imported and passed if needed by the component
-                // eventTypesData={eventTypes} // Assuming EventTypeSelectionStep takes this prop
-            />
-        </div>
-    );
-  }
-
-  // Specific route for the Wedding Inquiry Form
-  // The <Route> component from wouter will handle this in AppContent
-  return null; // Fallback, routing is handled by <Route>
-};
-
-
 function AppContent() {
   const { user, loading } = useAuthContext();
   const [location] = useLocation(); // Get current location
@@ -127,11 +74,7 @@ function AppContent() {
     );
   }
 
-  // Check if the current path is for any public-facing inquiry form
-  // For this refactor, we are focusing on /wedding-inquiry
-  const isWeddingInquiryPage = location === "/wedding-inquiry";
-  const isPublicInquiryPage = location === "/event-inquiry";
-  // You can add more conditions here for other public forms like /corporate-inquiry, /event-selection etc.
+  // Check if the current path is for any public-facing page
   const isInquirePage = location === "/inquire";
   const isPublicQuotePage = location.startsWith("/quote/");
   const isPublicEventPage = location.startsWith("/event/");
@@ -139,7 +82,7 @@ function AppContent() {
   const isClientPortalPage = location.startsWith("/my-events");
   const isDeclineFeedbackPage = location.startsWith("/decline-feedback/");
   const isTastingPage = location === "/tasting" || location.startsWith("/tasting/");
-  const isPublicFormPage = isWeddingInquiryPage || isPublicInquiryPage || isInquirePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage || isDeclineFeedbackPage || isTastingPage;
+  const isPublicFormPage = isInquirePage || isPublicQuotePage || isPublicEventPage || isFindMyEventPage || isClientPortalPage || isDeclineFeedbackPage || isTastingPage;
 
 
   if (isPublicFormPage && !user) { // Allow access to public forms even if not logged in
