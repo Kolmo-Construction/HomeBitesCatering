@@ -54,11 +54,13 @@ import {
 interface Venue {
   id: number;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  hasKitchen: boolean;
+  // Address fields match the DB — nullable because not every venue record
+  // has a complete mailing address on file.
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  hasKitchen: boolean | null;
 }
 
 interface PromoValidation {
@@ -1027,14 +1029,19 @@ export default function Inquire() {
         if (venueId && venueId !== "other") {
           const v = venues.find((x) => String(x.id) === venueId);
           if (v) {
+            // Coalesce nulls to "" so the <Input value=...> stays a
+            // controlled component. Without this, a venue missing address
+            // or zip in the DB would break the inputs (they'd go from
+            // controlled → uncontrolled mid-lifecycle and typing would
+            // silently fail on those fields).
             return {
               ...prev,
               selectedVenueId: venueId,
-              venueAddress: v.address,
-              venueCity: v.city,
-              venueState: v.state,
-              venueZip: v.zip,
-              hasKitchen: v.hasKitchen ? "yes" : "no",
+              venueAddress: v.address ?? "",
+              venueCity: v.city ?? "",
+              venueState: v.state ?? "",
+              venueZip: v.zip ?? "",
+              hasKitchen: v.hasKitchen == null ? "" : v.hasKitchen ? "yes" : "no",
             };
           }
         }
