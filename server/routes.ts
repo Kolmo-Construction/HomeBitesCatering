@@ -2080,14 +2080,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get a specific quote
-  app.get('/api/quotes/:id', isAuthenticated, async (req: Request, res: Response) => {
+  // `:id(\\d+)` forces numeric match so non-numeric sub-paths (e.g. /venues,
+  // /promo-codes) fall through to the public quoteRoutes sub-router mounted
+  // later in index.ts.
+  app.get('/api/quotes/:id(\\d+)', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const quoteId = parseInt(req.params.id);
-      
+
       if (isNaN(quoteId)) {
         return res.status(400).json({ message: 'Invalid quote ID' });
       }
-      
+
       const quote = await storage.getQuote(quoteId);
 
       if (!quote) {
@@ -2270,7 +2273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update an quote
-  app.patch('/api/quotes/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.patch('/api/quotes/:id(\\d+)', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const quoteId = parseInt(req.params.id);
       
@@ -5514,7 +5517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete an quote
-  app.delete('/api/quotes/:id', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
+  app.delete('/api/quotes/:id(\\d+)', isAuthenticated, hasWriteAccess, async (req: Request, res: Response) => {
     try {
       const quoteId = parseInt(req.params.id);
       
