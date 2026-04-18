@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import ingredientRoutes from "./ingredientRoutes";
 import quoteRoutes, { inquiryRouter } from "./quoteRoutes";
+import chatAgentRouter from "./chatAgentRoutes";
 import {
   getWeddingMenuThemes,
   getMenuItemsByCategory,
@@ -64,6 +65,9 @@ app.use((req, res, next) => {
 
   // Inquiry routes — mounted separately at /api/inquiries
   app.use('/api/inquiries', inquiryRouter);
+
+  // Kitchen chat agent (DeepSeek-powered floating widget for chefs)
+  app.use('/api/chat-agent', chatAgentRouter);
   
   // Register menu questionnaire routes for rich menu data integration
   app.get('/api/questionnaire/wedding-menu-themes', getWeddingMenuThemes);

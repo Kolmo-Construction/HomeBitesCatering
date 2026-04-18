@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import ChatAgentWidget from "@/components/ChatAgentWidget";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,6 +17,7 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+      <ChatAgentWidget />
     </div>
   );
 }
