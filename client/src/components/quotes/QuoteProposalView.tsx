@@ -31,8 +31,35 @@ import {
   Send,
   ArrowLeft,
   Eye,
+  Check,
+  Download,
+  Share2,
+  Quote as QuoteIcon,
 } from "lucide-react";
 import type { Proposal } from "@shared/proposal";
+
+// Public-safe site-config slice returned by the quote API.
+export interface QuoteSiteConfig {
+  businessName: string;
+  tagline: string;
+  phone: string;
+  email: string;
+  website: string;
+  chef: {
+    firstName: string;
+    lastName: string;
+    role: string;
+    bio: string;
+    photoUrl: string | null;
+    phone: string;
+    email: string;
+  };
+  social: {
+    instagram: string | null;
+    facebook: string | null;
+    twitter: string | null;
+  };
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -81,6 +108,69 @@ export interface QuoteProposalViewProps {
   sendDisabled?: boolean;
   // Subtitle shown in the admin status bar (e.g. "Draft · last edited 2 hours ago")
   previewSubtitle?: string;
+
+  // Public-safe site config — chef bio/phone/email, business name, socials.
+  // Drives the "A note from Mike" card, footer contact strip, and default
+  // "What's Included" derivation when proposal.whatsIncluded is unset.
+  site?: QuoteSiteConfig | null;
+
+  // URLs for the PDF download and share-link actions (public mode).
+  pdfUrl?: string | null;
+  shareUrl?: string | null;
+}
+
+// ─── Defaults ─────────────────────────────────────────────────────────────────
+
+/**
+ * What's actually covered by the price. We keep these truthful and generic so
+ * Mike doesn't have to worry about overpromising — admin can override per-quote
+ * via proposal.whatsIncluded when a specific event deviates.
+ */
+function defaultWhatsIncluded(serviceStyle?: string | null): string[] {
+  const base = [
+    "Full menu planning with one round of revisions",
+    "Complimentary tasting for the couple",
+    "On-site cooking and plating by our kitchen team",
+    "Professional service staff for the event",
+    "Setup of serving lines, chafing dishes, and presentation ware",
+    "Full breakdown and cleanup of our equipment after service",
+    "Dedicated event coordinator from booking through the day-of",
+  ];
+  switch ((serviceStyle || "").toLowerCase()) {
+    case "plated":
+      return [
+        "Full menu planning with one round of revisions",
+        "Complimentary tasting for the couple",
+        "Course-by-course plating in our on-site kitchen",
+        "Captain + servers to coordinate plated service with your venue",
+        "Setup of plating stations, bussing, and between-course resets",
+        "Full breakdown and cleanup of our equipment after service",
+        "Dedicated event coordinator from booking through the day-of",
+      ];
+    case "family_style":
+      return [
+        "Full menu planning with one round of revisions",
+        "Complimentary tasting for the couple",
+        "Family-style platters built and refreshed throughout service",
+        "Service staff to coordinate platter flow with your venue",
+        "Setup of communal platters, utensils, and replenishments",
+        "Full breakdown and cleanup of our equipment after service",
+        "Dedicated event coordinator from booking through the day-of",
+      ];
+    case "cocktail_party":
+    case "stations":
+      return [
+        "Full menu planning with one round of revisions",
+        "Complimentary tasting for the couple",
+        "On-site cooking at stations / passed hors d'oeuvres by our kitchen team",
+        "Service staff to pass and replenish throughout the event",
+        "Setup of stations, serving platters, and presentation ware",
+        "Full breakdown and cleanup of our equipment after service",
+        "Dedicated event coordinator from booking through the day-of",
+      ];
+    default:
+      return base;
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -274,9 +364,13 @@ export default function QuoteProposalView({
   sendLabel,
   sendDisabled,
   previewSubtitle,
+  site = null,
+  pdfUrl = null,
+  shareUrl = null,
 }: QuoteProposalViewProps) {
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
   const [declineCategory, setDeclineCategory] = useState<DeclineCategory | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoNote, setInfoNote] = useState("");
@@ -544,16 +638,20 @@ export default function QuoteProposalView({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
             {menuCategories.map((cat) => (
               <MenuCourse key={cat} title={categoryLabel(cat)}>
-                {groupedMenu[cat].map((name, i) => (
-                  <MenuItem key={`${cat}-${i}`}>{name}</MenuItem>
-                ))}
+                {(proposal.menuSelections || [])
+                  .filter((sel) => sel.category === cat)
+                  .map((sel, i) => (
+                    <MenuItem key={`${cat}-${i}`} description={sel.description}>
+                      {sel.name}
+                    </MenuItem>
+                  ))}
               </MenuCourse>
             ))}
 
             {proposal.appetizers && proposal.appetizers.length > 0 && (
               <MenuCourse title="Cocktail Hour Bites">
                 {proposal.appetizers.map((a, i) => (
-                  <MenuItem key={`app-${i}`}>
+                  <MenuItem key={`app-${i}`} description={a.description}>
                     {a.itemName}
                     {a.quantity > 0 && (
                       <span className="text-stone-400 text-xs ml-1.5">({a.quantity} pieces)</span>
@@ -566,7 +664,7 @@ export default function QuoteProposalView({
             {proposal.desserts && proposal.desserts.length > 0 && (
               <MenuCourse title="Sweet Endings" icon={<Cake className="h-3.5 w-3.5" />}>
                 {proposal.desserts.map((d, i) => (
-                  <MenuItem key={`d-${i}`}>
+                  <MenuItem key={`d-${i}`} description={d.description}>
                     {d.itemName}
                     {d.quantity > 0 && (
                       <span className="text-stone-400 text-xs ml-1.5">({d.quantity})</span>
@@ -648,6 +746,111 @@ export default function QuoteProposalView({
               </div>
             )}
         </MenuCard>
+      )}
+
+      {/* ═══════════════ WHAT'S INCLUDED ═══════════════ */}
+      {(() => {
+        const items =
+          proposal.whatsIncluded && proposal.whatsIncluded.length > 0
+            ? proposal.whatsIncluded
+            : defaultWhatsIncluded(proposal.serviceStyle);
+        if (!items || items.length === 0) return null;
+        return (
+          <Card kicker="What's included" title="Every price covers the whole experience">
+            <p className="text-stone-600 text-base leading-relaxed mb-6">
+              You're not just paying for food — here's everything we handle so
+              your day runs smoothly.
+            </p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+              {items.map((line, i) => (
+                <li key={i} className="flex items-start gap-3 text-stone-800 text-base leading-relaxed">
+                  <span className="mt-0.5 shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-[#E28C0A]/15 text-[#8B7355]">
+                    <Check className="h-3 w-3" />
+                  </span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        );
+      })()}
+
+      {/* ═══════════════ CHEF NOTE ═══════════════ */}
+      {(() => {
+        // Prefer per-quote override, else use siteConfig.chef, else skip.
+        const note = proposal.chefNote;
+        const firstName = note?.firstName ?? site?.chef.firstName;
+        const role = note?.role ?? site?.chef.role;
+        const photoUrl = note?.photoUrl ?? site?.chef.photoUrl ?? null;
+        const message = note?.message ?? site?.chef.bio;
+        if (!firstName || !message) return null;
+        return (
+          <section className="mb-8 rounded-3xl border border-[#e8ddc8] bg-gradient-to-br from-white via-[#fbf6ea] to-white p-8 sm:p-10 shadow-sm">
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
+              <div className="shrink-0">
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt={firstName}
+                    className="h-20 w-20 rounded-full object-cover border-2 border-[#e0d0b3]"
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[#E28C0A] to-[#8B7355] flex items-center justify-center text-white text-3xl font-serif font-semibold">
+                    {firstName.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="text-xs uppercase tracking-[0.22em] text-[#8B7355] font-semibold mb-1">
+                  A note from {firstName}
+                </div>
+                <p className="text-stone-800 text-base sm:text-lg leading-relaxed">
+                  {message}
+                </p>
+                <p className="mt-4 text-sm text-stone-600">
+                  — {firstName}
+                  {role && <span className="text-stone-500">, {role}</span>}
+                </p>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* ═══════════════ TESTIMONIALS ═══════════════ */}
+      {proposal.testimonials && proposal.testimonials.length > 0 && (
+        <section className="mb-8">
+          <div className="text-center mb-6">
+            <div className="text-xs uppercase tracking-[0.25em] text-[#8B7355] font-semibold">
+              Kind words
+            </div>
+            <h2
+              className="font-serif text-3xl sm:text-4xl text-stone-900 mt-2 leading-tight"
+              style={{ fontVariationSettings: "'opsz' 144" }}
+            >
+              From couples we've fed
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {proposal.testimonials.slice(0, 4).map((t, i) => (
+              <blockquote
+                key={i}
+                className="rounded-2xl bg-white border border-[#e8ddc8] p-6 shadow-sm"
+              >
+                <QuoteIcon className="h-5 w-5 text-[#c9b089] mb-2" />
+                <p className="text-stone-800 text-base leading-relaxed italic">
+                  "{t.quote}"
+                </p>
+                <footer className="mt-4 text-sm text-stone-600">
+                  — {t.author}
+                  {t.eventType && (
+                    <span className="text-stone-500"> · {t.eventType}</span>
+                  )}
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ═══════════════ SPECIAL REQUESTS ═══════════════ */}
@@ -789,6 +992,50 @@ export default function QuoteProposalView({
             <p className="mt-4 text-sm text-white/90" data-testid="consultation-booked-indicator">
               ✓ Call scheduled for {new Date(consultationBookedAt).toLocaleString()}
             </p>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════ DOWNLOAD / SHARE ═══════════════ */}
+      {mode === "public" && (pdfUrl || shareUrl) && (
+        <div className="mb-8 flex flex-col sm:flex-row gap-3 justify-center">
+          {pdfUrl && (
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[#e0d0b3] text-stone-700 hover:bg-[#faf5e9] hover:border-[#c9b089] font-medium text-sm transition shadow-sm"
+              data-testid="button-download-pdf"
+            >
+              <Download className="h-4 w-4" />
+              Download as PDF
+            </a>
+          )}
+          {shareUrl && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: `${coupleTitle(proposal)} · ${site?.businessName ?? "Homebites"} proposal`,
+                      url: shareUrl,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(shareUrl);
+                    setShareCopied(true);
+                    setTimeout(() => setShareCopied(false), 2000);
+                  }
+                } catch {
+                  // user cancelled — no-op
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[#e0d0b3] text-stone-700 hover:bg-[#faf5e9] hover:border-[#c9b089] font-medium text-sm transition shadow-sm"
+              data-testid="button-share-link"
+            >
+              <Share2 className="h-4 w-4" />
+              {shareCopied ? "Link copied!" : "Share with family"}
+            </button>
           )}
         </div>
       )}
@@ -977,23 +1224,28 @@ export default function QuoteProposalView({
           className="font-serif text-3xl text-stone-900 mt-3"
           style={{ fontVariationSettings: "'opsz' 144" }}
         >
-          Mike &amp; the Homebites team
+          {site?.chef.firstName ?? "Mike"} &amp; the{" "}
+          {site?.businessName ?? "Homebites"} team
         </p>
         <div className="mt-7 pt-7 border-t border-[#e0d0b3] flex flex-col sm:flex-row gap-5 justify-center text-base text-stone-700">
-          <a
-            href="tel:+12065550100"
-            className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
-          >
-            <Phone className="h-4 w-4" />
-            (206) 555-0100
-          </a>
-          <a
-            href="mailto:hello@homebitescatering.com"
-            className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
-          >
-            <Mail className="h-4 w-4" />
-            hello@homebitescatering.com
-          </a>
+          {site?.chef.phone || site?.phone ? (
+            <a
+              href={`tel:${(site.chef.phone || site.phone).replace(/[^\d+]/g, "")}`}
+              className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
+            >
+              <Phone className="h-4 w-4" />
+              {site.chef.phone || site.phone}
+            </a>
+          ) : null}
+          {site?.chef.email || site?.email ? (
+            <a
+              href={`mailto:${site.chef.email || site.email}`}
+              className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
+            >
+              <Mail className="h-4 w-4" />
+              {site.chef.email || site.email}
+            </a>
+          ) : null}
         </div>
         <p className="text-base text-stone-600 mt-7 leading-relaxed">
           Questions about anything in this proposal? Reply to our email or give
@@ -1124,11 +1376,24 @@ function MenuCourse({
   );
 }
 
-function MenuItem({ children }: { children: React.ReactNode }) {
+function MenuItem({
+  children,
+  description,
+}: {
+  children: React.ReactNode;
+  description?: string;
+}) {
   return (
     <li className="flex items-baseline gap-3 text-lg">
       <span className="text-[#c9b089] select-none leading-none">·</span>
-      <span className="flex-1">{children}</span>
+      <span className="flex-1">
+        <span className="block text-stone-900">{children}</span>
+        {description && (
+          <span className="block text-sm text-stone-600 italic mt-0.5 leading-relaxed">
+            {description}
+          </span>
+        )}
+      </span>
     </li>
   );
 }

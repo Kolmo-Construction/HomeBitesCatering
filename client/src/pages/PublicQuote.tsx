@@ -7,7 +7,9 @@ import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { XCircle, Loader2 } from "lucide-react";
 import type { Proposal } from "@shared/proposal";
-import QuoteProposalView from "@/components/quotes/QuoteProposalView";
+import QuoteProposalView, {
+  type QuoteSiteConfig,
+} from "@/components/quotes/QuoteProposalView";
 
 interface PublicQuoteData {
   id: number;
@@ -40,6 +42,7 @@ interface PublicQuotePayload {
   quote: PublicQuoteData;
   client: PublicClient | null;
   proposal: Proposal;
+  site?: QuoteSiteConfig | null;
 }
 
 export default function PublicQuote() {
@@ -189,34 +192,26 @@ export default function PublicQuote() {
     );
   }
 
+  const shareUrl = typeof window !== "undefined" ? window.location.href : null;
+
   return (
-    <>
-      <QuoteProposalView
-        proposal={data.proposal}
-        quoteStatus={data.quote.status}
-        mode="public"
-        acceptFlowState={localStatus}
-        acceptedEventUrl={eventPublicUrl}
-        onAccept={() => acceptMutation.mutate()}
-        onDecline={(payload) => declineMutation.mutate(payload)}
-        onRequestInfo={handleRequestInfo}
-        infoFlowState={infoFlowState}
-        infoRequestedAt={data.quote.infoRequestedAt ?? null}
-        consultationBookedAt={data.quote.consultationBookedAt ?? null}
-        consultationMeetingUrl={data.quote.consultationMeetingUrl ?? null}
-        resolvedBookingUrl={bookingConfig?.consultationUrl ?? null}
-      />
-      {/* Tier 3: PDF download for customer */}
-      <div className="max-w-3xl mx-auto px-6 pb-8 text-center">
-        <a
-          href={`/api/public/quote/${token}/pdf`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700 underline"
-        >
-          Download as PDF
-        </a>
-      </div>
-    </>
+    <QuoteProposalView
+      proposal={data.proposal}
+      quoteStatus={data.quote.status}
+      mode="public"
+      acceptFlowState={localStatus}
+      acceptedEventUrl={eventPublicUrl}
+      onAccept={() => acceptMutation.mutate()}
+      onDecline={(payload) => declineMutation.mutate(payload)}
+      onRequestInfo={handleRequestInfo}
+      infoFlowState={infoFlowState}
+      infoRequestedAt={data.quote.infoRequestedAt ?? null}
+      consultationBookedAt={data.quote.consultationBookedAt ?? null}
+      consultationMeetingUrl={data.quote.consultationMeetingUrl ?? null}
+      resolvedBookingUrl={bookingConfig?.consultationUrl ?? null}
+      site={data.site ?? null}
+      pdfUrl={`/api/public/quote/${token}/pdf`}
+      shareUrl={shareUrl}
+    />
   );
 }

@@ -814,7 +814,7 @@ inquiryRouter.post("/:id/convert", async (req: Request, res: Response) => {
     // single source of truth for the public quote page — everything the couple
     // sees is rendered from this field. Admin edits go through PATCH on the
     // quote and overwrite this blob directly.
-    const proposal = buildProposalFromInquiry(request, quote);
+    const proposal = await buildProposalFromInquiry(request, quote);
     const [quoteWithProposal] = await db
       .update(quotes)
       .set({ proposal: proposal as any, updatedAt: new Date() })
@@ -1044,7 +1044,7 @@ async function tryAutoQuote(request: any, analysis: any): Promise<void> {
   }).returning();
 
   // Build proposal blob
-  const proposal = buildProposalFromInquiry(request, quote);
+  const proposal = await buildProposalFromInquiry(request, quote);
   await db.update(quotes)
     .set({ proposal: proposal as any, updatedAt: new Date() })
     .where(eq(quotes.id, quote.id));

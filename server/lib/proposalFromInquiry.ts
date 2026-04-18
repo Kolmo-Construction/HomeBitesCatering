@@ -4,10 +4,35 @@
 // for legacy quotes that don't yet have quote.proposal populated.
 
 import type { Proposal, ProposalLineItem, ProposalMenuItem } from "@shared/proposal";
-import type { quotes, inquiries } from "@shared/schema";
+import type { quotes, inquiries, MenuCategoryItem } from "@shared/schema";
+import { menus } from "@shared/schema";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 type InquiryRow = typeof inquiries.$inferSelect;
 type QuoteRow = typeof quotes.$inferSelect;
+
+/**
+ * Build a case-insensitive name → description map across every category item
+ * in a menu. Used to surface flavor copy for each selection the customer made.
+ */
+async function buildMenuDescriptionIndex(
+  themeKey: string | null | undefined,
+): Promise<Map<string, string>> {
+  const idx = new Map<string, string>();
+  if (!themeKey) return idx;
+  const [menu] = await db.select().from(menus).where(eq(menus.themeKey, themeKey));
+  if (!menu) return idx;
+  const categoryItems = (menu.categoryItems as Record<string, MenuCategoryItem[]> | null) || {};
+  for (const items of Object.values(categoryItems)) {
+    for (const it of items || []) {
+      if (it?.description && it.name) {
+        idx.set(it.name.toLowerCase().trim(), it.description);
+      }
+    }
+  }
+  return idx;
+}
 
 // Coerce whatever is stored in quote.items (JSONB or JSON-stringified blob)
 // into a clean ProposalLineItem[].
@@ -32,16 +57,29 @@ function coerceLineItems(raw: unknown): ProposalLineItem[] {
     }));
 }
 
-export function buildProposalFromInquiry(
+export async function buildProposalFromInquiry(
   q: InquiryRow,
   e: QuoteRow,
-): Proposal {
+): Promise<Proposal> {
   const venueAddr = (q.venueAddress as any) || {};
+
+  // Load descriptions from the menu catalog so customer-facing items carry
+  // flavor copy when the admin has filled it in on the menu.
+  const descIdx = await buildMenuDescriptionIndex(q.menuTheme);
+  const lookupDescription = (name: string | null | undefined): string | undefined => {
+    if (!name) return undefined;
+    return descIdx.get(name.toLowerCase().trim());
+  };
+
   const menuSelections = Array.isArray(q.menuSelections)
-    ? ((q.menuSelections as any[]).map((sel) => ({
-        name: String(sel.name ?? ""),
-        category: String(sel.category ?? "main"),
-      })) as ProposalMenuItem[])
+    ? ((q.menuSelections as any[]).map((sel) => {
+        const name = String(sel.name ?? "");
+        return {
+          name,
+          category: String(sel.category ?? "main"),
+          description: lookupDescription(name),
+        };
+      }) as ProposalMenuItem[])
     : [];
 
   const appetizerSelections: Array<{ itemName?: string; quantity?: number }> =
@@ -89,14 +127,22 @@ export function buildProposalFromInquiry(
     menuTheme: q.menuTheme ?? null,
     menuTier: q.menuTier ?? null,
     menuSelections,
-    appetizers: appetizerSelections.map((a) => ({
-      itemName: String(a.itemName ?? ""),
-      quantity: Number(a.quantity) || 0,
-    })),
-    desserts: dessertItems.map((d) => ({
-      itemName: String(d.itemName ?? ""),
-      quantity: Number(d.quantity) || 0,
-    })),
+    appetizers: appetizerSelections.map((a) => {
+      const itemName = String(a.itemName ?? "");
+      return {
+        itemName,
+        quantity: Number(a.quantity) || 0,
+        description: lookupDescription(itemName),
+      };
+    }),
+    desserts: dessertItems.map((d) => {
+      const itemName = String(d.itemName ?? "");
+      return {
+        itemName,
+        quantity: Number(d.quantity) || 0,
+        description: lookupDescription(itemName),
+      };
+    }),
     beverages: (q.beverages as any) ?? undefined,
     equipment: {
       items: equipmentItems.map((e) => ({

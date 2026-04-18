@@ -22,18 +22,22 @@ export type ProposalMenuCategory =
 export interface ProposalMenuItem {
   name: string;
   category: ProposalMenuCategory;
+  /** Short flavor description shown under the item name on the customer page. */
+  description?: string;
   note?: string;
 }
 
 export interface ProposalAppetizer {
   itemName: string;
   quantity: number;
+  description?: string;
   note?: string;
 }
 
 export interface ProposalDessert {
   itemName: string;
   quantity: number;
+  description?: string;
   note?: string;
 }
 
@@ -145,6 +149,39 @@ export interface Proposal {
 
   // Admin notes shown to the customer (free text, optional)
   customerNotes?: string | null;
+
+  // ─── Trust + voice additions ────────────────────────────────────────────
+  // All optional. If unset, the renderer uses sensible defaults driven by
+  // serviceStyle / siteConfig. Admin can override per quote when a specific
+  // event needs tailored language (destination weddings, corporate policies).
+
+  /**
+   * Ordered list of what the price covers. Rendered as a checklist card
+   * between the menu and the investment total. When unset, a default list
+   * is derived from proposal.serviceStyle.
+   */
+  whatsIncluded?: string[];
+
+  /**
+   * Personal note from the chef to the customer. When unset, a default is
+   * assembled from siteConfig.chef (name/role/bio).
+   */
+  chefNote?: {
+    firstName: string;
+    role: string;
+    message: string;
+    photoUrl?: string | null;
+  } | null;
+
+  /**
+   * Short testimonial quotes to anchor social proof above the accept CTA.
+   * Omit to hide the section entirely — better no testimonials than fake ones.
+   */
+  testimonials?: Array<{
+    quote: string;
+    author: string;
+    eventType?: string;
+  }>;
 }
 
 /** Build an empty proposal scaffold. */

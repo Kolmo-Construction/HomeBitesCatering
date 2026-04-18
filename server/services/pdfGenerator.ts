@@ -18,6 +18,53 @@ function formatDate(iso: string | Date | null): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
+function defaultWhatsIncluded(serviceStyle?: string | null): string[] {
+  const base = [
+    "Full menu planning with one round of revisions",
+    "Complimentary tasting for the couple",
+    "On-site cooking and plating by our kitchen team",
+    "Professional service staff for the event",
+    "Setup of serving lines, chafing dishes, and presentation ware",
+    "Full breakdown and cleanup of our equipment after service",
+    "Dedicated event coordinator from booking through the day-of",
+  ];
+  switch ((serviceStyle || "").toLowerCase()) {
+    case "plated":
+      return [
+        "Full menu planning with one round of revisions",
+        "Complimentary tasting for the couple",
+        "Course-by-course plating in our on-site kitchen",
+        "Captain + servers to coordinate plated service with your venue",
+        "Setup of plating stations, bussing, and between-course resets",
+        "Full breakdown and cleanup of our equipment after service",
+        "Dedicated event coordinator from booking through the day-of",
+      ];
+    case "family_style":
+      return [
+        "Full menu planning with one round of revisions",
+        "Complimentary tasting for the couple",
+        "Family-style platters built and refreshed throughout service",
+        "Service staff to coordinate platter flow with your venue",
+        "Setup of communal platters, utensils, and replenishments",
+        "Full breakdown and cleanup of our equipment after service",
+        "Dedicated event coordinator from booking through the day-of",
+      ];
+    case "cocktail_party":
+    case "stations":
+      return [
+        "Full menu planning with one round of revisions",
+        "Complimentary tasting for the couple",
+        "On-site cooking at stations / passed hors d'oeuvres by our kitchen team",
+        "Service staff to pass and replenish throughout the event",
+        "Setup of stations, serving platters, and presentation ware",
+        "Full breakdown and cleanup of our equipment after service",
+        "Dedicated event coordinator from booking through the day-of",
+      ];
+    default:
+      return base;
+  }
+}
+
 function titleCase(s: string): string {
   return s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -76,10 +123,14 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     if (proposal.menuSelections && proposal.menuSelections.length > 0) {
       doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Menu Selections");
       doc.moveDown(0.3);
-      doc.fontSize(10).font("Helvetica").fillColor("#333");
 
       for (const item of proposal.menuSelections) {
-        doc.text(`  •  ${item.name}${item.category ? ` (${item.category})` : ""}`);
+        doc.fontSize(10).font("Helvetica").fillColor("#333")
+          .text(`  •  ${item.name}${item.category ? ` (${item.category})` : ""}`);
+        if (item.description) {
+          doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+            .text(`       ${item.description}`, { indent: 0 });
+        }
       }
       doc.moveDown(0.8);
     }
@@ -88,9 +139,13 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     if (proposal.appetizers && proposal.appetizers.length > 0) {
       doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Appetizers");
       doc.moveDown(0.3);
-      doc.fontSize(10).font("Helvetica").fillColor("#333");
       for (const app of proposal.appetizers) {
-        doc.text(`  •  ${app.itemName} × ${app.quantity}`);
+        doc.fontSize(10).font("Helvetica").fillColor("#333")
+          .text(`  •  ${app.itemName} × ${app.quantity}`);
+        if (app.description) {
+          doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+            .text(`       ${app.description}`);
+        }
       }
       doc.moveDown(0.8);
     }
@@ -99,10 +154,48 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     if (proposal.desserts && proposal.desserts.length > 0) {
       doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Desserts");
       doc.moveDown(0.3);
-      doc.fontSize(10).font("Helvetica").fillColor("#333");
       for (const d of proposal.desserts) {
-        doc.text(`  •  ${d.itemName} × ${d.quantity}`);
+        doc.fontSize(10).font("Helvetica").fillColor("#333")
+          .text(`  •  ${d.itemName} × ${d.quantity}`);
+        if (d.description) {
+          doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+            .text(`       ${d.description}`);
+        }
       }
+      doc.moveDown(0.8);
+    }
+
+    // ─── What's Included ───────────────────────────────────────────────────
+    const whatsIncluded =
+      (proposal.whatsIncluded && proposal.whatsIncluded.length > 0
+        ? proposal.whatsIncluded
+        : defaultWhatsIncluded(proposal.serviceStyle)) || [];
+    if (whatsIncluded.length > 0) {
+      doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("What's Included");
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica").fillColor("#333");
+      for (const line of whatsIncluded) {
+        doc.text(`  ✓  ${line}`);
+      }
+      doc.moveDown(0.8);
+    }
+
+    // ─── Chef's Note ───────────────────────────────────────────────────────
+    const chefNote = proposal.chefNote ?? {
+      firstName: config.chef.firstName,
+      role: config.chef.role,
+      message: config.chef.bio,
+      photoUrl: config.chef.photoUrl,
+    };
+    if (chefNote?.firstName && chefNote?.message) {
+      doc.fontSize(11).font("Helvetica-Bold").fillColor("#111")
+        .text(`A note from ${chefNote.firstName}`);
+      doc.moveDown(0.25);
+      doc.fontSize(10).font("Helvetica").fillColor("#444")
+        .text(chefNote.message, { align: "left" });
+      doc.moveDown(0.2);
+      doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+        .text(`— ${chefNote.firstName}${chefNote.role ? ", " + chefNote.role : ""}`);
       doc.moveDown(0.8);
     }
 

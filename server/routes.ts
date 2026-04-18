@@ -2591,7 +2591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .where(eq(inquiries.quoteId, quote.id));
 
     const proposal = originatingQuote
-      ? buildProposalFromInquiry(originatingQuote, quote)
+      ? await buildProposalFromInquiry(originatingQuote, quote)
       : buildProposalFromQuoteAlone(quote, client);
 
     // Persist so future reads (and admin edits) use the same blob.
@@ -2649,10 +2649,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
       const proposal = await resolveProposalForQuote(quote, client ?? null);
 
+      // Public-safe slice of site config so the quote page can personalize the
+      // chef note, contact info, and social links without another round-trip.
+      const site = getSiteConfig();
+      const sitePublic = {
+        businessName: site.businessName,
+        tagline: site.tagline,
+        phone: site.phone,
+        email: site.email,
+        website: site.website,
+        chef: {
+          firstName: site.chef.firstName,
+          lastName: site.chef.lastName,
+          role: site.chef.role,
+          bio: site.chef.bio,
+          photoUrl: site.chef.photoUrl,
+          phone: site.chef.phone,
+          email: site.chef.email,
+        },
+        social: site.social,
+      };
+
       return res.status(200).json({
         quote: sanitizeQuoteForPublic(quote),
         client: client ? sanitizeClientForPublic(client) : null,
         proposal,
+        site: sitePublic,
       });
     } catch (error) {
       console.error('Error fetching public quote:', error);
