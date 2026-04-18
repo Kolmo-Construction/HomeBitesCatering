@@ -79,6 +79,201 @@ const EVENT_TYPES = [
   { value: "other", label: "Other", icon: HelpCircle },
 ] as const;
 
+// --- Per-event-type form configuration ---
+// Declares which sections render, which labels to use, and which extra
+// questions each type needs. Keeps the render code free of sprawling
+// `if (eventType === "x") else if (...)` branches.
+interface EventTypeConfig {
+  // Step 2 heading — what we call the "venue" section
+  locationSectionTitle: string;
+  locationSectionSubtitle: string;
+  // How we phrase the Y/N question at the top of Step 2
+  hasLocationLabel: string;
+  // What we call the on-site point of contact
+  onSiteContactLabel: string;
+  // Whether Step 2's location flow applies at all (food truck skips it)
+  showLocationStep: boolean;
+  // Wedding-only: the ceremony timing block
+  showCeremonyBlock: boolean;
+  // Whether to show an "Our office / External venue / Not decided" branch
+  // before the venue Y/N — useful for corporate & birthday (residential)
+  showLocationTypeBranch: boolean;
+  // Food-truck-only: parking/power/water/permit logistics replace venue
+  showTruckLogistics: boolean;
+  // Whether the main-meal timing toggle defaults ON and is offered
+  mainMealDefault: boolean;
+  showMainMealToggle: boolean;
+  // Which extras render in the Step 1 per-type details block
+  showPartnerNames: boolean;          // wedding, engagement
+  showSurpriseFlag: boolean;          // engagement
+  showCompanyFields: boolean;         // corporate
+  showCorporateContext: boolean;      // corporate: purpose, branded menu, PO
+  showBirthdayContext: boolean;       // birthday: guest of honor, milestone, kids
+  showOtherDescription: boolean;      // "other" event type
+}
+
+const EVENT_TYPE_CONFIG: Record<string, EventTypeConfig> = {
+  wedding: {
+    locationSectionTitle: "Venue & Logistics",
+    locationSectionSubtitle: "Tell us about your venue and logistics.",
+    hasLocationLabel: "Have you secured a venue?",
+    onSiteContactLabel: "Venue Contact",
+    showLocationStep: true,
+    showCeremonyBlock: true,
+    showLocationTypeBranch: false,
+    showTruckLogistics: false,
+    mainMealDefault: true,
+    showMainMealToggle: true,
+    showPartnerNames: true,
+    showSurpriseFlag: false,
+    showCompanyFields: false,
+    showCorporateContext: false,
+    showBirthdayContext: false,
+    showOtherDescription: false,
+  },
+  engagement: {
+    locationSectionTitle: "Venue & Logistics",
+    locationSectionSubtitle: "Tell us about your venue and logistics.",
+    hasLocationLabel: "Have you secured a venue?",
+    onSiteContactLabel: "Venue Contact",
+    showLocationStep: true,
+    showCeremonyBlock: false,
+    showLocationTypeBranch: false,
+    showTruckLogistics: false,
+    mainMealDefault: true,
+    showMainMealToggle: true,
+    showPartnerNames: true,
+    showSurpriseFlag: true,
+    showCompanyFields: false,
+    showCorporateContext: false,
+    showBirthdayContext: false,
+    showOtherDescription: false,
+  },
+  corporate: {
+    locationSectionTitle: "Event Location & Logistics",
+    locationSectionSubtitle: "Tell us where the event will happen and who we'll coordinate with on the day.",
+    hasLocationLabel: "Have you secured a location?",
+    onSiteContactLabel: "On-site Contact",
+    showLocationStep: true,
+    showCeremonyBlock: false,
+    showLocationTypeBranch: true,
+    showTruckLogistics: false,
+    mainMealDefault: true,
+    showMainMealToggle: true,
+    showPartnerNames: false,
+    showSurpriseFlag: false,
+    showCompanyFields: true,
+    showCorporateContext: true,
+    showBirthdayContext: false,
+    showOtherDescription: false,
+  },
+  birthday: {
+    locationSectionTitle: "Location & Logistics",
+    locationSectionSubtitle: "Tell us where you're celebrating.",
+    hasLocationLabel: "Do you have a location picked out?",
+    onSiteContactLabel: "On-site Contact",
+    showLocationStep: true,
+    showCeremonyBlock: false,
+    showLocationTypeBranch: true,
+    showTruckLogistics: false,
+    mainMealDefault: true,
+    showMainMealToggle: true,
+    showPartnerNames: false,
+    showSurpriseFlag: false,
+    showCompanyFields: false,
+    showCorporateContext: false,
+    showBirthdayContext: true,
+    showOtherDescription: false,
+  },
+  cocktail_party: {
+    locationSectionTitle: "Venue & Logistics",
+    locationSectionSubtitle: "Tell us about your venue and logistics.",
+    hasLocationLabel: "Have you secured a venue?",
+    onSiteContactLabel: "Venue Contact",
+    showLocationStep: true,
+    showCeremonyBlock: false,
+    showLocationTypeBranch: false,
+    showTruckLogistics: false,
+    mainMealDefault: false, // cocktail parties usually skip main meal
+    showMainMealToggle: true, // still let them opt in if they want light bites + dinner
+    showPartnerNames: false,
+    showSurpriseFlag: false,
+    showCompanyFields: false,
+    showCorporateContext: false,
+    showBirthdayContext: false,
+    showOtherDescription: false,
+  },
+  food_truck: {
+    locationSectionTitle: "Event Location & Logistics",
+    locationSectionSubtitle: "Where's the event, and where can the truck park?",
+    hasLocationLabel: "Do you have a location picked out?",
+    onSiteContactLabel: "On-site Contact",
+    showLocationStep: true,
+    showCeremonyBlock: false,
+    showLocationTypeBranch: false,
+    showTruckLogistics: true, // legacy flag kept for config symmetry; truck
+                              // logistics now render in Step 3 gated by
+                              // serviceType === "food_truck".
+    mainMealDefault: true,
+    showMainMealToggle: false, // food truck = main meal by definition
+    showPartnerNames: false,
+    showSurpriseFlag: false,
+    showCompanyFields: false,
+    showCorporateContext: false,
+    showBirthdayContext: false,
+    showOtherDescription: false,
+  },
+  other: {
+    locationSectionTitle: "Location & Logistics",
+    locationSectionSubtitle: "Tell us where you're hosting and any on-site details.",
+    hasLocationLabel: "Do you have a location picked out?",
+    onSiteContactLabel: "On-site Contact",
+    showLocationStep: true,
+    showCeremonyBlock: false,
+    showLocationTypeBranch: false,
+    showTruckLogistics: false,
+    mainMealDefault: true,
+    showMainMealToggle: true,
+    showPartnerNames: false,
+    showSurpriseFlag: false,
+    showCompanyFields: false,
+    showCorporateContext: false,
+    showBirthdayContext: false,
+    showOtherDescription: true,
+  },
+};
+
+// Fallback config when eventType is "" (before selection)
+const DEFAULT_EVENT_CONFIG: EventTypeConfig = EVENT_TYPE_CONFIG.wedding;
+
+const getEventConfig = (eventType: string): EventTypeConfig =>
+  EVENT_TYPE_CONFIG[eventType] || DEFAULT_EVENT_CONFIG;
+
+// --- Corporate purpose options ---
+const CORPORATE_PURPOSES = [
+  { value: "client_entertainment", label: "Client entertainment" },
+  { value: "team_event", label: "Team event / offsite" },
+  { value: "conference", label: "Conference / seminar" },
+  { value: "training", label: "Training / workshop" },
+  { value: "holiday", label: "Holiday party" },
+  { value: "launch", label: "Product launch" },
+  { value: "other", label: "Other" },
+] as const;
+
+// --- Corporate/birthday location-type branch ---
+const CORPORATE_LOCATION_TYPES = [
+  { value: "our_office", label: "At our office" },
+  { value: "external_venue", label: "External venue" },
+  { value: "not_decided", label: "Not decided yet" },
+] as const;
+
+const BIRTHDAY_LOCATION_TYPES = [
+  { value: "home", label: "At home" },
+  { value: "venue", label: "At a venue" },
+  { value: "outdoor", label: "Outdoor / park" },
+  { value: "not_decided", label: "Not decided yet" },
+] as const;
+
 // --- Service Types ---
 const SERVICE_TYPES = [
   { value: "buffet", label: "Buffet", icon: UtensilsCrossed },
@@ -381,6 +576,33 @@ interface FormState {
   partnerFirstName: string;
   partnerLastName: string;
   companyName: string;
+  companyStreet: string;
+  companyCity: string;
+  companyState: string;
+  companyZip: string;
+  // Corporate-only context
+  corporatePurpose: string;
+  corporatePurposeOther: string;
+  brandedMenu: boolean;
+  poReference: string;
+  // Corporate/birthday: where will the event happen
+  eventLocationType: string; // "our_office" | "external_venue" | "not_decided" | "home" | "venue" | "outdoor"
+  // Engagement-only
+  isSurpriseProposal: boolean;
+  // Birthday-only
+  guestOfHonor: string;
+  isMilestone: boolean;
+  milestoneAge: string;
+  kidsFriendlyMenu: boolean;
+  // Food-truck-only logistics
+  truckParkingAvailable: string; // "yes" | "no" | "unknown"
+  truckPowerAccess: string;      // "yes" | "no" | "unknown"
+  truckWaterAccess: string;      // "yes" | "no" | "unknown"
+  truckPropertyType: string;     // "private" | "public"
+  truckServiceWindowStart: string;
+  truckServiceWindowEnd: string;
+  // "Other" event type
+  otherEventDescription: string;
   email: string;
   phone: string;
   eventDate: string;
@@ -464,6 +686,27 @@ const initialFormState: FormState = {
   partnerFirstName: "",
   partnerLastName: "",
   companyName: "",
+  companyStreet: "",
+  companyCity: "",
+  companyState: "",
+  companyZip: "",
+  corporatePurpose: "",
+  corporatePurposeOther: "",
+  brandedMenu: false,
+  poReference: "",
+  eventLocationType: "",
+  isSurpriseProposal: false,
+  guestOfHonor: "",
+  isMilestone: false,
+  milestoneAge: "",
+  kidsFriendlyMenu: false,
+  truckParkingAvailable: "",
+  truckPowerAccess: "",
+  truckWaterAccess: "",
+  truckPropertyType: "",
+  truckServiceWindowStart: "",
+  truckServiceWindowEnd: "",
+  otherEventDescription: "",
   email: "",
   phone: "",
   eventDate: "",
@@ -546,6 +789,10 @@ export default function Inquire() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>({ ...initialFormState });
   const [submitted, setSubmitted] = useState(false);
+  // Per-event-type rendering config — drives section labels, which blocks
+  // render, and what extra fields show. Falls back to wedding defaults while
+  // the user hasn't picked a type yet (Step 1 radio).
+  const eventConfig = getEventConfig(form.eventType);
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
   const [opportunityId, setOpportunityId] = useState<number | null>(null);
@@ -1098,8 +1345,122 @@ export default function Inquire() {
         specialDietaryNotes: _specialDietaryNotes,
         industryReferrals: _industryReferrals,
         customMenuNotes: _customMenuNotes,
+        // Corporate address: bundled into billingAddress jsonb below
+        companyStreet: _companyStreet,
+        companyCity: _companyCity,
+        companyState: _companyState,
+        companyZip: _companyZip,
+        // Per-event-type extras: folded into specialRequests summary below
+        corporatePurpose: _corporatePurpose,
+        corporatePurposeOther: _corporatePurposeOther,
+        brandedMenu: _brandedMenu,
+        poReference: _poReference,
+        eventLocationType: _eventLocationType,
+        isSurpriseProposal: _isSurpriseProposal,
+        guestOfHonor: _guestOfHonor,
+        isMilestone: _isMilestone,
+        milestoneAge: _milestoneAge,
+        kidsFriendlyMenu: _kidsFriendlyMenu,
+        truckParkingAvailable: _truckParkingAvailable,
+        truckPowerAccess: _truckPowerAccess,
+        truckWaterAccess: _truckWaterAccess,
+        truckPropertyType: _truckPropertyType,
+        truckServiceWindowStart: _truckServiceWindowStart,
+        truckServiceWindowEnd: _truckServiceWindowEnd,
+        otherEventDescription: _otherEventDescription,
         ...rest
       } = form;
+
+      // Build billingAddress jsonb from the corporate address inputs (only
+      // included if at least one field is filled in).
+      const hasCompanyAddress =
+        form.eventType === "corporate" &&
+        (form.companyStreet || form.companyCity || form.companyState || form.companyZip);
+      const billingAddress = hasCompanyAddress
+        ? {
+            street: form.companyStreet || undefined,
+            city: form.companyCity || undefined,
+            state: form.companyState || undefined,
+            zip: form.companyZip || undefined,
+          }
+        : undefined;
+
+      // Build a human-readable per-event-type summary that's prepended to
+      // specialRequests. We don't have a dedicated jsonb column for this
+      // today, but the summary keeps all the structured answers in front of
+      // the admin reviewing the inquiry.
+      const typeSummaryLines: string[] = [];
+      if (form.eventType === "corporate") {
+        if (form.corporatePurpose) {
+          const label = CORPORATE_PURPOSES.find(
+            (p) => p.value === form.corporatePurpose,
+          )?.label;
+          typeSummaryLines.push(
+            `Event purpose: ${form.corporatePurpose === "other" ? form.corporatePurposeOther || "Other" : label}`,
+          );
+        }
+        if (form.brandedMenu) typeSummaryLines.push("Branded menu cards: Yes");
+        if (form.poReference)
+          typeSummaryLines.push(`PO/Invoice reference: ${form.poReference}`);
+        if (form.eventLocationType) {
+          const label = CORPORATE_LOCATION_TYPES.find(
+            (l) => l.value === form.eventLocationType,
+          )?.label;
+          if (label) typeSummaryLines.push(`Location type: ${label}`);
+        }
+      }
+      if (form.eventType === "engagement" && form.isSurpriseProposal) {
+        typeSummaryLines.push("Surprise proposal — please be discreet");
+      }
+      if (form.eventType === "birthday") {
+        if (form.guestOfHonor)
+          typeSummaryLines.push(`Guest of honor: ${form.guestOfHonor}`);
+        if (form.isMilestone) {
+          typeSummaryLines.push(
+            form.milestoneAge
+              ? `Milestone birthday: ${form.milestoneAge}`
+              : "Milestone birthday",
+          );
+        }
+        if (form.kidsFriendlyMenu)
+          typeSummaryLines.push("Kids attending — kid-friendly options");
+        if (form.eventLocationType) {
+          const label = BIRTHDAY_LOCATION_TYPES.find(
+            (l) => l.value === form.eventLocationType,
+          )?.label;
+          if (label) typeSummaryLines.push(`Location type: ${label}`);
+        }
+      }
+      if (form.eventType === "food_truck") {
+        if (form.truckPropertyType)
+          typeSummaryLines.push(
+            `Property type: ${form.truckPropertyType === "private" ? "Private" : "Public/street"}`,
+          );
+        if (form.truckParkingAvailable)
+          typeSummaryLines.push(
+            `Parking available: ${form.truckParkingAvailable}`,
+          );
+        if (form.truckPowerAccess)
+          typeSummaryLines.push(`Power on-site: ${form.truckPowerAccess}`);
+        if (form.truckWaterAccess)
+          typeSummaryLines.push(`Water on-site: ${form.truckWaterAccess}`);
+        if (form.truckServiceWindowStart || form.truckServiceWindowEnd) {
+          typeSummaryLines.push(
+            `Service window: ${form.truckServiceWindowStart || "?"} – ${form.truckServiceWindowEnd || "?"}`,
+          );
+        }
+      }
+      if (form.eventType === "other" && form.otherEventDescription) {
+        typeSummaryLines.push(
+          `Event description: ${form.otherEventDescription}`,
+        );
+      }
+      const typeSummary = typeSummaryLines.length
+        ? `— Event details —\n${typeSummaryLines.join("\n")}`
+        : "";
+      const combinedSpecialRequests = [form.specialRequests?.trim(), typeSummary]
+        .filter(Boolean)
+        .join("\n\n");
 
       // "yes"/"no" → boolean mapper, returns undefined when the radio was untouched
       const yesNoToBool = (v: string | undefined | null): boolean | undefined => {
@@ -1111,6 +1472,10 @@ export default function Inquire() {
       const payload: Record<string, any> = {
         ...rest,
         guestCount,
+        ...(combinedSpecialRequests
+          ? { specialRequests: combinedSpecialRequests }
+          : {}),
+        ...(billingAddress ? { billingAddress } : {}),
         // Map form fields to schema columns / enums
         menuTier: form.packageTier || undefined,
         menuSelections,
@@ -1509,9 +1874,15 @@ export default function Inquire() {
         <Label className="text-base font-semibold">
           Event Type <span className="text-red-500">*</span>
         </Label>
-        {renderCardSelector(EVENT_TYPES, form.eventType, (v) =>
-          update("eventType", v),
-        )}
+        {renderCardSelector(EVENT_TYPES, form.eventType, (v) => {
+          update("eventType", v);
+          // If they picked the "Food Truck" event type, pre-select the
+          // matching service style so they don't have to pick it again on
+          // Step 3. They can still change it later.
+          if (v === "food_truck" && !form.serviceType) {
+            update("serviceType", "food_truck");
+          }
+        })}
       </div>
 
       <Separator />
@@ -1545,7 +1916,7 @@ export default function Inquire() {
         </div>
 
         {/* Partner name (Wedding / Engagement) */}
-        {(form.eventType === "wedding" || form.eventType === "engagement") && (
+        {eventConfig.showPartnerNames && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="partnerFirst">Partner First Name</Label>
@@ -1568,17 +1939,57 @@ export default function Inquire() {
           </div>
         )}
 
-        {/* Company name (Corporate) */}
+        {/* Company details (Corporate) */}
         {form.eventType === "corporate" && (
-          <div className="space-y-1.5">
-            <Label htmlFor="companyName">Company Name</Label>
-            <Input
-              id="companyName"
-              value={form.companyName}
-              onChange={(e) => update("companyName", e.target.value)}
-              placeholder="Company name"
-            />
-          </div>
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={form.companyName}
+                onChange={(e) => update("companyName", e.target.value)}
+                placeholder="Company name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="companyStreet">Company Address</Label>
+              <Input
+                id="companyStreet"
+                value={form.companyStreet}
+                onChange={(e) => update("companyStreet", e.target.value)}
+                placeholder="Street address"
+              />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="companyCity">City</Label>
+                <Input
+                  id="companyCity"
+                  value={form.companyCity}
+                  onChange={(e) => update("companyCity", e.target.value)}
+                  placeholder="City"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="companyState">State</Label>
+                <Input
+                  id="companyState"
+                  value={form.companyState}
+                  onChange={(e) => update("companyState", e.target.value)}
+                  placeholder="State"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="companyZip">ZIP</Label>
+                <Input
+                  id="companyZip"
+                  value={form.companyZip}
+                  onChange={(e) => update("companyZip", e.target.value)}
+                  placeholder="ZIP code"
+                />
+              </div>
+            </div>
+          </>
         )}
 
         <div className="space-y-1.5">
@@ -1662,227 +2073,672 @@ export default function Inquire() {
           </div>
         </div>
       </div>
+
+      {/* Per-event-type context block — only renders when the eventType
+          config asks for at least one of these extras. Customer sees
+          different questions depending on what they're hosting. */}
+      {(eventConfig.showSurpriseFlag ||
+        eventConfig.showCorporateContext ||
+        eventConfig.showBirthdayContext ||
+        eventConfig.showOtherDescription) && (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">
+              {form.eventType === "engagement"
+                ? "About Your Engagement"
+                : form.eventType === "corporate"
+                ? "About the Event"
+                : form.eventType === "birthday"
+                ? "About the Birthday"
+                : "About Your Event"}
+            </Label>
+
+            {/* Engagement: is this a surprise? */}
+            {eventConfig.showSurpriseFlag && (
+              <label className="flex items-start gap-3 cursor-pointer">
+                <Checkbox
+                  checked={form.isSurpriseProposal}
+                  onCheckedChange={(v) =>
+                    update("isSurpriseProposal", v === true)
+                  }
+                />
+                <div>
+                  <div className="font-medium">
+                    This is a surprise proposal
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    We'll be extra discreet with any coordination and won't
+                    contact anyone besides you.
+                  </div>
+                </div>
+              </label>
+            )}
+
+            {/* Corporate: purpose, branded menu, PO/invoice reference */}
+            {eventConfig.showCorporateContext && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="corporatePurpose">
+                    What kind of corporate event is this?
+                  </Label>
+                  <Select
+                    value={form.corporatePurpose}
+                    onValueChange={(v) => update("corporatePurpose", v)}
+                  >
+                    <SelectTrigger id="corporatePurpose">
+                      <SelectValue placeholder="Select a purpose..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CORPORATE_PURPOSES.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.corporatePurpose === "other" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="corporatePurposeOther">
+                      Tell us more
+                    </Label>
+                    <Input
+                      id="corporatePurposeOther"
+                      value={form.corporatePurposeOther}
+                      onChange={(e) =>
+                        update("corporatePurposeOther", e.target.value)
+                      }
+                      placeholder="Brief description of the event"
+                    />
+                  </div>
+                )}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={form.brandedMenu}
+                    onCheckedChange={(v) => update("brandedMenu", v === true)}
+                  />
+                  <div>
+                    <div className="font-medium">
+                      Include branded menu cards
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      We can print menu cards with your company logo for each
+                      place setting.
+                    </div>
+                  </div>
+                </label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="poReference">
+                    PO / Invoice reference{" "}
+                    <span className="text-gray-400 text-sm font-normal">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="poReference"
+                    value={form.poReference}
+                    onChange={(e) => update("poReference", e.target.value)}
+                    placeholder="e.g. PO-12345"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Birthday: guest of honor, milestone, kid-friendly */}
+            {eventConfig.showBirthdayContext && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="guestOfHonor">Guest of Honor</Label>
+                  <Input
+                    id="guestOfHonor"
+                    value={form.guestOfHonor}
+                    onChange={(e) => update("guestOfHonor", e.target.value)}
+                    placeholder="Who is this birthday for?"
+                  />
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={form.isMilestone}
+                    onCheckedChange={(v) => {
+                      const checked = v === true;
+                      update("isMilestone", checked);
+                      if (!checked) update("milestoneAge", "");
+                    }}
+                  />
+                  <div>
+                    <div className="font-medium">
+                      This is a milestone birthday
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      e.g. 16th, 21st, 30th, 50th — lets us plan something
+                      extra special.
+                    </div>
+                  </div>
+                </label>
+                {form.isMilestone && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="milestoneAge">Age being celebrated</Label>
+                    <Input
+                      id="milestoneAge"
+                      type="number"
+                      min="1"
+                      value={form.milestoneAge}
+                      onChange={(e) =>
+                        update("milestoneAge", e.target.value)
+                      }
+                      placeholder="e.g. 30"
+                      className="sm:w-32"
+                    />
+                  </div>
+                )}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={form.kidsFriendlyMenu}
+                    onCheckedChange={(v) =>
+                      update("kidsFriendlyMenu", v === true)
+                    }
+                  />
+                  <div>
+                    <div className="font-medium">
+                      Kids will be attending — include kid-friendly options
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      We'll suggest simpler dishes and kid-appropriate
+                      portions alongside the main menu.
+                    </div>
+                  </div>
+                </label>
+              </div>
+            )}
+
+            {/* "Other": short description so we know what we're quoting for */}
+            {eventConfig.showOtherDescription && (
+              <div className="space-y-1.5">
+                <Label htmlFor="otherEventDescription">
+                  Tell us about your event{" "}
+                  <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="otherEventDescription"
+                  value={form.otherEventDescription}
+                  onChange={(e) =>
+                    update("otherEventDescription", e.target.value)
+                  }
+                  placeholder="What are you celebrating? What's the vibe? Any important details?"
+                  rows={4}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 
-  const renderStep2 = () => (
-    <div className="space-y-8">
-      {/* Have you secured a venue? */}
+  // Truck-specific logistics block — rendered wherever serviceType=food_truck,
+  // regardless of event type. A wedding that picks a food truck for the
+  // reception needs the same parking/power/water answers as a standalone
+  // food-truck event.
+  const renderTruckLogistics = () => (
+    <div className="space-y-6 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/40 p-5">
+      <div>
+        <Label className="text-base font-semibold">Food Truck Logistics</Label>
+        <p className="text-sm text-gray-600 mt-1">
+          A few extra questions since you're going with a food truck — this
+          helps us confirm we can actually park, power, and serve on the day.
+        </p>
+      </div>
+
       <div className="space-y-3">
-        <Label className="text-base font-semibold">
-          Have you secured a venue? <span className="text-red-500">*</span>
+        <Label className="text-sm font-semibold">
+          Is this private or public property?
         </Label>
         <RadioGroup
-          value={form.hasVenue}
-          onValueChange={(v) => {
-            update("hasVenue", v);
-            if (v === "no") {
-              update("selectedVenueId", "");
-            }
-          }}
+          value={form.truckPropertyType}
+          onValueChange={(v) => update("truckPropertyType", v)}
           className="flex gap-6"
         >
           <div className="flex items-center gap-2">
-            <RadioGroupItem value="yes" id="venue-yes" />
-            <Label htmlFor="venue-yes">Yes</Label>
+            <RadioGroupItem value="private" id="truck-private" />
+            <Label htmlFor="truck-private">Private property</Label>
           </div>
           <div className="flex items-center gap-2">
-            <RadioGroupItem value="no" id="venue-no" />
-            <Label htmlFor="venue-no">No</Label>
+            <RadioGroupItem value="public" id="truck-public" />
+            <Label htmlFor="truck-public">Public / street</Label>
+          </div>
+        </RadioGroup>
+        {form.truckPropertyType === "public" && (
+          <p className="text-sm text-gray-500">
+            We'll need to confirm permits and any street-use restrictions
+            for your area before the event.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold">
+          Is there space for the truck to park and serve from?
+        </Label>
+        <RadioGroup
+          value={form.truckParkingAvailable}
+          onValueChange={(v) => update("truckParkingAvailable", v)}
+          className="flex gap-6"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="yes" id="truck-parking-yes" />
+            <Label htmlFor="truck-parking-yes">Yes</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="no" id="truck-parking-no" />
+            <Label htmlFor="truck-parking-no">No</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="unknown" id="truck-parking-unknown" />
+            <Label htmlFor="truck-parking-unknown">Not sure</Label>
           </div>
         </RadioGroup>
       </div>
 
-      {/* Venue selection (if Yes) */}
-      {form.hasVenue === "yes" && (
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Select Venue</Label>
-            <Select
-              value={form.selectedVenueId}
-              onValueChange={handleVenueSelect}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a venue..." />
-              </SelectTrigger>
-              <SelectContent>
-                {venues.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value="other">Other (enter manually)</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold">
+          Is on-site power available?
+        </Label>
+        <p className="text-sm text-gray-500 -mt-2">
+          We can run on the truck's generator, but a grid hookup is quieter
+          and better for the neighbours.
+        </p>
+        <RadioGroup
+          value={form.truckPowerAccess}
+          onValueChange={(v) => update("truckPowerAccess", v)}
+          className="flex gap-6"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="yes" id="truck-power-yes" />
+            <Label htmlFor="truck-power-yes">Yes</Label>
           </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="no" id="truck-power-no" />
+            <Label htmlFor="truck-power-no">No — we'll run on generator</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="unknown" id="truck-power-unknown" />
+            <Label htmlFor="truck-power-unknown">Not sure</Label>
+          </div>
+        </RadioGroup>
+      </div>
 
-          {/* Address fields */}
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold">
+          Is on-site water access available?
+        </Label>
+        <RadioGroup
+          value={form.truckWaterAccess}
+          onValueChange={(v) => update("truckWaterAccess", v)}
+          className="flex gap-6"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="yes" id="truck-water-yes" />
+            <Label htmlFor="truck-water-yes">Yes</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="no" id="truck-water-no" />
+            <Label htmlFor="truck-water-no">No — we'll self-supply</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="unknown" id="truck-water-unknown" />
+            <Label htmlFor="truck-water-unknown">Not sure</Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-sm font-semibold">
+          Service Window
+        </Label>
+        <p className="text-sm text-gray-500 -mt-2">
+          When should the truck be serving? We typically need 45–60 minutes
+          of setup before service starts.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="venueAddress">Venue Address</Label>
+            <Label htmlFor="truckStart">Service Start</Label>
             <Input
-              id="venueAddress"
-              value={form.venueAddress}
-              onChange={(e) => update("venueAddress", e.target.value)}
-              placeholder="Street address"
-              disabled={
-                !!form.selectedVenueId && form.selectedVenueId !== "other"
+              id="truckStart"
+              type="time"
+              value={form.truckServiceWindowStart}
+              onChange={(e) =>
+                update("truckServiceWindowStart", e.target.value)
               }
             />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="venueCity">City</Label>
-              <Input
-                id="venueCity"
-                value={form.venueCity}
-                onChange={(e) => update("venueCity", e.target.value)}
-                placeholder="City"
-                disabled={
-                  !!form.selectedVenueId && form.selectedVenueId !== "other"
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="venueState">State</Label>
-              <Input
-                id="venueState"
-                value={form.venueState}
-                onChange={(e) => update("venueState", e.target.value)}
-                placeholder="State"
-                disabled={
-                  !!form.selectedVenueId && form.selectedVenueId !== "other"
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="venueZip">ZIP</Label>
-              <Input
-                id="venueZip"
-                value={form.venueZip}
-                onChange={(e) => update("venueZip", e.target.value)}
-                placeholder="ZIP code"
-                disabled={
-                  !!form.selectedVenueId && form.selectedVenueId !== "other"
-                }
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Location preferences (if No) */}
-      {form.hasVenue === "no" && (
-        <div className="space-y-1.5">
-          <Label htmlFor="locationPrefs">Location Preferences</Label>
-          <Textarea
-            id="locationPrefs"
-            value={form.locationPreferences}
-            onChange={(e) => update("locationPreferences", e.target.value)}
-            placeholder="Describe your preferred area, venue type, or any location requirements..."
-            rows={3}
-          />
-        </div>
-      )}
-
-      {/* Kitchen facilities */}
-      {form.hasVenue === "yes" && (
-        <div className="space-y-3">
-          <Label className="text-base font-semibold">
-            Does the venue have kitchen facilities?
-          </Label>
-          <RadioGroup
-            value={form.hasKitchen}
-            onValueChange={(v) => update("hasKitchen", v)}
-            className="flex gap-6"
-          >
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="yes" id="kitchen-yes" />
-              <Label htmlFor="kitchen-yes">Yes</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="no" id="kitchen-no" />
-              <Label htmlFor="kitchen-no">No</Label>
-            </div>
-          </RadioGroup>
-        </div>
-      )}
-
-      {/* Wedding-specific: ceremony same space */}
-      {form.eventType === "wedding" && (
-        <>
-          <Separator />
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">Ceremony Details</Label>
-            <div className="space-y-3">
-              <Label>Will the ceremony be in the same space as the reception?</Label>
-              <RadioGroup
-                value={form.ceremonySameSpace}
-                onValueChange={(v) => update("ceremonySameSpace", v)}
-                className="flex gap-6"
-              >
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="yes" id="ceremony-same-yes" />
-                  <Label htmlFor="ceremony-same-yes">Yes</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="no" id="ceremony-same-no" />
-                  <Label htmlFor="ceremony-same-no">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="ceremonyStart">Ceremony Start Time</Label>
-                <Input
-                  id="ceremonyStart"
-                  type="time"
-                  value={form.ceremonyStartTime}
-                  onChange={(e) => update("ceremonyStartTime", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ceremonyEnd">Ceremony End Time</Label>
-                <Input
-                  id="ceremonyEnd"
-                  type="time"
-                  value={form.ceremonyEndTime}
-                  onChange={(e) => update("ceremonyEndTime", e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      <Separator />
-
-      {/* Venue contact */}
-      <div className="space-y-4">
-        <Label className="text-base font-semibold">Venue Contact</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="venueContactName">Contact Name</Label>
+            <Label htmlFor="truckEnd">Service End</Label>
             <Input
-              id="venueContactName"
-              value={form.venueContactName}
-              onChange={(e) => update("venueContactName", e.target.value)}
-              placeholder="Venue contact name"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="venueContactPhone">Contact Phone</Label>
-            <Input
-              id="venueContactPhone"
-              type="tel"
-              value={form.venueContactPhone}
-              onChange={(e) => update("venueContactPhone", e.target.value)}
-              placeholder="(555) 123-4567"
+              id="truckEnd"
+              type="time"
+              value={form.truckServiceWindowEnd}
+              onChange={(e) =>
+                update("truckServiceWindowEnd", e.target.value)
+              }
             />
           </div>
         </div>
       </div>
     </div>
   );
+
+  const renderStep2 = () => {
+    // Venue/location flow driven by EVENT_TYPE_CONFIG. Food-truck event type
+    // goes through this same flow — truck-specific questions (parking,
+    // power, etc.) live in Step 3, tied to serviceType=food_truck so they
+    // also appear for e.g. a wedding that hires a food truck.
+    const locationTypes =
+      form.eventType === "corporate"
+        ? CORPORATE_LOCATION_TYPES
+        : form.eventType === "birthday"
+        ? BIRTHDAY_LOCATION_TYPES
+        : null;
+
+    return (
+      <div className="space-y-8">
+        {/* Corporate / birthday: "Where's the event?" branch — comes before
+            the more rigid Yes/No venue question so we can tailor what
+            follows. */}
+        {eventConfig.showLocationTypeBranch && locationTypes && (
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">
+              Where will the event take place?{" "}
+              <span className="text-red-500">*</span>
+            </Label>
+            <RadioGroup
+              value={form.eventLocationType}
+              onValueChange={(v) => {
+                update("eventLocationType", v);
+                // Our-office / at-home shortcut: pre-fill venue so the user
+                // doesn't have to retype the address they already gave us.
+                if (v === "our_office" && form.eventType === "corporate") {
+                  update("hasVenue", "yes");
+                  update("selectedVenueId", "other");
+                  update("venueAddress", form.companyStreet);
+                  update("venueCity", form.companyCity);
+                  update("venueState", form.companyState);
+                  update("venueZip", form.companyZip);
+                } else if (v === "home" && form.eventType === "birthday") {
+                  update("hasVenue", "yes");
+                  update("selectedVenueId", "other");
+                } else if (v === "not_decided") {
+                  update("hasVenue", "no");
+                }
+              }}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+            >
+              {locationTypes.map((lt) => (
+                <label
+                  key={lt.value}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-all",
+                    form.eventLocationType === lt.value
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 hover:border-gray-300",
+                  )}
+                >
+                  <RadioGroupItem
+                    value={lt.value}
+                    id={`loc-type-${lt.value}`}
+                  />
+                  <span className="font-medium">{lt.label}</span>
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+        )}
+
+        {/* Have you secured a venue/location? — skip for corporate if they
+            already said "our office" or "not decided", since those answered
+            the question implicitly. */}
+        {!(
+          eventConfig.showLocationTypeBranch &&
+          (form.eventLocationType === "our_office" ||
+            form.eventLocationType === "home" ||
+            form.eventLocationType === "not_decided")
+        ) && (
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">
+              {eventConfig.hasLocationLabel}{" "}
+              <span className="text-red-500">*</span>
+            </Label>
+            <RadioGroup
+              value={form.hasVenue}
+              onValueChange={(v) => {
+                update("hasVenue", v);
+                if (v === "no") {
+                  update("selectedVenueId", "");
+                }
+              }}
+              className="flex gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="yes" id="venue-yes" />
+                <Label htmlFor="venue-yes">Yes</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="no" id="venue-no" />
+                <Label htmlFor="venue-no">No</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        )}
+
+        {/* Venue/location selection (if Yes) */}
+        {form.hasVenue === "yes" && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>
+                {form.eventType === "corporate" ||
+                form.eventType === "birthday"
+                  ? "Select a location"
+                  : "Select Venue"}
+              </Label>
+              <Select
+                value={form.selectedVenueId}
+                onValueChange={handleVenueSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a venue..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {venues.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="other">Other (enter manually)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="venueAddress">
+                {form.eventType === "corporate" ||
+                form.eventType === "birthday"
+                  ? "Address"
+                  : "Venue Address"}
+              </Label>
+              <Input
+                id="venueAddress"
+                value={form.venueAddress}
+                onChange={(e) => update("venueAddress", e.target.value)}
+                placeholder="Street address"
+                disabled={
+                  !!form.selectedVenueId && form.selectedVenueId !== "other"
+                }
+              />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="venueCity">City</Label>
+                <Input
+                  id="venueCity"
+                  value={form.venueCity}
+                  onChange={(e) => update("venueCity", e.target.value)}
+                  placeholder="City"
+                  disabled={
+                    !!form.selectedVenueId && form.selectedVenueId !== "other"
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venueState">State</Label>
+                <Input
+                  id="venueState"
+                  value={form.venueState}
+                  onChange={(e) => update("venueState", e.target.value)}
+                  placeholder="State"
+                  disabled={
+                    !!form.selectedVenueId && form.selectedVenueId !== "other"
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venueZip">ZIP</Label>
+                <Input
+                  id="venueZip"
+                  value={form.venueZip}
+                  onChange={(e) => update("venueZip", e.target.value)}
+                  placeholder="ZIP code"
+                  disabled={
+                    !!form.selectedVenueId && form.selectedVenueId !== "other"
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Location preferences (if No) */}
+        {form.hasVenue === "no" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="locationPrefs">Location Preferences</Label>
+            <Textarea
+              id="locationPrefs"
+              value={form.locationPreferences}
+              onChange={(e) => update("locationPreferences", e.target.value)}
+              placeholder="Describe your preferred area, venue type, or any location requirements..."
+              rows={3}
+            />
+          </div>
+        )}
+
+        {/* Kitchen facilities — only if they have a location */}
+        {form.hasVenue === "yes" && (
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">
+              {form.eventType === "corporate" ||
+              form.eventType === "birthday"
+                ? "Is there a kitchen on-site we can use?"
+                : "Does the venue have kitchen facilities?"}
+            </Label>
+            <RadioGroup
+              value={form.hasKitchen}
+              onValueChange={(v) => update("hasKitchen", v)}
+              className="flex gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="yes" id="kitchen-yes" />
+                <Label htmlFor="kitchen-yes">Yes</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="no" id="kitchen-no" />
+                <Label htmlFor="kitchen-no">No</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        )}
+
+        {/* Wedding-specific: ceremony same space */}
+        {eventConfig.showCeremonyBlock && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">Ceremony Details</Label>
+              <div className="space-y-3">
+                <Label>Will the ceremony be in the same space as the reception?</Label>
+                <RadioGroup
+                  value={form.ceremonySameSpace}
+                  onValueChange={(v) => update("ceremonySameSpace", v)}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="yes" id="ceremony-same-yes" />
+                    <Label htmlFor="ceremony-same-yes">Yes</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="no" id="ceremony-same-no" />
+                    <Label htmlFor="ceremony-same-no">No</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="ceremonyStart">Ceremony Start Time</Label>
+                  <Input
+                    id="ceremonyStart"
+                    type="time"
+                    value={form.ceremonyStartTime}
+                    onChange={(e) => update("ceremonyStartTime", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ceremonyEnd">Ceremony End Time</Label>
+                  <Input
+                    id="ceremonyEnd"
+                    type="time"
+                    value={form.ceremonyEndTime}
+                    onChange={(e) => update("ceremonyEndTime", e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* On-site / venue contact — only when they actually have a venue.
+            We hid this block before answering Yes/No, which was confusing. */}
+        {form.hasVenue === "yes" && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">
+                {eventConfig.onSiteContactLabel}
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="venueContactName">Contact Name</Label>
+                  <Input
+                    id="venueContactName"
+                    value={form.venueContactName}
+                    onChange={(e) => update("venueContactName", e.target.value)}
+                    placeholder="Contact name"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="venueContactPhone">Contact Phone</Label>
+                  <Input
+                    id="venueContactPhone"
+                    type="tel"
+                    value={form.venueContactPhone}
+                    onChange={(e) => update("venueContactPhone", e.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   const renderStep3 = () => (
     <div className="space-y-8">
@@ -1895,6 +2751,12 @@ export default function Inquire() {
           update("serviceType", v),
         )}
       </div>
+
+      {/* Food-truck logistics — shown whenever serviceType is food_truck,
+          regardless of event type. A wedding/corporate/birthday that hires a
+          food truck needs these answers just as much as a standalone
+          food-truck event. */}
+      {form.serviceType === "food_truck" && renderTruckLogistics()}
 
       {/* Buffet style (conditional) */}
       {form.serviceType === "buffet" && (
@@ -1964,16 +2826,44 @@ export default function Inquire() {
 
       <Separator />
 
-      {/* Main meal service */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label className="text-base font-semibold">Main Meal Service</Label>
-          <Switch
-            checked={form.hasMainMeal}
-            onCheckedChange={(v) => update("hasMainMeal", v)}
-          />
+      {/* Main meal service — food truck always serves a main meal (no toggle),
+          cocktail parties default OFF (but can opt in) */}
+      {eventConfig.showMainMealToggle ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-base font-semibold">Main Meal Service</Label>
+            <Switch
+              checked={form.hasMainMeal}
+              onCheckedChange={(v) => update("hasMainMeal", v)}
+            />
+          </div>
+          {form.hasMainMeal && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="mainMealStart">Start Time</Label>
+                <Input
+                  id="mainMealStart"
+                  type="time"
+                  value={form.mainMealStartTime}
+                  onChange={(e) => update("mainMealStartTime", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mainMealEnd">End Time</Label>
+                <Input
+                  id="mainMealEnd"
+                  type="time"
+                  value={form.mainMealEndTime}
+                  onChange={(e) => update("mainMealEndTime", e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
-        {form.hasMainMeal && (
+      ) : null}
+      {/* Unconditional meal timing block — only reachable when the toggle
+          is hidden AND the config wants a main meal (food truck). */}
+      {!eventConfig.showMainMealToggle && eventConfig.mainMealDefault && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="mainMealStart">Start Time</Label>
@@ -1995,7 +2885,6 @@ export default function Inquire() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 
@@ -2818,6 +3707,88 @@ export default function Inquire() {
                 {form.companyName}
               </p>
             )}
+            {form.eventType === "corporate" &&
+              (form.companyStreet || form.companyCity) && (
+                <p>
+                  <span className="text-gray-500">Address:</span>{" "}
+                  {[
+                    form.companyStreet,
+                    [form.companyCity, form.companyState].filter(Boolean).join(", "),
+                    form.companyZip,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                </p>
+              )}
+            {form.eventType === "corporate" && form.corporatePurpose && (
+              <p>
+                <span className="text-gray-500">Purpose:</span>{" "}
+                {form.corporatePurpose === "other"
+                  ? form.corporatePurposeOther || "Other"
+                  : CORPORATE_PURPOSES.find(
+                      (p) => p.value === form.corporatePurpose,
+                    )?.label}
+              </p>
+            )}
+            {form.eventType === "corporate" && form.brandedMenu && (
+              <p>
+                <span className="text-gray-500">Branded menu cards:</span> Yes
+              </p>
+            )}
+            {form.eventType === "corporate" && form.poReference && (
+              <p>
+                <span className="text-gray-500">PO/Invoice ref:</span>{" "}
+                {form.poReference}
+              </p>
+            )}
+            {form.eventType === "engagement" && form.isSurpriseProposal && (
+              <p>
+                <span className="text-gray-500">Surprise proposal:</span> Yes
+                — please be discreet
+              </p>
+            )}
+            {form.eventType === "birthday" && form.guestOfHonor && (
+              <p>
+                <span className="text-gray-500">Guest of honor:</span>{" "}
+                {form.guestOfHonor}
+                {form.isMilestone && form.milestoneAge
+                  ? ` (${form.milestoneAge})`
+                  : form.isMilestone
+                  ? " (milestone)"
+                  : ""}
+              </p>
+            )}
+            {form.eventType === "birthday" && form.kidsFriendlyMenu && (
+              <p>
+                <span className="text-gray-500">Kid-friendly menu:</span> Yes
+              </p>
+            )}
+            {form.eventType === "food_truck" && (
+              <>
+                {form.truckPropertyType && (
+                  <p>
+                    <span className="text-gray-500">Property:</span>{" "}
+                    {form.truckPropertyType === "private"
+                      ? "Private"
+                      : "Public / street"}
+                  </p>
+                )}
+                {(form.truckServiceWindowStart ||
+                  form.truckServiceWindowEnd) && (
+                  <p>
+                    <span className="text-gray-500">Service window:</span>{" "}
+                    {form.truckServiceWindowStart || "?"} –{" "}
+                    {form.truckServiceWindowEnd || "?"}
+                  </p>
+                )}
+              </>
+            )}
+            {form.eventType === "other" && form.otherEventDescription && (
+              <p>
+                <span className="text-gray-500">Event:</span>{" "}
+                {form.otherEventDescription}
+              </p>
+            )}
             <p>
               <span className="text-gray-500">Email:</span> {form.email}
             </p>
@@ -3441,11 +4412,13 @@ export default function Inquire() {
                     const Icon = stepIcons[step - 1];
                     return <Icon className="h-5 w-5 text-primary" />;
                   })()}
-                  {STEP_LABELS[step - 1]}
+                  {step === 2
+                    ? eventConfig.locationSectionTitle
+                    : STEP_LABELS[step - 1]}
                 </CardTitle>
                 <CardDescription>
                   {step === 1 && "Let us know who you are and what you're planning."}
-                  {step === 2 && "Tell us about your event location and logistics."}
+                  {step === 2 && eventConfig.locationSectionSubtitle}
                   {step === 3 && "Choose how you'd like your meal served."}
                   {step === 4 && "Select your menu theme and package level."}
                   {step === 5 && "Add appetizers and desserts to your event."}
