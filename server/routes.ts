@@ -238,6 +238,59 @@ async function pauseOpportunityDrip(opportunityId: number | null | undefined, re
   }
 }
 
+// First-view-wins: stamp viewedAt, start the drip clock on the linked opportunity,
+// and fire a one-shot admin notification. Safe to call multiple times — guarded by
+// the `viewedAt` check. Returns void so callers can fire-and-forget.
+async function stampQuoteViewedInBackground(
+  quote: typeof quotes.$inferSelect,
+): Promise<void> {
+  // Re-read to avoid racing with a parallel view. The caller's copy may be stale.
+  const [current] = await db.select().from(quotes).where(eq(quotes.id, quote.id));
+  if (!current || current.viewedAt) return;
+
+  const now = new Date();
+  await db
+    .update(quotes)
+    .set({ viewedAt: now, updatedAt: now })
+    .where(eq(quotes.id, current.id));
+
+  if (current.opportunityId) {
+    const [opp] = await db
+      .select()
+      .from(opportunities)
+      .where(eq(opportunities.id, current.opportunityId));
+    if (opp && !opp.followUpSequenceStartedAt) {
+      await db
+        .update(opportunities)
+        .set({ followUpSequenceStartedAt: now, updatedAt: now })
+        .where(eq(opportunities.id, opp.id));
+    }
+  }
+
+  try {
+    const [client] = await db.select().from(clients).where(eq(clients.id, current.clientId));
+    const emailCfg = getEmailConfig();
+    const adminQuoteUrl = `${emailCfg.publicBaseUrl}/quotes/${current.id}/view`;
+    const template = quoteViewedAdminEmail({
+      customerName: client ? `${client.firstName} ${client.lastName}` : 'A customer',
+      eventType: current.eventType,
+      eventDate: current.eventDate,
+      totalCents: current.total,
+      adminQuoteUrl,
+    });
+    sendEmailInBackground({
+      to: emailCfg.adminNotificationEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      clientId: current.clientId,
+      templateKey: 'quote_viewed_admin',
+    });
+  } catch (notifyError) {
+    console.warn('Failed to fire quote-viewed admin notification:', notifyError);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure PostgreSQL session store
   const PgStore = pgSession(session);
@@ -2670,6 +2723,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         social: site.social,
       };
 
+      // First-view-wins: stamp viewedAt the first time the customer loads the
+      // quote. Kept as a side-effect of the GET (not a separate POST) so tracking
+      // doesn't depend on the frontend remembering to call /view. Fire-and-forget
+      // so the admin notification doesn't slow the customer's page load.
+      if (!quote.viewedAt) {
+        stampQuoteViewedInBackground(quote).catch((err) =>
+          console.warn(`[quote-view] stamp failed for quote ${quote.id}:`, err)
+        );
+      }
+
       return res.status(200).json({
         quote: sanitizeQuoteForPublic(quote),
         client: client ? sanitizeClientForPublic(client) : null,
@@ -2683,8 +2746,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public: stamp viewedAt the first time the customer opens the quote.
-  // Also fires a one-shot admin notification (fire-and-forget) so Mike knows
-  // the customer engaged with the quote.
+  // Kept as an explicit endpoint so the frontend can signal a view independently
+  // of the GET (e.g. after a non-cached render). GET /api/public/quote/:token
+  // also stamps as a side-effect so tracking works even without this call.
   app.post('/api/public/quote/:token/view', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
@@ -2692,57 +2756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!quote) {
         return res.status(404).json({ message: 'Quote not found' });
       }
-
-      const isFirstView = !quote.viewedAt;
-
-      // First-view-wins: don't overwrite an existing viewedAt so we track the initial open time
-      if (isFirstView) {
-        await db
-          .update(quotes)
-          .set({ viewedAt: new Date(), updatedAt: new Date() })
-          .where(eq(quotes.id, quote.id));
-
-        // P1-2: Drip clock starts when the customer FIRST views the quote.
-        // We stamp followUpSequenceStartedAt on the linked opportunity (if any)
-        // the first time this happens. Subsequent views are no-ops.
-        if (quote.opportunityId) {
-          const [opp] = await db
-            .select()
-            .from(opportunities)
-            .where(eq(opportunities.id, quote.opportunityId));
-          if (opp && !opp.followUpSequenceStartedAt) {
-            await db
-              .update(opportunities)
-              .set({ followUpSequenceStartedAt: new Date(), updatedAt: new Date() })
-              .where(eq(opportunities.id, opp.id));
-          }
-        }
-
-        // Fire the admin notification in the background. Don't block the customer's page load.
-        try {
-          const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
-          const emailCfg = getEmailConfig();
-          const adminQuoteUrl = `${emailCfg.publicBaseUrl}/quotes/${quote.id}/view`;
-          const template = quoteViewedAdminEmail({
-            customerName: client ? `${client.firstName} ${client.lastName}` : 'A customer',
-            eventType: quote.eventType,
-            eventDate: quote.eventDate,
-            totalCents: quote.total,
-            adminQuoteUrl,
-          });
-          sendEmailInBackground({
-            to: emailCfg.adminNotificationEmail,
-            subject: template.subject,
-            html: template.html,
-            text: template.text,
-            clientId: quote.clientId,
-            templateKey: 'quote_viewed_admin',
-          });
-        } catch (notifyError) {
-          console.warn('Failed to fire quote-viewed admin notification:', notifyError);
-        }
-      }
-
+      await stampQuoteViewedInBackground(quote);
       return res.status(200).json({ ok: true });
     } catch (error) {
       console.error('Error stamping view:', error);
@@ -2822,6 +2836,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(events).values({
           clientId: quote.clientId,
           quoteId: quote.id,
+          opportunityId: quote.opportunityId ?? null,
+          inquiryId: originatingQuote?.id ?? null,
+          totalCents: quote.total ?? null,
           eventDate,
           startTime,
           endTime,

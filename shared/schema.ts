@@ -484,6 +484,14 @@ export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
   quoteId: integer("quote_id").references(() => quotes.id),
+  // Direct FKs to the originating opportunity and inquiry so reports and exports
+  // don't have to join through `quotes`. Nullable because events can be created
+  // manually (no upstream pipeline) or from legacy data that pre-dates this link.
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
+  inquiryId: integer("inquiry_id").references(() => inquiries.id),
+  // Agreed total at the moment of acceptance — snapshotted so later quote edits
+  // don't retroactively change what the customer committed to.
+  totalCents: integer("total_cents"),
   eventDate: timestamp("event_date").notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
