@@ -60,6 +60,9 @@ interface Venue {
   state: string | null;
   zip: string | null;
   hasKitchen: boolean | null;
+  // Which event types this venue is suitable for. Empty / null = show for
+  // all (legacy fallback). Used to hide wedding venues on a corporate inquiry.
+  eventTypes: string[] | null;
 }
 
 interface PromoValidation {
@@ -2887,11 +2890,28 @@ export default function Inquire() {
                   <SelectValue placeholder="Choose a venue..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {venues.map((v) => (
-                    <SelectItem key={v.id} value={String(v.id)}>
-                      {v.name}
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    // Filter by current event type: a venue shows if its
+                    // eventTypes list includes the current type, OR if its
+                    // list is empty (legacy rows default to "show for all").
+                    const filtered = venues.filter((v) => {
+                      if (!form.eventType) return true;
+                      if (!v.eventTypes || v.eventTypes.length === 0) return true;
+                      return v.eventTypes.includes(form.eventType);
+                    });
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="px-2 py-1.5 text-xs text-gray-500">
+                          No venues in our list for this event type — pick "Other" below and enter your location.
+                        </div>
+                      );
+                    }
+                    return filtered.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.name}
+                      </SelectItem>
+                    ));
+                  })()}
                   <SelectItem value="other">Other (enter manually)</SelectItem>
                 </SelectContent>
               </Select>

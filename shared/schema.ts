@@ -1184,6 +1184,11 @@ export const venues = pgTable("venues", {
   hasWater: boolean("has_water").default(true),
   capacity: integer("capacity"),
   notes: text("notes"),
+  // Which event types this venue is suitable for — e.g. {"wedding","engagement"}.
+  // Empty/null = show for all event types (legacy fallback). The inquiry form
+  // filters its dropdown using this list so wedding venues don't surface on a
+  // corporate inquiry.
+  eventTypes: text("event_types").array(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
