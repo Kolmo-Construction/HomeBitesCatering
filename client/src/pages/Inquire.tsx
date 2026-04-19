@@ -4809,20 +4809,6 @@ export default function Inquire() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Validation errors */}
-                {stepErrors.length > 0 && (
-                  <div className="mb-6 p-4 rounded-lg border border-red-200 bg-red-50">
-                    <p className="font-medium text-red-700 mb-1">
-                      Please fix the following:
-                    </p>
-                    <ul className="list-disc list-inside text-sm text-red-600 space-y-0.5">
-                      {stepErrors.map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 {/* Catalog loading / error banner — only relevant for steps 5–7 which depend on the catalog. */}
                 {[5, 6, 7].includes(step) && catalogLoading && (
                   <div className="mb-6 p-4 rounded-lg border border-blue-200 bg-blue-50 flex items-center gap-2">
@@ -4848,6 +4834,21 @@ export default function Inquire() {
                 {step === 6 && renderStep6()}
                 {step === 7 && renderStep7()}
                 {step === 8 && renderStep8()}
+
+                {/* Validation errors — shown right above the Back/Next row so
+                    the message is visible at the moment the user clicks Next. */}
+                {stepErrors.length > 0 && (
+                  <div className="mt-8 p-4 rounded-lg border border-red-200 bg-red-50">
+                    <p className="font-medium text-red-700 mb-1">
+                      Please fix the following:
+                    </p>
+                    <ul className="list-disc list-inside text-sm text-red-600 space-y-0.5">
+                      {stepErrors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Navigation */}
                 <div className="flex justify-between items-center mt-8 pt-6 border-t">
