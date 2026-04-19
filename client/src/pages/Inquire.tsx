@@ -3096,15 +3096,20 @@ export default function Inquire() {
           Service Type <span className="text-red-500">*</span>
         </Label>
         {renderCardSelector(SERVICE_TYPES, form.serviceType, (v) =>
-          // Picking "Cocktail Party" clears any leftover main-meal state so
-          // stale toggles don't surface on the review screen.
-          setForm((prev) => ({
-            ...prev,
-            serviceType: v,
-            hasMainMeal: v === "cocktail_party" ? false : prev.hasMainMeal,
-            mainMealStartTime: v === "cocktail_party" ? "" : prev.mainMealStartTime,
-            mainMealEndTime: v === "cocktail_party" ? "" : prev.mainMealEndTime,
-          })),
+          setForm((prev) => {
+            const isCocktail = v === "cocktail_party";
+            return {
+              ...prev,
+              serviceType: v,
+              // Cocktail parties have no main meal — clear any stale state.
+              hasMainMeal: isCocktail ? false : prev.hasMainMeal,
+              mainMealStartTime: isCocktail ? "" : prev.mainMealStartTime,
+              mainMealEndTime: isCocktail ? "" : prev.mainMealEndTime,
+              // …and the cocktail/appetizer hour IS the event, so open it
+              // automatically so the customer sees the start/end time fields.
+              hasCocktailHour: isCocktail ? true : prev.hasCocktailHour,
+            };
+          }),
         )}
         {/* Plain-language description of the currently selected service
             type — helps customers understand what they're choosing without
