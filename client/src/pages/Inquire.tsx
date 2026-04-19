@@ -1293,15 +1293,15 @@ export default function Inquire() {
         cat.items.forEach((item) => {
           const qty = sel[item.name] || 0;
           if (qty <= 0) return;
-          // per-person categories (charcuterie): qty=1 means "selected";
-          // effective quantity is guestCount
-          const effectiveQty = cat.perPerson ? guestCount : qty;
+          // For per-person categories (charcuterie boards) qty is the number
+          // of servings the customer wants — not tied to guest count. Price
+          // is price-per-serving × servings.
           appetizerSelections.push({
             category: slug(cat.label),
             itemName: item.name,
             pricePerPiece: item.price,
-            quantity: effectiveQty,
-            subtotal: item.price * effectiveQty,
+            quantity: qty,
+            subtotal: item.price * qty,
           });
         });
       });
@@ -3497,9 +3497,8 @@ export default function Inquire() {
                     (selections["__servings"] || 0)
                   : cat.items.reduce((sum, item) => {
                       const qty = selections[item.name] || 0;
-                      if (cat.perPerson) {
-                        return sum + (qty > 0 ? item.price * guestCount : 0);
-                      }
+                      // Works for both lot-priced (qty = pieces) and per-person
+                      // (qty = servings). Both multiply item.price × qty.
                       return sum + item.price * qty;
                     }, 0);
 
@@ -3628,20 +3627,30 @@ export default function Inquire() {
                                 </p>
                               </div>
                               {cat.perPerson ? (
+                                // Per-person boards (charcuterie / grazing).
+                                // Customer chooses servings — independent of guest
+                                // count. Price = price-per-serving × servings.
                                 <div className="flex items-center gap-3">
-                                  <Switch
-                                    checked={qty > 0}
-                                    onCheckedChange={(checked) =>
-                                      setAppetizerQty(
-                                        cat.label,
-                                        item.name,
-                                        checked ? 1 : 0,
-                                      )
-                                    }
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step={1}
+                                    placeholder="servings"
+                                    value={qty === 0 ? "" : String(qty)}
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+                                      if (raw === "") {
+                                        setAppetizerQty(cat.label, item.name, 0);
+                                        return;
+                                      }
+                                      const n = Math.max(0, Math.floor(Number(raw) || 0));
+                                      setAppetizerQty(cat.label, item.name, n);
+                                    }}
+                                    className="w-28"
                                   />
                                   {qty > 0 && (
-                                    <span className="text-sm text-gray-600">
-                                      {fmt(item.price * guestCount)}
+                                    <span className="text-sm text-gray-600 w-24 text-right">
+                                      {fmt(item.price * qty)}
                                     </span>
                                   )}
                                 </div>
