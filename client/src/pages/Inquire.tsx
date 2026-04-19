@@ -1126,6 +1126,9 @@ export default function Inquire() {
             errors.push("Please select a buffet style.");
           break;
         case 4:
+          // Cocktail parties don't pick a menu theme/tier — they go straight
+          // to hors d'oeuvres. Step 4 is skipped entirely (see goNext/goBack).
+          if (form.serviceType === "cocktail_party") break;
           if (!form.menuTheme) errors.push("Please select a menu theme.");
           if (form.menuTheme !== "custom" && !form.packageTier)
             errors.push("Please select a package tier.");
@@ -1219,6 +1222,10 @@ export default function Inquire() {
     [form, guestCount, selectedTier, selectedMenu],
   );
 
+  // Cocktail parties have no main meal — skip step 4 (menu theme/tier) and
+  // go straight to appetizers. Advance and back should both jump over it.
+  const skipMenuStep = form.serviceType === "cocktail_party";
+
   const goNext = useCallback(() => {
     const errors = validateStep(step);
     if (errors.length > 0) {
@@ -1226,15 +1233,23 @@ export default function Inquire() {
       return;
     }
     setStepErrors([]);
-    setStep((prev) => Math.min(prev + 1, 8));
+    setStep((prev) => {
+      const next = prev + 1;
+      if (skipMenuStep && next === 4) return 5; // 3 → 5
+      return Math.min(next, 8);
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [step, validateStep]);
+  }, [step, validateStep, skipMenuStep]);
 
   const goBack = useCallback(() => {
     setStepErrors([]);
-    setStep((prev) => Math.max(prev - 1, 1));
+    setStep((prev) => {
+      const next = prev - 1;
+      if (skipMenuStep && next === 4) return 3; // 5 → 3
+      return Math.max(next, 1);
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [skipMenuStep]);
 
   // ---------- Submit mutation ----------
   const submitMutation = useMutation({
