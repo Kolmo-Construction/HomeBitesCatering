@@ -550,6 +550,7 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           serviceFeeFullServiceNoSetup: { type: "number", description: "Full-service-no-setup % (e.g. 17.5)" },
           serviceFeeFullService: { type: "number", description: "Full-service % (e.g. 20)" },
           taxRate: { type: "number", description: "Tax rate % (e.g. 10.25)" },
+          childDiscount: { type: "number", description: "Child-under-10 food discount % (e.g. 50 for half price)" },
         },
       },
     },
@@ -1522,6 +1523,7 @@ const toolHandlers: Record<string, ToolHandler> = {
         fullService: row.serviceFeeFullServiceBps / 100,
       },
       taxRatePercent: row.taxRateBps / 100,
+      childDiscountPercent: row.childDiscountBps / 100,
     };
   },
 
@@ -1557,6 +1559,7 @@ const toolHandlers: Record<string, ToolHandler> = {
     setPercent("serviceFeeFullServiceNoSetupBps", "serviceFeeFullServiceNoSetup");
     setPercent("serviceFeeFullServiceBps", "serviceFeeFullService");
     setPercent("taxRateBps", "taxRate");
+    setPercent("childDiscountBps", "childDiscount");
 
     if (Object.keys(patch).length === 0) {
       return { error: "No valid fields provided." };

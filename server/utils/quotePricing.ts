@@ -79,6 +79,7 @@ const DEFAULT_CONFIG = {
   serviceFeeFullServiceNoSetupBps: 1750,
   serviceFeeFullServiceBps: 2000,
   taxRateBps: 1025,
+  childDiscountBps: 5000,
 };
 type ConfigShape = typeof DEFAULT_CONFIG;
 
@@ -103,6 +104,7 @@ export async function refreshPricingConfigCache(): Promise<void> {
         serviceFeeFullServiceNoSetupBps: row.serviceFeeFullServiceNoSetupBps,
         serviceFeeFullServiceBps: row.serviceFeeFullServiceBps,
         taxRateBps: row.taxRateBps,
+        childDiscountBps: row.childDiscountBps,
       },
       fetchedAt: Date.now(),
     };
@@ -141,6 +143,11 @@ export function calculateQuotePricing(
   quote: InsertInquiry | Inquiry
 ): PricingBreakdown {
   const guestCount = quote.guestCount || 0;
+  // Adults pay the full per-person tier; children (under 10) pay a discounted
+  // share controlled by pricing_config.childDiscountBps (default 50% off). If
+  // adultCount is null (pre-split inquiries), treat everyone as adults.
+  const adultCount = (quote as any).adultCount ?? guestCount;
+  const childCount = (quote as any).childCount ?? 0;
   const cfg = getPricingConfig();
 
   // 1. Food cost from menu tier — read from database cache
@@ -161,7 +168,13 @@ export function calculateQuotePricing(
       }
     }
   }
-  const foodSubtotalCents = perPersonCents * guestCount;
+  // Food: adults × full + children × (1 − childDiscountRate). Round after so
+  // cents don't drift on odd combinations.
+  const childMultiplierBps = 10000 - cfg.childDiscountBps; // e.g. 5000 = 50% of adult price
+  const foodSubtotalCents = Math.round(
+    perPersonCents * adultCount +
+    (perPersonCents * childCount * childMultiplierBps) / 10000
+  );
 
   // 2. Appetizers — use pre-computed subtotal from payload if provided,
   //    otherwise fall back to pricePerPiece × quantity. Subtotals from the

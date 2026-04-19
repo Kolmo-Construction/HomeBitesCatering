@@ -133,6 +133,7 @@ interface PricingConfigRow {
   serviceFeeFullServiceNoSetupBps: number;
   serviceFeeFullServiceBps: number;
   taxRateBps: number;
+  childDiscountBps: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -596,6 +597,7 @@ function PricingConfigEditor() {
                 serviceFeeFullServiceNoSetupBps: 1750,
                 serviceFeeFullServiceBps: 2000,
                 taxRateBps: 1025,
+                childDiscountBps: 5000,
               })
             }
             disabled={saveMutation.isPending}
@@ -777,6 +779,20 @@ function PricingConfigEditor() {
             label="Sales & use tax"
             valueBps={editing.taxRateBps}
             onChange={(v) => update({ taxRateBps: v })}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Kids pricing</CardTitle>
+          <CardDescription>Discount applied to the per-person food tier for children under 10. Other categories (appetizers, equipment, water service) still use total guest count.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <PercentInput
+            label="Child discount (under 10)"
+            valueBps={editing.childDiscountBps}
+            onChange={(v) => update({ childDiscountBps: v })}
           />
         </CardContent>
       </Card>

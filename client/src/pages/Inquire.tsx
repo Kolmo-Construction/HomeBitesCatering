@@ -552,7 +552,11 @@ interface FormState {
   email: string;
   phone: string;
   eventDate: string;
+  // guestCount is always adults + children; derived from the two inputs below.
+  // Kept in FormState for the rest of the form logic that reads total headcount.
   guestCount: number | "";
+  adultCount: number | "";
+  childCount: number | "";
   eventStartTime: string;
   eventEndTime: string;
 
@@ -659,6 +663,8 @@ const initialFormState: FormState = {
   phone: "",
   eventDate: "",
   guestCount: "",
+  adultCount: "",
+  childCount: 0,
   eventStartTime: "",
   eventEndTime: "",
 
@@ -1102,8 +1108,8 @@ export default function Inquire() {
           else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
             errors.push("Please enter a valid email address.");
           if (!form.eventDate) errors.push("Event date is required.");
-          if (!form.guestCount || Number(form.guestCount) < 1)
-            errors.push("Guest count is required.");
+          if (!form.adultCount || Number(form.adultCount) < 1)
+            errors.push("Number of adults is required.");
           break;
         case 2:
           if (!form.hasVenue)
@@ -1552,6 +1558,10 @@ export default function Inquire() {
       const payload: Record<string, any> = {
         ...rest,
         guestCount,
+        adultCount:
+          typeof form.adultCount === "number" ? form.adultCount : guestCount,
+        childCount:
+          typeof form.childCount === "number" ? form.childCount : 0,
         ...(combinedSpecialRequests
           ? { specialRequests: combinedSpecialRequests }
           : {}),
@@ -2195,22 +2205,60 @@ export default function Inquire() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="guestCount">
-              Guest Count <span className="text-red-500">*</span>
+            <Label htmlFor="adultCount">
+              Adults <span className="text-red-500">*</span>
             </Label>
             <Input
-              id="guestCount"
+              id="adultCount"
               type="number"
               min="1"
-              value={form.guestCount}
-              onChange={(e) =>
-                update(
-                  "guestCount",
-                  e.target.value ? Number(e.target.value) : "",
-                )
-              }
-              placeholder="Number of guests"
+              value={form.adultCount}
+              onChange={(e) => {
+                const n = e.target.value ? Number(e.target.value) : "";
+                const adults = typeof n === "number" ? n : 0;
+                const kids = typeof form.childCount === "number" ? form.childCount : 0;
+                setForm((prev) => ({
+                  ...prev,
+                  adultCount: n,
+                  guestCount: n === "" ? "" : adults + kids,
+                }));
+              }}
+              placeholder="10+ years old"
             />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="childCount">
+              Children under 10
+            </Label>
+            <Input
+              id="childCount"
+              type="number"
+              min="0"
+              value={form.childCount}
+              onChange={(e) => {
+                const n = e.target.value ? Math.max(0, Number(e.target.value)) : 0;
+                const adults = typeof form.adultCount === "number" ? form.adultCount : 0;
+                setForm((prev) => ({
+                  ...prev,
+                  childCount: n,
+                  guestCount: adults === 0 && n === 0 ? "" : adults + n,
+                }));
+              }}
+              placeholder="0"
+            />
+            <p className="text-xs text-gray-500">
+              Kids under 10 are charged a reduced food rate (currently 50% off). Other line items still scale with total headcount.
+            </p>
+          </div>
+          <div className="space-y-1.5 flex items-end">
+            <p className="text-sm text-gray-600">
+              <strong>Total:</strong>{" "}
+              {(typeof form.adultCount === "number" ? form.adultCount : 0) +
+                (typeof form.childCount === "number" ? form.childCount : 0)}{" "}
+              guests
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

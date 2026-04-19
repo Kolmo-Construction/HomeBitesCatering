@@ -1369,7 +1369,9 @@ export const inquiries = pgTable("inquiries", {
   eventDate: timestamp("event_date"),
   eventStartTime: text("event_start_time"),
   eventEndTime: text("event_end_time"),
-  guestCount: integer("guest_count").notNull(),
+  guestCount: integer("guest_count").notNull(),                    // total = adults + children
+  adultCount: integer("adult_count"),                               // >= 10 years old, pay full food price
+  childCount: integer("child_count").default(0),                    // under 10, food discounted (see pricing_config.childDiscountBps)
 
   // Venue
   venueId: integer("venue_id").references(() => venues.id),
@@ -1959,6 +1961,12 @@ export const pricingConfig = pgTable("pricing_config", {
   serviceFeeFullServiceBps: integer("service_fee_full_bps").notNull().default(2000),                 // 20%
   // --- Tax (basis points) ---
   taxRateBps: integer("tax_rate_bps").notNull().default(1025),                                        // 10.25%
+  // --- Kids pricing ---
+  // Child (under 10) food discount as basis points off the adult price.
+  // 5000 bps = 50% off, so a child's food is priced at 50% of the adult rate.
+  // Only applied to the per-person food tier; appetizers, equipment, water,
+  // coffee/tea, and non-alcoholic package all use total guest count.
+  childDiscountBps: integer("child_discount_bps").notNull().default(5000),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
