@@ -1,5 +1,6 @@
-// QuoteProposalView — the shared renderer for the customer-facing wedding
-// proposal. Used in two places:
+// QuoteProposalView — the shared renderer for the customer-facing proposal.
+// Event-type agnostic: theme, copy, and section opt-ins all flow from
+// `getEventPreset(proposal.eventType)`. Used in two places:
 //
 //   1. /quote/:token (public, token-keyed) via PublicQuote.tsx — mode="public"
 //   2. /quotes/:id/view (admin) via AdminQuotePreview.tsx — mode="preview"
@@ -37,7 +38,7 @@ import {
   Quote as QuoteIcon,
 } from "lucide-react";
 import type { Proposal } from "@shared/proposal";
-import { getEventCopy } from "@shared/eventCopy";
+import { getEventPreset } from "@shared/eventPresets";
 
 // Public-safe site-config slice returned by the quote API.
 export interface QuoteSiteConfig {
@@ -120,60 +121,6 @@ export interface QuoteProposalViewProps {
   // URLs for the PDF download and share-link actions (public mode).
   pdfUrl?: string | null;
   shareUrl?: string | null;
-}
-
-// ─── Defaults ─────────────────────────────────────────────────────────────────
-
-/**
- * What's actually covered by the price. We keep these truthful and generic so
- * Mike doesn't have to worry about overpromising — admin can override per-quote
- * via proposal.whatsIncluded when a specific event deviates.
- */
-function defaultWhatsIncluded(serviceStyle?: string | null): string[] {
-  const base = [
-    "Full menu planning with one round of revisions",
-    "Complimentary tasting for the couple",
-    "On-site cooking and plating by our kitchen team",
-    "Professional service staff for the event",
-    "Setup of serving lines, chafing dishes, and presentation ware",
-    "Full breakdown and cleanup of our equipment after service",
-    "Dedicated event coordinator from booking through the day-of",
-  ];
-  switch ((serviceStyle || "").toLowerCase()) {
-    case "plated":
-      return [
-        "Full menu planning with one round of revisions",
-        "Complimentary tasting for the couple",
-        "Course-by-course plating in our on-site kitchen",
-        "Captain + servers to coordinate plated service with your venue",
-        "Setup of plating stations, bussing, and between-course resets",
-        "Full breakdown and cleanup of our equipment after service",
-        "Dedicated event coordinator from booking through the day-of",
-      ];
-    case "family_style":
-      return [
-        "Full menu planning with one round of revisions",
-        "Complimentary tasting for the couple",
-        "Family-style platters built and refreshed throughout service",
-        "Service staff to coordinate platter flow with your venue",
-        "Setup of communal platters, utensils, and replenishments",
-        "Full breakdown and cleanup of our equipment after service",
-        "Dedicated event coordinator from booking through the day-of",
-      ];
-    case "cocktail_party":
-    case "stations":
-      return [
-        "Full menu planning with one round of revisions",
-        "Complimentary tasting for the couple",
-        "On-site cooking at stations / passed hors d'oeuvres by our kitchen team",
-        "Service staff to pass and replenish throughout the event",
-        "Setup of stations, serving platters, and presentation ware",
-        "Full breakdown and cleanup of our equipment after service",
-        "Dedicated event coordinator from booking through the day-of",
-      ];
-    default:
-      return base;
-  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -273,23 +220,6 @@ function formatTime(t: string | null | undefined): string {
   h = h % 12;
   if (h === 0) h = 12;
   return `${h}:${min} ${ampm}`;
-}
-
-/**
- * Display title for the customer. Event-type aware: weddings/engagements use
- * couple framing when both first names are present (and distinct — never
- * "Pascal & Pascal"); corporate uses company name; everything else falls back
- * to a solo name. Driven by `getEventCopy(eventType).displayTitle`.
- */
-function displayTitle(p: Proposal): string {
-  const copy = getEventCopy(p.eventType);
-  return copy.displayTitle({
-    firstName: p.firstName,
-    lastName: p.lastName,
-    partnerFirstName: p.partnerFirstName,
-    partnerLastName: p.partnerLastName,
-    // Proposal doesn't yet carry company; extend if needed
-  });
 }
 
 function groupMenuSelections(
@@ -415,7 +345,6 @@ export default function QuoteProposalView({
 
   const groupedMenu = groupMenuSelections(proposal.menuSelections);
   const menuCategories = sortCategories(Object.keys(groupedMenu));
-  const isWedding = (proposal.eventType || "").toLowerCase().includes("wedding");
   const venueName = proposal.venue?.name || "";
   const venueLine = proposal.venue
     ? [proposal.venue.street, proposal.venue.city, proposal.venue.state]
@@ -455,8 +384,16 @@ export default function QuoteProposalView({
     if (result?.bookingUrl) setActiveBookingUrl(result.bookingUrl);
   };
 
-  const copy = getEventCopy(proposal.eventType);
-  const title = displayTitle(proposal);
+  const preset = getEventPreset(proposal.eventType);
+  const { copy, sections } = preset;
+  const personContext = {
+    firstName: proposal.firstName,
+    lastName: proposal.lastName,
+    partnerFirstName: proposal.partnerFirstName,
+    partnerLastName: proposal.partnerLastName,
+  };
+  const title = copy.displayTitle(personContext);
+  const useHearts = sections.useHeartAccents;
 
   return (
     <PageShell mode={mode}>
@@ -532,7 +469,7 @@ export default function QuoteProposalView({
                 href={acceptedEventUrl}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-emerald-200 text-emerald-800 text-sm font-medium rounded-full hover:bg-emerald-50 transition"
               >
-                {isWedding && <Heart className="h-3.5 w-3.5 fill-current" />}
+                {useHearts && <Heart className="h-3.5 w-3.5 fill-current" />}
                 View celebration page
               </a>
             )}
@@ -561,11 +498,11 @@ export default function QuoteProposalView({
         <div className="relative px-8 py-16 sm:py-20 text-center">
           <div className="inline-flex items-center gap-3 text-[#8B7355] text-xs sm:text-sm uppercase tracking-[0.32em] mb-6 font-semibold">
             <span className="h-px w-10 bg-[#c9b089]" />
-            {isWedding && (
+            {useHearts && (
               <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
             )}
             {copy.proposalKicker}
-            {isWedding && (
+            {useHearts && (
               <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
             )}
             <span className="h-px w-10 bg-[#c9b089]" />
@@ -589,12 +526,7 @@ export default function QuoteProposalView({
             </p>
           )}
           <p className="mt-10 max-w-xl mx-auto text-stone-700 leading-relaxed text-lg">
-            {copy.proposalLead({
-              firstName: proposal.firstName,
-              lastName: proposal.lastName,
-              partnerFirstName: proposal.partnerFirstName,
-              partnerLastName: proposal.partnerLastName,
-            })}
+            {copy.proposalLead(personContext)}
           </p>
         </div>
       </div>
@@ -775,7 +707,7 @@ export default function QuoteProposalView({
         const items =
           proposal.whatsIncluded && proposal.whatsIncluded.length > 0
             ? proposal.whatsIncluded
-            : defaultWhatsIncluded(proposal.serviceStyle);
+            : preset.defaults.whatsIncluded(proposal.serviceStyle);
         if (!items || items.length === 0) return null;
         return (
           <Card kicker="What's included" title="Every price covers the whole experience">
@@ -844,13 +776,13 @@ export default function QuoteProposalView({
         <section className="mb-8">
           <div className="text-center mb-6">
             <div className="text-xs uppercase tracking-[0.25em] text-[#8B7355] font-semibold">
-              Kind words
+              {copy.testimonialsKicker}
             </div>
             <h2
               className="font-serif text-3xl sm:text-4xl text-stone-900 mt-2 leading-tight"
               style={{ fontVariationSettings: "'opsz' 144" }}
             >
-              From couples we've fed
+              {copy.testimonialsHeadline}
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -957,10 +889,9 @@ export default function QuoteProposalView({
       {/* ═══════════════ ACCEPT / DECLINE (public only) ═══════════════ */}
       {mode === "public" && effectiveStatus === "pending" && !showDeclineForm && (
         <div className="mb-8 rounded-3xl bg-gradient-to-br from-[#8B7355] via-[#a67c5a] to-[#E28C0A] p-10 sm:p-12 text-center shadow-xl shadow-[#e0d0b3]">
-          <p className="text-white text-2xl font-semibold mb-3">Ready to make it official?</p>
+          <p className="text-white text-2xl font-semibold mb-3">{copy.acceptCtaHeadline}</p>
           <p className="text-[#fef9ed] text-base sm:text-lg mb-7 max-w-md mx-auto leading-relaxed">
-            Accept the proposal and we&rsquo;ll send the contract and deposit
-            instructions within 24 hours.
+            {copy.acceptCtaBlurb}
           </p>
           <Button
             size="lg"
@@ -976,7 +907,7 @@ export default function QuoteProposalView({
               </>
             ) : (
               <>
-                <Heart className="h-5 w-5 mr-2 fill-current" />
+                {useHearts && <Heart className="h-5 w-5 mr-2 fill-current" />}
                 Yes — let&rsquo;s do this
               </>
             )}

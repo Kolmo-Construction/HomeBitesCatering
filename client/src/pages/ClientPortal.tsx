@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
-import { getEventTheme } from "@/lib/eventThemes";
+import { getEventPreset } from "@shared/eventPresets";
 import {
   Calendar,
   Users,
@@ -276,7 +276,8 @@ function ActiveEventHero({
   event: PortalEvent;
   onRequestChange: () => void;
 }) {
-  const theme = getEventTheme(event.eventType);
+  const preset = getEventPreset(event.eventType);
+  const { theme } = preset;
   const days = event.daysToEvent;
 
   return (
@@ -293,8 +294,7 @@ function ActiveEventHero({
               className="text-3xl sm:text-4xl font-serif text-stone-900 leading-tight"
               style={{ fontFamily: "Georgia, serif" }}
             >
-              {theme.icon}{" "}
-              <span className="capitalize">{event.eventType.replace(/_/g, " ")}</span>
+              {theme.icon} <span>{preset.label}</span>
             </h2>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-stone-700 text-sm">
               <span className="flex items-center gap-1.5">
@@ -529,13 +529,14 @@ function DocumentLocker({ events }: { events: PortalEvent[] }) {
   const docs = useMemo(() => {
     const all: Array<{ eventId: number; label: string; url: string; kind: string; context: string }> = [];
     for (const e of events) {
+      const preset = getEventPreset(e.eventType);
       for (const d of e.documents) {
         all.push({
           eventId: e.id,
           label: d.label,
           url: d.url,
           kind: d.kind,
-          context: `${e.eventType.replace(/_/g, " ")} · ${formatDate(new Date(e.eventDate))}`,
+          context: `${preset.label} · ${formatDate(new Date(e.eventDate))}`,
         });
       }
     }
@@ -804,7 +805,8 @@ function PortalDashboard({
             </h2>
             <div className="grid gap-3">
               {pendingQuotes.map((q) => {
-                const theme = getEventTheme(q.eventType);
+                const preset = getEventPreset(q.eventType);
+                const { theme } = preset;
                 return (
                   <a
                     key={q.id}
@@ -817,8 +819,8 @@ function PortalDashboard({
                     >
                       <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                          <div className="font-medium capitalize">
-                            {q.eventType.replace(/_/g, " ")}
+                          <div className="font-medium">
+                            {preset.label}
                           </div>
                           <div className="text-sm text-gray-500">
                             {q.eventDate ? formatDate(new Date(q.eventDate)) : "Date TBD"}{" "}
@@ -878,7 +880,8 @@ function PortalDashboard({
             </h2>
             <div className="grid gap-3">
               {otherUpcoming.map((evt) => {
-                const theme = getEventTheme(evt.eventType);
+                const preset = getEventPreset(evt.eventType);
+                const { theme } = preset;
                 return (
                   <Card key={evt.id} className="hover:shadow-md transition overflow-hidden">
                     <div className="h-1" style={{ background: theme.gradient }} />
@@ -887,8 +890,8 @@ function PortalDashboard({
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-xl">{theme.icon}</span>
-                            <span className="font-medium capitalize truncate">
-                              {evt.eventType.replace(/_/g, " ")}
+                            <span className="font-medium truncate">
+                              {preset.label}
                             </span>
                             <Badge variant="secondary" className="text-xs shrink-0">
                               {evt.status}
@@ -948,7 +951,8 @@ function PortalDashboard({
             </h2>
             <div className="grid gap-2">
               {pastEvents.map((evt) => {
-                const theme = getEventTheme(evt.eventType);
+                const preset = getEventPreset(evt.eventType);
+                const { theme } = preset;
                 return (
                   <a
                     key={evt.id}
@@ -959,8 +963,8 @@ function PortalDashboard({
                       <CardContent className="p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span>{theme.icon}</span>
-                          <span className="text-sm font-medium capitalize">
-                            {evt.eventType.replace(/_/g, " ")}
+                          <span className="text-sm font-medium">
+                            {preset.label}
                           </span>
                           <span className="text-xs text-gray-400">
                             {formatDate(new Date(evt.eventDate))}

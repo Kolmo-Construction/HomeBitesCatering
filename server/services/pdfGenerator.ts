@@ -7,7 +7,7 @@
 import PDFDocument from "pdfkit";
 import { getSiteConfig } from "../utils/siteConfig";
 import type { Proposal } from "@shared/proposal";
-import { getEventCopy } from "@shared/eventCopy";
+import { getEventPreset } from "@shared/eventPresets";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -19,59 +19,15 @@ function formatDate(iso: string | Date | null): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
-function defaultWhatsIncluded(serviceStyle?: string | null): string[] {
-  const base = [
-    "Full menu planning with one round of revisions",
-    "Complimentary tasting for the couple",
-    "On-site cooking and plating by our kitchen team",
-    "Professional service staff for the event",
-    "Setup of serving lines, chafing dishes, and presentation ware",
-    "Full breakdown and cleanup of our equipment after service",
-    "Dedicated event coordinator from booking through the day-of",
-  ];
-  switch ((serviceStyle || "").toLowerCase()) {
-    case "plated":
-      return [
-        "Full menu planning with one round of revisions",
-        "Complimentary tasting for the couple",
-        "Course-by-course plating in our on-site kitchen",
-        "Captain + servers to coordinate plated service with your venue",
-        "Setup of plating stations, bussing, and between-course resets",
-        "Full breakdown and cleanup of our equipment after service",
-        "Dedicated event coordinator from booking through the day-of",
-      ];
-    case "family_style":
-      return [
-        "Full menu planning with one round of revisions",
-        "Complimentary tasting for the couple",
-        "Family-style platters built and refreshed throughout service",
-        "Service staff to coordinate platter flow with your venue",
-        "Setup of communal platters, utensils, and replenishments",
-        "Full breakdown and cleanup of our equipment after service",
-        "Dedicated event coordinator from booking through the day-of",
-      ];
-    case "cocktail_party":
-    case "stations":
-      return [
-        "Full menu planning with one round of revisions",
-        "Complimentary tasting for the couple",
-        "On-site cooking at stations / passed hors d'oeuvres by our kitchen team",
-        "Service staff to pass and replenish throughout the event",
-        "Setup of stations, serving platters, and presentation ware",
-        "Full breakdown and cleanup of our equipment after service",
-        "Dedicated event coordinator from booking through the day-of",
-      ];
-    default:
-      return base;
-  }
-}
-
 function titleCase(s: string): string {
   return s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export async function generateQuotePDF(proposal: Proposal, quote: any, client: any): Promise<Buffer> {
   const config = getSiteConfig();
+  const preset = getEventPreset(proposal.eventType || quote.eventType);
+  const { copy, defaults, pdfBranding } = preset;
+  const palette = pdfBranding.palette;
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "LETTER", margin: 50 });
@@ -84,19 +40,19 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     const W = doc.page.width - 100; // usable width
 
     // ─── Header ────────────────────────────────────────────────────────────
-    doc.fontSize(22).font("Helvetica-Bold").text(config.businessName, { align: "center" });
-    doc.fontSize(10).font("Helvetica-Oblique").fillColor("#666")
+    doc.fontSize(22).font("Helvetica-Bold").fillColor(palette.headerText)
+      .text(config.businessName, { align: "center" });
+    doc.fontSize(10).font("Helvetica-Oblique").fillColor(palette.muted)
       .text(config.tagline, { align: "center" });
     doc.moveDown(0.3);
-    doc.fontSize(9).font("Helvetica").fillColor("#888")
+    doc.fontSize(9).font("Helvetica").fillColor(palette.muted)
       .text(`${config.address} · ${config.phone} · ${config.email}`, { align: "center" });
 
     doc.moveDown(1);
-    doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).strokeColor("#ddd").lineWidth(1).stroke();
+    doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).strokeColor(palette.rule).lineWidth(1).stroke();
     doc.moveDown(1);
 
     // ─── Proposal Title ────────────────────────────────────────────────────
-    const copy = getEventCopy(proposal.eventType || quote.eventType);
     const personContext = {
       firstName: proposal.firstName,
       lastName: proposal.lastName,
@@ -105,15 +61,15 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     };
     const displayTitle = copy.displayTitle(personContext);
     // Kicker (e.g., "A Corporate Event Proposal") + title
-    doc.fontSize(10).font("Helvetica").fillColor("#8B7355")
+    doc.fontSize(10).font("Helvetica").fillColor(palette.primary)
       .text(copy.proposalKicker.toUpperCase(), { align: "center", characterSpacing: 2 });
     doc.moveDown(0.3);
-    doc.fontSize(20).font("Helvetica-Bold").fillColor("#111")
+    doc.fontSize(20).font("Helvetica-Bold").fillColor(palette.headerText)
       .text(displayTitle, { align: "center" });
     doc.moveDown(0.5);
 
     // ─── Event Details ─────────────────────────────────────────────────────
-    doc.fontSize(11).font("Helvetica").fillColor("#333");
+    doc.fontSize(11).font("Helvetica").fillColor(palette.bodyText);
 
     const details: [string, string][] = [];
     if (proposal.eventDate) details.push(["Date", formatDate(proposal.eventDate)]);
@@ -132,14 +88,14 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
 
     // ─── Menu Selections ───────────────────────────────────────────────────
     if (proposal.menuSelections && proposal.menuSelections.length > 0) {
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Menu Selections");
+      doc.fontSize(13).font("Helvetica-Bold").fillColor(palette.headerText).text("Menu Selections");
       doc.moveDown(0.3);
 
       for (const item of proposal.menuSelections) {
-        doc.fontSize(10).font("Helvetica").fillColor("#333")
+        doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText)
           .text(`  •  ${item.name}${item.category ? ` (${item.category})` : ""}`);
         if (item.description) {
-          doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+          doc.fontSize(9).font("Helvetica-Oblique").fillColor(palette.muted)
             .text(`       ${item.description}`, { indent: 0 });
         }
       }
@@ -148,13 +104,13 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
 
     // ─── Appetizers ────────────────────────────────────────────────────────
     if (proposal.appetizers && proposal.appetizers.length > 0) {
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Appetizers");
+      doc.fontSize(13).font("Helvetica-Bold").fillColor(palette.headerText).text("Appetizers");
       doc.moveDown(0.3);
       for (const app of proposal.appetizers) {
-        doc.fontSize(10).font("Helvetica").fillColor("#333")
+        doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText)
           .text(`  •  ${app.itemName} × ${app.quantity}`);
         if (app.description) {
-          doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+          doc.fontSize(9).font("Helvetica-Oblique").fillColor(palette.muted)
             .text(`       ${app.description}`);
         }
       }
@@ -163,13 +119,13 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
 
     // ─── Desserts ──────────────────────────────────────────────────────────
     if (proposal.desserts && proposal.desserts.length > 0) {
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Desserts");
+      doc.fontSize(13).font("Helvetica-Bold").fillColor(palette.headerText).text("Desserts");
       doc.moveDown(0.3);
       for (const d of proposal.desserts) {
-        doc.fontSize(10).font("Helvetica").fillColor("#333")
+        doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText)
           .text(`  •  ${d.itemName} × ${d.quantity}`);
         if (d.description) {
-          doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+          doc.fontSize(9).font("Helvetica-Oblique").fillColor(palette.muted)
             .text(`       ${d.description}`);
         }
       }
@@ -178,13 +134,13 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
 
     // ─── What's Included ───────────────────────────────────────────────────
     const whatsIncluded =
-      (proposal.whatsIncluded && proposal.whatsIncluded.length > 0
+      proposal.whatsIncluded && proposal.whatsIncluded.length > 0
         ? proposal.whatsIncluded
-        : defaultWhatsIncluded(proposal.serviceStyle)) || [];
+        : defaults.whatsIncluded(proposal.serviceStyle);
     if (whatsIncluded.length > 0) {
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("What's Included");
+      doc.fontSize(13).font("Helvetica-Bold").fillColor(palette.headerText).text("What's Included");
       doc.moveDown(0.3);
-      doc.fontSize(10).font("Helvetica").fillColor("#333");
+      doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText);
       for (const line of whatsIncluded) {
         doc.text(`  ✓  ${line}`);
       }
@@ -199,13 +155,13 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
       photoUrl: config.chef.photoUrl,
     };
     if (chefNote?.firstName && chefNote?.message) {
-      doc.fontSize(11).font("Helvetica-Bold").fillColor("#111")
+      doc.fontSize(11).font("Helvetica-Bold").fillColor(palette.headerText)
         .text(`A note from ${chefNote.firstName}`);
       doc.moveDown(0.25);
-      doc.fontSize(10).font("Helvetica").fillColor("#444")
+      doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText)
         .text(chefNote.message, { align: "left" });
       doc.moveDown(0.2);
-      doc.fontSize(9).font("Helvetica-Oblique").fillColor("#666")
+      doc.fontSize(9).font("Helvetica-Oblique").fillColor(palette.muted)
         .text(`— ${chefNote.firstName}${chefNote.role ? ", " + chefNote.role : ""}`);
       doc.moveDown(0.8);
     }
@@ -213,14 +169,14 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     // ─── Line Items / Pricing ──────────────────────────────────────────────
     if (proposal.lineItems && proposal.lineItems.length > 0) {
       doc.moveDown(0.5);
-      doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).strokeColor("#ddd").lineWidth(1).stroke();
+      doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).strokeColor(palette.rule).lineWidth(1).stroke();
       doc.moveDown(0.8);
 
-      doc.fontSize(13).font("Helvetica-Bold").fillColor("#111").text("Pricing Breakdown");
+      doc.fontSize(13).font("Helvetica-Bold").fillColor(palette.headerText).text("Pricing Breakdown");
       doc.moveDown(0.5);
 
       // Table header
-      doc.fontSize(9).font("Helvetica-Bold").fillColor("#666");
+      doc.fontSize(9).font("Helvetica-Bold").fillColor(palette.muted);
       const col1 = 50;
       const col2 = 350;
       const col3 = 420;
@@ -231,7 +187,7 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
       doc.text("Total", col4, doc.y, { width: 60, align: "right" });
       doc.moveDown(0.5);
 
-      doc.fontSize(10).font("Helvetica").fillColor("#333");
+      doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText);
       for (const item of proposal.lineItems) {
         const y = doc.y;
         doc.text(item.name, col1, y, { width: 290 });
@@ -244,11 +200,11 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
 
     // ─── Totals ────────────────────────────────────────────────────────────
     doc.moveDown(0.5);
-    doc.moveTo(350, doc.y).lineTo(50 + W, doc.y).strokeColor("#ddd").lineWidth(1).stroke();
+    doc.moveTo(350, doc.y).lineTo(50 + W, doc.y).strokeColor(palette.rule).lineWidth(1).stroke();
     doc.moveDown(0.5);
 
     const pricing = proposal.pricing;
-    doc.fontSize(10).font("Helvetica").fillColor("#333");
+    doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText);
 
     if (pricing.subtotalCents) {
       doc.text("Subtotal", 350, doc.y, { width: 80, continued: false });
@@ -264,13 +220,13 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     }
 
     doc.moveDown(0.3);
-    doc.fontSize(14).font("Helvetica-Bold").fillColor("#111");
+    doc.fontSize(14).font("Helvetica-Bold").fillColor(palette.headerText);
     doc.text("Total", 350, doc.y, { width: 80 });
     doc.text(formatCents(pricing.totalCents), 430, doc.y - doc.currentLineHeight(), { width: 120, align: "right" });
 
     if (pricing.depositPercent) {
       doc.moveDown(0.5);
-      doc.fontSize(10).font("Helvetica").fillColor("#666");
+      doc.fontSize(10).font("Helvetica").fillColor(palette.muted);
       const depositCents = Math.round(pricing.totalCents * (pricing.depositPercent / 100));
       doc.text(`Deposit due (${pricing.depositPercent}%): ${formatCents(depositCents)}`, 350, doc.y, { width: 200, align: "right" });
     }
@@ -278,17 +234,17 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
     // ─── Special Requests ──────────────────────────────────────────────────
     if (proposal.specialRequests) {
       doc.moveDown(1.5);
-      doc.fontSize(11).font("Helvetica-Bold").fillColor("#111").text("Special Requests");
+      doc.fontSize(11).font("Helvetica-Bold").fillColor(palette.headerText).text("Special Requests");
       doc.moveDown(0.3);
-      doc.fontSize(10).font("Helvetica").fillColor("#555").text(proposal.specialRequests);
+      doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText).text(proposal.specialRequests);
     }
 
     // ─── Footer ────────────────────────────────────────────────────────────
     doc.moveDown(2);
-    doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).strokeColor("#ddd").lineWidth(1).stroke();
+    doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).strokeColor(palette.rule).lineWidth(1).stroke();
     doc.moveDown(0.5);
 
-    doc.fontSize(9).font("Helvetica-Oblique").fillColor("#999")
+    doc.fontSize(9).font("Helvetica-Oblique").fillColor(palette.muted)
       .text(
         `This quote was prepared by ${config.businessName}. Pricing is valid for 30 days from the date of issue. ` +
         `To accept, visit your personalized quote link or contact us directly.`,

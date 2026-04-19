@@ -3,8 +3,8 @@ import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import homebitesLogo from "@assets/homebites-logo.avif";
-import { getEventTheme, applyThemeCSS } from "@/lib/eventThemes";
-import { getEventCopy } from "@shared/eventCopy";
+import { getEventPreset } from "@shared/eventPresets";
+import { applyThemeCSS } from "@/lib/eventPresetCSS";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -253,18 +253,13 @@ export default function PublicEventPage() {
   const isCompleted = event.status === "completed";
   const isCancelled = event.status === "cancelled";
 
-  // Tier 3: Event-type theme
-  const theme = getEventTheme(event.eventType);
+  // Event-type preset drives theme + copy + section opt-ins.
+  const preset = getEventPreset(event.eventType);
+  const { theme, copy } = preset;
   const themeStyles = applyThemeCSS(theme);
 
-  // Build the personalized title + pull event-type copy
-  const copy = getEventCopy(event.eventType);
   const personTitle = buildPersonTitle(client, inquiry, event.eventType);
-  const eventTitle = personTitle
-    ? copy.useCoupleTitle
-      ? `${personTitle}'s ${titleCase(event.eventType)}`
-      : personTitle
-    : `Your ${titleCase(event.eventType)}`;
+  const eventTitle = copy.composeEventTitle(personTitle || null, preset.label);
 
   // Use the real meal start time from the inquiry when available; otherwise
   // skip rendering a time (instead of showing a bogus midnight/noon sentinel
@@ -316,7 +311,7 @@ export default function PublicEventPage() {
             </div>
             {days > 1 && (
               <p className="font-serif text-stone-600 text-lg mt-1">
-                day{days === 1 ? "" : "s"} until your celebration
+                day{days === 1 ? "" : "s"} {copy.countdownUnit}
               </p>
             )}
             <Separator className="my-5 max-w-xs mx-auto bg-amber-200" />
@@ -346,11 +341,10 @@ export default function PublicEventPage() {
           <CardContent className="py-10 text-center">
             <Heart className="h-10 w-10 text-emerald-600 mx-auto mb-3" />
             <h2 className="font-serif text-2xl text-stone-900">
-              Thank you for letting us be part of your day
+              {copy.completedHeadline}
             </h2>
             <p className="font-serif text-stone-600 mt-2 max-w-md mx-auto">
-              It was our honor to prepare your event. If you'd ever like to book with us
-              again, we'd love to be part of your next celebration.
+              {copy.completedBlurb}
             </p>
           </CardContent>
         </Card>
@@ -361,8 +355,7 @@ export default function PublicEventPage() {
         <Card className="mb-6 border-stone-300 bg-stone-100">
           <CardContent className="py-8 text-center">
             <p className="font-serif text-stone-700">
-              This event has been cancelled. If this wasn't intentional, please reach out to
-              us — we'd love to help make it right.
+              {copy.cancelledBlurb}
             </p>
           </CardContent>
         </Card>
@@ -543,9 +536,9 @@ function buildPersonTitle(
   eventType: string
 ): string {
   if (!client) return "";
-  // Delegate to shared event-type copy so wedding/corporate/etc render the
+  // Delegate to the event-type preset so wedding/corporate/etc render the
   // right shape. Never duplicates the same name with an ampersand.
-  return getEventCopy(eventType).displayTitle({
+  return getEventPreset(eventType).copy.displayTitle({
     firstName: client.firstName,
     lastName: client.lastName,
     partnerFirstName: inquiry?.partnerFirstName ?? null,
