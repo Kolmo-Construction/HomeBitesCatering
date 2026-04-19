@@ -3096,7 +3096,15 @@ export default function Inquire() {
           Service Type <span className="text-red-500">*</span>
         </Label>
         {renderCardSelector(SERVICE_TYPES, form.serviceType, (v) =>
-          update("serviceType", v),
+          // Picking "Cocktail Party" clears any leftover main-meal state so
+          // stale toggles don't surface on the review screen.
+          setForm((prev) => ({
+            ...prev,
+            serviceType: v,
+            hasMainMeal: v === "cocktail_party" ? false : prev.hasMainMeal,
+            mainMealStartTime: v === "cocktail_party" ? "" : prev.mainMealStartTime,
+            mainMealEndTime: v === "cocktail_party" ? "" : prev.mainMealEndTime,
+          })),
         )}
         {/* Plain-language description of the currently selected service
             type — helps customers understand what they're choosing without
@@ -3194,8 +3202,8 @@ export default function Inquire() {
       <Separator />
 
       {/* Main meal service — food truck always serves a main meal (no toggle),
-          cocktail parties default OFF (but can opt in) */}
-      {eventConfig.showMainMealToggle ? (
+          cocktail parties don't have one at all (hide entirely). */}
+      {form.serviceType !== "cocktail_party" && eventConfig.showMainMealToggle ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-base font-semibold">Main Meal Service</Label>
@@ -3230,7 +3238,7 @@ export default function Inquire() {
       ) : null}
       {/* Unconditional meal timing block — only reachable when the toggle
           is hidden AND the config wants a main meal (food truck). */}
-      {!eventConfig.showMainMealToggle && eventConfig.mainMealDefault && (
+      {form.serviceType !== "cocktail_party" && !eventConfig.showMainMealToggle && eventConfig.mainMealDefault && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="mainMealStart">Start Time</Label>
