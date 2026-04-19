@@ -56,6 +56,9 @@ import PublicTastingThanks from "@/pages/PublicTastingThanks";
 
 import UnmatchedInbox from "@/pages/UnmatchedInbox";
 
+// Admin catalog + pricing-config editor
+import Catalog from "@/pages/Catalog";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -182,6 +185,7 @@ function AppContent() {
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
           <Route path="/inquiries" component={Inquiries} />
+          <Route path="/catalog" component={Catalog} />
           <Route path="/events" component={Events} />
           <Route path="/events/:id" component={Events} />
           <Route path="/dietary-demo" component={DietaryDemo} />

@@ -43,7 +43,6 @@ import {
   Loader2,
   Minus,
   Plus,
-  DollarSign,
   PartyPopper,
 } from "lucide-react";
 
@@ -391,102 +390,12 @@ interface AppetizerCategory {
 
 const LOT_SIZES = [24, 36, 48, 72, 96, 144];
 
-const APPETIZER_CATEGORIES: AppetizerCategory[] = [
-  {
-    label: "Tea Sandwiches",
-    items: [
-      { name: "Caprese", price: 1.95, unit: "per piece" },
-      { name: "Chicken Cranberry", price: 2.0, unit: "per piece" },
-      { name: "Gravlax", price: 2.75, unit: "per piece" },
-      { name: "Crab Salad", price: 3.0, unit: "per piece" },
-    ],
-  },
-  {
-    label: "Shooters",
-    items: [
-      { name: "Chicken Satay", price: 2.45, unit: "per piece" },
-      { name: "Greek Village", price: 2.25, unit: "per piece" },
-      { name: "Gazpacho w/ Shrimp", price: 2.75, unit: "per piece" },
-      { name: "Bloody Mary w/ Lobster", price: 4.75, unit: "per piece" },
-    ],
-  },
-  {
-    label: "Mini Skewers",
-    items: [
-      { name: "Korean BBQ Pork Belly", price: 2.75, unit: "per piece" },
-      { name: "Chicken Teriyaki", price: 2.75, unit: "per piece" },
-      { name: "Mediterranean Shrimp", price: 2.75, unit: "per piece" },
-      { name: "Caprese", price: 2.25, unit: "per piece" },
-    ],
-  },
-  {
-    label: "Canapes",
-    items: [
-      { name: "Watermelon Radish", price: 1.5, unit: "per piece" },
-      { name: "French Onion Tartlets", price: 2.75, unit: "per piece" },
-      { name: "Crostini Goat Cheese", price: 1.95, unit: "per piece" },
-      { name: "Focaccia Pizza Bites", price: 2.75, unit: "per piece" },
-    ],
-  },
-  {
-    label: "Vol au Vents",
-    items: [
-      { name: "Gravlax Cream Cheese", price: 3.0, unit: "per piece" },
-      { name: "Spinach Feta Leek", price: 3.0, unit: "per piece" },
-      { name: "Melted Brie Cranberry", price: 3.5, unit: "per piece" },
-      { name: "Tuna Tartare", price: 3.75, unit: "per piece" },
-    ],
-  },
-  {
-    label: "Simple Fare",
-    items: [
-      { name: "Loaded Potato Skins", price: 1.95, unit: "per piece" },
-      { name: "Stuffed Mushrooms", price: 2.25, unit: "per piece" },
-      { name: "Chicken Wings", price: 2.65, unit: "per piece" },
-      { name: "Lobster Rolls", price: 7.5, unit: "per piece" },
-    ],
-  },
-  {
-    label: "Charcuterie",
-    perPerson: true,
-    items: [
-      { name: "Cheese & Fruit", price: 10, unit: "per person" },
-      { name: "Meat Cheese Fruit", price: 12, unit: "per person" },
-      { name: "Mexican", price: 13, unit: "per person" },
-      { name: "Mediterranean", price: 14, unit: "per person" },
-      { name: "Premium", price: 18, unit: "per person" },
-    ],
-  },
-  {
-    label: "Spreads",
-    servingPack: {
-      pricePerServing: 6.5,
-      flavorsToPick: 3,
-      description:
-        "Pick 3 spreads to make up your trio, then choose how many servings you'd like.",
-    },
-    // Flavors have a 0 price — the pack is priced at the category level
-    // (pricePerServing × servings). Listed as "per serving" for the UI.
-    items: [
-      { name: "Tzatziki", price: 0, unit: "flavor" },
-      { name: "Hummus", price: 0, unit: "flavor" },
-      { name: "Baba Ghanoush", price: 0, unit: "flavor" },
-      { name: "Spicy Feta", price: 0, unit: "flavor" },
-    ],
-  },
-];
+// Appetizer, dessert, and equipment catalogs are fetched at runtime from
+// /api/catalog/* (backed by the appetizer_items / dessert_items /
+// equipment_items DB tables). Admins edit prices/availability via the
+// catalog admin UI — no code change needed.
 
-// --- Dessert Data ---
-const DESSERT_ITEMS: AppetizerItem[] = [
-  { name: "Petit Fours", price: 2.95, unit: "per piece" },
-  { name: "Macaroons", price: 2.75, unit: "per piece" },
-  { name: "Cheesecake", price: 5.75, unit: "per piece" },
-  { name: "Baklava", price: 5.25, unit: "per piece" },
-  { name: "Cannolis", price: 4.75, unit: "per piece" },
-  { name: "Tiramisu Cups", price: 5.75, unit: "per piece" },
-];
-
-// --- Equipment Data ---
+// --- Equipment Data (types) ---
 interface EquipmentItem {
   name: string;
   price: number;
@@ -497,34 +406,6 @@ interface EquipmentCategory {
   label: string;
   items: EquipmentItem[];
 }
-
-const EQUIPMENT_CATEGORIES: EquipmentCategory[] = [
-  {
-    label: "Linens",
-    items: [
-      { name: "Napkins", price: 0.5, unit: "each" },
-      { name: "Buffet Runners", price: 22, unit: "each" },
-      { name: '90" Tablecloths', price: 27, unit: "each" },
-    ],
-  },
-  {
-    label: "Serving Ware",
-    items: [
-      { name: "Biodegradable Set", price: 2.25, unit: "per person" },
-      { name: "Premium Disposable", price: 5, unit: "per person" },
-      { name: "China/Silverware", price: 8.25, unit: "per person" },
-    ],
-  },
-  {
-    label: "Furniture",
-    items: [
-      { name: '8ft Rectangle Table', price: 27, unit: "each" },
-      { name: '6ft Rectangle Table', price: 24, unit: "each" },
-      { name: 'Round Table 60"', price: 30, unit: "each" },
-      { name: "Folding Chairs", price: 8, unit: "each" },
-    ],
-  },
-];
 
 // --- Referral Sources ---
 const REFERRAL_SOURCES = [
@@ -979,6 +860,26 @@ export default function Inquire() {
     queryKey: ["/api/quotes/menus/public"],
   });
 
+  // ---------- Catalog queries (appetizer / dessert / equipment lists) ----------
+  // These used to be hardcoded constants; now sourced from the DB so Mike
+  // can edit prices and availability without a deploy.
+  const appetizerCatalogQ = useQuery<AppetizerCategory[]>({
+    queryKey: ["/api/catalog/appetizers"],
+  });
+  const dessertCatalogQ = useQuery<AppetizerItem[]>({
+    queryKey: ["/api/catalog/desserts"],
+  });
+  const equipmentCatalogQ = useQuery<EquipmentCategory[]>({
+    queryKey: ["/api/catalog/equipment"],
+  });
+  const appetizerCatalog = appetizerCatalogQ.data ?? [];
+  const dessertCatalog = dessertCatalogQ.data ?? [];
+  const equipmentCatalog = equipmentCatalogQ.data ?? [];
+  const catalogLoading =
+    appetizerCatalogQ.isLoading || dessertCatalogQ.isLoading || equipmentCatalogQ.isLoading;
+  const catalogError =
+    appetizerCatalogQ.error || dessertCatalogQ.error || equipmentCatalogQ.error;
+
   // Find the currently selected menu object from the query data
   const selectedMenu = useMemo(
     () => publicMenus.find((m) => m.themeKey === form.menuTheme) || null,
@@ -1169,159 +1070,26 @@ export default function Inquire() {
     [],
   );
 
-  // ---------- Pricing calculations ----------
-  const pricing = useMemo(() => {
-    let perPersonFood = 0;
-    let appetizerTotal = 0;
-    let dessertTotal = 0;
-    let beverageQuote = 0;
-    let equipmentTotal = 0;
-
-    // Per-person food cost — from the selected tier in the database
-    if (selectedTier) {
-      perPersonFood = selectedTier.pricePerPersonCents / 100;
-      // Add upcharges for any selected items
-      if (selectedMenu?.categoryItems) {
-        for (const [category, ids] of Object.entries(form.menuItemSelections)) {
-          const items = selectedMenu.categoryItems[category] || [];
-          for (const id of ids) {
-            const item = items.find((i) => i.id === id);
-            if (item?.upchargeCents) {
-              perPersonFood += item.upchargeCents / 100;
-            }
-          }
+  // ---------- Pricing ----------
+  // Pricing is calculated server-side. The inquiry form shows per-line-item
+  // prices (e.g. "$40/person", "$2.75/piece") but no category subtotals,
+  // service fees, taxes, or grand total — those are revealed on the quote.
+  // The backend recalculates everything from the structured payload sent
+  // in submitMutation (see server/utils/quotePricing.ts).
+  const perPersonFood = useMemo(() => {
+    if (!selectedTier) return 0;
+    let cents = selectedTier.pricePerPersonCents;
+    if (selectedMenu?.categoryItems) {
+      for (const [category, ids] of Object.entries(form.menuItemSelections)) {
+        const items = selectedMenu.categoryItems[category] || [];
+        for (const id of ids) {
+          const item = items.find((i) => i.id === id);
+          if (item?.upchargeCents) cents += item.upchargeCents;
         }
       }
     }
-
-    const foodSubtotal = perPersonFood * guestCount;
-
-    // Appetizers
-    APPETIZER_CATEGORIES.forEach((cat) => {
-      const selections = form.appetizerSelections[cat.label] || {};
-      if (cat.servingPack) {
-        // Pack category: one price-per-serving × servings, regardless of
-        // which flavors are picked. Servings stored under the sentinel
-        // key "__servings".
-        const servings = selections["__servings"] || 0;
-        appetizerTotal += cat.servingPack.pricePerServing * servings;
-        return;
-      }
-      cat.items.forEach((item) => {
-        const qty = selections[item.name] || 0;
-        if (cat.perPerson) {
-          // qty is 1 (selected) or 0 — cost = price * guestCount
-          appetizerTotal += qty > 0 ? item.price * guestCount : 0;
-        } else {
-          // qty is a lot size count (e.g. 24, 48, etc.)
-          appetizerTotal += item.price * qty;
-        }
-      });
-    });
-
-    // Desserts
-    DESSERT_ITEMS.forEach((item) => {
-      const qty = form.dessertSelections[item.name] || 0;
-      dessertTotal += item.price * qty;
-    });
-
-    // Beverage quote (rough)
-    const drinkGuests =
-      typeof form.drinkingGuestCount === "number"
-        ? form.drinkingGuestCount
-        : 0;
-    if (form.beverageType === "non_alcoholic" || form.beverageType === "both") {
-      beverageQuote += 5 * guestCount; // $5 pp non-alcoholic base
-    }
-    if (form.beverageType === "alcoholic" || form.beverageType === "both") {
-      const durationHours = parseFloat(form.barDuration) || 3;
-      const baseRate = form.barType === "wet_hire" ? 15 : 8;
-      const qualityMultiplier =
-        form.liquorQuality === "top_shelf"
-          ? 1.5
-          : form.liquorQuality === "mid_shelf"
-            ? 1.25
-            : 1;
-      // When the user explicitly types a drinking-guest count (including
-      // 0 — "no one drinks"), respect it. Only fall back to guestCount
-      // when the field is empty (still a string "") — in that case treat
-      // it as "assume everyone is drinking".
-      const headcountForBar =
-        typeof form.drinkingGuestCount === "number"
-          ? form.drinkingGuestCount
-          : guestCount;
-      beverageQuote +=
-        baseRate * qualityMultiplier * durationHours * headcountForBar;
-    }
-    if (form.tableWaterService) {
-      beverageQuote += 6.5 * guestCount;
-    }
-    if (form.coffeTeaService) {
-      beverageQuote += 4 * guestCount;
-    }
-    if (form.needsGlassware) {
-      beverageQuote += 2 * guestCount;
-    }
-
-    // Equipment
-    EQUIPMENT_CATEGORIES.forEach((cat) => {
-      const selections = form.equipmentSelections[cat.label] || {};
-      cat.items.forEach((item) => {
-        const qty = selections[item.name] || 0;
-        if (item.unit === "per person") {
-          equipmentTotal += item.price * qty * guestCount;
-        } else {
-          equipmentTotal += item.price * qty;
-        }
-      });
-    });
-
-    const subtotal =
-      foodSubtotal + appetizerTotal + dessertTotal + beverageQuote + equipmentTotal;
-
-    // Service fee — keyed off the actual service style:
-    // - Drop-off buffet: 0% (no on-site staff)
-    // - Standard buffet: 15% (staff for meal window only)
-    // - Full-service no setup: 17.5% (staff stays the full event)
-    // - Full-service: 20% (staff plus full equipment/table setup)
-    // - Plated / family_style / cocktail_party / etc.: 15% (all staffed)
-    let serviceFeeRate = 0;
-    if (form.buffetStyle === "full_service") {
-      serviceFeeRate = 0.2;
-    } else if (form.buffetStyle === "full_service_no_setup") {
-      serviceFeeRate = 0.175;
-    } else if (form.buffetStyle === "standard" || form.serviceType === "plated") {
-      serviceFeeRate = 0.15;
-    } else if (
-      form.serviceType &&
-      form.serviceType !== "buffet" &&
-      !form.isDropOff
-    ) {
-      serviceFeeRate = 0.15;
-    }
-    const serviceFee = subtotal * serviceFeeRate;
-
-    const preDiscountTotal = subtotal + serviceFee;
-    const discount =
-      form.promoValid && form.promoDiscount
-        ? preDiscountTotal * (form.promoDiscount / 100)
-        : 0;
-    const estimatedTotal = preDiscountTotal - discount;
-
-    return {
-      perPersonFood,
-      foodSubtotal,
-      appetizerTotal,
-      dessertTotal,
-      beverageQuote,
-      equipmentTotal,
-      subtotal,
-      serviceFeeRate,
-      serviceFee,
-      discount,
-      estimatedTotal,
-    };
-  }, [form, guestCount]);
+    return cents / 100;
+  }, [selectedTier, selectedMenu, form.menuItemSelections]);
 
   // ---------- Step validation ----------
   const validateStep = useCallback(
@@ -1408,7 +1176,7 @@ export default function Inquire() {
         case 5:
           // If a serving-pack appetizer category has servings picked, the
           // flavor count must match (e.g. Spreads trio requires exactly 3).
-          for (const cat of APPETIZER_CATEGORIES) {
+          for (const cat of appetizerCatalog) {
             if (!cat.servingPack) continue;
             const sel = form.appetizerSelections[cat.label] || {};
             const servings = sel["__servings"] || 0;
@@ -1487,6 +1255,126 @@ export default function Inquire() {
           }
         }
       }
+
+      // --- Structured appetizer/dessert/beverage/equipment payloads ---
+      // These match the jsonb shapes the inquiries table expects
+      // (QuoteAppetizer[], QuoteDessert[], QuoteBeverages, QuoteEquipmentItem[]).
+      // The backend pricing calculator reads these fields; without them, stored
+      // estimated totals only include food and everything else is treated as $0.
+      const slug = (s: string) => s.toLowerCase().replace(/\s+/g, "_");
+
+      const appetizerSelections: Array<{
+        category: string;
+        itemName: string;
+        pricePerPiece: number;
+        quantity: number;
+        subtotal: number;
+      }> = [];
+      appetizerCatalog.forEach((cat) => {
+        const sel = form.appetizerSelections[cat.label] || {};
+        if (cat.servingPack) {
+          const servings = sel["__servings"] || 0;
+          if (servings > 0) {
+            const picked = cat.items
+              .filter((it) => (sel[it.name] || 0) > 0)
+              .map((it) => it.name);
+            appetizerSelections.push({
+              category: slug(cat.label),
+              itemName: picked.length
+                ? `${cat.label} trio (${picked.join(", ")})`
+                : `${cat.label} trio`,
+              pricePerPiece: cat.servingPack.pricePerServing,
+              quantity: servings,
+              subtotal: cat.servingPack.pricePerServing * servings,
+            });
+          }
+          return;
+        }
+        cat.items.forEach((item) => {
+          const qty = sel[item.name] || 0;
+          if (qty <= 0) return;
+          // per-person categories (charcuterie): qty=1 means "selected";
+          // effective quantity is guestCount
+          const effectiveQty = cat.perPerson ? guestCount : qty;
+          appetizerSelections.push({
+            category: slug(cat.label),
+            itemName: item.name,
+            pricePerPiece: item.price,
+            quantity: effectiveQty,
+            subtotal: item.price * effectiveQty,
+          });
+        });
+      });
+
+      const dessertSelections: Array<{
+        itemName: string;
+        pricePerPiece: number;
+        quantity: number;
+        subtotal: number;
+      }> = [];
+      dessertCatalog.forEach((item) => {
+        const qty = form.dessertSelections[item.name] || 0;
+        if (qty <= 0) return;
+        dessertSelections.push({
+          itemName: item.name,
+          pricePerPiece: item.price,
+          quantity: qty,
+          subtotal: item.price * qty,
+        });
+      });
+
+      const beveragesPayload = {
+        hasNonAlcoholic:
+          form.beverageType === "non_alcoholic" || form.beverageType === "both",
+        ...(form.nonAlcoholicSelections.length
+          ? { nonAlcoholicSelections: form.nonAlcoholicSelections }
+          : {}),
+        hasAlcoholic:
+          form.beverageType === "alcoholic" || form.beverageType === "both",
+        ...(form.barType ? { bartendingType: form.barType } : {}),
+        ...(form.barDuration
+          ? { bartendingDurationHours: parseFloat(form.barDuration) }
+          : {}),
+        ...(typeof form.drinkingGuestCount === "number"
+          ? { drinkingGuestCount: form.drinkingGuestCount }
+          : {}),
+        ...(form.alcoholSelections.length
+          ? { alcoholSelections: form.alcoholSelections }
+          : {}),
+        ...(form.liquorQuality ? { liquorQuality: form.liquorQuality } : {}),
+        ...(form.tableWaterService ? { tableWaterService: true } : {}),
+        ...(form.coffeTeaService ? { coffeeTeaService: true } : {}),
+        ...(form.needsGlassware ? { glassware: true } : {}),
+      };
+      const hasAnyBeverageInfo =
+        beveragesPayload.hasNonAlcoholic ||
+        beveragesPayload.hasAlcoholic ||
+        form.tableWaterService ||
+        form.coffeTeaService ||
+        form.needsGlassware;
+
+      const equipmentItems: Array<{
+        item: string;
+        category: string;
+        pricePerUnit: number;
+        quantity: number;
+        subtotal: number;
+      }> = [];
+      equipmentCatalog.forEach((cat) => {
+        const sel = form.equipmentSelections[cat.label] || {};
+        cat.items.forEach((item) => {
+          const qty = sel[item.name] || 0;
+          if (qty <= 0) return;
+          const effectiveQty = item.unit === "per person" ? qty * guestCount : qty;
+          equipmentItems.push({
+            item: item.name,
+            category: slug(cat.label),
+            pricePerUnit: item.price,
+            quantity: effectiveQty,
+            subtotal: item.price * effectiveQty,
+          });
+        });
+      });
 
       // Strip fields the backend schema doesn't understand / that have
       // type mismatches with FormState, then reshape the rest to match.
@@ -1676,6 +1564,18 @@ export default function Inquire() {
         // Map form fields to schema columns / enums
         menuTier: form.packageTier || undefined,
         menuSelections,
+        // Structured jsonb fields — backend recalculates pricing from these
+        ...(appetizerSelections.length
+          ? {
+              appetizers: {
+                ...(form.appetizerStyle ? { serviceStyle: form.appetizerStyle } : {}),
+                selections: appetizerSelections,
+              },
+            }
+          : {}),
+        ...(dessertSelections.length ? { desserts: dessertSelections } : {}),
+        ...(hasAnyBeverageInfo ? { beverages: beveragesPayload } : {}),
+        ...(equipmentItems.length ? { equipment: { items: equipmentItems } } : {}),
         serviceStyle: formBuffetStyle || undefined, // buffetStyle → serviceStyle enum
         venueHasKitchen: yesNoToBool(formHasKitchen),
         ceremonySameSpace: yesNoToBool(formCeremonySameSpace),
@@ -1683,7 +1583,6 @@ export default function Inquire() {
           typeof form.drinkingGuestCount === "number"
             ? form.drinkingGuestCount
             : undefined,
-        estimatedTotal: pricing.estimatedTotal,
         ...(opportunityId ? { opportunityId } : {}),
         ...(inviteToken ? { inviteToken } : {}),
         // P2-3: prefer utm_source over explicit source param, fall back to "website"
@@ -3591,7 +3490,7 @@ export default function Inquire() {
             </div>
 
             <Accordion type="multiple" className="w-full">
-              {APPETIZER_CATEGORIES.map((cat) => {
+              {appetizerCatalog.map((cat) => {
                 const selections = form.appetizerSelections[cat.label] || {};
                 const catTotal = cat.servingPack
                   ? cat.servingPack.pricePerServing *
@@ -3786,7 +3685,7 @@ export default function Inquire() {
 
         {form.addDesserts && (
           <div className="space-y-3">
-            {DESSERT_ITEMS.map((item) => {
+            {dessertCatalog.map((item) => {
               const qty = form.dessertSelections[item.name] || 0;
               return (
                 <div
@@ -4084,7 +3983,7 @@ export default function Inquire() {
 
         {form.needsEquipment && (
           <Accordion type="multiple" className="w-full">
-            {EQUIPMENT_CATEGORIES.map((cat) => {
+            {equipmentCatalog.map((cat) => {
               const selections = form.equipmentSelections[cat.label] || {};
               const catTotal = cat.items.reduce((sum, item) => {
                 const qty = selections[item.name] || 0;
@@ -4478,7 +4377,7 @@ export default function Inquire() {
             {selectedTier && (
               <p>
                 <span className="text-gray-500">Package:</span>{" "}
-                {selectedTier.tierName} ({fmt(pricing.perPersonFood)}/person)
+                {selectedTier.tierName} ({fmt(perPersonFood)}/person)
               </p>
             )}
             {selectedTier && selectedMenu?.categoryItems && (
@@ -4506,8 +4405,8 @@ export default function Inquire() {
           </CardContent>
         </Card>
 
-        {/* Appetizers & Desserts summary */}
-        {(pricing.appetizerTotal > 0 || pricing.dessertTotal > 0) && (
+        {/* Appetizers & Desserts summary — show selections, not totals */}
+        {(form.addAppetizers || form.addDesserts) && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -4518,13 +4417,12 @@ export default function Inquire() {
               {form.addAppetizers && (
                 <p>
                   <span className="text-gray-500">Appetizers:</span>{" "}
-                  {fmt(pricing.appetizerTotal)} ({form.appetizerStyle})
+                  {form.appetizerStyle || "requested"}
                 </p>
               )}
               {form.addDesserts && (
                 <p>
-                  <span className="text-gray-500">Desserts:</span>{" "}
-                  {fmt(pricing.dessertTotal)}
+                  <span className="text-gray-500">Desserts:</span> requested
                 </p>
               )}
             </CardContent>
@@ -4605,10 +4503,9 @@ export default function Inquire() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
-              {form.needsEquipment && pricing.equipmentTotal > 0 && (
+              {form.needsEquipment && (
                 <p>
-                  <span className="text-gray-500">Equipment:</span>{" "}
-                  {fmt(pricing.equipmentTotal)}
+                  <span className="text-gray-500">Equipment:</span> requested
                 </p>
               )}
               {form.dietaryRestrictions.length > 0 && (
@@ -4632,93 +4529,6 @@ export default function Inquire() {
             </CardContent>
           </Card>
         )}
-      </div>
-
-      <Separator />
-
-      {/* Pricing Breakdown */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-bold flex items-center gap-2">
-          <DollarSign className="h-5 w-5" /> Estimated Pricing
-        </h3>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2 text-sm">
-              {pricing.perPersonFood > 0 && (
-                <div className="flex justify-between">
-                  <span>
-                    Food ({fmt(pricing.perPersonFood)}/person x {guestCount}{" "}
-                    guests)
-                  </span>
-                  <span className="font-medium">
-                    {fmt(pricing.foodSubtotal)}
-                  </span>
-                </div>
-              )}
-              {pricing.appetizerTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>Appetizers</span>
-                  <span className="font-medium">
-                    {fmt(pricing.appetizerTotal)}
-                  </span>
-                </div>
-              )}
-              {pricing.dessertTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>Desserts</span>
-                  <span className="font-medium">
-                    {fmt(pricing.dessertTotal)}
-                  </span>
-                </div>
-              )}
-              {pricing.beverageQuote > 0 && (
-                <div className="flex justify-between">
-                  <span>Beverages (quote)</span>
-                  <span className="font-medium">
-                    {fmt(pricing.beverageQuote)}
-                  </span>
-                </div>
-              )}
-              {pricing.equipmentTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>Equipment</span>
-                  <span className="font-medium">
-                    {fmt(pricing.equipmentTotal)}
-                  </span>
-                </div>
-              )}
-              <Separator className="my-2" />
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span className="font-medium">{fmt(pricing.subtotal)}</span>
-              </div>
-              {pricing.serviceFeeRate > 0 && (
-                <div className="flex justify-between">
-                  <span>
-                    Service Fee ({Math.round(pricing.serviceFeeRate * 100)}%)
-                  </span>
-                  <span className="font-medium">
-                    {fmt(pricing.serviceFee)}
-                  </span>
-                </div>
-              )}
-              {pricing.discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Promo Discount ({form.promoDiscount}%)</span>
-                  <span className="font-medium">-{fmt(pricing.discount)}</span>
-                </div>
-              )}
-              <Separator className="my-2" />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Estimated Total</span>
-                <span>{fmt(pricing.estimatedTotal)}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                This is an quote. Final pricing will be confirmed by our team.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Separator />
@@ -4786,80 +4596,6 @@ export default function Inquire() {
       </div>
     </div>
   );
-
-  // =========================================================================
-  // PRICING SIDEBAR (visible from step 4 onward)
-  // =========================================================================
-
-  const renderPricingSidebar = () => {
-    if (step < 4 || guestCount === 0) return null;
-    return (
-      <Card className="sticky top-4">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <DollarSign className="h-4 w-4" /> Running Total
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          {pricing.foodSubtotal > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Food</span>
-              <span>{fmt(pricing.foodSubtotal)}</span>
-            </div>
-          )}
-          {pricing.appetizerTotal > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Appetizers</span>
-              <span>{fmt(pricing.appetizerTotal)}</span>
-            </div>
-          )}
-          {pricing.dessertTotal > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Desserts</span>
-              <span>{fmt(pricing.dessertTotal)}</span>
-            </div>
-          )}
-          {pricing.beverageQuote > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Beverages</span>
-              <span>{fmt(pricing.beverageQuote)}</span>
-            </div>
-          )}
-          {pricing.equipmentTotal > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Equipment</span>
-              <span>{fmt(pricing.equipmentTotal)}</span>
-            </div>
-          )}
-          {pricing.serviceFee > 0 && (
-            <>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-gray-600">Service Fee</span>
-                <span>{fmt(pricing.serviceFee)}</span>
-              </div>
-            </>
-          )}
-          {pricing.discount > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Discount</span>
-              <span>-{fmt(pricing.discount)}</span>
-            </div>
-          )}
-          <Separator />
-          <div className="flex justify-between font-bold text-base">
-            <span>Quote</span>
-            <span>{fmt(pricing.estimatedTotal)}</span>
-          </div>
-          <p className="text-xs text-gray-400">
-            {guestCount} guests
-            {guestCount > 0 && pricing.estimatedTotal > 0 &&
-              ` | ${fmt(pricing.estimatedTotal / guestCount)}/pp total`}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  };
 
   // =========================================================================
   // MAIN RENDER
@@ -4969,13 +4705,10 @@ export default function Inquire() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <div
-          className={cn(
-            "gap-8",
-            step >= 4 ? "lg:grid lg:grid-cols-[1fr_280px]" : "",
-          )}
-        >
-          {/* Main form area */}
+        <div>
+          {/* Main form area — pricing total intentionally hidden; customer
+              sees per-line-item prices only. The full breakdown is revealed
+              on the quote. */}
           <div>
             <Card className="shadow-lg">
               <CardHeader>
@@ -5011,6 +4744,22 @@ export default function Inquire() {
                         <li key={i}>{err}</li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* Catalog loading / error banner — only relevant for steps 5–7 which depend on the catalog. */}
+                {[5, 6, 7].includes(step) && catalogLoading && (
+                  <div className="mb-6 p-4 rounded-lg border border-blue-200 bg-blue-50 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    <p className="text-sm text-blue-700">Loading menu options…</p>
+                  </div>
+                )}
+                {[5, 6, 7].includes(step) && !catalogLoading && catalogError && (
+                  <div className="mb-6 p-4 rounded-lg border border-red-200 bg-red-50">
+                    <p className="text-sm font-medium text-red-700 mb-1">Couldn't load menu options</p>
+                    <p className="text-xs text-red-600">
+                      Please refresh the page. If this keeps happening, contact us directly — we'll pick things up from our side.
+                    </p>
                   </div>
                 )}
 
@@ -5071,17 +4820,7 @@ export default function Inquire() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Pricing sidebar (desktop, step 4+) */}
-          {step >= 4 && (
-            <div className="hidden lg:block">{renderPricingSidebar()}</div>
-          )}
         </div>
-
-        {/* Pricing inline (mobile, step 4+) */}
-        {step >= 4 && guestCount > 0 && (
-          <div className="lg:hidden mt-6">{renderPricingSidebar()}</div>
-        )}
       </div>
     </div>
   );

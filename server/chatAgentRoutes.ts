@@ -18,9 +18,29 @@ import {
   insertMenuSchema,
   insertBaseIngredientSchema,
   type MenuRecipeItem,
+  // Catalog tables — agent edits prices here
+  appetizerCategories,
+  appetizerItems,
+  dessertItems,
+  equipmentCategories,
+  equipmentItemsTable,
+  pricingConfig,
 } from "@shared/schema";
 import { calculateShoppingListForInquiry } from "./utils/shoppingList";
 import { getRecipeCostBreakdown } from "./utils/menuMargin";
+import { storage } from "./storage";
+
+// Gate: pricing writes require admin role. Chef/user accounts can still read
+// via list_catalog_items and get_pricing_config.
+async function requireAdmin(userId: number | undefined): Promise<string | null> {
+  if (!userId) return "Not authenticated.";
+  const user = await storage.getUser(userId);
+  if (!user) return "User not found.";
+  if (user.role !== "admin") {
+    return `Only admin users can change pricing. Your role is "${user.role}". Ask Mike to make the change.`;
+  }
+  return null;
+}
 
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -443,6 +463,86 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           itemKey: { type: "string" },
         },
         required: ["itemKey"],
+      },
+    },
+  },
+  // ---- Catalog & pricing config ----
+  {
+    type: "function",
+    function: {
+      name: "list_catalog_items",
+      description:
+        "List all appetizer / dessert / equipment items with current prices. Use this before update_catalog_item_price to find the correct type+id for an item by name. Returns {type, id, name, category, priceDollars, unit, isActive}.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            description:
+              "Filter by catalog type: 'appetizer', 'dessert', or 'equipment'. Omit to return all.",
+          },
+          search: {
+            type: "string",
+            description:
+              "Case-insensitive substring match on item name (e.g. 'lobster' matches 'Lobster Rolls').",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_catalog_item_price",
+      description:
+        "Change the price of a single appetizer / dessert / equipment item. Call list_catalog_items first to look up the id by name. Prices are in dollars (e.g. 6.50 for $6.50). Takes effect within 1 minute (cache TTL).",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["appetizer", "dessert", "equipment"],
+          },
+          id: { type: "number" },
+          priceDollars: { type: "number", description: "New price in dollars, e.g. 6.50" },
+        },
+        required: ["type", "id", "priceDollars"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_pricing_config",
+      description:
+        "Read the current pricing configuration (bartending rates, per-person add-ons, service-fee tiers, tax rate). Returns human-readable dollars/percentages.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_pricing_config",
+      description:
+        "Change one or more pricing-config rates. Pass only the fields you want to change. Dollar values (e.g. wetHirePerHour) are in dollars; percent values (e.g. taxRate, serviceFeeFullService) are in whole percent (20 for 20%); multipliers are decimals (1.5 for 1.5×). Takes effect within 1 minute (cache TTL).",
+      parameters: {
+        type: "object",
+        properties: {
+          wetHirePerHour: { type: "number", description: "Wet-hire bar rate in $/pp/hr" },
+          dryHirePerHour: { type: "number", description: "Dry-hire bar rate in $/pp/hr" },
+          liquorMultiplierWell: { type: "number", description: "e.g. 1.0" },
+          liquorMultiplierMidShelf: { type: "number", description: "e.g. 1.25" },
+          liquorMultiplierTopShelf: { type: "number", description: "e.g. 1.5" },
+          nonAlcoholicPackage: { type: "number", description: "Non-alcoholic package $/pp" },
+          coffeeTeaService: { type: "number", description: "Coffee/tea service $/pp" },
+          tableWaterService: { type: "number", description: "Table water $/pp" },
+          glassware: { type: "number", description: "Glassware $/pp" },
+          serviceFeeDropOff: { type: "number", description: "Drop-off service fee % (e.g. 0)" },
+          serviceFeeStandard: { type: "number", description: "Standard buffet service fee % (e.g. 15)" },
+          serviceFeeFullServiceNoSetup: { type: "number", description: "Full-service-no-setup % (e.g. 17.5)" },
+          serviceFeeFullService: { type: "number", description: "Full-service % (e.g. 20)" },
+          taxRate: { type: "number", description: "Tax rate % (e.g. 10.25)" },
+        },
       },
     },
   },
@@ -1224,6 +1324,185 @@ const toolHandlers: Record<string, ToolHandler> = {
       ok: true,
       itemKey: target.key,
       message: `Dismissed "${target.title}". It will re-appear if the underlying record changes.`,
+    };
+  },
+
+  // ==========================================================================
+  // Catalog & pricing-config handlers
+  // ==========================================================================
+
+  async list_catalog_items(args) {
+    const type = (args?.type as string | undefined)?.toLowerCase();
+    const search = ((args?.search as string | undefined) || "").toLowerCase().trim();
+    const matches = (name: string) => !search || name.toLowerCase().includes(search);
+    const out: any[] = [];
+
+    if (!type || type === "appetizer") {
+      const cats = await db.select().from(appetizerCategories);
+      const catLabelById = new Map(cats.map((c) => [c.id, c.label]));
+      const rows = await db.select().from(appetizerItems);
+      for (const r of rows) {
+        if (!matches(r.name)) continue;
+        out.push({
+          type: "appetizer",
+          id: r.id,
+          name: r.name,
+          category: catLabelById.get(r.categoryId) || null,
+          priceDollars: r.priceCents / 100,
+          unit: r.unit,
+          isActive: r.isActive,
+        });
+      }
+    }
+    if (!type || type === "dessert") {
+      const rows = await db.select().from(dessertItems);
+      for (const r of rows) {
+        if (!matches(r.name)) continue;
+        out.push({
+          type: "dessert",
+          id: r.id,
+          name: r.name,
+          category: null,
+          priceDollars: r.priceCents / 100,
+          unit: r.unit,
+          isActive: r.isActive,
+        });
+      }
+    }
+    if (!type || type === "equipment") {
+      const cats = await db.select().from(equipmentCategories);
+      const catLabelById = new Map(cats.map((c) => [c.id, c.label]));
+      const rows = await db.select().from(equipmentItemsTable);
+      for (const r of rows) {
+        if (!matches(r.name)) continue;
+        out.push({
+          type: "equipment",
+          id: r.id,
+          name: r.name,
+          category: catLabelById.get(r.categoryId) || null,
+          priceDollars: r.priceCents / 100,
+          unit: r.unit,
+          isActive: r.isActive,
+        });
+      }
+    }
+    return { count: out.length, items: out };
+  },
+
+  async update_catalog_item_price(args, ctx) {
+    const authError = await requireAdmin(ctx?.userId);
+    if (authError) return { error: authError };
+    const type = String(args?.type || "").toLowerCase();
+    const id = Number(args?.id);
+    const priceDollars = Number(args?.priceDollars);
+    if (!id || !Number.isFinite(priceDollars) || priceDollars < 0) {
+      return { error: "type, id, and non-negative priceDollars are required." };
+    }
+    const priceCents = Math.round(priceDollars * 100);
+    const now = new Date();
+    let table: any;
+    if (type === "appetizer") table = appetizerItems;
+    else if (type === "dessert") table = dessertItems;
+    else if (type === "equipment") table = equipmentItemsTable;
+    else return { error: `Unknown type "${type}" — use appetizer / dessert / equipment.` };
+
+    const rows = (await db
+      .update(table)
+      .set({ priceCents, updatedAt: now })
+      .where(eq(table.id, id))
+      .returning()) as any[];
+    if (!rows[0]) return { error: `${type} item ${id} not found.` };
+    return {
+      ok: true,
+      type,
+      id: rows[0].id,
+      name: rows[0].name,
+      newPriceDollars: rows[0].priceCents / 100,
+      note: "Propagates to the inquiry form and quote math within 1 minute.",
+    };
+  },
+
+  async get_pricing_config() {
+    const [row] = await db.select().from(pricingConfig).limit(1);
+    if (!row) return { error: "Pricing config not seeded." };
+    return {
+      bartending: {
+        wetHirePerHourDollars: row.wetHireRateCentsPerHour / 100,
+        dryHirePerHourDollars: row.dryHireRateCentsPerHour / 100,
+        liquorMultipliers: {
+          well: row.liquorMultiplierWell / 100,
+          midShelf: row.liquorMultiplierMidShelf / 100,
+          topShelf: row.liquorMultiplierTopShelf / 100,
+        },
+      },
+      perPersonAddOns: {
+        nonAlcoholicPackageDollars: row.nonAlcoholicPackageCents / 100,
+        coffeeTeaServiceDollars: row.coffeeTeaServiceCents / 100,
+        tableWaterServiceDollars: row.tableWaterServiceCents / 100,
+        glasswareDollars: row.glasswareCents / 100,
+      },
+      serviceFeesPercent: {
+        dropOff: row.serviceFeeDropOffBps / 100,
+        standard: row.serviceFeeStandardBps / 100,
+        fullServiceNoSetup: row.serviceFeeFullServiceNoSetupBps / 100,
+        fullService: row.serviceFeeFullServiceBps / 100,
+      },
+      taxRatePercent: row.taxRateBps / 100,
+    };
+  },
+
+  async update_pricing_config(args, ctx) {
+    const authError = await requireAdmin(ctx?.userId);
+    if (authError) return { error: authError };
+    const patch: Record<string, number> = {};
+    const setDollars = (field: string, key: string) => {
+      if (args?.[key] !== undefined && Number.isFinite(Number(args[key]))) {
+        patch[field] = Math.round(Number(args[key]) * 100);
+      }
+    };
+    const setMultiplier = (field: string, key: string) => {
+      if (args?.[key] !== undefined && Number.isFinite(Number(args[key]))) {
+        patch[field] = Math.round(Number(args[key]) * 100);
+      }
+    };
+    const setPercent = (field: string, key: string) => {
+      if (args?.[key] !== undefined && Number.isFinite(Number(args[key]))) {
+        patch[field] = Math.round(Number(args[key]) * 100);
+      }
+    };
+    setDollars("wetHireRateCentsPerHour", "wetHirePerHour");
+    setDollars("dryHireRateCentsPerHour", "dryHirePerHour");
+    setMultiplier("liquorMultiplierWell", "liquorMultiplierWell");
+    setMultiplier("liquorMultiplierMidShelf", "liquorMultiplierMidShelf");
+    setMultiplier("liquorMultiplierTopShelf", "liquorMultiplierTopShelf");
+    setDollars("nonAlcoholicPackageCents", "nonAlcoholicPackage");
+    setDollars("coffeeTeaServiceCents", "coffeeTeaService");
+    setDollars("tableWaterServiceCents", "tableWaterService");
+    setDollars("glasswareCents", "glassware");
+    setPercent("serviceFeeDropOffBps", "serviceFeeDropOff");
+    setPercent("serviceFeeStandardBps", "serviceFeeStandard");
+    setPercent("serviceFeeFullServiceNoSetupBps", "serviceFeeFullServiceNoSetup");
+    setPercent("serviceFeeFullServiceBps", "serviceFeeFullService");
+    setPercent("taxRateBps", "taxRate");
+
+    if (Object.keys(patch).length === 0) {
+      return { error: "No valid fields provided." };
+    }
+    const [existing] = await db.select().from(pricingConfig).limit(1);
+    if (!existing) {
+      const rows = (await db.insert(pricingConfig).values(patch as any).returning()) as any[];
+      return { ok: true, created: true, updated: Object.keys(patch), row: rows[0] };
+    }
+    const rows = (await db
+      .update(pricingConfig)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(pricingConfig.id, existing.id))
+      .returning()) as any[];
+    return {
+      ok: true,
+      updated: Object.keys(patch),
+      note: "Propagates to the quote math within 1 minute.",
+      row: rows[0],
     };
   },
 };

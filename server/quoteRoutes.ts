@@ -12,7 +12,11 @@ import {
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike, isNull } from "drizzle-orm";
 import { analyzeInquiry } from "./services/quoteAiService";
-import { calculateQuotePricing, refreshMenuPricingCache } from "./utils/quotePricing";
+import {
+  calculateQuotePricing,
+  refreshMenuPricingCache,
+  refreshPricingConfigCache,
+} from "./utils/quotePricing";
 import { calculateMenuMargin, calculateMenuMarginDetail } from "./utils/menuMargin";
 import { calculateShoppingListForInquiry } from "./utils/shoppingList";
 import { getEmailConfig } from "./utils/siteConfig";
@@ -408,10 +412,12 @@ inquiryRouter.post("/", async (req: Request, res: Response) => {
         .where(eq(promoCodes.id, parsed.data.promoCodeId));
     }
 
-    // Calculate pricing server-side (refresh menu cache first to use current DB prices)
+    // Calculate pricing server-side (refresh caches first so the DB is the
+    // source of truth for tier prices and pricing config).
     if (parsed.data.menuTheme) {
       await refreshMenuPricingCache(parsed.data.menuTheme);
     }
+    await refreshPricingConfigCache();
     const pricing = calculateQuotePricing(parsed.data);
 
     // If submission came from a Mike-initiated invite, resolve the invite row
@@ -544,6 +550,7 @@ inquiryRouter.post("/:id/recalculate-pricing", async (req: Request, res: Respons
     if (request.menuTheme) {
       await refreshMenuPricingCache(request.menuTheme);
     }
+    await refreshPricingConfigCache();
     const pricing = calculateQuotePricing(request);
     const [updated] = await db
       .update(inquiries)

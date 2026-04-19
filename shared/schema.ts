@@ -1443,6 +1443,48 @@ export const inquiries = pgTable("inquiries", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Zod shapes for jsonb payloads — backend rejects malformed data before the
+// pricing calculator runs. Without these, drizzle-zod produces z.any() and the
+// calculator silently sees $0 for everything.
+const quoteAppetizerPayloadSchema = z.object({
+  category: z.string(),
+  itemName: z.string(),
+  pricePerPiece: z.number().nonnegative(),
+  quantity: z.number().int().nonnegative(),
+  subtotal: z.number().nonnegative(),
+});
+const quoteDessertPayloadSchema = z.object({
+  itemName: z.string(),
+  pricePerPiece: z.number().nonnegative(),
+  quantity: z.number().int().nonnegative(),
+  subtotal: z.number().nonnegative(),
+});
+const quoteBeveragesPayloadSchema = z.object({
+  hasNonAlcoholic: z.boolean(),
+  nonAlcoholicSelections: z.array(z.string()).optional(),
+  mocktails: z.array(z.string()).optional(),
+  hasAlcoholic: z.boolean(),
+  bartendingType: z.enum(["dry_hire", "wet_hire"]).optional(),
+  drinkingGuestCount: z.number().int().nonnegative().optional(),
+  bartendingDurationHours: z.number().nonnegative().optional(),
+  alcoholSelections: z.array(z.string()).optional(),
+  liquorQuality: z.enum(["well", "mid_shelf", "top_shelf"]).optional(),
+  additionalCocktails: z.number().int().nonnegative().optional(),
+  glassware: z.boolean().optional(),
+  barEquipment: z.array(z.string()).optional(),
+  tableWaterService: z.boolean().optional(),
+  coffeeTeaService: z.boolean().optional(),
+  servingWareType: z.string().optional(),
+  notes: z.string().optional(),
+});
+const quoteEquipmentItemPayloadSchema = z.object({
+  item: z.string(),
+  category: z.string(),
+  pricePerUnit: z.number().nonnegative(),
+  quantity: z.number().int().nonnegative(),
+  subtotal: z.number().nonnegative(),
+});
+
 export const insertInquirySchema = createInsertSchema(inquiries, {
   eventDate: z.coerce.date().nullable().optional(),
   guestCount: z.coerce.number().int().positive(),
@@ -1453,6 +1495,16 @@ export const insertInquirySchema = createInsertSchema(inquiries, {
     category: z.string(),
     upcharge: z.number().optional(),
   })).optional(),
+  appetizers: z.object({
+    serviceStyle: z.string().optional(),
+    selections: z.array(quoteAppetizerPayloadSchema),
+  }).nullable().optional(),
+  desserts: z.array(quoteDessertPayloadSchema).nullable().optional(),
+  beverages: quoteBeveragesPayloadSchema.nullable().optional(),
+  equipment: z.object({
+    items: z.array(quoteEquipmentItemPayloadSchema),
+    otherNotes: z.string().optional(),
+  }).nullable().optional(),
 }).omit({
   id: true,
   createdAt: true,
@@ -1466,6 +1518,7 @@ export const insertInquirySchema = createInsertSchema(inquiries, {
   estimatedSubtotalCents: true,
   estimatedServiceFeeCents: true,
   estimatedTaxCents: true,
+  estimatedTotalCents: true,
 });
 
 export type Inquiry = typeof inquiries.$inferSelect;
@@ -1762,3 +1815,157 @@ export const followUpStates = pgTable(
 
 export type FollowUpState = typeof followUpStates.$inferSelect;
 export type InsertFollowUpState = typeof followUpStates.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Catalog: appetizer / dessert / equipment items (previously hardcoded in
+// client/src/pages/Inquire.tsx). Admin-editable so Mike can adjust prices
+// without a deploy.
+// ---------------------------------------------------------------------------
+
+// --- Appetizer categories (Tea Sandwiches, Shooters, Spreads, etc.) ---
+export const appetizerCategories = pgTable("appetizer_categories", {
+  id: serial("id").primaryKey(),
+  categoryKey: text("category_key").notNull().unique(), // tea_sandwiches, shooters, spreads
+  label: text("label").notNull(),                        // "Tea Sandwiches"
+  // perPerson=true means items are priced × guestCount (e.g. Charcuterie boards)
+  perPerson: boolean("per_person").default(false).notNull(),
+  // servingPack: when set, the category is priced at pack level (e.g. Spreads
+  // trio = $6.50/serving × servings, customer picks N flavors to fill the pack).
+  servingPack: jsonb("serving_pack").$type<{
+    pricePerServingCents: number;
+    flavorsToPick: number;
+    description: string;
+  }>(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const appetizerItems = pgTable("appetizer_items", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => appetizerCategories.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  priceCents: integer("price_cents").notNull(), // 0 for servingPack "flavor" items
+  unit: text("unit").notNull(),                  // per_piece, per_person, flavor
+  displayOrder: integer("display_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertAppetizerCategorySchema = createInsertSchema(appetizerCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertAppetizerItemSchema = createInsertSchema(appetizerItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AppetizerCategory = typeof appetizerCategories.$inferSelect;
+export type AppetizerItem = typeof appetizerItems.$inferSelect;
+export type InsertAppetizerCategory = z.infer<typeof insertAppetizerCategorySchema>;
+export type InsertAppetizerItem = z.infer<typeof insertAppetizerItemSchema>;
+
+// --- Desserts (flat list, no categories) ---
+export const dessertItems = pgTable("dessert_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  priceCents: integer("price_cents").notNull(),
+  unit: text("unit").notNull().default("per_piece"),
+  displayOrder: integer("display_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDessertItemSchema = createInsertSchema(dessertItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type DessertItem = typeof dessertItems.$inferSelect;
+export type InsertDessertItem = z.infer<typeof insertDessertItemSchema>;
+
+// --- Equipment categories (Linens, Serving Ware, Furniture) ---
+export const equipmentCategories = pgTable("equipment_categories", {
+  id: serial("id").primaryKey(),
+  categoryKey: text("category_key").notNull().unique(),
+  label: text("label").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const equipmentItemsTable = pgTable("equipment_items", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => equipmentCategories.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  priceCents: integer("price_cents").notNull(),
+  unit: text("unit").notNull(), // each, per_person
+  displayOrder: integer("display_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertEquipmentCategorySchema = createInsertSchema(equipmentCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertEquipmentItemSchema = createInsertSchema(equipmentItemsTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EquipmentCategory = typeof equipmentCategories.$inferSelect;
+export type EquipmentItem = typeof equipmentItemsTable.$inferSelect;
+export type InsertEquipmentCategory = z.infer<typeof insertEquipmentCategorySchema>;
+export type InsertEquipmentItem = z.infer<typeof insertEquipmentItemSchema>;
+
+// --- Pricing Config (single-row table — rates that aren't tied to catalog items) ---
+// Percentages and multipliers are stored as basis points to keep math in integers:
+//   * basis points (bps): 10000 = 100%. So 1025 bps = 10.25%, 2000 bps = 20%.
+//   * multipliers × 100:  100 = 1.00×. So 150 = 1.5× (top-shelf uplift).
+// Admin UI converts to/from user-friendly % and × on display.
+export const pricingConfig = pgTable("pricing_config", {
+  id: serial("id").primaryKey(),
+  // --- Bartending ---
+  wetHireRateCentsPerHour: integer("wet_hire_rate_cents_per_hour").notNull().default(1500), // $15/pp/hr
+  dryHireRateCentsPerHour: integer("dry_hire_rate_cents_per_hour").notNull().default(800),  // $8/pp/hr
+  liquorMultiplierWell: integer("liquor_multiplier_well").notNull().default(100),           // 1.00×
+  liquorMultiplierMidShelf: integer("liquor_multiplier_mid_shelf").notNull().default(125),  // 1.25×
+  liquorMultiplierTopShelf: integer("liquor_multiplier_top_shelf").notNull().default(150),  // 1.50×
+  // --- Per-person add-ons ---
+  nonAlcoholicPackageCents: integer("non_alcoholic_package_cents").notNull().default(500),  // $5/pp
+  coffeeTeaServiceCents: integer("coffee_tea_service_cents").notNull().default(400),        // $4/pp
+  tableWaterServiceCents: integer("table_water_service_cents").notNull().default(650),      // $6.50/pp
+  glasswareCents: integer("glassware_cents").notNull().default(200),                        // $2/pp
+  // --- Service fee by service style (basis points) ---
+  serviceFeeDropOffBps: integer("service_fee_drop_off_bps").notNull().default(0),                   // 0%
+  serviceFeeStandardBps: integer("service_fee_standard_bps").notNull().default(1500),               // 15%
+  serviceFeeFullServiceNoSetupBps: integer("service_fee_full_no_setup_bps").notNull().default(1750), // 17.5%
+  serviceFeeFullServiceBps: integer("service_fee_full_bps").notNull().default(2000),                 // 20%
+  // --- Tax (basis points) ---
+  taxRateBps: integer("tax_rate_bps").notNull().default(1025),                                        // 10.25%
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPricingConfigSchema = createInsertSchema(pricingConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type PricingConfig = typeof pricingConfig.$inferSelect;
+export type InsertPricingConfig = z.infer<typeof insertPricingConfigSchema>;

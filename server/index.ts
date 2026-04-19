@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes";
 import ingredientRoutes from "./ingredientRoutes";
 import quoteRoutes, { inquiryRouter } from "./quoteRoutes";
 import chatAgentRouter from "./chatAgentRoutes";
+import catalogRouter from "./catalogRoutes";
 import {
   getWeddingMenuThemes,
   getMenuItemsByCategory,
@@ -68,6 +69,9 @@ app.use((req, res, next) => {
 
   // Kitchen chat agent (DeepSeek-powered floating widget for chefs)
   app.use('/api/chat-agent', chatAgentRouter);
+
+  // Catalog (appetizers / desserts / equipment / pricing config)
+  app.use('/api/catalog', catalogRouter);
   
   // Register menu questionnaire routes for rich menu data integration
   app.get('/api/questionnaire/wedding-menu-themes', getWeddingMenuThemes);
