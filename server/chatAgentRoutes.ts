@@ -95,6 +95,15 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "list_capabilities",
+      description:
+        "Return the full menu of what the agent can help with, grouped by topic (events, menu/recipes, ingredients, inquiries, catalog/pricing, follow-ups). Use this whenever the user asks things like 'what can you do', 'help', 'what can you help me with', 'capabilities', 'commands', 'menu', or any similar discovery question. Always call this tool rather than listing capabilities from memory — the list may have grown.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_upcoming_events",
       description:
         "List upcoming confirmed events (future event_date). Returns id, date, event type, guest count, venue, client name.",
@@ -558,6 +567,71 @@ interface ToolContext {
 type ToolHandler = (args: any, ctx?: ToolContext) => Promise<any>;
 
 const toolHandlers: Record<string, ToolHandler> = {
+  async list_capabilities() {
+    return {
+      intro:
+        "Here's what I can help with. Ask me in plain English — you don't need to know the tool names.",
+      topics: [
+        {
+          name: "Events & schedule",
+          examples: [
+            "what's on the schedule today?",
+            "show me upcoming events",
+            "what's happening this week?",
+            "tell me about event 42",
+            "what's the shopping list for the Smith wedding?",
+            "give me the prep sheet for Friday's event",
+          ],
+        },
+        {
+          name: "Menus & recipes",
+          examples: [
+            "list our menus",
+            "show me the Gold Taco Fiesta package",
+            "find all recipes with chicken",
+            "show me the recipe for Greek lemon potatoes",
+            "what's in the Charcuterie grazing board?",
+            "create a new menu called 'Summer Barbecue 2026'",
+          ],
+        },
+        {
+          name: "Base ingredients",
+          examples: [
+            "search ingredients for 'saffron'",
+            "what's our cost on olive oil?",
+            "which recipes use feta?",
+            "add a new base ingredient (you'll need category, price, unit)",
+          ],
+        },
+        {
+          name: "Catalog & pricing (admin only for edits)",
+          examples: [
+            "show me the current tax rate",
+            "what do we charge for wet-bar?",
+            "find lobster rolls in the catalog",
+            "change lobster rolls to $6.50",
+            "set the top-shelf multiplier to 1.4",
+            "raise the tax rate to 10.5%",
+          ],
+          note: "Reading catalog and pricing is open to anyone logged in. Changes require admin role.",
+        },
+        {
+          name: "Follow-ups inbox",
+          examples: [
+            "what's in my follow-up inbox?",
+            "draft a reply for item X",
+            "mark item Y as handled",
+          ],
+        },
+      ],
+      tips: [
+        "I have access to today's date, the full calendar, menus, recipes, ingredients, inquiries, and pricing — just ask.",
+        "I'll tell you when I can't do something (e.g. deleting items or changing a customer's contract).",
+        "For changes I do make, I'll echo the before/after so you can spot typos.",
+      ],
+    };
+  },
+
   async list_upcoming_events({ limit = 10 }) {
     const now = new Date();
     const rows = await db
@@ -1528,6 +1602,7 @@ You can:
 
 Rules:
 - Always call the appropriate tool for live data; never invent prices, ids, or dates.
+- If the user asks what you can do ("what can you help with", "help", "commands", "capabilities", "menu", etc.), always call list_capabilities and present the result as a short bullet list grouped by topic with 2–3 example phrases per topic.
 - Keep answers short and scannable. Prefer bullet lists or compact tables.
 - When a tool result includes a "link" field, render ids as markdown links — e.g. "Event [#42](/events/42) · Sat Apr 25, 5:30 PM". Do the same for recipes (/recipes/:id) and base ingredients (/base-ingredients).
 - Format dates human-readably (e.g. "Sat Apr 25, 5:30 PM"). Money values are dollars unless noted.
