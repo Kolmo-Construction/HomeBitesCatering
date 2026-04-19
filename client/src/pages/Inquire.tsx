@@ -602,7 +602,6 @@ interface FormState {
   barDuration: string;
   alcoholSelections: string[];
   liquorQuality: string; // "well" | "mid_shelf" | "top_shelf"
-  needsGlassware: boolean;
   tableWaterService: boolean;
   coffeTeaService: boolean;
 
@@ -704,7 +703,6 @@ const initialFormState: FormState = {
   barDuration: "",
   alcoholSelections: [],
   liquorQuality: "",
-  needsGlassware: false,
   tableWaterService: false,
   coffeTeaService: false,
 
@@ -1344,14 +1342,12 @@ export default function Inquire() {
         ...(form.liquorQuality ? { liquorQuality: form.liquorQuality } : {}),
         ...(form.tableWaterService ? { tableWaterService: true } : {}),
         ...(form.coffeTeaService ? { coffeeTeaService: true } : {}),
-        ...(form.needsGlassware ? { glassware: true } : {}),
       };
       const hasAnyBeverageInfo =
         beveragesPayload.hasNonAlcoholic ||
         beveragesPayload.hasAlcoholic ||
         form.tableWaterService ||
-        form.coffeTeaService ||
-        form.needsGlassware;
+        form.coffeTeaService;
 
       const equipmentItems: Array<{
         item: string;
@@ -1409,7 +1405,6 @@ export default function Inquire() {
         barType: _barType,
         barDuration: _barDuration,
         liquorQuality: _liquorQuality,
-        needsGlassware: _needsGlassware,
         tableWaterService: _tableWaterService,
         coffeTeaService: _coffeTeaService,
         needsEquipment: _needsEquipment,
@@ -3934,19 +3929,10 @@ export default function Inquire() {
         <Label className="text-base font-semibold">
           Additional Beverage Options
         </Label>
+        <p className="text-xs text-gray-500 -mt-2">
+          Glassware options (beer, wine, cocktail, water goblets, champagne flutes) live in the next step under <strong>Equipment → Glassware</strong> — pick the exact glasses you want there.
+        </p>
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Glassware Service</p>
-              <p className="text-xs text-gray-500">
-                Professional glassware for your event
-              </p>
-            </div>
-            <Switch
-              checked={form.needsGlassware}
-              onCheckedChange={(v) => update("needsGlassware", v)}
-            />
-          </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-sm">Table Water Service</p>

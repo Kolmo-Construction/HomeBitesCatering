@@ -210,9 +210,11 @@ export function calculateQuotePricing(
   if (beverages?.coffeeTeaService) {
     beverageSubtotalCents += cfg.coffeeTeaServiceCents * guestCount;
   }
-  if (beverages?.glassware) {
-    beverageSubtotalCents += cfg.glasswareCents * guestCount;
-  }
+  // NOTE: "glassware" as a flat $2/pp toggle was removed. Customers now pick
+  // specific glassware (beer, wine, cocktail, flutes, water goblets, etc.) in
+  // the Equipment step — those line items are priced per-unit through the
+  // equipmentSubtotalCents path below. The glasswareCents config field is
+  // kept for schema stability but no longer applied.
 
   // 5. Equipment
   const equipmentItems = (quote.equipment as any)?.items || [];

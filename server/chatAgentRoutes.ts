@@ -545,7 +545,6 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           nonAlcoholicPackage: { type: "number", description: "Non-alcoholic package $/pp" },
           coffeeTeaService: { type: "number", description: "Coffee/tea service $/pp" },
           tableWaterService: { type: "number", description: "Table water $/pp" },
-          glassware: { type: "number", description: "Glassware $/pp" },
           serviceFeeDropOff: { type: "number", description: "Drop-off service fee % (e.g. 0)" },
           serviceFeeStandard: { type: "number", description: "Standard buffet service fee % (e.g. 15)" },
           serviceFeeFullServiceNoSetup: { type: "number", description: "Full-service-no-setup % (e.g. 17.5)" },
@@ -1513,7 +1512,8 @@ const toolHandlers: Record<string, ToolHandler> = {
         nonAlcoholicPackageDollars: row.nonAlcoholicPackageCents / 100,
         coffeeTeaServiceDollars: row.coffeeTeaServiceCents / 100,
         tableWaterServiceDollars: row.tableWaterServiceCents / 100,
-        glasswareDollars: row.glasswareCents / 100,
+        // Glassware is priced per-item via the Equipment catalog now (beer,
+        // wine, cocktail, flutes, etc.). Flat $/pp glassware was removed.
       },
       serviceFeesPercent: {
         dropOff: row.serviceFeeDropOffBps / 100,
@@ -1552,7 +1552,6 @@ const toolHandlers: Record<string, ToolHandler> = {
     setDollars("nonAlcoholicPackageCents", "nonAlcoholicPackage");
     setDollars("coffeeTeaServiceCents", "coffeeTeaService");
     setDollars("tableWaterServiceCents", "tableWaterService");
-    setDollars("glasswareCents", "glassware");
     setPercent("serviceFeeDropOffBps", "serviceFeeDropOff");
     setPercent("serviceFeeStandardBps", "serviceFeeStandard");
     setPercent("serviceFeeFullServiceNoSetupBps", "serviceFeeFullServiceNoSetup");

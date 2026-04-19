@@ -732,12 +732,9 @@ function PricingConfigEditor() {
             suffix="/pp"
             onChange={(v) => update({ tableWaterServiceCents: v })}
           />
-          <DollarInput
-            label="Glassware"
-            valueCents={editing.glasswareCents}
-            suffix="/pp"
-            onChange={(v) => update({ glasswareCents: v })}
-          />
+          {/* Glassware moved to Equipment catalog — customers now pick specific
+              glasses (beer, wine, cocktail, water goblets, champagne flutes).
+              Edit those under Equipment → Glassware. */}
         </CardContent>
       </Card>
 
