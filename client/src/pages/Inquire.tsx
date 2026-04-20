@@ -656,6 +656,8 @@ interface FormState {
   alcoholSelections: string[];
   liquorQuality: string; // "well" | "mid_shelf" | "top_shelf"
   preferredLiquorBrands: string;
+  subsidizedBar: boolean;
+  subsidyAmountDollars: number | "";
   tableWaterService: boolean;
   coffeTeaService: boolean;
 
@@ -761,6 +763,8 @@ const initialFormState: FormState = {
   alcoholSelections: [],
   liquorQuality: "",
   preferredLiquorBrands: "",
+  subsidizedBar: false,
+  subsidyAmountDollars: "",
   tableWaterService: false,
   coffeTeaService: false,
 
@@ -1419,6 +1423,15 @@ export default function Inquire() {
         ...(form.liquorQuality ? { liquorQuality: form.liquorQuality } : {}),
         ...(form.liquorQuality && form.liquorQuality !== "well" && form.preferredLiquorBrands.trim()
           ? { preferredLiquorBrands: form.preferredLiquorBrands.trim() }
+          : {}),
+        ...(form.barType === "wet_hire" && form.subsidizedBar
+          ? {
+              subsidizedBar: true,
+              subsidyAmountCents:
+                typeof form.subsidyAmountDollars === "number"
+                  ? Math.round(form.subsidyAmountDollars * 100)
+                  : null,
+            }
           : {}),
         ...(form.tableWaterService ? { tableWaterService: true } : {}),
         ...(form.coffeTeaService ? { coffeeTeaService: true } : {}),
@@ -4232,16 +4245,37 @@ export default function Inquire() {
               <RadioGroup
                 value={form.barType}
                 onValueChange={(v) => {
-                  // When switching to dry hire, drop any package that no
-                  // longer applies (the list above hides them, and we don't
-                  // want a stale stored selection to carry through to the
-                  // quote).
+                  // When switching bar types, drop state that no longer
+                  // applies so stale picks don't sneak into the quote payload:
+                  //   - dry_hire: strip wet-hire-only alcohol packages
+                  //   - wet_hire: zero out dry-hire ice qty (wet hire
+                  //     includes ice, separate row is hidden)
+                  //   - dry_hire: zero out wet-hire ice qty (shouldn't exist
+                  //     anyway since wet-hire row is hidden for dry_hire)
                   const DRY_HIDDEN = new Set([
                     "House Wine",
                     "Premium Wine",
                     "Open Bar",
                     "Cash Bar",
                   ]);
+                  const clearIceForCategory = (
+                    eq: Record<string, Record<string, number>>,
+                    predicate: (itemName: string) => boolean,
+                  ) => {
+                    const out: Record<string, Record<string, number>> = {};
+                    for (const [cat, items] of Object.entries(eq)) {
+                      const kept: Record<string, number> = {};
+                      for (const [name, qty] of Object.entries(items)) {
+                        if (!predicate(name)) kept[name] = qty;
+                      }
+                      out[cat] = kept;
+                    }
+                    return out;
+                  };
+                  const isDryIce = (n: string) =>
+                    /\bice\b/i.test(n) && /\bdry\b/i.test(n);
+                  const isWetIce = (n: string) =>
+                    /\bice\b/i.test(n) && /(bartend|wet|included|service)/i.test(n);
                   setForm((prev) => ({
                     ...prev,
                     barType: v,
@@ -4249,6 +4283,17 @@ export default function Inquire() {
                       v === "dry_hire"
                         ? prev.alcoholSelections.filter((s) => !DRY_HIDDEN.has(s))
                         : prev.alcoholSelections,
+                    equipmentSelections:
+                      v === "wet_hire"
+                        ? clearIceForCategory(prev.equipmentSelections, isDryIce)
+                        : v === "dry_hire"
+                          ? clearIceForCategory(prev.equipmentSelections, isWetIce)
+                          : prev.equipmentSelections,
+                    // Subsidized bar only applies to wet hire; clear if
+                    // switching away.
+                    subsidizedBar: v === "wet_hire" ? prev.subsidizedBar : false,
+                    subsidyAmountDollars:
+                      v === "wet_hire" ? prev.subsidyAmountDollars : "",
                   }));
                 }}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"
@@ -4370,6 +4415,90 @@ export default function Inquire() {
                 </div>
               );
             })()}
+
+            {/* Subsidized bar (wet hire only).
+                Host caps how much alcohol they want to cover; beyond that,
+                guests pay cash. Middle ground between Open Bar and Cash Bar. */}
+            {form.barType === "wet_hire" && (
+              <div className="space-y-3 rounded-lg border border-gray-200 bg-white/60 p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <div className="pt-0.5">
+                    <Switch
+                      checked={form.subsidizedBar}
+                      onCheckedChange={(v) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          subsidizedBar: !!v,
+                          subsidyAmountDollars: v ? prev.subsidyAmountDollars : "",
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold">Offer a subsidized bar?</div>
+                    <p className="text-xs text-gray-600 mt-0.5 font-serif italic">
+                      You cover a set dollar amount of drinks for your guests;
+                      once the tab is reached, guests pay cash for any
+                      additional drinks. A popular middle ground between an
+                      open bar and a cash bar.
+                    </p>
+                  </div>
+                </label>
+
+                <AnimatePresence initial={false}>
+                  {form.subsidizedBar && (
+                    <motion.div
+                      key="subsidy-amount"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div className="pt-1 max-w-xs">
+                        <Label
+                          htmlFor="subsidyAmount"
+                          className="text-sm font-medium"
+                        >
+                          How much would you like to cover?
+                        </Label>
+                        <div className="relative mt-1.5">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                            $
+                          </span>
+                          <Input
+                            id="subsidyAmount"
+                            type="number"
+                            min={0}
+                            step={50}
+                            inputMode="decimal"
+                            placeholder="500"
+                            value={
+                              form.subsidyAmountDollars === ""
+                                ? ""
+                                : String(form.subsidyAmountDollars)
+                            }
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              update(
+                                "subsidyAmountDollars",
+                                raw === ""
+                                  ? ""
+                                  : Math.max(0, Number(raw) || 0),
+                              );
+                            }}
+                            className="pl-7"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1 font-serif italic">
+                          Round numbers work best — e.g. $500, $1,000, $2,500.
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {/* Liquor quality (wet hire only) */}
             {form.barType === "wet_hire" && (
@@ -4495,7 +4624,24 @@ export default function Inquire() {
           <Accordion type="multiple" className="w-full">
             {equipmentCatalog.map((cat) => {
               const selections = form.equipmentSelections[cat.label] || {};
-              const catTotal = cat.items.reduce((sum, item) => {
+
+              // Ice handling:
+              //   - Dry-hire ice: sold in 50 lb bags at $20/bag ($0.40/lb × 50).
+              //     Only relevant when the customer has a Dry-Hire bar (or no
+              //     bar at all); wet hire includes ice so we hide this row.
+              //   - "Ice with bartending" (wet hire): included at $0. Hidden
+              //     unless the customer actually chose Wet Hire.
+              const matchesDryIce = (n: string) => /\bice\b/i.test(n) && /\bdry\b/i.test(n);
+              const matchesWetIce = (n: string) =>
+                /\bice\b/i.test(n) && /(bartend|wet|included|service)/i.test(n);
+
+              const visibleItems = cat.items.filter((item) => {
+                if (matchesDryIce(item.name)) return form.barType !== "wet_hire";
+                if (matchesWetIce(item.name)) return form.barType === "wet_hire";
+                return true;
+              });
+
+              const catTotal = visibleItems.reduce((sum, item) => {
                 const qty = selections[item.name] || 0;
                 if (item.unit === "per person") {
                   return sum + item.price * qty * guestCount;
@@ -4517,9 +4663,11 @@ export default function Inquire() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-3">
-                      {cat.items.map((item) => {
+                      {visibleItems.map((item) => {
                         const qty = selections[item.name] || 0;
                         const isPerPerson = item.unit === "per person";
+                        const isDryIce = matchesDryIce(item.name);
+                        const isWetIce = matchesWetIce(item.name);
                         return (
                           <div
                             key={item.name}
@@ -4528,20 +4676,44 @@ export default function Inquire() {
                             <div>
                               <p className="font-medium text-sm">{item.name}</p>
                               <p className="text-xs text-gray-500">
-                                {fmt(item.price)} {item.unit}
-                                {isPerPerson && guestCount > 0 && (
+                                {isDryIce ? (
+                                  <>$20 per 50 lb bag</>
+                                ) : isWetIce ? (
+                                  <>Included with bartending — no charge.</>
+                                ) : (
                                   <>
-                                    {" "}
-                                    · {guestCount} guests ={" "}
-                                    <strong>
-                                      {fmt(item.price * guestCount)}
-                                    </strong>
+                                    {fmt(item.price)} {item.unit}
+                                    {isPerPerson && guestCount > 0 && (
+                                      <>
+                                        {" "}
+                                        · {guestCount} guests ={" "}
+                                        <strong>
+                                          {fmt(item.price * guestCount)}
+                                        </strong>
+                                      </>
+                                    )}
                                   </>
                                 )}
                               </p>
                             </div>
                             <div className="flex items-center gap-3">
-                              {isPerPerson ? (
+                              {isWetIce ? (
+                                // Wet-hire ice is always on and free — no
+                                // qty selector needed.
+                                <span className="text-xs font-serif italic text-emerald-700">
+                                  Included
+                                </span>
+                              ) : isDryIce ? (
+                                // Dry-hire ice: step in 50 lb bags. Value in
+                                // state is the lb count; +/- adds/removes 50.
+                                renderQuantitySelector(
+                                  qty,
+                                  (v) =>
+                                    setEquipmentQty(cat.label, item.name, v),
+                                  0,
+                                  50,
+                                )
+                              ) : isPerPerson ? (
                                 // Per-person items are all-or-nothing: 1 set
                                 // per guest, auto-scaled by guestCount. Old
                                 // +/- qty confused customers who thought
@@ -4566,7 +4738,7 @@ export default function Inquire() {
                                   1,
                                 )
                               )}
-                              {qty > 0 && (
+                              {qty > 0 && !isWetIce && (
                                 <span className="text-sm text-gray-600 w-20 text-right">
                                   {fmt(
                                     isPerPerson
