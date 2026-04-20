@@ -1232,7 +1232,9 @@ export default function Inquire() {
                           ? "Sauces"
                           : category === "pasta"
                             ? "Pasta"
-                            : `${category.charAt(0).toUpperCase()}${category.slice(1)}s`;
+                            : category === "protein" || category === "entree" || category === "main"
+                              ? "Mains"
+                              : `${category.charAt(0).toUpperCase()}${category.slice(1)}s`;
                 errors.push(
                   `${pretty}: please select ${limit} (you have ${selectedCount}).`,
                 );
@@ -3811,7 +3813,29 @@ export default function Inquire() {
                 </Badge>
               )}
             </div>
-            {Object.entries(selectedTier.selectionLimits).map(
+            {(() => {
+              // Canonical display order across every menu so customers see
+              // Mains (proteins) first, then Sides, Salads, and the trailing
+              // condiment-y categories. Anything not in this list falls
+              // through at the end in its original insertion order.
+              const CATEGORY_ORDER = [
+                "protein", "entree", "main",
+                "pasta",
+                "side",
+                "salad",
+                "spread", "salsa", "sauce", "condiment",
+              ];
+              const entries = Object.entries(selectedTier.selectionLimits);
+              entries.sort(([a], [b]) => {
+                const ai = CATEGORY_ORDER.indexOf(a);
+                const bi = CATEGORY_ORDER.indexOf(b);
+                if (ai === -1 && bi === -1) return 0;
+                if (ai === -1) return 1;
+                if (bi === -1) return -1;
+                return ai - bi;
+              });
+              return entries;
+            })().map(
               ([category, limit]) => {
                 const allItems = selectedMenu.categoryItems![category] || [];
                 // Items can be gated to specific tiers; empty/undefined = all tiers
@@ -3839,7 +3863,9 @@ export default function Inquire() {
                                 ? "Sauces"
                                 : category === "pasta"
                                   ? "Pasta"
-                                  : `${category.charAt(0).toUpperCase()}${category.slice(1)}s`}
+                                  : category === "protein" || category === "entree" || category === "main"
+                                    ? "Mains"
+                                    : `${category.charAt(0).toUpperCase()}${category.slice(1)}s`}
                       </h4>
                       <span
                         className={cn(
