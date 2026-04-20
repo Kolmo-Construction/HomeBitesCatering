@@ -12,6 +12,7 @@ import {
   getDietaryRecommendations
 } from "./menuQuestionnaireRoutes";
 import { setupVite, serveStatic, log } from "./vite";
+import { registerScheduledJobs } from "./jobs/scheduler";
 
 const app = express();
 // Capture raw body for webhook signature verification (Cal.com, Stripe, etc.).
@@ -102,5 +103,6 @@ app.use((req, res, next) => {
   const port = process.env.PORT || 3002;
   server.listen(port, () => {
     log(`serving on port ${port}`);
+    registerScheduledJobs();
   });
 })();
