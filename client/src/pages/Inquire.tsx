@@ -1182,6 +1182,10 @@ export default function Inquire() {
           // Cocktail parties don't pick a menu theme/tier — they go straight
           // to hors d'oeuvres. Step 4 is skipped entirely (see goNext/goBack).
           if (form.serviceType === "cocktail_party") break;
+          // Food trucks don't pick from the menu theme catalog yet — the
+          // food-truck menu lives outside this picker (populated separately
+          // from the Menus admin). Skip validation so customers can advance.
+          if (form.serviceType === "food_truck") break;
           if (!form.menuTheme) errors.push("Please select a menu theme.");
           if (form.menuTheme !== "custom" && !form.packageTier)
             errors.push("Please select a package tier.");
@@ -3588,6 +3592,42 @@ export default function Inquire() {
         icon: ChefHat,
       }));
     themeOptions.push({ value: "custom", label: "Custom", icon: ChefHat });
+
+    // Food-truck service gets a placeholder — the Food Truck menu exists in
+    // the admin Menus tool but isn't yet surfaced through this picker. Show
+    // a polite notice instead of the empty grid.
+    if (form.serviceType === "food_truck") {
+      return (
+        <div
+          className="rounded-xl p-6 border text-center space-y-3"
+          style={{
+            background: "color-mix(in srgb, var(--theme-bg) 65%, white)",
+            borderColor: "color-mix(in srgb, var(--theme-border) 50%, transparent)",
+          }}
+        >
+          <div
+            className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-white shadow-sm"
+            style={{ background: "var(--theme-gradient)" }}
+          >
+            <Truck className="h-6 w-6" />
+          </div>
+          <h3
+            className="text-xl font-semibold"
+            style={{
+              color: "var(--theme-text)",
+              fontFamily: "var(--theme-heading-font), Georgia, serif",
+            }}
+          >
+            Your Food Truck menu will be shared separately
+          </h3>
+          <p className="text-sm text-gray-600 max-w-md mx-auto font-serif italic">
+            The Food Truck menu is being populated — we'll share the final
+            lineup with you once it's ready. In the meantime, just continue
+            with the next steps and we'll handle the rest.
+          </p>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-8">
