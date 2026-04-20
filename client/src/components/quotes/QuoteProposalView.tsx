@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { Helmet } from "react-helmet";
+import { AcceptanceDialog } from "@/components/quotes/AcceptanceDialog";
 import homebitesLogo from "@assets/homebites-logo.avif";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,7 +86,8 @@ export interface QuoteProposalViewProps {
   // Public mode — accept/decline handlers. The component owns the decline
   // form state internally and calls onDecline({ category, notes }) when the
   // customer confirms. Category is the structured P0-3 decline reason.
-  onAccept?: () => void;
+  /** Called with the typed legal name once the customer signs in the dialog. */
+  onAccept?: (typedName: string) => void;
   onDecline?: (payload: { category: DeclineCategory | null; notes: string }) => void;
   acceptFlowState?: "idle" | "accepting" | "accepted" | "declining" | "declined";
   acceptedEventUrl?: string | null;
@@ -383,6 +385,19 @@ export default function QuoteProposalView({
     if (!onRequestInfo) return;
     const result = await onRequestInfo(infoNote.trim());
     if (result?.bookingUrl) setActiveBookingUrl(result.bookingUrl);
+  };
+
+  // Formalized acceptance flow — opens the signing dialog so the customer
+  // reads the T&Cs, types their name, and ticks the legally-binding box
+  // before the accept fires. Replaces the previous one-click Accept.
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const handleAcceptClick = () => {
+    if (!onAccept) return;
+    setShowAcceptDialog(true);
+  };
+  const handleAcceptConfirm = (typedName: string) => {
+    setShowAcceptDialog(false);
+    onAccept?.(typedName);
   };
 
   const preset = getEventPreset(proposal.eventType);
@@ -896,7 +911,7 @@ export default function QuoteProposalView({
           </p>
           <Button
             size="lg"
-            onClick={onAccept}
+            onClick={handleAcceptClick}
             disabled={acceptFlowState === "accepting"}
             className="h-16 px-12 text-lg bg-white text-[color:var(--theme-primary)] hover:bg-[var(--theme-bg)] rounded-full shadow-xl font-semibold transition-all hover:scale-[1.02]"
             data-testid="button-accept"
@@ -1207,6 +1222,16 @@ export default function QuoteProposalView({
           us a call — we&rsquo;d love to hear from you.
         </p>
       </div>
+
+      {/* Formalized acceptance dialog — opens on Accept click, captures typed
+          legal name + T&Cs consent before the server writes the audit row. */}
+      <AcceptanceDialog
+        open={showAcceptDialog}
+        onOpenChange={setShowAcceptDialog}
+        expectedName={title || `${proposal.firstName ?? ""} ${proposal.lastName ?? ""}`.trim()}
+        submitting={acceptFlowState === "accepting"}
+        onConfirm={handleAcceptConfirm}
+      />
     </PageShell>
   );
 }

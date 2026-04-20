@@ -452,6 +452,29 @@ export const clientMagicLinks = pgTable("client_magic_links", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Acceptance audit trail — formalizes the "Accept on quote" clickwrap so it
+// holds up as a binding contract without a third-party e-signature vendor.
+// Every quote acceptance writes one row capturing the typed name, IP, UA,
+// token used, and timestamp. Paired with the stored proposal on the quote
+// row, this becomes the permanent legal record.
+export const acceptanceAuditLog = pgTable("acceptance_audit_log", {
+  id: serial("id").primaryKey(),
+  quoteId: integer("quote_id").references(() => quotes.id, { onDelete: 'cascade' }).notNull(),
+  typedName: text("typed_name").notNull(),
+  customerEmail: text("customer_email"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  // The viewToken the customer used when accepting — useful for forensic
+  // matching against email delivery logs.
+  tokenUsed: text("token_used"),
+  // The exact T&Cs text + version the customer accepted (denormalized so a
+  // future edit to the boilerplate doesn't retroactively change what they
+  // agreed to).
+  termsSnapshot: text("terms_snapshot"),
+  termsVersion: text("terms_version"),
+  acceptedAt: timestamp("accepted_at").defaultNow().notNull(),
+});
+
 // Tier 3: Client portal session tokens (issued after magic link verified)
 export const clientSessions = pgTable("client_sessions", {
   id: serial("id").primaryKey(),

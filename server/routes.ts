@@ -52,7 +52,7 @@ import {
 import { filterQuote, filterQuotes, filterMenuItem, filterMenuItems } from './utils/dataFilters';
 import { buildProposalFromInquiry, buildProposalFromQuoteAlone } from './lib/proposalFromInquiry';
 import type { Proposal } from '@shared/proposal';
-import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent, getReviewConfig } from './utils/siteConfig';
+import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent, getReviewConfig, getTermsConfig } from './utils/siteConfig';
 import { createCheckoutLink, verifySquareWebhook } from './services/paymentService';
 import {
   generateContractHtml,
@@ -2711,6 +2711,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Returns the Proposal blob stored on quote.proposal — this is the
   // single source of truth for the customer-facing page.
+  // Public T&Cs — served to the acceptance dialog so the client can render
+  // the exact text the customer is agreeing to. Version + body come from
+  // getTermsConfig() (env-overridable).
+  app.get('/api/public/terms', (_req: Request, res: Response) => {
+    res.status(200).json(getTermsConfig());
+  });
+
   app.get('/api/public/quote/:token', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
@@ -2790,6 +2797,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Public: accept the quote — same downstream effect as the admin accept endpoint
   // (client graduates to customer, event is auto-created). Token-keyed so no auth needed.
+  //
+  // This is the legal acceptance moment. Customer must have typed their full
+  // name and ticked the "legally binding" confirmation on the client; we
+  // capture the typed name + IP + user-agent + token + T&Cs snapshot into an
+  // acceptance_audit_log row so the click-accept is defensible as a signature
+  // (ESIGN/UETA). Replaces the need for a third-party e-signature service.
   app.post('/api/public/quote/:token/accept', async (req: Request, res: Response) => {
     try {
       const token = req.params.token;
@@ -2802,12 +2815,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'This quote has already been declined.' });
       }
 
+      // Capture the typed name if the updated client sent it. Kept soft —
+      // older clients won't yet submit this field, and we'd rather not break
+      // an in-flight accept during a rolling deploy. Once every client is
+      // shipping the new AcceptanceDialog, this can be promoted to a 400.
+      const typedName = typeof req.body?.typedName === 'string' ? req.body.typedName.trim() : '';
+      const isRepeatAccept = quote.status === 'accepted';
+
       const now = new Date();
       const [updatedQuote] = await db
         .update(quotes)
         .set({ status: 'accepted', acceptedAt: quote.acceptedAt ?? now, updatedAt: now })
         .where(eq(quotes.id, quote.id))
         .returning();
+
+      // Write the audit row for first-time acceptances when the client sent
+      // a typed name. Skip for repeats (double-click, browser back) and for
+      // old-client callers that haven't yet adopted the signing dialog. The
+      // insert is already try/wrapped so a missing table (pre-migration) or
+      // stray write error never blocks the accept itself.
+      if (!isRepeatAccept && typedName.length >= 2) {
+        try {
+          const { acceptanceAuditLog } = await import('@shared/schema');
+          const terms = getTermsConfig();
+          const forwardedFor = req.headers['x-forwarded-for'];
+          const ipAddress = Array.isArray(forwardedFor)
+            ? forwardedFor[0]
+            : (forwardedFor as string | undefined)?.split(',')[0]?.trim() ||
+              req.socket.remoteAddress ||
+              null;
+          const [acceptingClient] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, quote.clientId));
+          await db.insert(acceptanceAuditLog).values({
+            quoteId: quote.id,
+            typedName,
+            customerEmail: acceptingClient?.email ?? null,
+            ipAddress: ipAddress || null,
+            userAgent: req.headers['user-agent']?.slice(0, 500) ?? null,
+            tokenUsed: token,
+            termsSnapshot: terms.body,
+            termsVersion: terms.version,
+            acceptedAt: now,
+          } as any);
+        } catch (auditErr) {
+          console.warn(`[accept] failed to write audit log for quote ${quote.id}:`, auditErr);
+        }
+      }
 
       // P1-2: pause drip — client accepted the quote
       await pauseOpportunityDrip(quote.opportunityId, 'quote_accepted');

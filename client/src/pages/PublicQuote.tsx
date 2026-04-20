@@ -95,8 +95,12 @@ export default function PublicQuote() {
   }, [data]);
 
   const acceptMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/public/quote/${token}/accept`, { method: "POST" });
+    mutationFn: async (typedName: string) => {
+      const res = await fetch(`/api/public/quote/${token}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ typedName }),
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(err.message || "Failed to accept quote");
@@ -208,7 +212,7 @@ export default function PublicQuote() {
       acceptFlowState={localStatus}
       acceptedEventUrl={eventPublicUrl}
       acceptedPortalUrl={portalUrl}
-      onAccept={() => acceptMutation.mutate()}
+      onAccept={(typedName) => acceptMutation.mutate(typedName)}
       onDecline={(payload) => declineMutation.mutate(payload)}
       onRequestInfo={handleRequestInfo}
       infoFlowState={infoFlowState}

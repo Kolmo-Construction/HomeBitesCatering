@@ -206,3 +206,41 @@ export function getReviewConfig(): ReviewConfig {
     referralCreditDollars: Number(process.env.REFERRAL_CREDIT_DOLLARS) || 100,
   };
 }
+
+// Terms & Conditions customers must read + affirm when accepting a quote.
+// Keep the defaults in sync with current operational reality. The version
+// string bumps whenever the text changes so each acceptance-audit-log row
+// can record which version was in effect at sign time.
+export interface TermsConfig {
+  version: string;
+  heading: string;
+  body: string;
+}
+
+const DEFAULT_TERMS_V1 = `1. Deposit & booking. A 50% deposit is required to lock in your date. The balance is due 24 hours before the event.
+
+2. Cancellation. Cancellations 30+ days prior receive a full refund of the deposit. 14–29 days prior forfeits 50% of the deposit. Within 14 days forfeits the full deposit. Food-cost expenses already incurred may also be passed through.
+
+3. Final headcount. You'll confirm final guest count no later than 7 days before the event. Increases after that point may be accommodated at an additional fee; decreases do not reduce the total.
+
+4. Menu & substitutions. We source the best available ingredients on the week of your event. If a specific item is unavailable due to supply or seasonality, we'll substitute with a comparable option and notify you in advance.
+
+5. Allergies. We handle common allergens (nuts, shellfish, dairy, gluten) with care but our kitchen is not a certified allergen-free facility. Please disclose all dietary needs at time of booking. Homebites is not liable for allergic reactions where full disclosure was not provided.
+
+6. On-site service. Our standard service includes setup, serving, and breakdown of our equipment. Extending service time, additional courses, or add-on staffing will be billed separately.
+
+7. Property & damages. You are responsible for damage to our equipment caused by your guests or venue. We carry standard commercial liability coverage for our team's work.
+
+8. Force majeure. Neither party is liable for cancellation due to circumstances beyond reasonable control (weather emergencies, government orders, etc.). We'll work with you in good faith to reschedule or refund.
+
+9. Electronic acceptance. By typing your full name and clicking Accept, you agree that your electronic signature is the legal equivalent of a handwritten signature for this agreement, consistent with the U.S. ESIGN Act and UETA. You consent to conduct this transaction electronically.
+
+10. Entire agreement. This proposal — including the menu, pricing, event date, venue, and these terms — constitutes the entire agreement between you and Homebites Catering for this event.`;
+
+export function getTermsConfig(): TermsConfig {
+  return {
+    version: process.env.HOMEBITES_TERMS_VERSION || "v1-2026-04",
+    heading: process.env.HOMEBITES_TERMS_HEADING || "Terms & Conditions",
+    body: process.env.HOMEBITES_TERMS_BODY || DEFAULT_TERMS_V1,
+  };
+}
