@@ -476,15 +476,26 @@ const MOCKTAIL_OPTIONS = [
 ];
 const MOCKTAIL_MENU_URL = "https://homebites.net/bartending#mocktails";
 
-// --- Alcoholic Beverage Options ---
-const ALCOHOL_OPTIONS = [
+// --- Drinks Package (WHAT gets offered at the bar) ---
+// Wet hire: HBC supplies the alcohol, so packages reflect our tiers
+// (house vs premium wine) and a bundled cocktails option with the "2
+// cocktails" count we actually mix.
+// Dry hire: host supplies the alcohol, so the package is just a broad
+// description of what they're serving — no tiers, no count.
+const DRINKS_PACKAGE_OPTIONS_WET = [
   "Beer",
   "House Wine",
   "Premium Wine",
   "Beer+Wine+2 Cocktails",
-  "Open Bar",
-  "Cash Bar",
 ];
+const DRINKS_PACKAGE_OPTIONS_DRY = [
+  "Beer",
+  "Beer+Wine",
+  "Beer+Wine+Cocktails",
+];
+
+// --- Bar Service Model (HOW guests are charged) — wet hire only ---
+const BAR_SERVICE_OPTIONS = ["Open Bar", "Cash Bar", "Subsidized Bar"];
 
 // --- Bar Duration Options ---
 const BAR_DURATIONS = ["2.5", "3", "3.5", "4", "4.5", "5"];
@@ -653,10 +664,10 @@ interface FormState {
   barType: string; // "dry_hire" | "wet_hire"
   drinkingGuestCount: number | "";
   barDuration: string;
-  alcoholSelections: string[];
+  drinksPackage: string; // "" | one of DRINKS_PACKAGE_OPTIONS
+  barServiceModel: string; // "" | one of BAR_SERVICE_OPTIONS
   liquorQuality: string; // "well" | "mid_shelf" | "top_shelf"
   preferredLiquorBrands: string;
-  subsidizedBar: boolean;
   subsidyAmountDollars: number | "";
   tableWaterService: boolean;
   coffeTeaService: boolean;
@@ -760,10 +771,10 @@ const initialFormState: FormState = {
   barType: "",
   drinkingGuestCount: "",
   barDuration: "",
-  alcoholSelections: [],
+  drinksPackage: "",
+  barServiceModel: "",
   liquorQuality: "",
   preferredLiquorBrands: "",
-  subsidizedBar: false,
   subsidyAmountDollars: "",
   tableWaterService: false,
   coffeTeaService: false,
@@ -1423,14 +1434,27 @@ export default function Inquire() {
         ...(typeof form.drinkingGuestCount === "number"
           ? { drinkingGuestCount: form.drinkingGuestCount }
           : {}),
-        ...(form.alcoholSelections.length
-          ? { alcoholSelections: form.alcoholSelections }
+        ...(form.drinksPackage ? { drinksPackage: form.drinksPackage } : {}),
+        ...(form.barType === "wet_hire" && form.barServiceModel
+          ? { barServiceModel: form.barServiceModel }
+          : {}),
+        // Back-compat: `alcoholSelections` is still part of QuoteBeverages in
+        // shared/schema.ts and may be read by downstream consumers. Populate
+        // it from the two new fields so nothing breaks.
+        ...(form.drinksPackage ||
+        (form.barType === "wet_hire" && form.barServiceModel)
+          ? {
+              alcoholSelections: [
+                form.drinksPackage,
+                form.barType === "wet_hire" ? form.barServiceModel : "",
+              ].filter(Boolean),
+            }
           : {}),
         ...(form.liquorQuality ? { liquorQuality: form.liquorQuality } : {}),
         ...(form.liquorQuality && form.liquorQuality !== "well" && form.preferredLiquorBrands.trim()
           ? { preferredLiquorBrands: form.preferredLiquorBrands.trim() }
           : {}),
-        ...(form.barType === "wet_hire" && form.subsidizedBar
+        ...(form.barType === "wet_hire" && form.barServiceModel === "Subsidized Bar"
           ? {
               subsidizedBar: true,
               subsidyAmountCents:
@@ -1499,7 +1523,9 @@ export default function Inquire() {
         addDesserts: _addDesserts,
         appetizerStyle: _appetizerStyle,
         nonAlcoholicSelections: _nonAlcoholicSelections,
-        alcoholSelections: _alcoholSelections,
+        drinksPackage: _drinksPackage,
+        barServiceModel: _barServiceModel,
+        subsidyAmountDollars: _subsidyAmountDollars,
         beverageType: _beverageType,
         barType: _barType,
         barDuration: _barDuration,
@@ -4337,19 +4363,9 @@ export default function Inquire() {
               <RadioGroup
                 value={form.barType}
                 onValueChange={(v) => {
-                  // When switching bar types, drop state that no longer
-                  // applies so stale picks don't sneak into the quote payload:
-                  //   - dry_hire: strip wet-hire-only alcohol packages
-                  //   - wet_hire: zero out dry-hire ice qty (wet hire
-                  //     includes ice, separate row is hidden)
-                  //   - dry_hire: zero out wet-hire ice qty (shouldn't exist
-                  //     anyway since wet-hire row is hidden for dry_hire)
-                  const DRY_HIDDEN = new Set([
-                    "House Wine",
-                    "Premium Wine",
-                    "Open Bar",
-                    "Cash Bar",
-                  ]);
+                  // Dry hire: customer supplies alcohol themselves, so
+                  // neither the drinks package nor the bar service model
+                  // apply — clear both. Also swap ice equipment rows.
                   const clearIceForCategory = (
                     eq: Record<string, Record<string, number>>,
                     predicate: (itemName: string) => boolean,
@@ -4368,24 +4384,29 @@ export default function Inquire() {
                     /\bice\b/i.test(n) && /\bdry\b/i.test(n);
                   const isWetIce = (n: string) =>
                     /\bice\b/i.test(n) && /(bartend|wet|included|service)/i.test(n);
+                  const validDrinksForType =
+                    v === "dry_hire"
+                      ? new Set(DRINKS_PACKAGE_OPTIONS_DRY)
+                      : v === "wet_hire"
+                        ? new Set(DRINKS_PACKAGE_OPTIONS_WET)
+                        : null;
                   setForm((prev) => ({
                     ...prev,
                     barType: v,
-                    alcoholSelections:
-                      v === "dry_hire"
-                        ? prev.alcoholSelections.filter((s) => !DRY_HIDDEN.has(s))
-                        : prev.alcoholSelections,
+                    drinksPackage:
+                      validDrinksForType && validDrinksForType.has(prev.drinksPackage)
+                        ? prev.drinksPackage
+                        : "",
+                    barServiceModel:
+                      v === "wet_hire" ? prev.barServiceModel : "",
+                    subsidyAmountDollars:
+                      v === "wet_hire" ? prev.subsidyAmountDollars : "",
                     equipmentSelections:
                       v === "wet_hire"
                         ? clearIceForCategory(prev.equipmentSelections, isDryIce)
                         : v === "dry_hire"
                           ? clearIceForCategory(prev.equipmentSelections, isWetIce)
                           : prev.equipmentSelections,
-                    // Subsidized bar only applies to wet hire; clear if
-                    // switching away.
-                    subsidizedBar: v === "wet_hire" ? prev.subsidizedBar : false,
-                    subsidyAmountDollars:
-                      v === "wet_hire" ? prev.subsidyAmountDollars : "",
                   }));
                 }}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"
@@ -4463,133 +4484,127 @@ export default function Inquire() {
               </div>
             </div>
 
-            {/* Alcohol package — radio (single choice). Previously checkboxes,
-                which let customers pick mutually-exclusive packages like
-                "Beer" + "Open Bar" simultaneously.
+            {/* Drinks Package (WHAT) — shown for both dry and wet hire.
+                The option list differs by hire type: wet hire reflects our
+                supplied tiers, dry hire just captures what the host is
+                planning to serve.
 
-                Dry hire ⇒ customer supplies the alcohol themselves, so the
-                packages that describe what WE provide (House Wine, Premium
-                Wine, Open Bar, Cash Bar) don't apply and are hidden. */}
-            {(() => {
-              const DRY_HIRE_HIDDEN = new Set([
-                "House Wine",
-                "Premium Wine",
-                "Open Bar",
-                "Cash Bar",
-              ]);
-              const visibleOptions =
-                form.barType === "dry_hire"
-                  ? ALCOHOL_OPTIONS.filter((o) => !DRY_HIRE_HIDDEN.has(o))
-                  : ALCOHOL_OPTIONS;
-              return (
+                Bar Service (HOW) below is wet-hire only — under dry hire
+                the host owns the alcohol, so there's no HBC billing
+                question to answer. */}
+            {(form.barType === "wet_hire" || form.barType === "dry_hire") && (
+              <div className="space-y-3">
+                <Label>Drinks Package</Label>
+                <RadioGroup
+                  value={form.drinksPackage}
+                  onValueChange={(v) => update("drinksPackage", v)}
+                  className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+                >
+                  {(form.barType === "dry_hire"
+                    ? DRINKS_PACKAGE_OPTIONS_DRY
+                    : DRINKS_PACKAGE_OPTIONS_WET
+                  ).map((opt) => (
+                    <label
+                      key={opt}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <RadioGroupItem value={opt} id={`drinks-${opt}`} />
+                      <span className="text-sm">{opt}</span>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+
+            {form.barType === "wet_hire" && (
+              <>
                 <div className="space-y-3">
-                  <Label>Alcohol Package</Label>
+                  <Label>Bar Service</Label>
                   <RadioGroup
-                    value={form.alcoholSelections[0] || ""}
+                    value={form.barServiceModel}
                     onValueChange={(v) =>
                       setForm((prev) => ({
                         ...prev,
-                        alcoholSelections: v ? [v] : [],
+                        barServiceModel: v,
+                        subsidyAmountDollars:
+                          v === "Subsidized Bar" ? prev.subsidyAmountDollars : "",
                       }))
                     }
-                    className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-2"
                   >
-                    {visibleOptions.map((opt) => (
+                    {BAR_SERVICE_OPTIONS.map((opt) => (
                       <label
                         key={opt}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <RadioGroupItem value={opt} id={`alc-${opt}`} />
+                        <RadioGroupItem value={opt} id={`bar-svc-${opt}`} />
                         <span className="text-sm">{opt}</span>
                       </label>
                     ))}
                   </RadioGroup>
-                </div>
-              );
-            })()}
-
-            {/* Subsidized bar (wet hire only).
-                Host caps how much alcohol they want to cover; beyond that,
-                guests pay cash. Middle ground between Open Bar and Cash Bar. */}
-            {form.barType === "wet_hire" && (
-              <div className="space-y-3 rounded-lg border border-gray-200 bg-white/60 p-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <div className="pt-0.5">
-                    <Switch
-                      checked={form.subsidizedBar}
-                      onCheckedChange={(v) => {
-                        setForm((prev) => ({
-                          ...prev,
-                          subsidizedBar: !!v,
-                          subsidyAmountDollars: v ? prev.subsidyAmountDollars : "",
-                        }));
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold">Offer a subsidized bar?</div>
+                  {form.barServiceModel === "Subsidized Bar" && (
                     <p className="text-xs text-gray-600 mt-0.5 font-serif italic">
                       You cover a set dollar amount of drinks for your guests;
                       once the tab is reached, guests pay cash for any
                       additional drinks. A popular middle ground between an
                       open bar and a cash bar.
                     </p>
-                  </div>
-                </label>
-
-                <AnimatePresence initial={false}>
-                  {form.subsidizedBar && (
-                    <motion.div
-                      key="subsidy-amount"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                      style={{ overflow: "hidden" }}
-                    >
-                      <div className="pt-1 max-w-xs">
-                        <Label
-                          htmlFor="subsidyAmount"
-                          className="text-sm font-medium"
-                        >
-                          How much would you like to cover?
-                        </Label>
-                        <div className="relative mt-1.5">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
-                            $
-                          </span>
-                          <Input
-                            id="subsidyAmount"
-                            type="number"
-                            min={0}
-                            step={50}
-                            inputMode="decimal"
-                            placeholder="500"
-                            value={
-                              form.subsidyAmountDollars === ""
-                                ? ""
-                                : String(form.subsidyAmountDollars)
-                            }
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              update(
-                                "subsidyAmountDollars",
-                                raw === ""
-                                  ? ""
-                                  : Math.max(0, Number(raw) || 0),
-                              );
-                            }}
-                            className="pl-7"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1 font-serif italic">
-                          Round numbers work best — e.g. $500, $1,000, $2,500.
-                        </p>
-                      </div>
-                    </motion.div>
                   )}
-                </AnimatePresence>
-              </div>
+
+                  <AnimatePresence initial={false}>
+                    {form.barServiceModel === "Subsidized Bar" && (
+                      <motion.div
+                        key="subsidy-amount"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        style={{ overflow: "hidden" }}
+                      >
+                        <div className="pt-1 max-w-xs">
+                          <Label
+                            htmlFor="subsidyAmount"
+                            className="text-sm font-medium"
+                          >
+                            How much would you like to cover?
+                          </Label>
+                          <div className="relative mt-1.5">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                              $
+                            </span>
+                            <Input
+                              id="subsidyAmount"
+                              type="number"
+                              min={0}
+                              step={50}
+                              inputMode="decimal"
+                              placeholder="500"
+                              value={
+                                form.subsidyAmountDollars === ""
+                                  ? ""
+                                  : String(form.subsidyAmountDollars)
+                              }
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                update(
+                                  "subsidyAmountDollars",
+                                  raw === ""
+                                    ? ""
+                                    : Math.max(0, Number(raw) || 0),
+                                );
+                              }}
+                              className="pl-7"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 font-serif italic">
+                            Round numbers work best — e.g. $500, $1,000, $2,500.
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
             )}
 
             {/* Liquor quality (wet hire only) */}
@@ -5277,10 +5292,20 @@ export default function Inquire() {
                     {form.barType === "wet_hire" ? "Wet Hire" : "Dry Hire"}
                     {form.barDuration && ` (${form.barDuration} hours)`}
                   </p>
-                  {form.alcoholSelections.length > 0 && (
+                  {form.drinksPackage && (
                     <p>
-                      <span className="text-gray-500">Alcohol:</span>{" "}
-                      {form.alcoholSelections.join(", ")}
+                      <span className="text-gray-500">Drinks:</span>{" "}
+                      {form.drinksPackage}
+                    </p>
+                  )}
+                  {form.barServiceModel && (
+                    <p>
+                      <span className="text-gray-500">Bar service:</span>{" "}
+                      {form.barServiceModel}
+                      {form.barServiceModel === "Subsidized Bar" &&
+                      typeof form.subsidyAmountDollars === "number"
+                        ? ` ($${form.subsidyAmountDollars} covered)`
+                        : ""}
                     </p>
                   )}
                   {form.barType === "wet_hire" && form.liquorQuality && (
