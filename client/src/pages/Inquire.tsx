@@ -2046,25 +2046,43 @@ export default function Inquire() {
     min = 0,
     step_size = 1,
   ) => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <Button
         type="button"
         variant="outline"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         onClick={() => onChange(Math.max(min, value - step_size))}
         disabled={value <= min}
       >
         <Minus className="h-3 w-3" />
       </Button>
-      <span className="w-12 text-center font-medium tabular-nums">
-        {value}
-      </span>
+      {/* Direct-entry number field — typing "300" beats clicking + 300 times.
+          The +/- buttons still work for small nudges and respect step_size. */}
+      <Input
+        type="number"
+        min={min}
+        step={step_size}
+        inputMode="numeric"
+        value={value === 0 ? "" : String(value)}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            onChange(min);
+            return;
+          }
+          const n = Math.max(min, Math.floor(Number(raw) || 0));
+          onChange(n);
+        }}
+        onFocus={(e) => e.currentTarget.select()}
+        className="h-8 w-16 text-center px-1 font-medium tabular-nums"
+        placeholder="0"
+      />
       <Button
         type="button"
         variant="outline"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         onClick={() => onChange(value + step_size)}
       >
         <Plus className="h-3 w-3" />
