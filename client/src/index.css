@@ -38,6 +38,18 @@
   /* Home Bites brand colors */
   --primary-taupe: 28 33% 52%; /* #8B7355 */
   --secondary-orange: 30 100% 50%; /* #E28C0A */
+
+  /* Event-type theme defaults (Homebites brand) — overridden per event by applyThemeCSS */
+  --theme-primary: #8B7355;
+  --theme-secondary: #F5E6D3;
+  --theme-accent: #E28C0A;
+  --theme-bg: #FBF6EA;
+  --theme-text: #2D1810;
+  --theme-text-secondary: #6B5345;
+  --theme-heading-font: 'Playfair Display', Georgia, serif;
+  --theme-body-font: 'Lora', Georgia, serif;
+  --theme-gradient: linear-gradient(135deg, #8B7355 0%, #E28C0A 100%);
+  --theme-border: #e8ddc8;
 }
 
 .dark {
@@ -68,7 +80,12 @@
   }
 
   body {
-    @apply font-sans antialiased bg-neutral-100 text-foreground;
+    @apply font-sans antialiased text-foreground;
+    background-color: hsl(var(--muted));
+  }
+
+  .dark body {
+    background-color: hsl(var(--background));
   }
 }
 

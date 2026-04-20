@@ -2,6 +2,9 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { StrictMode } from "react";
+import { initTheme } from "./lib/theme";
+
+initTheme();
 
 // Create a simplified setup
 const rootElement = document.getElementById("root");

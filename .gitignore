@@ -13,4 +13,13 @@ vite.config.ts.*
 
 # Recipe migration data — contains recipe IP, never commit
 scripts/recipesgen-cards.json
-scripts/recipesgen-*.jsonbackup_*.dump
+scripts/recipesgen-*.json
+
+# Local database dumps / backups — never commit
+backup_*.dump
+database-backup-*.sql
+database-backup-*.sql.gz
+database-dump-*.sql
+*.dump
+my-database-backup.sql
+database_backup.sql

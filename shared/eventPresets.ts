@@ -123,6 +123,25 @@ export interface PdfBranding {
   palette: PdfPalette;
 }
 
+/**
+ * Derive a print-ready palette from an `EventTheme`. Used as a fallback when
+ * a preset doesn't supply its own `pdfBranding.palette`, and as a way for the
+ * PDF generator to keep web + print in sync when a future redesign changes
+ * theme colors. Text colors default to dark near-black regardless of theme
+ * because print contrast requirements differ from on-screen.
+ */
+export function derivePdfPaletteFromTheme(theme: EventTheme): PdfPalette {
+  return {
+    primary: theme.primary,
+    accent: theme.accent,
+    background: theme.background,
+    headerText: "#1A1A1A",
+    bodyText: "#2D2D2D",
+    muted: theme.textSecondary || "#6B6B6B",
+    rule: theme.borderAccent || "#D8D8D8",
+  };
+}
+
 export interface EventPreset {
   key: EventTypeKey;
   /** Human-readable label, e.g., "Wedding". Also used as-is in `composeEventTitle`. */
@@ -131,7 +150,13 @@ export interface EventPreset {
   copy: EventCopy;
   sections: EventSections;
   defaults: EventDefaults;
-  pdfBranding: PdfBranding;
+  /**
+   * Optional print palette override. When absent, the PDF generator derives
+   * a palette from `theme` so new event types only need to define their theme
+   * once. Supply this field only when print needs colors that differ from the
+   * web theme (e.g., more saturated for CMYK legibility).
+   */
+  pdfBranding?: PdfBranding;
 }
 
 // ─── Person / title formatting helpers ──────────────────────────────────────

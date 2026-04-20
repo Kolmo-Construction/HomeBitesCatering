@@ -35,6 +35,7 @@ import {
   clients,                       // for accept-quote endpoint (prospect→customer graduation)
   events,                        // for auto-create event on accept and /full endpoint
   menus,                         // for /api/events/:id/full aggregate endpoint
+  menuItems,                     // for enriching celebration-page menu with descriptions
   tastings,                      // P1-1: tasting bookings
   contracts,                     // P2-1: contracts
   type InsertCommunication,
@@ -51,7 +52,7 @@ import {
 import { filterQuote, filterQuotes, filterMenuItem, filterMenuItems } from './utils/dataFilters';
 import { buildProposalFromInquiry, buildProposalFromQuoteAlone } from './lib/proposalFromInquiry';
 import type { Proposal } from '@shared/proposal';
-import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent } from './utils/siteConfig';
+import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent, getReviewConfig } from './utils/siteConfig';
 import { createCheckoutLink, verifySquareWebhook } from './services/paymentService';
 import {
   generateContractHtml,
@@ -6091,6 +6092,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Attach `description` from the menu_items catalog to selections that carry an
+  // `itemId`. Selections from older inquiries may not; those pass through as-is.
+  async function enrichWithCatalogDescriptions<T extends { itemId?: string; name?: string; description?: string }>(
+    items: T[],
+  ): Promise<T[]> {
+    if (!items || items.length === 0) return items;
+    const ids = items.map((i) => i.itemId).filter((v): v is string => !!v);
+    if (ids.length === 0) return items;
+    const rows = await db
+      .select({ id: menuItems.id, description: menuItems.description })
+      .from(menuItems)
+      .where(inArray(menuItems.id, ids));
+    const byId = new Map<string, string | null>(rows.map((r) => [r.id, r.description]));
+    return items.map((i) =>
+      i.itemId && byId.get(i.itemId)
+        ? { ...i, description: i.description ?? (byId.get(i.itemId) as string) }
+        : i,
+    );
+  }
+
+  // Appetizers/desserts don't carry itemId — fall back to lowercased-name match.
+  async function enrichAppetizersOrDesserts<T extends { itemName?: string; description?: string }>(
+    items: T[],
+  ): Promise<T[]> {
+    if (!items || items.length === 0) return items;
+    const names = items.map((i) => (i.itemName || "").toLowerCase().trim()).filter(Boolean);
+    if (names.length === 0) return items;
+    const rows = await db
+      .select({ name: menuItems.name, description: menuItems.description })
+      .from(menuItems);
+    const byName = new Map<string, string | null>();
+    for (const r of rows) byName.set((r.name || "").toLowerCase().trim(), r.description);
+    return items.map((i) => {
+      const key = (i.itemName || "").toLowerCase().trim();
+      const desc = byName.get(key);
+      return desc ? { ...i, description: i.description ?? desc } : i;
+    });
+  }
+
   // Public: fetch the customer-facing event page payload by token.
   // Sanitized: strips internal notes, shopping list, prep schedule, AI analysis,
   // pricing internals, completed tasks, and admin metadata. Includes the site
@@ -6148,15 +6188,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         : null;
 
+      // Enrich menuSelections / appetizers / desserts with catalog descriptions.
+      // Customers on the celebration page see a bulleted list today; adding a
+      // one-line description under each item makes the menu read like a
+      // restaurant menu rather than a packing list.
+      const enrichedMenuSelections = await enrichWithCatalogDescriptions(
+        (inquiry?.menuSelections as any[]) ?? []
+      );
+      const enrichedAppetizers = await enrichAppetizersOrDesserts(
+        (inquiry?.appetizers as any)?.selections ?? []
+      );
+      const enrichedDesserts = await enrichAppetizersOrDesserts(
+        (inquiry?.desserts as any[]) ?? []
+      );
+
       const publicInquiry = inquiry
         ? {
             partnerFirstName: inquiry.partnerFirstName,
             partnerLastName: inquiry.partnerLastName,
             menuTheme: inquiry.menuTheme,
             menuTier: inquiry.menuTier,
-            menuSelections: inquiry.menuSelections,
-            appetizers: inquiry.appetizers,
-            desserts: inquiry.desserts,
+            menuSelections: enrichedMenuSelections,
+            appetizers: inquiry.appetizers
+              ? { ...(inquiry.appetizers as any), selections: enrichedAppetizers }
+              : inquiry.appetizers,
+            desserts: enrichedDesserts.length > 0 ? enrichedDesserts : inquiry.desserts,
             beverages: inquiry.beverages,
             dietary: inquiry.dietary,
             hasCocktailHour: inquiry.hasCocktailHour,
@@ -6185,6 +6241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inquiry: publicInquiry,
         menu: publicMenu,
         siteConfig: getSiteConfig(),
+        reviewConfig: getReviewConfig(),
       });
     } catch (error) {
       console.error('Error fetching public event:', error);

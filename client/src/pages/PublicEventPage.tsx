@@ -49,11 +49,11 @@ interface PublicInquiry {
   partnerLastName: string | null;
   menuTheme: string | null;
   menuTier: string | null;
-  menuSelections: Array<{ name: string; category: string }> | null;
+  menuSelections: Array<{ name: string; category: string; description?: string | null }> | null;
   appetizers: {
-    selections: Array<{ category: string; itemName: string; quantity: number }>;
+    selections: Array<{ category: string; itemName: string; quantity: number; description?: string | null }>;
   } | null;
-  desserts: Array<{ itemName: string; quantity: number }> | null;
+  desserts: Array<{ itemName: string; quantity: number; description?: string | null }> | null;
   beverages: {
     hasNonAlcoholic: boolean;
     hasAlcoholic: boolean;
@@ -103,12 +103,18 @@ interface SiteConfig {
   };
 }
 
+interface PublicReviewConfig {
+  googleReviewUrl: string | null;
+  referralCreditDollars: number;
+}
+
 interface PublicEventPayload {
   event: PublicEvent;
   client: PublicClient | null;
   inquiry: PublicInquiry | null;
   menu: PublicMenu | null;
   siteConfig: SiteConfig;
+  reviewConfig?: PublicReviewConfig;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -247,7 +253,7 @@ export default function PublicEventPage() {
     );
   }
 
-  const { event, client, inquiry, menu, siteConfig } = data;
+  const { event, client, inquiry, menu, siteConfig, reviewConfig } = data;
   const days = daysUntil(event.eventDate);
   const hasPassed = days < 0;
   const isCompleted = event.status === "completed";
@@ -272,13 +278,13 @@ export default function PublicEventPage() {
     : menu?.name || "Your menu";
 
   return (
-    <PageShell siteConfig={siteConfig}>
+    <PageShell siteConfig={siteConfig} themeStyles={themeStyles}>
       <Helmet>
         <title>{eventTitle} · {siteConfig.businessName}</title>
       </Helmet>
 
       {/* ─── Themed Hero ──────────────────────────────────────────────── */}
-      <div className="text-center py-8 px-4" style={themeStyles}>
+      <div className="text-center py-8 px-4">
         <div
           className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center text-3xl"
           style={{ background: theme.gradient }}
@@ -301,9 +307,9 @@ export default function PublicEventPage() {
 
       {/* ─── Countdown card ───────────────────────────────────────────── */}
       {!hasPassed && !isCancelled && (
-        <Card className="mb-6 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/50 shadow-sm">
+        <Card className="mb-6 border-[color:var(--theme-border)] bg-gradient-to-br from-[var(--theme-bg)] to-white shadow-sm">
           <CardContent className="py-10 text-center">
-            <p className="font-serif text-sm uppercase tracking-widest text-amber-700 mb-2">
+            <p className="font-serif text-sm uppercase tracking-widest text-[color:var(--theme-primary)] mb-2">
               Countdown
             </p>
             <div className="font-serif text-6xl md:text-7xl font-bold text-stone-900">
@@ -314,7 +320,7 @@ export default function PublicEventPage() {
                 day{days === 1 ? "" : "s"} {copy.countdownUnit}
               </p>
             )}
-            <Separator className="my-5 max-w-xs mx-auto bg-amber-200" />
+            <Separator className="my-5 max-w-xs mx-auto bg-[color:var(--theme-border)]" />
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-stone-700 font-serif">
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-4 w-4 text-stone-500" />
@@ -346,6 +352,28 @@ export default function PublicEventPage() {
             <p className="font-serif text-stone-600 mt-2 max-w-md mx-auto">
               {copy.completedBlurb}
             </p>
+            {(reviewConfig?.googleReviewUrl || (reviewConfig?.referralCreditDollars ?? 0) > 0) && (
+              <div className="mt-6 flex flex-col items-center gap-3">
+                {reviewConfig?.googleReviewUrl && (
+                  <a
+                    href={reviewConfig.googleReviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-serif text-sm font-semibold text-white shadow-sm hover:brightness-110"
+                    style={{ background: theme.gradient }}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Leave a Google review
+                  </a>
+                )}
+                {(reviewConfig?.referralCreditDollars ?? 0) > 0 && (
+                  <p className="text-sm text-stone-600 font-serif italic max-w-md">
+                    Know someone planning an event? Send them our way and we'll send you a $
+                    {reviewConfig!.referralCreditDollars} credit when they book.
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -366,7 +394,7 @@ export default function PublicEventPage() {
         <Card className="mb-6 bg-white shadow-sm">
           <CardContent className="py-10 px-6 md:px-12">
             <div className="text-center mb-8">
-              <Sparkles className="h-5 w-5 text-amber-500 mx-auto mb-2" />
+              <Sparkles className="h-5 w-5 text-[color:var(--theme-accent)] mx-auto mb-2" />
               <h2 className="font-serif text-3xl text-stone-900">{themeLabel}</h2>
               <p className="font-serif italic text-stone-500 mt-1 text-sm">
                 Curated for your celebration
@@ -423,7 +451,7 @@ export default function PublicEventPage() {
         )}
 
       {/* ─── Meet the chef ────────────────────────────────────────────── */}
-      <Card className="mb-6 bg-gradient-to-br from-stone-50 to-amber-50/30 border-stone-200">
+      <Card className="mb-6 bg-gradient-to-br from-stone-50 to-[var(--theme-bg)] border-stone-200">
         <CardContent className="py-8 px-6">
           <div className="flex flex-col items-center md:flex-row md:items-start md:gap-6 text-center md:text-left">
             <div className="shrink-0 mb-4 md:mb-0">
@@ -431,16 +459,16 @@ export default function PublicEventPage() {
                 <img
                   src={siteConfig.chef.photoUrl}
                   alt={siteConfig.chef.firstName}
-                  className="h-24 w-24 rounded-full object-cover border-2 border-amber-200"
+                  className="h-24 w-24 rounded-full object-cover border-2 border-[color:var(--theme-border)]"
                 />
               ) : (
-                <div className="h-24 w-24 rounded-full bg-amber-100 border-2 border-amber-200 flex items-center justify-center">
-                  <ChefHat className="h-12 w-12 text-amber-700" />
+                <div className="h-24 w-24 rounded-full bg-[var(--theme-bg)] border-2 border-[color:var(--theme-border)] flex items-center justify-center">
+                  <ChefHat className="h-12 w-12 text-[color:var(--theme-primary)]" />
                 </div>
               )}
             </div>
             <div className="flex-1">
-              <p className="font-serif text-sm uppercase tracking-wide text-amber-700">
+              <p className="font-serif text-sm uppercase tracking-wide text-[color:var(--theme-primary)]">
                 Meet your chef
               </p>
               <h3 className="font-serif text-2xl text-stone-900 mt-1">
@@ -456,14 +484,14 @@ export default function PublicEventPage() {
               <div className="mt-4 flex flex-wrap gap-3 justify-center md:justify-start text-sm">
                 <a
                   href={`tel:${siteConfig.chef.phone}`}
-                  className="flex items-center gap-1.5 text-amber-800 hover:text-amber-900"
+                  className="flex items-center gap-1.5 text-[color:var(--theme-primary)] hover:brightness-90"
                 >
                   <Phone className="h-4 w-4" />
                   {siteConfig.chef.phone}
                 </a>
                 <a
                   href={`mailto:${siteConfig.chef.email}`}
-                  className="flex items-center gap-1.5 text-amber-800 hover:text-amber-900"
+                  className="flex items-center gap-1.5 text-[color:var(--theme-primary)] hover:brightness-90"
                 >
                   <Mail className="h-4 w-4" />
                   {siteConfig.chef.email}
@@ -499,7 +527,7 @@ export default function PublicEventPage() {
                   Want to adjust the menu, pricing, or logistics?{" "}
                   <a
                     href={`/quote/${inquiry.quoteViewToken}`}
-                    className="text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                    className="text-[color:var(--theme-primary)] underline underline-offset-2 hover:brightness-90"
                   >
                     View your quote
                   </a>
@@ -509,7 +537,7 @@ export default function PublicEventPage() {
                 Anything else?{" "}
                 <a
                   href={`tel:${siteConfig.chef.phone}`}
-                  className="text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                  className="text-[color:var(--theme-primary)] underline underline-offset-2 hover:brightness-90"
                 >
                   Call or text {siteConfig.chef.firstName} directly
                 </a>
@@ -547,19 +575,24 @@ function buildPersonTitle(
 }
 
 function TastingMenu({ inquiry }: { inquiry: PublicInquiry }) {
-  // Group main menu selections by category
-  const grouped: Record<string, string[]> = {};
+  type MenuLine = { name: string; description?: string | null };
+
+  // Group main menu selections by category (carrying description through)
+  const grouped: Record<string, MenuLine[]> = {};
   for (const sel of inquiry.menuSelections ?? []) {
     if (!grouped[sel.category]) grouped[sel.category] = [];
-    grouped[sel.category].push(sel.name);
+    grouped[sel.category].push({ name: sel.name, description: sel.description ?? null });
   }
 
-  const sections: Array<{ title: string; items: string[] }> = [];
+  const sections: Array<{ title: string; items: MenuLine[] }> = [];
 
   if (inquiry.appetizers?.selections?.length) {
     sections.push({
       title: "Antipasti · To Begin",
-      items: inquiry.appetizers.selections.map((a) => a.itemName),
+      items: inquiry.appetizers.selections.map((a) => ({
+        name: a.itemName,
+        description: a.description ?? null,
+      })),
     });
   }
 
@@ -584,7 +617,10 @@ function TastingMenu({ inquiry }: { inquiry: PublicInquiry }) {
   if (inquiry.desserts?.length) {
     sections.push({
       title: "Dolci · Something Sweet",
-      items: inquiry.desserts.map((d) => d.itemName),
+      items: inquiry.desserts.map((d) => ({
+        name: d.itemName,
+        description: d.description ?? null,
+      })),
     });
   }
 
@@ -603,10 +639,15 @@ function TastingMenu({ inquiry }: { inquiry: PublicInquiry }) {
           <p className="font-serif text-xs uppercase tracking-[0.25em] text-stone-400 mb-3">
             ⸻ {section.title} ⸻
           </p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-3">
             {section.items.map((item, j) => (
-              <li key={j} className="font-serif text-lg text-stone-800">
-                {item}
+              <li key={j} className="font-serif">
+                <div className="text-lg text-stone-800">{item.name}</div>
+                {item.description && (
+                  <div className="text-sm text-stone-500 italic mt-0.5 px-6">
+                    {item.description}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -684,7 +725,7 @@ function EventTimeline({
           <div className="shrink-0 w-20 text-right font-serif font-semibold text-stone-900">
             {e.time}
           </div>
-          <div className="h-8 w-px bg-amber-300" />
+          <div className="h-8 w-px bg-[color:var(--theme-accent)]" />
           <div className="flex-1 font-serif text-stone-700">{e.label}</div>
         </div>
       ))}
@@ -740,12 +781,17 @@ function Milestones({ daysUntilEvent }: { daysUntilEvent: number }) {
 function PageShell({
   children,
   siteConfig,
+  themeStyles,
 }: {
   children: React.ReactNode;
   siteConfig: SiteConfig | null;
+  themeStyles?: React.CSSProperties;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/40 via-stone-50 to-stone-100 pb-12">
+    <div
+      className="min-h-screen bg-gradient-to-b from-[var(--theme-bg)] via-stone-50 to-stone-100 pb-12"
+      style={themeStyles}
+    >
       <div className="bg-white/90 backdrop-blur border-b border-stone-200">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <img
@@ -770,12 +816,12 @@ function PageShell({
             <div>{siteConfig.address}</div>
             <div className="flex justify-center gap-4">
               {siteConfig.social.instagram && (
-                <a href={siteConfig.social.instagram} className="hover:text-amber-700">
+                <a href={siteConfig.social.instagram} className="hover:text-[color:var(--theme-primary)]">
                   <Instagram className="h-4 w-4" />
                 </a>
               )}
               {siteConfig.social.facebook && (
-                <a href={siteConfig.social.facebook} className="hover:text-amber-700">
+                <a href={siteConfig.social.facebook} className="hover:text-[color:var(--theme-primary)]">
                   <Facebook className="h-4 w-4" />
                 </a>
               )}

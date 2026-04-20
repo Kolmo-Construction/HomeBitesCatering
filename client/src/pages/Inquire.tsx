@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { EmailInput } from "@/components/inquiry/EmailInput";
+import { PhoneInput } from "@/components/inquiry/PhoneInput";
+import { AddressAutocomplete, type AddressParts } from "@/components/inquiry/AddressAutocomplete";
+import { getEventPreset } from "@shared/eventPresets";
+import { applyThemeCSS } from "@/lib/eventPresetCSS";
+import { motion, AnimatePresence } from "framer-motion";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -44,6 +50,11 @@ import {
   Minus,
   Plus,
   PartyPopper,
+  Sparkles,
+  ExternalLink,
+  Star,
+  Award,
+  Mail as MailIcon,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -431,6 +442,40 @@ const NON_ALCOHOLIC_OPTIONS = [
   "Mocktails",
 ];
 
+// --- Menu-theme hero photos (sourced from homebites.net) ---
+// Matched by themeKey. The menu-theme picker on Step 4 shows these so the
+// customer sees the cuisine, not just a text label.
+const MENU_THEME_PHOTOS: Record<string, string> = {
+  taco_fiesta:
+    "https://static.wixstatic.com/media/9c66ad_800b0560ce9b4f3c832fa8c3eed32232~mv2.jpeg",
+  bbq:
+    "https://static.wixstatic.com/media/9c66ad_db826cbe905041cb938365b4bf3f359b~mv2.jpg",
+  greece:
+    "https://static.wixstatic.com/media/9c66ad_108d9512c7684520a2584910b7a5913b~mv2.jpg",
+  italy:
+    "https://static.wixstatic.com/media/11062b_4c68ff7404e7429aa4270be3fac9c9f8~mv2_d_4500_3003_s_4_2.jpg",
+  vegan:
+    "https://static.wixstatic.com/media/9c66ad_7725f81fe79347f9930909d2d00db65b~mv2.jpg",
+  kebab:
+    "https://static.wixstatic.com/media/9c66ad_94b6888cc94042e08f683e588e599e21~mv2.png",
+};
+
+// --- Mocktail Options (shown when "Mocktails" is selected) ---
+const MOCKTAIL_OPTIONS = [
+  "Pomegranate Splash",
+  "Berry Grape Punch",
+  "Peach Melba Punch",
+  "Watermelon Nojito",
+  "Cranberry Sangria Mocktail",
+  "Tropical Punch Mocktail",
+  "The New Zealander",
+  "Mediterranean Sunset",
+  "Seattle Fog",
+  "Tropical Twist Spritz",
+  "Berrylicious Refresher",
+];
+const MOCKTAIL_MENU_URL = "https://homebites.net/bartending#mocktails";
+
 // --- Alcoholic Beverage Options ---
 const ALCOHOL_OPTIONS = [
   "Beer",
@@ -604,11 +649,13 @@ interface FormState {
   // Step 6
   beverageType: string; // "non_alcoholic" | "alcoholic" | "both" | "none"
   nonAlcoholicSelections: string[];
+  mocktailSelections: string[];
   barType: string; // "dry_hire" | "wet_hire"
   drinkingGuestCount: number | "";
   barDuration: string;
   alcoholSelections: string[];
   liquorQuality: string; // "well" | "mid_shelf" | "top_shelf"
+  preferredLiquorBrands: string;
   tableWaterService: boolean;
   coffeTeaService: boolean;
 
@@ -707,11 +754,13 @@ const initialFormState: FormState = {
 
   beverageType: "",
   nonAlcoholicSelections: [],
+  mocktailSelections: [],
   barType: "",
   drinkingGuestCount: "",
   barDuration: "",
   alcoholSelections: [],
   liquorQuality: "",
+  preferredLiquorBrands: "",
   tableWaterService: false,
   coffeTeaService: false,
 
@@ -1351,6 +1400,10 @@ export default function Inquire() {
         ...(form.nonAlcoholicSelections.length
           ? { nonAlcoholicSelections: form.nonAlcoholicSelections }
           : {}),
+        ...(form.nonAlcoholicSelections.includes("Mocktails") &&
+        form.mocktailSelections.length
+          ? { mocktailSelections: form.mocktailSelections }
+          : {}),
         hasAlcoholic:
           form.beverageType === "alcoholic" || form.beverageType === "both",
         ...(form.barType ? { bartendingType: form.barType } : {}),
@@ -1364,6 +1417,9 @@ export default function Inquire() {
           ? { alcoholSelections: form.alcoholSelections }
           : {}),
         ...(form.liquorQuality ? { liquorQuality: form.liquorQuality } : {}),
+        ...(form.liquorQuality && form.liquorQuality !== "well" && form.preferredLiquorBrands.trim()
+          ? { preferredLiquorBrands: form.preferredLiquorBrands.trim() }
+          : {}),
         ...(form.tableWaterService ? { tableWaterService: true } : {}),
         ...(form.coffeTeaService ? { coffeeTeaService: true } : {}),
       };
@@ -1707,41 +1763,146 @@ export default function Inquire() {
       }
     }
 
+    // Theme the thank-you page to match the event type the customer picked.
+    const thanksPreset = getEventPreset(form.eventType || "celebration");
+    const thanksStyles = applyThemeCSS(thanksPreset.theme);
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50 p-4 sm:p-8">
+      <div
+        className="min-h-screen p-4 sm:p-8"
+        style={{
+          ...thanksStyles,
+          background:
+            "linear-gradient(135deg, var(--theme-bg) 0%, white 45%, var(--theme-secondary) 100%)",
+        }}
+      >
         <div
           className={cn(
             "max-w-6xl mx-auto grid gap-6",
-            prefilledCalUrl ? "lg:grid-cols-2" : "grid-cols-1 max-w-lg"
+            prefilledCalUrl ? "lg:grid-cols-2" : "grid-cols-1 max-w-2xl"
           )}
         >
           {/* ─── Confirmation (left column, or centered if no Cal.com) ─── */}
-          <Card className="shadow-xl h-fit" data-testid="card-confirmation">
-            <CardContent className="pt-10 pb-10 text-center space-y-4">
-              <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+          <Card
+            className="shadow-xl h-fit border"
+            style={{
+              borderColor:
+                "color-mix(in srgb, var(--theme-border) 50%, transparent)",
+            }}
+            data-testid="card-confirmation"
+          >
+            <CardContent className="pt-10 pb-10 px-6 sm:px-10 text-center space-y-5">
+              {/* Logo + themed medallion */}
+              <img
+                src={homebitesLogo}
+                alt="Home Bites Catering"
+                className="h-14 w-auto mx-auto opacity-90"
+              />
+              <div
+                className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-white shadow-md"
+                style={{ background: "var(--theme-gradient)" }}
+              >
+                <CheckCircle className="w-10 h-10" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Thank You!</h2>
-              <p className="text-gray-600 text-lg leading-relaxed">
-                Your quote request has been submitted. Our team will review
-                your event details and respond within{" "}
-                <span className="font-semibold">24-48 hours</span>.
+              <div>
+                <p
+                  className="text-xs uppercase tracking-[0.3em] font-semibold mb-2"
+                  style={{ color: "var(--theme-primary)" }}
+                >
+                  Thank you
+                </p>
+                <h2
+                  className="text-3xl sm:text-4xl font-semibold"
+                  style={{
+                    color: "var(--theme-text)",
+                    fontFamily:
+                      "var(--theme-heading-font), Georgia, serif",
+                  }}
+                >
+                  We're on it, {form.firstName || "friend"}.
+                </h2>
+              </div>
+              <p
+                className="text-base sm:text-lg leading-relaxed font-serif"
+                style={{ color: "var(--theme-text-secondary)" }}
+              >
+                Your inquiry is in. I'll personally review the details and put
+                together a tailored proposal with pricing and menu notes.
               </p>
+
+              {/* What happens next — 3-step timeline */}
+              <div
+                className="mt-6 rounded-xl p-5 text-left space-y-4 border"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--theme-bg) 60%, white)",
+                  borderColor:
+                    "color-mix(in srgb, var(--theme-border) 50%, transparent)",
+                }}
+              >
+                <p
+                  className="text-sm font-semibold uppercase tracking-wider"
+                  style={{ color: "var(--theme-primary)" }}
+                >
+                  What happens next
+                </p>
+                {[
+                  {
+                    icon: ClipboardCheck,
+                    title: "We review your details — tonight or tomorrow morning.",
+                  },
+                  {
+                    icon: MailIcon,
+                    title: "You'll get a tailored proposal in your inbox within 24–48 hours.",
+                  },
+                  {
+                    icon: Sparkles,
+                    title: "You review, tweak, and accept — then we start cooking.",
+                  },
+                ].map((step, i) => {
+                  const Icon = step.icon;
+                  return (
+                    <div key={i} className="flex items-start gap-3">
+                      <div
+                        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                        style={{ background: "var(--theme-gradient)" }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div
+                          className="font-serif text-[15px]"
+                          style={{ color: "var(--theme-text)" }}
+                        >
+                          {step.title}
+                        </div>
+                      </div>
+                      <Icon
+                        className="shrink-0 h-5 w-5 mt-1.5 opacity-70"
+                        style={{ color: "var(--theme-primary)" }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
               {form.promoValid && form.promoDiscount > 0 && (
                 <Badge variant="secondary" className="text-sm">
                   {form.promoDiscount}% promo discount applied
                 </Badge>
               )}
-              <Separator />
-              <p className="text-sm text-gray-500">
-                A confirmation email has been sent to{" "}
+
+              <p
+                className="text-sm font-serif italic"
+                style={{ color: "var(--theme-text-secondary)" }}
+              >
+                — Mike &amp; the Home Bites team
+              </p>
+              <p className="text-xs text-gray-500">
+                A confirmation copy is on its way to{" "}
                 <span className="font-medium">{form.email}</span>.
               </p>
-              {prefilledCalUrl && (
-                <p className="text-sm text-gray-700 font-medium pt-1">
-                  Want answers faster? Book a free 15-minute call →
-                </p>
-              )}
+
               <Button
                 variant="outline"
                 className="mt-2"
@@ -1799,36 +1960,63 @@ export default function Inquire() {
       {options.map((opt) => {
         const Icon = opt.icon;
         const isActive = selected === opt.value;
+        // Per-event-type tinted hover: for the top-level event-type picker,
+        // look up the preset per-option so hovering a "Wedding" card previews
+        // the wedding palette and "Corporate" previews navy.
+        const optPreset = getEventPreset(opt.value);
+        const cardTheme = isActive ? preset.theme : optPreset.theme;
         return (
           <button
             key={opt.value}
             type="button"
             onClick={() => onSelect(opt.value)}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 text-center transition-all hover:shadow-md",
+              "group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 text-center transition-all hover:shadow-md",
               isActive
-                ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                : "border-gray-200 bg-white hover:border-gray-300",
+                ? "shadow-md ring-2"
+                : "border-gray-200 bg-white hover:-translate-y-0.5",
             )}
+            style={
+              isActive
+                ? {
+                    borderColor: cardTheme.primary,
+                    background: `color-mix(in srgb, ${cardTheme.primary} 8%, white)`,
+                    // @ts-expect-error — tailwind-ring custom prop, inline
+                    "--tw-ring-color": `color-mix(in srgb, ${cardTheme.primary} 25%, transparent)`,
+                  }
+                : undefined
+            }
+            onMouseEnter={(e) => {
+              if (!isActive) {
+                (e.currentTarget as HTMLElement).style.borderColor = cardTheme.primary;
+                (e.currentTarget as HTMLElement).style.background =
+                  `color-mix(in srgb, ${cardTheme.background} 80%, white)`;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isActive) {
+                (e.currentTarget as HTMLElement).style.borderColor = "";
+                (e.currentTarget as HTMLElement).style.background = "";
+              }
+            }}
           >
             {isActive && (
               <div className="absolute top-2 right-2">
-                <Check className="h-4 w-4 text-primary" />
+                <Check
+                  className="h-4 w-4"
+                  style={{ color: cardTheme.primary }}
+                />
               </div>
             )}
             {Icon && (
               <Icon
-                className={cn(
-                  "h-7 w-7",
-                  isActive ? "text-primary" : "text-gray-400",
-                )}
+                className="h-7 w-7 transition-colors"
+                style={{ color: isActive ? cardTheme.primary : "#9ca3af" }}
               />
             )}
             <span
-              className={cn(
-                "text-sm font-medium",
-                isActive ? "text-primary" : "text-gray-700",
-              )}
+              className="text-sm font-semibold transition-colors"
+              style={{ color: isActive ? cardTheme.primary : "#374151" }}
             >
               {opt.label}
             </span>
@@ -1900,6 +2088,36 @@ export default function Inquire() {
 
   const renderStep1 = () => (
     <div className="space-y-8">
+      {/* Chef intro — a warm, human first impression. The form is an inquiry
+          but the first thing on it should feel like a handshake, not a
+          dropdown. */}
+      <div
+        className="rounded-xl p-5 flex items-start gap-4 border"
+        style={{
+          background: "color-mix(in srgb, var(--theme-bg) 70%, white)",
+          borderColor: "color-mix(in srgb, var(--theme-border) 50%, transparent)",
+        }}
+      >
+        <div
+          className="shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-sm"
+          style={{ background: "var(--theme-gradient)" }}
+        >
+          <ChefHat className="h-7 w-7" />
+        </div>
+        <div className="min-w-0">
+          <p
+            className="font-serif text-lg leading-snug"
+            style={{ color: "var(--theme-text)" }}
+          >
+            Hi, I'm Mike — I'll be cooking for your event.
+          </p>
+          <p className="text-sm text-gray-600 mt-1 font-serif italic">
+            Tell me a little about what you're planning and I'll put together a
+            menu you're actually excited about. Nothing generic, no copy-paste.
+          </p>
+        </div>
+      </div>
+
       {/* Drop-off shortcut — prominent callout at the top for customers who
           just need food delivered, not full event catering. Simplifies the
           rest of the form: Step 2 collapses to address + window + recipient,
@@ -1940,12 +2158,12 @@ export default function Inquire() {
         <div>
           <div className="font-semibold flex items-center gap-2">
             <Package className="h-4 w-4" />
-            This is a drop-off order
+            Is this a drop-off order?
           </div>
           <div className="text-sm text-gray-600 mt-0.5">
-            Just need food delivered — no on-site service. We'll keep the
-            form short: delivery address, time window, and who's receiving
-            it.
+            Check this if you only need food delivered, with no on-site
+            service. We'll keep the rest of the form short — delivery
+            address, drop-off time, and who's receiving it.
           </div>
         </div>
       </label>
@@ -2061,7 +2279,7 @@ export default function Inquire() {
       {/* Event Type */}
       <div className="space-y-3">
         <Label className="text-base font-semibold">
-          Event Type <span className="text-red-500">*</span>
+          What kind of celebration are we cooking for? <span className="text-red-500">*</span>
         </Label>
         {renderCardSelector(EVENT_TYPES, form.eventType, (v) => {
           update("eventType", v);
@@ -2078,7 +2296,7 @@ export default function Inquire() {
 
       {/* Contact Info */}
       <div className="space-y-4">
-        <Label className="text-base font-semibold">Your Information</Label>
+        <Label className="text-base font-semibold">Who should we get back to?</Label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="firstName">
@@ -2185,21 +2403,19 @@ export default function Inquire() {
           <Label htmlFor="email">
             Email <span className="text-red-500">*</span>
           </Label>
-          <Input
+          <EmailInput
             id="email"
-            type="email"
             value={form.email}
-            onChange={(e) => update("email", e.target.value)}
+            onChange={(v) => update("email", v)}
             placeholder="you@example.com"
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">Phone</Label>
-          <Input
+          <PhoneInput
             id="phone"
-            type="tel"
             value={form.phone}
-            onChange={(e) => update("phone", e.target.value)}
+            onChange={(v) => update("phone", v)}
             placeholder="(555) 123-4567"
           />
         </div>
@@ -2677,11 +2893,17 @@ export default function Inquire() {
               Delivery Address <span className="text-red-500">*</span>
             </Label>
             <div className="space-y-1.5">
-              <Input
+              <AddressAutocomplete
                 id="venueAddress"
                 value={form.venueAddress}
-                onChange={(e) => update("venueAddress", e.target.value)}
-                placeholder="Street address"
+                onChange={(v) => update("venueAddress", v)}
+                onSelect={(p: AddressParts) => {
+                  update("venueAddress", p.street);
+                  if (p.city) update("venueCity", p.city);
+                  if (p.state) update("venueState", p.state);
+                  if (p.zip) update("venueZip", p.zip);
+                }}
+                placeholder="Start typing an address…"
               />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -2752,11 +2974,10 @@ export default function Inquire() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="venueContactPhone">Recipient Phone</Label>
-                <Input
+                <PhoneInput
                   id="venueContactPhone"
-                  type="tel"
                   value={form.venueContactPhone}
-                  onChange={(e) => update("venueContactPhone", e.target.value)}
+                  onChange={(v) => update("venueContactPhone", v)}
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -2939,11 +3160,17 @@ export default function Inquire() {
                   ? "Address"
                   : "Venue Address"}
               </Label>
-              <Input
+              <AddressAutocomplete
                 id="venueAddress"
                 value={form.venueAddress}
-                onChange={(e) => update("venueAddress", e.target.value)}
-                placeholder="Street address"
+                onChange={(v) => update("venueAddress", v)}
+                onSelect={(p: AddressParts) => {
+                  update("venueAddress", p.street);
+                  if (p.city) update("venueCity", p.city);
+                  if (p.state) update("venueState", p.state);
+                  if (p.zip) update("venueZip", p.zip);
+                }}
+                placeholder="Start typing an address…"
               />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -3086,11 +3313,10 @@ export default function Inquire() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="venueContactPhone">Contact Phone</Label>
-                  <Input
+                  <PhoneInput
                     id="venueContactPhone"
-                    type="tel"
                     value={form.venueContactPhone}
-                    onChange={(e) => update("venueContactPhone", e.target.value)}
+                    onChange={(v) => update("venueContactPhone", v)}
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -3326,27 +3552,94 @@ export default function Inquire() {
 
     return (
       <div className="space-y-8">
-        {/* Menu theme */}
+        {/* Menu theme — photo-led grid. Real food photos from homebites.net
+            make the cuisine tangible; text-only labels feel like a form.  */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">
-            Menu Theme <span className="text-red-500">*</span>
+            Pick a cuisine — this is where your menu starts coming to life.{" "}
+            <span className="text-red-500">*</span>
           </Label>
           {publicMenus.length === 0 ? (
-            <p className="text-sm text-gray-500">Loading menu options…</p>
+            <p className="text-sm text-gray-500 font-serif italic">
+              Pulling up cuisines fresh from the kitchen…
+            </p>
           ) : (
-            renderCardSelector(
-              themeOptions,
-              form.menuTheme,
-              (v) => {
-                update("menuTheme", v);
-                update("packageTier", "");
-                update("menuItemSelections", {});
-              },
-              "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
-            )
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {themeOptions.map((opt) => {
+                const photo = MENU_THEME_PHOTOS[opt.value];
+                const isActive = form.menuTheme === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      update("menuTheme", opt.value);
+                      update("packageTier", "");
+                      update("menuItemSelections", {});
+                    }}
+                    className={cn(
+                      "group relative rounded-xl overflow-hidden border-2 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg bg-white",
+                      isActive
+                        ? "shadow-lg ring-2"
+                        : "border-gray-200 hover:border-gray-300",
+                    )}
+                    style={
+                      isActive
+                        ? {
+                            borderColor: "var(--theme-primary)",
+                            // @ts-expect-error custom ring var
+                            "--tw-ring-color":
+                              "color-mix(in srgb, var(--theme-primary) 25%, transparent)",
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                      {photo ? (
+                        <img
+                          src={photo}
+                          alt={opt.label}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full flex items-center justify-center"
+                          style={{ background: "var(--theme-gradient)" }}
+                        >
+                          <ChefHat className="h-10 w-10 text-white/80" />
+                        </div>
+                      )}
+                    </div>
+                    {isActive && (
+                      <div
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-sm"
+                        style={{ background: "var(--theme-gradient)" }}
+                      >
+                        <Check className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p
+                        className="font-semibold text-sm leading-snug"
+                        style={{
+                          color: isActive ? "var(--theme-primary)" : "#111827",
+                          fontFamily: "var(--theme-heading-font), Georgia, serif",
+                        }}
+                      >
+                        {opt.label}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
           {selectedMenu?.description && (
-            <p className="text-sm text-gray-600 mt-2 italic">
+            <p
+              className="text-sm mt-2 italic font-serif"
+              style={{ color: "var(--theme-text-secondary)" }}
+            >
               {selectedMenu.description}
             </p>
           )}
@@ -3719,26 +4012,31 @@ export default function Inquire() {
                               </div>
                               {cat.perPerson ? (
                                 // Per-person boards (charcuterie / grazing).
-                                // Customer chooses servings — independent of guest
-                                // count. Price = price-per-serving × servings.
+                                // Customer picks a preset serving size —
+                                // independent of guest count. Price =
+                                // price-per-serving × servings.
                                 <div className="flex items-center gap-3">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    step={1}
-                                    placeholder="servings"
+                                  <Select
                                     value={qty === 0 ? "" : String(qty)}
-                                    onChange={(e) => {
-                                      const raw = e.target.value;
-                                      if (raw === "") {
-                                        setAppetizerQty(cat.label, item.name, 0);
-                                        return;
-                                      }
-                                      const n = Math.max(0, Math.floor(Number(raw) || 0));
-                                      setAppetizerQty(cat.label, item.name, n);
-                                    }}
-                                    className="w-28"
-                                  />
+                                    onValueChange={(v) =>
+                                      setAppetizerQty(
+                                        cat.label,
+                                        item.name,
+                                        v === "" ? 0 : Number(v),
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger className="w-32">
+                                      <SelectValue placeholder="Servings" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {[24, 36, 48, 72, 96, 120].map((n) => (
+                                        <SelectItem key={n} value={String(n)}>
+                                          {n} servings
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                   {qty > 0 && (
                                     <span className="text-sm text-gray-600 w-24 text-right">
                                       {fmt(item.price * qty)}
@@ -3854,7 +4152,7 @@ export default function Inquire() {
         form.beverageType === "both") && (
         <div className="space-y-3">
           <Label className="text-base font-semibold">
-            Non-Alcoholic Beverages
+            The drinks table
           </Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {NON_ALCOHOLIC_OPTIONS.map((opt) => (
@@ -3872,6 +4170,52 @@ export default function Inquire() {
               </label>
             ))}
           </div>
+
+          {/* Nested mocktail picker — only when Mocktails is checked. */}
+          <AnimatePresence initial={false}>
+          {form.nonAlcoholicSelections.includes("Mocktails") && (
+            <motion.div
+              key="mocktail-panel"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              style={{ overflow: "hidden" }}
+              className="mt-3 rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <Label className="font-semibold">Pick your mocktails</Label>
+                <a
+                  href={MOCKTAIL_MENU_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-primary underline underline-offset-2 hover:brightness-90"
+                >
+                  See full menu ↗
+                </a>
+              </div>
+              <p className="text-xs text-gray-600 -mt-1">
+                Choose as many as you'd like — we'll confirm quantities during
+                planning.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {MOCKTAIL_OPTIONS.map((opt) => (
+                  <label
+                    key={opt}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={form.mocktailSelections.includes(opt)}
+                      onCheckedChange={() =>
+                        toggleArrayItem("mocktailSelections", opt)
+                      }
+                    />
+                    <span className="text-sm">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </motion.div>
+          )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -3887,7 +4231,26 @@ export default function Inquire() {
               <Label>Bar Type</Label>
               <RadioGroup
                 value={form.barType}
-                onValueChange={(v) => update("barType", v)}
+                onValueChange={(v) => {
+                  // When switching to dry hire, drop any package that no
+                  // longer applies (the list above hides them, and we don't
+                  // want a stale stored selection to carry through to the
+                  // quote).
+                  const DRY_HIDDEN = new Set([
+                    "House Wine",
+                    "Premium Wine",
+                    "Open Bar",
+                    "Cash Bar",
+                  ]);
+                  setForm((prev) => ({
+                    ...prev,
+                    barType: v,
+                    alcoholSelections:
+                      v === "dry_hire"
+                        ? prev.alcoholSelections.filter((s) => !DRY_HIDDEN.has(s))
+                        : prev.alcoholSelections,
+                  }));
+                }}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"
               >
                 <label
@@ -3965,30 +4328,48 @@ export default function Inquire() {
 
             {/* Alcohol package — radio (single choice). Previously checkboxes,
                 which let customers pick mutually-exclusive packages like
-                "Beer" + "Open Bar" simultaneously. */}
-            <div className="space-y-3">
-              <Label>Alcohol Package</Label>
-              <RadioGroup
-                value={form.alcoholSelections[0] || ""}
-                onValueChange={(v) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    alcoholSelections: v ? [v] : [],
-                  }))
-                }
-                className="grid grid-cols-2 sm:grid-cols-3 gap-2"
-              >
-                {ALCOHOL_OPTIONS.map((opt) => (
-                  <label
-                    key={opt}
-                    className="flex items-center gap-2 cursor-pointer"
+                "Beer" + "Open Bar" simultaneously.
+
+                Dry hire ⇒ customer supplies the alcohol themselves, so the
+                packages that describe what WE provide (House Wine, Premium
+                Wine, Open Bar, Cash Bar) don't apply and are hidden. */}
+            {(() => {
+              const DRY_HIRE_HIDDEN = new Set([
+                "House Wine",
+                "Premium Wine",
+                "Open Bar",
+                "Cash Bar",
+              ]);
+              const visibleOptions =
+                form.barType === "dry_hire"
+                  ? ALCOHOL_OPTIONS.filter((o) => !DRY_HIRE_HIDDEN.has(o))
+                  : ALCOHOL_OPTIONS;
+              return (
+                <div className="space-y-3">
+                  <Label>Alcohol Package</Label>
+                  <RadioGroup
+                    value={form.alcoholSelections[0] || ""}
+                    onValueChange={(v) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        alcoholSelections: v ? [v] : [],
+                      }))
+                    }
+                    className="grid grid-cols-2 sm:grid-cols-3 gap-2"
                   >
-                    <RadioGroupItem value={opt} id={`alc-${opt}`} />
-                    <span className="text-sm">{opt}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
+                    {visibleOptions.map((opt) => (
+                      <label
+                        key={opt}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <RadioGroupItem value={opt} id={`alc-${opt}`} />
+                        <span className="text-sm">{opt}</span>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              );
+            })()}
 
             {/* Liquor quality (wet hire only) */}
             {form.barType === "wet_hire" && (
@@ -4012,6 +4393,44 @@ export default function Inquire() {
                     <Label htmlFor="liq-top">Top Shelf</Label>
                   </div>
                 </RadioGroup>
+
+                {/* Brand preferences — only relevant above "Well". */}
+                <AnimatePresence initial={false}>
+                  {(form.liquorQuality === "mid_shelf" ||
+                    form.liquorQuality === "top_shelf") && (
+                    <motion.div
+                      key="preferred-brands"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      style={{ overflow: "hidden" }}
+                      className="pt-2"
+                    >
+                      <div className="space-y-1.5">
+                        <Label htmlFor="preferredLiquorBrands">
+                          Any brands you'd like us to include?
+                        </Label>
+                        <p className="text-xs text-gray-500 -mt-0.5 font-serif italic">
+                          Optional — list any specific spirits, wines, or
+                          brands you'd love on the bar (e.g. Hendrick's gin,
+                          Maker's Mark, a particular rosé). We'll do our best
+                          to source them.
+                        </p>
+                        <Textarea
+                          id="preferredLiquorBrands"
+                          value={form.preferredLiquorBrands}
+                          onChange={(e) =>
+                            update("preferredLiquorBrands", e.target.value)
+                          }
+                          placeholder="e.g. Hendrick's gin, Casamigos Blanco, Whispering Angel rosé…"
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>
@@ -4227,9 +4646,45 @@ export default function Inquire() {
 
   const renderStep8 = () => (
     <div className="space-y-8">
+      {/* Branded summary intro — frames this as a preview, not a form recap */}
+      <div
+        className="rounded-2xl p-6 text-center border"
+        style={{
+          background:
+            "color-mix(in srgb, var(--theme-bg) 75%, white)",
+          borderColor:
+            "color-mix(in srgb, var(--theme-border) 50%, transparent)",
+        }}
+      >
+        <div
+          className="mx-auto mb-3 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-sm"
+          style={{ background: "var(--theme-gradient)" }}
+        >
+          <ClipboardCheck className="h-6 w-6" />
+        </div>
+        <p
+          className="font-serif text-sm uppercase tracking-[0.2em]"
+          style={{ color: "var(--theme-primary)" }}
+        >
+          Almost done
+        </p>
+        <h3
+          className="text-2xl sm:text-3xl font-semibold mt-1"
+          style={{
+            color: "var(--theme-text)",
+            fontFamily: "var(--theme-heading-font), Georgia, serif",
+          }}
+        >
+          Here's what we've got so far
+        </h3>
+        <p className="text-sm text-gray-600 mt-2 font-serif italic max-w-md mx-auto">
+          Take one last look. Once you submit, we'll put together a tailored
+          proposal with final pricing and get it back to you within 24–48h.
+        </p>
+      </div>
+
       {/* Summary */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold">Review Your Selections</h3>
 
         {/* Contact & Event */}
         <Card>
@@ -4543,6 +4998,13 @@ export default function Inquire() {
                   {form.nonAlcoholicSelections.join(", ")}
                 </p>
               )}
+              {form.nonAlcoholicSelections.includes("Mocktails") &&
+                form.mocktailSelections.length > 0 && (
+                  <p>
+                    <span className="text-gray-500">Mocktails:</span>{" "}
+                    {form.mocktailSelections.join(", ")}
+                  </p>
+                )}
               {(form.beverageType === "alcoholic" ||
                 form.beverageType === "both") && (
                 <>
@@ -4703,42 +5165,93 @@ export default function Inquire() {
     ClipboardCheck,
   ];
 
+  // Theme cascade — once the customer picks an event type, the whole form
+  // visually shifts to the matching preset (wedding → cream/gold, corporate →
+  // navy, etc). Before pick: neutral Homebites palette (the celebration preset).
+  const preset = getEventPreset(form.eventType || "celebration");
+  const themeStyles = applyThemeCSS(preset.theme);
+  const themeActive = !!form.eventType;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-amber-50">
+    <div
+      className="min-h-screen transition-colors duration-500"
+      style={{
+        ...themeStyles,
+        background: themeActive
+          ? `linear-gradient(135deg, var(--theme-bg) 0%, white 45%, var(--theme-secondary) 100%)`
+          : "linear-gradient(135deg, #faf6ef 0%, #ffffff 50%, #fbf3e7 100%)",
+      }}
+    >
       {/* Header */}
-      <div className="bg-white border-b shadow-sm">
+      <div className="bg-white/80 backdrop-blur border-b border-[color:var(--theme-border)]/40 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center text-center">
           <img
             src={homebitesLogo}
             alt="Home Bites Catering"
             className="h-20 sm:h-24 w-auto mb-4"
           />
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Request a Quote
+          <h1
+            className="text-3xl sm:text-4xl font-semibold tracking-tight"
+            style={{
+              color: themeActive ? "var(--theme-text)" : "#1f2937",
+              fontFamily: "var(--theme-heading-font), Georgia, serif",
+            }}
+          >
+            Let's plan your event
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">
-            Tell us about your event and we will craft the perfect catering
-            experience
+          <p
+            className="mt-2 text-lg italic"
+            style={{
+              color: themeActive ? "var(--theme-text-secondary)" : "#6b7280",
+              fontFamily: "var(--theme-body-font), Georgia, serif",
+            }}
+          >
+            A few quick questions and we'll get straight to cooking up your menu.
           </p>
+          {/* Trust strip */}
+          <div className="mt-4 flex flex-wrap justify-center items-center gap-x-5 gap-y-1 text-xs text-gray-500 font-serif">
+            <span className="flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-[color:var(--theme-primary)]" />
+              100+ Seattle events catered
+            </span>
+            <span aria-hidden className="text-gray-300">·</span>
+            <span>Licensed &amp; insured</span>
+            <span aria-hidden className="text-gray-300">·</span>
+            <span>Typical reply within 24–48h</span>
+          </div>
         </div>
       </div>
 
       {/* Progress */}
-      <div className="bg-white border-b sticky top-0 z-30">
+      <div className="bg-white/85 backdrop-blur border-b border-[color:var(--theme-border)]/40 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">
-              Step {step} of 8: {STEP_LABELS[step - 1]}
+            <span
+              className="text-sm font-semibold"
+              style={{
+                color: "var(--theme-text)",
+                fontFamily: "var(--theme-heading-font), Georgia, serif",
+              }}
+            >
+              Step {step} of 8 · {STEP_LABELS[step - 1]}
             </span>
-            <span className="text-sm text-gray-500">
-              {Math.round((step / 8) * 100)}%
+            <span className="text-sm text-gray-500 font-serif italic">
+              {Math.round((step / 8) * 100)}% complete
             </span>
           </div>
-          <Progress value={(step / 8) * 100} className="h-2" />
+          {/* Gradient progress bar keyed to the event preset */}
+          <div className="h-2 rounded-full bg-[color:var(--theme-border)]/30 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${(step / 8) * 100}%`,
+                background: "var(--theme-gradient)",
+              }}
+            />
+          </div>
           {/* Step indicators */}
           <div className="hidden sm:flex justify-between mt-3">
             {STEP_LABELS.map((label, idx) => {
-              const StepIcon = stepIcons[idx];
               const stepNum = idx + 1;
               const isCompleted = stepNum < step;
               const isCurrent = stepNum === step;
@@ -4763,13 +5276,18 @@ export default function Inquire() {
                 >
                   <div
                     className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
                       isCompleted
                         ? "bg-green-500 text-white"
                         : isCurrent
-                          ? "bg-primary text-white"
+                          ? "text-white shadow-sm"
                           : "bg-gray-200 text-gray-500",
                     )}
+                    style={
+                      isCurrent
+                        ? { background: "var(--theme-gradient)" }
+                        : undefined
+                    }
                   >
                     {isCompleted ? (
                       <Check className="h-4 w-4" />
@@ -4779,11 +5297,16 @@ export default function Inquire() {
                   </div>
                   <span
                     className={cn(
-                      "text-[10px] leading-tight text-center max-w-[60px]",
+                      "text-[10px] leading-tight text-center max-w-[60px] font-serif",
                       isCurrent
-                        ? "text-primary font-semibold"
+                        ? "font-semibold"
                         : "text-gray-500",
                     )}
+                    style={
+                      isCurrent
+                        ? { color: "var(--theme-primary)" }
+                        : undefined
+                    }
                   >
                     {label}
                   </span>
@@ -4813,14 +5336,14 @@ export default function Inquire() {
                     : STEP_LABELS[step - 1]}
                 </CardTitle>
                 <CardDescription>
-                  {step === 1 && "Let us know who you are and what you're planning."}
+                  {step === 1 && "A few quick details about you and the occasion — we'll keep the rest fun."}
                   {step === 2 && eventConfig.locationSectionSubtitle}
-                  {step === 3 && "Choose how you'd like your meal served."}
-                  {step === 4 && "Select your menu theme and package level."}
-                  {step === 5 && "Add appetizers and desserts to your event."}
-                  {step === 6 && "Set up your bar and beverage service."}
-                  {step === 7 && "Add equipment rentals and note dietary needs."}
-                  {step === 8 && "Review everything and submit your request."}
+                  {step === 3 && "How would you like your meal served on the day?"}
+                  {step === 4 && "Pick a cuisine and tier — this is where the menu starts coming to life."}
+                  {step === 5 && "The little extras that make an event memorable."}
+                  {step === 6 && "Wines, mocktails, coffee — tell us how guests will drink."}
+                  {step === 7 && "Any rentals we should handle, and anything we should know about dietary needs."}
+                  {step === 8 && "One last look, then we'll take it from here."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -4828,7 +5351,7 @@ export default function Inquire() {
                 {[5, 6, 7].includes(step) && catalogLoading && (
                   <div className="mb-6 p-4 rounded-lg border border-blue-200 bg-blue-50 flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    <p className="text-sm text-blue-700">Loading menu options…</p>
+                    <p className="text-sm text-blue-700 font-serif italic">Pulling up the kitchen notes…</p>
                   </div>
                 )}
                 {[5, 6, 7].includes(step) && !catalogLoading && catalogError && (
@@ -4840,15 +5363,25 @@ export default function Inquire() {
                   </div>
                 )}
 
-                {/* Step content */}
-                {step === 1 && renderStep1()}
-                {step === 2 && renderStep2()}
-                {step === 3 && renderStep3()}
-                {step === 4 && renderStep4()}
-                {step === 5 && renderStep5()}
-                {step === 6 && renderStep6()}
-                {step === 7 && renderStep7()}
-                {step === 8 && renderStep8()}
+                {/* Step content — animated transitions via framer-motion */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={step}
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    transition={{ duration: 0.28, ease: "easeOut" }}
+                  >
+                    {step === 1 && renderStep1()}
+                    {step === 2 && renderStep2()}
+                    {step === 3 && renderStep3()}
+                    {step === 4 && renderStep4()}
+                    {step === 5 && renderStep5()}
+                    {step === 6 && renderStep6()}
+                    {step === 7 && renderStep7()}
+                    {step === 8 && renderStep8()}
+                  </motion.div>
+                </AnimatePresence>
 
                 {/* Validation errors — shown right above the Back/Next row so
                     the message is visible at the moment the user clicks Next. */}

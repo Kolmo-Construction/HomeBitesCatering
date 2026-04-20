@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
 import { getEventPreset } from "@shared/eventPresets";
+import { applyThemeCSS } from "@/lib/eventPresetCSS";
 import {
   Calendar,
   Users,
@@ -152,7 +153,7 @@ function LoginScreen() {
       <div className="min-h-screen bg-[#FBF6EA] flex items-center justify-center p-6">
         <Card className="max-w-md w-full text-center">
           <CardContent className="pt-8 pb-8">
-            <Mail className="h-12 w-12 text-[#8B7355] mx-auto mb-4" />
+            <Mail className="h-12 w-12 text-[color:var(--theme-primary)] mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2" style={{ fontFamily: "Georgia, serif" }}>
               Check your email
             </h2>
@@ -190,7 +191,7 @@ function LoginScreen() {
             />
             <Button
               type="submit"
-              className="w-full bg-[#8B7355] hover:bg-[#6B5345]"
+              className="w-full bg-[var(--theme-primary)] hover:bg-[#6B5345]"
               disabled={requestMutation.isPending}
             >
               {requestMutation.isPending ? (
@@ -222,7 +223,7 @@ function MilestoneTracker({ milestones }: { milestones: Milestone[] }) {
                   "h-8 w-8 rounded-full flex items-center justify-center border-2 shrink-0 transition",
                   m.status === "done" && "bg-emerald-500 border-emerald-500 text-white",
                   m.status === "current" &&
-                    "border-[#E28C0A] text-[#E28C0A] bg-[#fff6e6] ring-4 ring-[#E28C0A]/15",
+                    "border-[color:var(--theme-accent)] text-[color:var(--theme-accent)] bg-[var(--theme-bg)] ring-4 ring-[color:var(--theme-accent)]/15",
                   m.status === "pending" && "border-stone-300 text-stone-300 bg-white",
                   m.status === "overdue" && "border-red-500 text-red-600 bg-red-50",
                 )}
@@ -246,7 +247,7 @@ function MilestoneTracker({ milestones }: { milestones: Milestone[] }) {
               <div
                 className={cn(
                   "font-medium leading-tight",
-                  m.status === "current" && "text-[#8B7355]",
+                  m.status === "current" && "text-[color:var(--theme-primary)]",
                   m.status === "pending" && "text-stone-500",
                   m.status === "done" && "text-stone-900",
                   m.status === "overdue" && "text-red-700",
@@ -278,16 +279,20 @@ function ActiveEventHero({
 }) {
   const preset = getEventPreset(event.eventType);
   const { theme } = preset;
+  const themeStyles = applyThemeCSS(theme);
   const days = event.daysToEvent;
 
   return (
-    <section className="rounded-3xl bg-white border border-[#e8ddc8] shadow-sm overflow-hidden">
+    <section
+      className="rounded-3xl bg-white border border-[color:var(--theme-border)] shadow-sm overflow-hidden"
+      style={themeStyles}
+    >
       <div className="h-2" style={{ background: theme.gradient }} />
       <div className="p-6 sm:p-8">
         {/* Top row: event title + countdown */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.22em] text-[#8B7355] font-semibold mb-1">
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--theme-primary)] font-semibold mb-1">
               Your next event
             </div>
             <h2
@@ -298,16 +303,16 @@ function ActiveEventHero({
             </h2>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-stone-700 text-sm">
               <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-[#8B7355]" />
+                <Calendar className="h-4 w-4 text-[color:var(--theme-primary)]" />
                 {formatDate(new Date(event.eventDate))}
               </span>
               <span className="flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-[#8B7355]" />
+                <Users className="h-4 w-4 text-[color:var(--theme-primary)]" />
                 {event.guestCount} guests
               </span>
               {event.venue && (
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-[#8B7355]" />
+                  <MapPin className="h-4 w-4 text-[color:var(--theme-primary)]" />
                   {event.venue}
                 </span>
               )}
@@ -326,9 +331,9 @@ function ActiveEventHero({
 
         {/* Next step CTA */}
         {event.nextStep && (
-          <div className="mt-6 rounded-2xl border border-[#E28C0A]/30 bg-gradient-to-br from-[#fff6e6] to-white p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="mt-6 rounded-2xl border border-[color:var(--theme-accent)]/30 bg-gradient-to-br from-[var(--theme-bg)] to-white p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider text-[#8B7355] font-semibold">
+              <div className="text-xs uppercase tracking-wider text-[color:var(--theme-primary)] font-semibold">
                 What's next
               </div>
               <div className="text-stone-900 font-medium mt-0.5">
@@ -340,7 +345,7 @@ function ActiveEventHero({
                 href={event.nextStep.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 inline-flex items-center gap-2 bg-[#E28C0A] hover:bg-[#c77a00] text-white font-medium px-5 py-2.5 rounded-full text-sm transition shadow-sm"
+                className="shrink-0 inline-flex items-center gap-2 bg-[var(--theme-accent)] hover:brightness-95 text-white font-medium px-5 py-2.5 rounded-full text-sm transition shadow-sm"
               >
                 {event.nextStep.cta}
                 <ChevronRight className="h-4 w-4" />
@@ -353,7 +358,7 @@ function ActiveEventHero({
 
         {/* Milestones */}
         <div className="mt-8">
-          <div className="text-xs uppercase tracking-[0.22em] text-[#8B7355] font-semibold mb-4">
+          <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--theme-primary)] font-semibold mb-4">
             Progress
           </div>
           <MilestoneTracker milestones={event.milestones} />
@@ -366,7 +371,7 @@ function ActiveEventHero({
               href={event.contract.signingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[#8B7355] text-white hover:bg-[#7a6448] transition"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[var(--theme-primary)] text-white hover:brightness-95 transition"
             >
               <PenLine className="h-4 w-4" /> Sign contract
             </a>
@@ -456,7 +461,7 @@ function ChangeRequestsHistory({
           className="text-lg flex items-center gap-2"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          <MessageSquare className="h-5 w-5 text-[#8B7355]" />
+          <MessageSquare className="h-5 w-5 text-[color:var(--theme-primary)]" />
           Your change requests
         </CardTitle>
         <CardDescription>
@@ -494,7 +499,7 @@ function ChangeRequestsHistory({
                     </p>
                     {req.metaData?.adminReply && (
                       <div className="mt-2 rounded-md bg-white border border-stone-200 px-2.5 py-1.5">
-                        <p className="text-[10px] uppercase tracking-wide text-[#8B7355] font-semibold mb-0.5">
+                        <p className="text-[10px] uppercase tracking-wide text-[color:var(--theme-primary)] font-semibold mb-0.5">
                           Mike replied
                         </p>
                         <p className="text-xs text-stone-700 whitespace-pre-wrap">
@@ -508,7 +513,7 @@ function ChangeRequestsHistory({
                       "shrink-0 text-[10px] px-1.5 py-0 border-0",
                       status === "resolved"
                         ? "bg-emerald-100 text-emerald-800"
-                        : "bg-[#E28C0A]/15 text-[#8B7355]",
+                        : "bg-[var(--theme-accent)]/15 text-[color:var(--theme-primary)]",
                     )}
                   >
                     {status === "resolved" ? "Resolved" : "Waiting"}
@@ -551,7 +556,7 @@ function DocumentLocker({ events }: { events: PortalEvent[] }) {
           className="text-lg flex items-center gap-2"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          <FileText className="h-5 w-5 text-[#8B7355]" />
+          <FileText className="h-5 w-5 text-[color:var(--theme-primary)]" />
           Your documents
         </CardTitle>
         <CardDescription>Everything for your event in one place.</CardDescription>
@@ -682,7 +687,7 @@ function ChangeRequestModal({
                   className={cn(
                     "w-full text-left p-3 rounded-xl border text-sm transition",
                     selected
-                      ? "border-[#8B7355] bg-[#faf5e9] ring-2 ring-[#E28C0A]/30"
+                      ? "border-[color:var(--theme-primary)] bg-[var(--theme-bg)] ring-2 ring-[color:var(--theme-accent)]/30"
                       : "border-stone-200 bg-white hover:border-stone-300",
                   )}
                 >
@@ -714,7 +719,7 @@ function ChangeRequestModal({
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-[#8B7355] hover:bg-[#6B5345] text-white"
+              className="flex-1 bg-[var(--theme-primary)] hover:bg-[#6B5345] text-white"
               disabled={!message.trim() || mutation.isPending}
               onClick={() => mutation.mutate()}
             >
@@ -775,7 +780,7 @@ function PortalDashboard({
   return (
     <div className="min-h-screen bg-[#FBF6EA]">
       {/* Header */}
-      <div className="bg-white border-b border-[#e8ddc8] px-6 py-4">
+      <div className="bg-white border-b border-[color:var(--theme-border)] px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
             <h1
@@ -812,15 +817,17 @@ function PortalDashboard({
                     key={q.id}
                     href={q.viewToken ? `/quote/${q.viewToken}` : "#"}
                     className="block"
+                    style={applyThemeCSS(theme)}
                   >
                     <Card
                       className="hover:shadow-md transition cursor-pointer"
-                      style={{ borderLeftColor: theme.primary, borderLeftWidth: 4 }}
+                      style={{ borderLeftColor: theme.primary, borderLeftWidth: 4, background: `linear-gradient(to right, ${theme.background}, white 40%)` }}
                     >
                       <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                          <div className="font-medium">
-                            {preset.label}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{theme.icon}</span>
+                            <span className="font-medium">{preset.label}</span>
                           </div>
                           <div className="text-sm text-gray-500">
                             {q.eventDate ? formatDate(new Date(q.eventDate)) : "Date TBD"}{" "}
@@ -851,7 +858,7 @@ function PortalDashboard({
         ) : (
           <Card>
             <CardContent className="p-8 text-center text-gray-500">
-              <PartyPopper className="h-10 w-10 text-[#8B7355] mx-auto mb-3" />
+              <PartyPopper className="h-10 w-10 text-[color:var(--theme-primary)] mx-auto mb-3" />
               No events booked yet. Once you accept a proposal, we'll track
               everything here.
             </CardContent>
@@ -875,7 +882,7 @@ function PortalDashboard({
               className="text-lg font-semibold mb-3"
               style={{ fontFamily: "Georgia, serif" }}
             >
-              <Calendar className="h-5 w-5 inline mr-2 text-[#8B7355]" />
+              <Calendar className="h-5 w-5 inline mr-2 text-[color:var(--theme-primary)]" />
               More upcoming events
             </h2>
             <div className="grid gap-3">
@@ -883,7 +890,11 @@ function PortalDashboard({
                 const preset = getEventPreset(evt.eventType);
                 const { theme } = preset;
                 return (
-                  <Card key={evt.id} className="hover:shadow-md transition overflow-hidden">
+                  <Card
+                    key={evt.id}
+                    className="hover:shadow-md transition overflow-hidden"
+                    style={{ ...applyThemeCSS(theme), borderColor: theme.borderAccent }}
+                  >
                     <div className="h-1" style={{ background: theme.gradient }} />
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between gap-3">
@@ -1077,7 +1088,7 @@ export default function ClientPortal() {
   if (verifying) {
     return (
       <div className="min-h-screen bg-[#FBF6EA] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#8B7355]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[color:var(--theme-primary)]" />
         <p className="ml-3 text-gray-600">Verifying your login…</p>
       </div>
     );
@@ -1088,7 +1099,7 @@ export default function ClientPortal() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#FBF6EA] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#8B7355]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[color:var(--theme-primary)]" />
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -6,6 +6,7 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { themePresets, applyTheme, getSavedPreset, getSavedDarkMode } from "@/lib/theme";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -74,16 +75,6 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-// Theme preset colors
-const themePresets = [
-  { name: "Home Bites", primary: "28 33% 52%", accent: "30 100% 50%", description: "Rose taupe and orange" },
-  { name: "Ocean Blue", primary: "210 70% 50%", accent: "190 80% 45%", description: "Professional blue tones" },
-  { name: "Forest Green", primary: "150 40% 40%", accent: "80 60% 45%", description: "Natural earth tones" },
-  { name: "Sunset", primary: "350 65% 55%", accent: "25 90% 55%", description: "Warm coral and gold" },
-  { name: "Lavender", primary: "270 50% 60%", accent: "280 60% 70%", description: "Soft purple tones" },
-  { name: "Slate", primary: "220 15% 45%", accent: "200 20% 55%", description: "Modern neutral gray" },
-];
-
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const { user } = useAuth();
@@ -91,49 +82,14 @@ export default function Settings() {
   const queryClient = useQueryClient();
   
   // Theme state
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark';
-    }
-    return false;
-  });
-  const [selectedTheme, setSelectedTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('themePreset') || 'Home Bites';
-    }
-    return 'Home Bites';
-  });
+  const [isDarkMode, setIsDarkMode] = useState(getSavedDarkMode);
+  const [selectedTheme, setSelectedTheme] = useState(getSavedPreset);
 
-  // Apply theme changes
-  const applyTheme = (themeName: string, dark: boolean) => {
-    const preset = themePresets.find(t => t.name === themeName) || themePresets[0];
-    const root = document.documentElement;
-    
-    // Apply dark mode
-    if (dark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    
-    // Apply color theme
-    root.style.setProperty('--primary', preset.primary);
-    root.style.setProperty('--ring', preset.primary);
-    root.style.setProperty('--accent', preset.accent);
-    root.style.setProperty('--secondary', preset.accent);
-    
-    // Save to localStorage
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
-    localStorage.setItem('themePreset', themeName);
-  };
-
-  // Handle theme toggle
   const handleDarkModeToggle = (enabled: boolean) => {
     setIsDarkMode(enabled);
     applyTheme(selectedTheme, enabled);
   };
 
-  // Handle theme preset change
   const handleThemeChange = (themeName: string) => {
     setSelectedTheme(themeName);
     applyTheme(themeName, isDarkMode);
@@ -142,11 +98,6 @@ export default function Settings() {
       description: `Applied ${themeName} theme`,
     });
   };
-
-  // Apply saved theme on mount
-  useEffect(() => {
-    applyTheme(selectedTheme, isDarkMode);
-  }, []);
   
   // Get user data
   const { data: userData, isLoading } = useQuery<any>({

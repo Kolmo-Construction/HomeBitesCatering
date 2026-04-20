@@ -38,7 +38,8 @@ import {
   Quote as QuoteIcon,
 } from "lucide-react";
 import type { Proposal } from "@shared/proposal";
-import { getEventPreset } from "@shared/eventPresets";
+import { getEventPreset, type EventTheme } from "@shared/eventPresets";
+import { applyThemeCSS } from "@/lib/eventPresetCSS";
 
 // Public-safe site-config slice returned by the quote API.
 export interface QuoteSiteConfig {
@@ -396,7 +397,7 @@ export default function QuoteProposalView({
   const useHearts = sections.useHeartAccents;
 
   return (
-    <PageShell mode={mode}>
+    <PageShell mode={mode} theme={preset.theme}>
       <Helmet>
         <title>
           {title} · {copy.proposalKicker} · Homebites
@@ -405,7 +406,7 @@ export default function QuoteProposalView({
 
       {/* ═══════════════ ADMIN PREVIEW BAR ═══════════════ */}
       {mode === "preview" && (
-        <div className="mb-6 flex items-center justify-between gap-3 flex-wrap rounded-2xl border border-[#e8ddc8] bg-white/90 backdrop-blur px-5 py-4 shadow-sm">
+        <div className="mb-6 flex items-center justify-between gap-3 flex-wrap rounded-2xl border border-[color:var(--theme-border)] bg-white/90 backdrop-blur px-5 py-4 shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
               <Button variant="outline" size="sm" onClick={onBack} className="shrink-0">
@@ -414,7 +415,7 @@ export default function QuoteProposalView({
               </Button>
             )}
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[#8B7355] font-semibold">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[color:var(--theme-primary)] font-semibold">
                 <Eye className="h-3.5 w-3.5" />
                 Customer Preview
               </div>
@@ -434,7 +435,7 @@ export default function QuoteProposalView({
               <Button
                 onClick={onSend}
                 disabled={sendDisabled}
-                className="bg-gradient-to-br from-[#8B7355] to-[#E28C0A] text-white hover:from-[#7a6449] hover:to-[#c77a00]"
+                className="bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-accent)] text-white hover:brightness-95"
                 data-testid="button-send-quote"
               >
                 <Send className="h-4 w-4 mr-1.5" />
@@ -488,24 +489,24 @@ export default function QuoteProposalView({
       )}
 
       {/* ═══════════════ HERO CARD ═══════════════ */}
-      <div className="relative mb-10 overflow-hidden rounded-3xl border border-[#e0d0b3] bg-gradient-to-br from-[#fbf6ea] via-[#fdf8ec] to-[#faf0dc] shadow-sm">
+      <div className="relative mb-10 overflow-hidden rounded-3xl border border-[color:var(--theme-border)] bg-gradient-to-br from-[var(--theme-bg)] via-[var(--theme-bg)] to-[var(--theme-bg)] shadow-sm">
         {/* Decorative corner ornaments */}
-        <div className="absolute top-0 left-0 w-28 h-28 border-t-2 border-l-2 border-[#d4c09a] rounded-tl-3xl" />
-        <div className="absolute top-0 right-0 w-28 h-28 border-t-2 border-r-2 border-[#d4c09a] rounded-tr-3xl" />
-        <div className="absolute bottom-0 left-0 w-28 h-28 border-b-2 border-l-2 border-[#d4c09a] rounded-bl-3xl" />
-        <div className="absolute bottom-0 right-0 w-28 h-28 border-b-2 border-r-2 border-[#d4c09a] rounded-br-3xl" />
+        <div className="absolute top-0 left-0 w-28 h-28 border-t-2 border-l-2 border-[color:var(--theme-border)] rounded-tl-3xl" />
+        <div className="absolute top-0 right-0 w-28 h-28 border-t-2 border-r-2 border-[color:var(--theme-border)] rounded-tr-3xl" />
+        <div className="absolute bottom-0 left-0 w-28 h-28 border-b-2 border-l-2 border-[color:var(--theme-border)] rounded-bl-3xl" />
+        <div className="absolute bottom-0 right-0 w-28 h-28 border-b-2 border-r-2 border-[color:var(--theme-border)] rounded-br-3xl" />
 
         <div className="relative px-8 py-16 sm:py-20 text-center">
-          <div className="inline-flex items-center gap-3 text-[#8B7355] text-xs sm:text-sm uppercase tracking-[0.32em] mb-6 font-semibold">
-            <span className="h-px w-10 bg-[#c9b089]" />
+          <div className="inline-flex items-center gap-3 text-[color:var(--theme-primary)] text-xs sm:text-sm uppercase tracking-[0.32em] mb-6 font-semibold">
+            <span className="h-px w-10 bg-[color:var(--theme-primary)]/40" />
             {useHearts && (
-              <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
+              <Heart className="h-3.5 w-3.5 fill-[var(--theme-accent)] text-[color:var(--theme-accent)]" />
             )}
             {copy.proposalKicker}
             {useHearts && (
-              <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
+              <Heart className="h-3.5 w-3.5 fill-[var(--theme-accent)] text-[color:var(--theme-accent)]" />
             )}
-            <span className="h-px w-10 bg-[#c9b089]" />
+            <span className="h-px w-10 bg-[color:var(--theme-primary)]/40" />
           </div>
           <h1
             className="font-serif text-6xl sm:text-7xl md:text-8xl text-stone-900 leading-[1.02] tracking-tight"
@@ -515,9 +516,9 @@ export default function QuoteProposalView({
             {title}
           </h1>
           <div className="flex items-center justify-center gap-5 mt-8">
-            <span className="h-px w-16 bg-[#c9b089]" />
+            <span className="h-px w-16 bg-[color:var(--theme-primary)]/40" />
             <p className="text-stone-800 text-xl sm:text-2xl font-semibold">{longDate}</p>
-            <span className="h-px w-16 bg-[#c9b089]" />
+            <span className="h-px w-16 bg-[color:var(--theme-primary)]/40" />
           </div>
           {venueName && (
             <p className="mt-4 text-stone-700 text-lg">
@@ -545,8 +546,8 @@ export default function QuoteProposalView({
         </div>
 
         {hasTimeline && (
-          <div className="mt-8 pt-8 border-t border-dashed border-[#e0d0b3]">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[#8B7355] mb-4 font-semibold">
+          <div className="mt-8 pt-8 border-t border-dashed border-[color:var(--theme-border)]">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[color:var(--theme-primary)] mb-4 font-semibold">
               <Clock className="h-3.5 w-3.5" />
               Timeline
             </div>
@@ -670,8 +671,8 @@ export default function QuoteProposalView({
             ((proposal.dietary.restrictions?.length ?? 0) > 0 ||
               (proposal.dietary.allergies?.length ?? 0) > 0 ||
               proposal.dietary.specialNotes) && (
-              <div className="mt-8 pt-6 border-t border-dashed border-[#e0d0b3]">
-                <p className="text-[10px] uppercase tracking-[0.25em] text-[#8B7355] mb-3 font-semibold">
+              <div className="mt-8 pt-6 border-t border-dashed border-[color:var(--theme-border)]">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-[color:var(--theme-primary)] mb-3 font-semibold">
                   Dietary accommodations
                 </p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -718,7 +719,7 @@ export default function QuoteProposalView({
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               {items.map((line, i) => (
                 <li key={i} className="flex items-start gap-3 text-stone-800 text-base leading-relaxed">
-                  <span className="mt-0.5 shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-[#E28C0A]/15 text-[#8B7355]">
+                  <span className="mt-0.5 shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-[var(--theme-accent)]/15 text-[color:var(--theme-primary)]">
                     <Check className="h-3 w-3" />
                   </span>
                   <span>{line}</span>
@@ -739,23 +740,23 @@ export default function QuoteProposalView({
         const message = note?.message ?? site?.chef.bio;
         if (!firstName || !message) return null;
         return (
-          <section className="mb-8 rounded-3xl border border-[#e8ddc8] bg-gradient-to-br from-white via-[#fbf6ea] to-white p-8 sm:p-10 shadow-sm">
+          <section className="mb-8 rounded-3xl border border-[color:var(--theme-border)] bg-gradient-to-br from-white via-[var(--theme-bg)] to-white p-8 sm:p-10 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               <div className="shrink-0">
                 {photoUrl ? (
                   <img
                     src={photoUrl}
                     alt={firstName}
-                    className="h-20 w-20 rounded-full object-cover border-2 border-[#e0d0b3]"
+                    className="h-20 w-20 rounded-full object-cover border-2 border-[color:var(--theme-border)]"
                   />
                 ) : (
-                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[#E28C0A] to-[#8B7355] flex items-center justify-center text-white text-3xl font-serif font-semibold">
+                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[var(--theme-accent)] to-[var(--theme-primary)] flex items-center justify-center text-white text-3xl font-serif font-semibold">
                     {firstName.charAt(0)}
                   </div>
                 )}
               </div>
               <div className="flex-1">
-                <div className="text-xs uppercase tracking-[0.22em] text-[#8B7355] font-semibold mb-1">
+                <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--theme-primary)] font-semibold mb-1">
                   A note from {firstName}
                 </div>
                 <p className="text-stone-800 text-base sm:text-lg leading-relaxed">
@@ -775,7 +776,7 @@ export default function QuoteProposalView({
       {proposal.testimonials && proposal.testimonials.length > 0 && (
         <section className="mb-8">
           <div className="text-center mb-6">
-            <div className="text-xs uppercase tracking-[0.25em] text-[#8B7355] font-semibold">
+            <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--theme-primary)] font-semibold">
               {copy.testimonialsKicker}
             </div>
             <h2
@@ -789,9 +790,9 @@ export default function QuoteProposalView({
             {proposal.testimonials.slice(0, 4).map((t, i) => (
               <blockquote
                 key={i}
-                className="rounded-2xl bg-white border border-[#e8ddc8] p-6 shadow-sm"
+                className="rounded-2xl bg-white border border-[color:var(--theme-border)] p-6 shadow-sm"
               >
-                <QuoteIcon className="h-5 w-5 text-[#c9b089] mb-2" />
+                <QuoteIcon className="h-5 w-5 text-[color:var(--theme-primary)]/60 mb-2" />
                 <p className="text-stone-800 text-base leading-relaxed italic">
                   "{t.quote}"
                 </p>
@@ -809,9 +810,9 @@ export default function QuoteProposalView({
 
       {/* ═══════════════ SPECIAL REQUESTS ═══════════════ */}
       {proposal.specialRequests && (
-        <div className="mb-8 rounded-3xl border border-[#e0d0b3] bg-[#faf5e9]/60 p-8 shadow-sm">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[#8B7355] mb-4 font-semibold">
-            <Heart className="h-3.5 w-3.5 fill-[#E28C0A] text-[#E28C0A]" />
+        <div className="mb-8 rounded-3xl border border-[color:var(--theme-border)] bg-[var(--theme-bg)]/60 p-8 shadow-sm">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[color:var(--theme-primary)] mb-4 font-semibold">
+            <Heart className="h-3.5 w-3.5 fill-[var(--theme-accent)] text-[color:var(--theme-accent)]" />
             Your special requests
           </div>
           <p className="text-stone-800 leading-relaxed whitespace-pre-wrap text-lg">
@@ -888,7 +889,7 @@ export default function QuoteProposalView({
 
       {/* ═══════════════ ACCEPT / DECLINE (public only) ═══════════════ */}
       {mode === "public" && effectiveStatus === "pending" && !showDeclineForm && (
-        <div className="mb-8 rounded-3xl bg-gradient-to-br from-[#8B7355] via-[#a67c5a] to-[#E28C0A] p-10 sm:p-12 text-center shadow-xl shadow-[#e0d0b3]">
+        <div className="mb-8 rounded-3xl bg-gradient-to-br from-[var(--theme-primary)] via-[var(--theme-primary)] to-[var(--theme-accent)] p-10 sm:p-12 text-center shadow-xl shadow-[color:var(--theme-border)]">
           <p className="text-white text-2xl font-semibold mb-3">{copy.acceptCtaHeadline}</p>
           <p className="text-[#fef9ed] text-base sm:text-lg mb-7 max-w-md mx-auto leading-relaxed">
             {copy.acceptCtaBlurb}
@@ -897,7 +898,7 @@ export default function QuoteProposalView({
             size="lg"
             onClick={onAccept}
             disabled={acceptFlowState === "accepting"}
-            className="h-16 px-12 text-lg bg-white text-[#8B7355] hover:bg-[#faf5e9] rounded-full shadow-xl font-semibold transition-all hover:scale-[1.02]"
+            className="h-16 px-12 text-lg bg-white text-[color:var(--theme-primary)] hover:bg-[var(--theme-bg)] rounded-full shadow-xl font-semibold transition-all hover:scale-[1.02]"
             data-testid="button-accept"
           >
             {acceptFlowState === "accepting" ? (
@@ -957,7 +958,7 @@ export default function QuoteProposalView({
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[#e0d0b3] text-stone-700 hover:bg-[#faf5e9] hover:border-[#c9b089] font-medium text-sm transition shadow-sm"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[color:var(--theme-border)] text-stone-700 hover:bg-[var(--theme-bg)] hover:border-[color:var(--theme-primary)]/50 font-medium text-sm transition shadow-sm"
               data-testid="button-download-pdf"
             >
               <Download className="h-4 w-4" />
@@ -990,7 +991,7 @@ export default function QuoteProposalView({
                   document.body.removeChild(ta);
                 }
               }}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[#e0d0b3] text-stone-700 hover:bg-[#faf5e9] hover:border-[#c9b089] font-medium text-sm transition shadow-sm"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white border border-[color:var(--theme-border)] text-stone-700 hover:bg-[var(--theme-bg)] hover:border-[color:var(--theme-primary)]/50 font-medium text-sm transition shadow-sm"
               data-testid="button-share-link"
             >
               <Share2 className="h-4 w-4" />
@@ -1040,7 +1041,7 @@ export default function QuoteProposalView({
                     Cancel
                   </Button>
                   <Button
-                    className="flex-1 bg-[#8B7355] hover:bg-[#7a6448] text-white"
+                    className="flex-1 bg-[var(--theme-primary)] hover:brightness-95 text-white"
                     disabled={infoFlowState === "submitting"}
                     onClick={handleSubmitInfoRequest}
                     data-testid="button-confirm-need-info"
@@ -1120,7 +1121,7 @@ export default function QuoteProposalView({
                   data-testid={`decline-option-${opt.value}`}
                   className={`w-full text-left p-3 rounded-xl border transition-all ${
                     selected
-                      ? "border-[#8B7355] bg-[#faf5e9] ring-2 ring-[#E28C0A]/30"
+                      ? "border-[color:var(--theme-primary)] bg-[var(--theme-bg)] ring-2 ring-[color:var(--theme-accent)]/30"
                       : "border-stone-200 hover:border-stone-300 bg-white"
                   }`}
                 >
@@ -1181,11 +1182,11 @@ export default function QuoteProposalView({
           {site?.chef.firstName ?? "Mike"} &amp; the{" "}
           {site?.businessName ?? "Homebites"} team
         </p>
-        <div className="mt-7 pt-7 border-t border-[#e0d0b3] flex flex-col sm:flex-row gap-5 justify-center text-base text-stone-700">
+        <div className="mt-7 pt-7 border-t border-[color:var(--theme-border)] flex flex-col sm:flex-row gap-5 justify-center text-base text-stone-700">
           {site?.chef.phone || site?.phone ? (
             <a
               href={`tel:${(site.chef.phone || site.phone).replace(/[^\d+]/g, "")}`}
-              className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
+              className="flex items-center gap-2 justify-center hover:text-[color:var(--theme-primary)] transition font-medium"
             >
               <Phone className="h-4 w-4" />
               {site.chef.phone || site.phone}
@@ -1194,7 +1195,7 @@ export default function QuoteProposalView({
           {site?.chef.email || site?.email ? (
             <a
               href={`mailto:${site.chef.email || site.email}`}
-              className="flex items-center gap-2 justify-center hover:text-[#8B7355] transition font-medium"
+              className="flex items-center gap-2 justify-center hover:text-[color:var(--theme-primary)] transition font-medium"
             >
               <Mail className="h-4 w-4" />
               {site.chef.email || site.email}
@@ -1215,28 +1216,31 @@ export default function QuoteProposalView({
 function PageShell({
   children,
   mode,
+  theme,
 }: {
   children: React.ReactNode;
   mode: QuoteViewMode;
+  theme: EventTheme;
 }) {
+  const themeVars = applyThemeCSS(theme);
   return (
     <div
-      className="min-h-screen bg-[#fbf6ea] pb-20"
-      style={{ fontFeatureSettings: '"ss01", "ss02"' }}
+      className="min-h-screen bg-[var(--theme-bg)] pb-20"
+      style={{ ...themeVars, fontFeatureSettings: '"ss01", "ss02"' }}
     >
       {/* Homebites branded header — rendered in both modes so the admin sees
           exactly what the customer sees (plus the preview bar below). */}
-      <header className="w-full bg-white/85 backdrop-blur-sm border-b border-[#e8ddc8] sticky top-0 z-10">
+      <header className="w-full bg-white/85 backdrop-blur-sm border-b border-[color:var(--theme-border)] sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
           <img src={homebitesLogo} alt="Homebites" className="h-10" />
           <div>
             <p
               className="font-serif font-semibold text-lg leading-tight text-stone-900"
-              style={{ fontVariationSettings: "'opsz' 144" }}
+              style={{ fontVariationSettings: "'opsz' 144", fontFamily: theme.fontHeading }}
             >
               Homebites Catering
             </p>
-            <p className="text-xs text-[#8B7355] font-medium">
+            <p className="text-xs font-medium" style={{ color: theme.primary }}>
               {mode === "preview" ? "Customer proposal preview" : "Crafted for your celebration"}
             </p>
           </div>
@@ -1260,10 +1264,10 @@ function Card({
 }) {
   return (
     <section
-      className={`mb-8 bg-white rounded-3xl border border-[#e8ddc8] shadow-sm overflow-hidden ${className}`}
+      className={`mb-8 bg-white rounded-3xl border border-[color:var(--theme-border)] shadow-sm overflow-hidden ${className}`}
     >
       <header className="px-8 pt-8 pb-5">
-        <div className="text-xs uppercase tracking-[0.25em] text-[#8B7355] font-semibold">{kicker}</div>
+        <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--theme-primary)] font-semibold">{kicker}</div>
         <h2
           className="font-serif text-[32px] sm:text-4xl text-stone-900 mt-2 leading-tight"
           style={{ fontVariationSettings: "'opsz' 144" }}
@@ -1286,12 +1290,12 @@ function MenuCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-8 rounded-3xl border-2 border-double border-[#d4c09a] bg-gradient-to-b from-[#fbf5ea] via-[#fefaf0] to-white shadow-sm overflow-hidden">
+    <section className="mb-8 rounded-3xl border-2 border-double border-[color:var(--theme-border)] bg-gradient-to-b from-[var(--theme-bg)] via-[var(--theme-bg)] to-white shadow-sm overflow-hidden">
       <div className="px-8 pt-10 pb-2 text-center">
-        <div className="flex items-center justify-center gap-3 text-xs uppercase tracking-[0.3em] text-[#8B7355] mb-4 font-semibold">
-          <span className="h-px w-12 bg-[#c9b089]" />
+        <div className="flex items-center justify-center gap-3 text-xs uppercase tracking-[0.3em] text-[color:var(--theme-primary)] mb-4 font-semibold">
+          <span className="h-px w-12 bg-[color:var(--theme-primary)]/40" />
           Menu
-          <span className="h-px w-12 bg-[#c9b089]" />
+          <span className="h-px w-12 bg-[color:var(--theme-primary)]/40" />
         </div>
         <h2
           className="font-serif text-5xl sm:text-6xl text-stone-900 leading-tight"
@@ -1300,7 +1304,7 @@ function MenuCard({
           {title}
         </h2>
         {subtitle && <p className="mt-3 text-stone-600 text-lg">{subtitle}</p>}
-        <div className="mx-auto mt-6 w-24 h-px bg-gradient-to-r from-transparent via-[#c9b089] to-transparent" />
+        <div className="mx-auto mt-6 w-24 h-px bg-gradient-to-r from-transparent via-[color:var(--theme-primary)]/50 to-transparent" />
       </div>
       <div className="px-8 pt-6 pb-10">{children}</div>
     </section>
@@ -1339,7 +1343,7 @@ function MenuItem({
 }) {
   return (
     <li className="flex items-baseline gap-3 text-lg">
-      <span className="text-[#c9b089] select-none leading-none">·</span>
+      <span className="text-[color:var(--theme-primary)]/60 select-none leading-none">·</span>
       <span className="flex-1">
         <span className="block text-stone-900">{children}</span>
         {description && (
@@ -1362,8 +1366,8 @@ function Fact({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-[#faf5e9]/60 border border-[#e8ddc8] px-5 py-5">
-      <div className="flex items-center gap-1.5 text-[#8B7355] text-xs uppercase tracking-[0.18em] mb-2 font-semibold">
+    <div className="rounded-2xl bg-[var(--theme-bg)]/60 border border-[color:var(--theme-border)] px-5 py-5">
+      <div className="flex items-center gap-1.5 text-[color:var(--theme-primary)] text-xs uppercase tracking-[0.18em] mb-2 font-semibold">
         {icon}
         {label}
       </div>
@@ -1387,8 +1391,8 @@ function TimelineBlock({
   end: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-[#e8ddc8] bg-[#faf5e9]/70 px-5 py-4">
-      <div className="text-xs uppercase tracking-[0.18em] text-[#8B7355] font-semibold">{label}</div>
+    <div className="rounded-2xl border border-[color:var(--theme-border)] bg-[var(--theme-bg)]/70 px-5 py-4">
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--theme-primary)] font-semibold">{label}</div>
       <div className="mt-1.5 text-stone-900 text-lg font-semibold tabular-nums">
         {formatTime(start)}
         {end ? ` – ${formatTime(end)}` : ""}
@@ -1434,8 +1438,8 @@ function PaymentTile({
   note: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#e8ddc8] bg-[#faf5e9]/50 p-6">
-      <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] font-semibold text-[#8B7355]">
+    <div className="rounded-2xl border border-[color:var(--theme-border)] bg-[var(--theme-bg)]/50 p-6">
+      <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] font-semibold text-[color:var(--theme-primary)]">
         <span>Step {step}</span>
         <span>{percent}%</span>
       </div>
