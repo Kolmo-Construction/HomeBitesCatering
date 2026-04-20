@@ -2819,7 +2819,7 @@ export default function Inquire() {
           Is on-site power available?
         </Label>
         <p className="text-sm text-gray-500 -mt-2">
-          We can run on the truck's generator, but a grid hookup is quieter
+          The truck can run on its own generator, but a grid hookup is quieter
           and better for the neighbours.
         </p>
         <RadioGroup
@@ -2833,7 +2833,9 @@ export default function Inquire() {
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="no" id="truck-power-no" />
-            <Label htmlFor="truck-power-no">No — we'll run on generator</Label>
+            <Label htmlFor="truck-power-no">
+              No — the truck will run on its own power
+            </Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="unknown" id="truck-power-unknown" />
@@ -2857,7 +2859,7 @@ export default function Inquire() {
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="no" id="truck-water-no" />
-            <Label htmlFor="truck-water-no">No — we'll self-supply</Label>
+            <Label htmlFor="truck-water-no">No water access</Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="unknown" id="truck-water-unknown" />
