@@ -316,10 +316,10 @@ const kebab = {
   is_publicly_visible: true,
   recipes: [],
   packages: [
-    { tierKey: "bronze", tierName: "Bronze", pricePerPersonCents: 3500, description: "3 proteins, 3 sides, 2 salads, 3 spreads", displayOrder: 1, minGuestCount: 50, selectionLimits: { protein: 3, side: 3, salad: 2, spread: 3 } },
-    { tierKey: "silver", tierName: "Silver", pricePerPersonCents: 3900, description: "4 proteins, 4 sides, 3 salads, 4 spreads", displayOrder: 2, selectionLimits: { protein: 4, side: 4, salad: 3, spread: 4 } },
-    { tierKey: "gold", tierName: "Gold", pricePerPersonCents: 4900, description: "5 proteins, 5 sides, 3 salads, 5 spreads", displayOrder: 3, selectionLimits: { protein: 5, side: 5, salad: 3, spread: 5 } },
-    { tierKey: "diamond", tierName: "Diamond", pricePerPersonCents: 6300, description: "6 proteins, 6 sides, 4 salads, 6 spreads", displayOrder: 4, selectionLimits: { protein: 6, side: 6, salad: 4, spread: 6 } },
+    { tierKey: "bronze", tierName: "Bronze", pricePerPersonCents: 3500, description: "3 proteins, 2 sides, 1 salad", displayOrder: 1, minGuestCount: 50, selectionLimits: { protein: 3, side: 2, salad: 1 } },
+    { tierKey: "silver", tierName: "Silver", pricePerPersonCents: 3900, description: "4 proteins, 3 sides, 2 salads", displayOrder: 2, selectionLimits: { protein: 4, side: 3, salad: 2 } },
+    { tierKey: "gold", tierName: "Gold", pricePerPersonCents: 4900, description: "4 proteins, 4 sides, 3 salads, 3 spreads, pita bread", displayOrder: 3, selectionLimits: { protein: 4, side: 4, salad: 3, spread: 3 }, included: ["Pita Bread"] },
+    { tierKey: "diamond", tierName: "Diamond", pricePerPersonCents: 6300, description: "5 proteins, 4 sides, 3 salads, 3 spreads, meze platter, pita bread", displayOrder: 4, selectionLimits: { protein: 5, side: 4, salad: 3, spread: 3 }, included: ["Pita Bread", "Meze Platter"] },
   ],
   category_items: {
     protein: [
