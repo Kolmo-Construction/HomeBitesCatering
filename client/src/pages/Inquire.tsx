@@ -3461,6 +3461,10 @@ export default function Inquire() {
         </div>
       )}
 
+      {/* Cocktail / appetizer hour + main meal — hidden for food trucks, which
+          use their own Service Start / End window set in Truck Logistics. */}
+      {form.serviceType !== "food_truck" && (
+        <>
       <Separator />
 
       {/* Cocktail / appetizer hour */}
@@ -3559,6 +3563,8 @@ export default function Inquire() {
             </div>
           </div>
         )}
+        </>
+      )}
     </div>
   );
   };
