@@ -25,7 +25,15 @@ import {
   equipmentCategories,
   equipmentItemsTable,
   pricingConfig,
+  // Tables the action tools write to / read from
+  opportunities,
+  communications,
+  quotes,
+  contracts,
 } from "@shared/schema";
+import { randomBytes } from "node:crypto";
+import { sendEmail } from "./utils/email";
+import { quoteSentEmail } from "./utils/emailTemplates";
 import { calculateShoppingListForInquiry } from "./utils/shoppingList";
 import { getRecipeCostBreakdown } from "./utils/menuMargin";
 import { storage } from "./storage";
@@ -555,6 +563,196 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════
+  // Lifecycle action tools — the agent can DO things, not just read them.
+  // Most of these are multi-click workflows in the admin UI today.
+  // ═══════════════════════════════════════════════════════════════════════
+  {
+    type: "function",
+    function: {
+      name: "update_event",
+      description:
+        "Patch fields on an event. Use for 'bump guest count to 125', 'change event 47 date to Sat Sept 12', 'mark event in progress', 'add note about gluten-free table', 'update venue to The Sanctuary'. Accepts any subset of fields. Dates accepted as ISO-8601.",
+      parameters: {
+        type: "object",
+        properties: {
+          eventId: { type: "number", description: "events.id" },
+          status: { type: "string", enum: ["confirmed", "in_progress", "completed", "cancelled"] },
+          eventDate: { type: "string", description: "ISO date (YYYY-MM-DD or full ISO)" },
+          startTime: { type: "string", description: "ISO datetime" },
+          endTime: { type: "string", description: "ISO datetime" },
+          guestCount: { type: "number" },
+          venue: { type: "string" },
+          notes: { type: "string" },
+        },
+        required: ["eventId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "mark_event_completed",
+      description:
+        "Flip an event to status=completed and stamp completedAt. Use for 'mark the Smith wedding done' or 'close out event 47'. Downstream cron then fires the review-request email. Destructive-ish — ask the chef to confirm for cancelled/future events.",
+      parameters: {
+        type: "object",
+        properties: {
+          eventId: { type: "number" },
+        },
+        required: ["eventId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_opportunity_status",
+      description:
+        "Move an opportunity through the pipeline (new, qualified, quoted, booked, lost, won, paused). Use for 'mark opp 23 booked', 'move the Johnson opp to qualified', 'this one's a loss'.",
+      parameters: {
+        type: "object",
+        properties: {
+          opportunityId: { type: "number" },
+          status: {
+            type: "string",
+            enum: ["new", "qualified", "quoted", "booked", "won", "lost", "paused"],
+          },
+          reason: { type: "string", description: "Optional note appended to opportunity.notes" },
+        },
+        required: ["opportunityId", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "pause_opportunity_drip",
+      description:
+        "Stop scheduled drip follow-ups for an opportunity. Use when the customer asked for time, went silent intentionally, or booked through another channel.",
+      parameters: {
+        type: "object",
+        properties: {
+          opportunityId: { type: "number" },
+          reason: { type: "string", description: "Free-text reason (e.g. 'customer on vacation')" },
+        },
+        required: ["opportunityId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resume_opportunity_drip",
+      description:
+        "Re-enable drip follow-ups on an opportunity that was previously paused.",
+      parameters: {
+        type: "object",
+        properties: {
+          opportunityId: { type: "number" },
+        },
+        required: ["opportunityId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_communication",
+      description:
+        "Record a phone call, SMS, email, or in-person chat on a client's / opportunity's / event's timeline. Use after Mike says 'called Sarah, she wants Sept 12' or 'texted the Smiths about the cake'. Does NOT send anything — just logs what already happened.",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: { type: "number" },
+          opportunityId: { type: "number" },
+          eventId: { type: "number" },
+          type: { type: "string", enum: ["call", "sms", "email", "in_person", "note"], description: "Default: note" },
+          direction: { type: "string", enum: ["incoming", "outgoing", "internal"], description: "Default: outgoing" },
+          subject: { type: "string" },
+          body: { type: "string", description: "What happened — one or two sentences is fine" },
+        },
+        required: ["body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_quote_to_customer",
+      description:
+        "Mark a draft quote as sent, generate its public viewToken if missing, and email the link to the customer using the quote_sent template. Use when Mike says 'send quote 42 to the customer' — only call this for quotes currently in 'draft' status.",
+      parameters: {
+        type: "object",
+        properties: {
+          quoteId: { type: "number" },
+        },
+        required: ["quoteId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_contract",
+      description:
+        "Ensure a contract exists for an accepted quote, then trigger the BoldSign send. Use when Mike says 'send the contract for quote 42' after a customer accepted.",
+      parameters: {
+        type: "object",
+        properties: {
+          quoteId: { type: "number" },
+        },
+        required: ["quoteId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "promote_inquiry_to_opportunity",
+      description:
+        "For inquiries where auto-quote skipped (custom menu, high complexity, weird guest count, etc.), create the client + opportunity rows so Mike can draft a quote from the pipeline. Does NOT draft a quote itself — use create_quote_from_inquiry for that.",
+      parameters: {
+        type: "object",
+        properties: {
+          inquiryId: { type: "number" },
+        },
+        required: ["inquiryId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_quote_from_inquiry",
+      description:
+        "Build a draft quote from an existing inquiry, bypassing the auto-quote AI gates. Use when Mike wants a draft for a custom/complex/large event the auto-quote skipped. Creates the client + opportunity if not already present. Quote is created in 'draft' status — Mike reviews then calls send_quote_to_customer.",
+      parameters: {
+        type: "object",
+        properties: {
+          inquiryId: { type: "number" },
+          menuTheme: { type: "string", description: "Override the inquiry's menuTheme if needed" },
+          menuTier: { type: "string", description: "Override tier (bronze/silver/gold/diamond)" },
+        },
+        required: ["inquiryId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_client_full_history",
+      description:
+        "Return all touchpoints for one client: inquiries, opportunities, quotes, events, communications — sorted by time. One prompt to replace 6+ page visits. Use for 'what have we done with Sarah Johnson?' or 'walk me through the Smith file'.",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: { type: "number" },
+          email: { type: "string", description: "Alternative lookup if clientId unknown" },
+        },
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -621,6 +819,21 @@ const toolHandlers: Record<string, ToolHandler> = {
             "what's in my follow-up inbox?",
             "draft a reply for item X",
             "mark item Y as handled",
+          ],
+        },
+        {
+          name: "Pipeline actions (update in one sentence)",
+          examples: [
+            "bump event 47's guest count to 125",
+            "change event 47's date to Saturday Sept 12",
+            "mark the Smith wedding as completed",
+            "move opp 23 to booked — quote accepted verbally",
+            "pause drip on opp 41 (customer's on vacation)",
+            "log a call with Sarah — she confirmed Sept 12 for tasting",
+            "send quote 42 to the customer",
+            "promote inquiry 58 to an opportunity",
+            "draft a quote for inquiry 58 at Silver Italian",
+            "walk me through Sarah Johnson's full history",
           ],
         },
       ],
@@ -1581,6 +1794,507 @@ const toolHandlers: Record<string, ToolHandler> = {
       row: rows[0],
     };
   },
+
+  // ==========================================================================
+  // Lifecycle action handlers
+  // ==========================================================================
+
+  async update_event(args, _ctx) {
+    const id = Number(args?.eventId);
+    if (!Number.isFinite(id)) return { error: "eventId required." };
+    const patch: Record<string, any> = {};
+    const copy = (k: string) => {
+      if (args?.[k] !== undefined && args?.[k] !== null && args?.[k] !== "") {
+        patch[k] = args[k];
+      }
+    };
+    copy("status"); copy("venue"); copy("notes");
+    if (typeof args?.guestCount === "number") patch.guestCount = args.guestCount;
+    if (args?.eventDate) patch.eventDate = new Date(args.eventDate);
+    if (args?.startTime) patch.startTime = new Date(args.startTime);
+    if (args?.endTime) patch.endTime = new Date(args.endTime);
+    if (Object.keys(patch).length === 0) return { error: "No fields provided to update." };
+    const updated = await storage.updateEvent(id, patch as any);
+    if (!updated) return { error: `Event ${id} not found.` };
+    return {
+      ok: true,
+      id: updated.id,
+      updated: Object.keys(patch),
+      message: `Event #${id} updated: ${Object.keys(patch).join(", ")}.`,
+      link: `/events/${id}`,
+    };
+  },
+
+  async mark_event_completed(args, _ctx) {
+    const id = Number(args?.eventId);
+    if (!Number.isFinite(id)) return { error: "eventId required." };
+    const [current] = await db.select().from(events).where(eq(events.id, id));
+    if (!current) return { error: `Event ${id} not found.` };
+    if (current.status === "completed") {
+      return { ok: true, id, message: "Event was already marked completed." };
+    }
+    const now = new Date();
+    const updated = await storage.updateEvent(id, {
+      status: "completed",
+      completedAt: now,
+      updatedAt: now,
+    } as any);
+    return {
+      ok: true,
+      id,
+      message: `Event #${id} marked completed. Review-request email will fire via cron on the day after the event.`,
+      link: `/events/${id}`,
+    };
+  },
+
+  async update_opportunity_status(args, _ctx) {
+    const id = Number(args?.opportunityId);
+    const status = String(args?.status || "").trim();
+    if (!Number.isFinite(id)) return { error: "opportunityId required." };
+    if (!status) return { error: "status required." };
+    const [existing] = await db
+      .select()
+      .from(opportunities)
+      .where(eq(opportunities.id, id));
+    if (!existing) return { error: `Opportunity ${id} not found.` };
+    const now = new Date();
+    const newNotes = args?.reason
+      ? [existing.notes, `[${now.toISOString().slice(0, 10)}] Status → ${status}: ${args.reason}`]
+          .filter(Boolean)
+          .join("\n")
+      : existing.notes;
+    const [updated] = await db
+      .update(opportunities)
+      .set({
+        status: status as any,
+        statusChangedAt: now,
+        updatedAt: now,
+        ...(newNotes !== existing.notes ? { notes: newNotes } : {}),
+      })
+      .where(eq(opportunities.id, id))
+      .returning();
+    return {
+      ok: true,
+      id: updated.id,
+      previousStatus: existing.status,
+      status: updated.status,
+      link: `/opportunities/${id}`,
+    };
+  },
+
+  async pause_opportunity_drip(args, _ctx) {
+    const id = Number(args?.opportunityId);
+    if (!Number.isFinite(id)) return { error: "opportunityId required." };
+    const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, id));
+    if (!opp) return { error: `Opportunity ${id} not found.` };
+    if (opp.followUpSequencePausedAt) {
+      return { ok: true, id, message: `Drip was already paused for opp #${id}.` };
+    }
+    const now = new Date();
+    await db
+      .update(opportunities)
+      .set({ followUpSequencePausedAt: now, updatedAt: now })
+      .where(eq(opportunities.id, id));
+    return {
+      ok: true,
+      id,
+      reason: args?.reason ?? null,
+      message: `Drip paused for opp #${id}.`,
+      link: `/opportunities/${id}`,
+    };
+  },
+
+  async resume_opportunity_drip(args, _ctx) {
+    const id = Number(args?.opportunityId);
+    if (!Number.isFinite(id)) return { error: "opportunityId required." };
+    const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, id));
+    if (!opp) return { error: `Opportunity ${id} not found.` };
+    const now = new Date();
+    await db
+      .update(opportunities)
+      .set({ followUpSequencePausedAt: null, updatedAt: now })
+      .where(eq(opportunities.id, id));
+    return {
+      ok: true,
+      id,
+      message: `Drip resumed for opp #${id}.`,
+      link: `/opportunities/${id}`,
+    };
+  },
+
+  async log_communication(args, _ctx) {
+    const body = String(args?.body || "").trim();
+    if (!body) return { error: "body required." };
+    const hasAnchor =
+      args?.clientId || args?.opportunityId || args?.eventId;
+    if (!hasAnchor) {
+      return { error: "Provide clientId, opportunityId, or eventId to anchor the log." };
+    }
+    const now = new Date();
+    const [row] = await db
+      .insert(communications)
+      .values({
+        clientId: args?.clientId ?? null,
+        opportunityId: args?.opportunityId ?? null,
+        eventId: args?.eventId ?? null,
+        type: args?.type || "note",
+        direction: args?.direction || "outgoing",
+        source: "chat_agent",
+        timestamp: now,
+        subject: (args?.subject ? String(args.subject) : null) as any,
+        bodyRaw: body,
+        bodySummary: body.slice(0, 280),
+        metaData: { loggedViaAgent: true },
+      } as any)
+      .returning({ id: communications.id });
+    return {
+      ok: true,
+      id: row?.id,
+      message: `Logged ${args?.type || "note"} on the timeline.`,
+    };
+  },
+
+  async send_quote_to_customer(args, _ctx) {
+    const id = Number(args?.quoteId);
+    if (!Number.isFinite(id)) return { error: "quoteId required." };
+    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+    if (!quote) return { error: `Quote ${id} not found.` };
+    if (quote.status !== "draft") {
+      return {
+        error: `Quote ${id} is in '${quote.status}' — only draft quotes can be sent. Tell Mike to check the quote page.`,
+      };
+    }
+    const now = new Date();
+    const viewToken = quote.viewToken || randomBytes(24).toString("base64url");
+    const [updated] = await db
+      .update(quotes)
+      .set({
+        status: "sent",
+        sentAt: quote.sentAt ?? now,
+        viewToken,
+        updatedAt: now,
+      })
+      .where(eq(quotes.id, id))
+      .returning();
+    const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+    const baseUrl =
+      process.env.HOMEBITES_PUBLIC_BASE_URL ||
+      "https://homebitescatering-production.up.railway.app";
+    const publicUrl = `${baseUrl}/quote/${viewToken}`;
+    let emailSent = false;
+    if (client?.email) {
+      const template = quoteSentEmail({
+        customerFirstName: client.firstName || "there",
+        eventType: quote.eventType,
+        eventDate: quote.eventDate,
+        guestCount: quote.guestCount,
+        publicQuoteUrl: publicUrl,
+      });
+      const result = await sendEmail({
+        to: client.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+        clientId: client.id,
+        templateKey: "quote_sent",
+      });
+      emailSent = result.sent;
+    }
+    return {
+      ok: true,
+      id: updated.id,
+      publicUrl,
+      emailSent,
+      emailRecipient: client?.email || null,
+      message: emailSent
+        ? `Quote #${id} sent to ${client?.email}.`
+        : `Quote #${id} marked sent. Email was not delivered (no client email on file or email provider not configured).`,
+      link: `/quotes/${id}`,
+    };
+  },
+
+  async send_contract(args, _ctx) {
+    const id = Number(args?.quoteId);
+    if (!Number.isFinite(id)) return { error: "quoteId required." };
+    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+    if (!quote) return { error: `Quote ${id} not found.` };
+    if (quote.status !== "accepted") {
+      return {
+        error: `Quote ${id} hasn't been accepted yet (status='${quote.status}'). Contracts only go out after acceptance.`,
+      };
+    }
+    const [existing] = await db
+      .select()
+      .from(contracts)
+      .where(eq(contracts.quoteId, id));
+    if (!existing) {
+      return {
+        error: `No contract row exists for quote ${id}. Open the quote in the admin and hit 'Send Contract' there — the agent can't mint and send in one step yet.`,
+      };
+    }
+    if (existing.status === "sent" || existing.sentAt) {
+      return {
+        ok: true,
+        id: existing.id,
+        message: `Contract #${existing.id} already sent for quote ${id}.`,
+        link: `/quotes/${id}`,
+      };
+    }
+    return {
+      error: `Contract #${existing.id} is in '${existing.status}'. Use the admin quote page to trigger the BoldSign send — the signature flow needs a real request context.`,
+      link: `/quotes/${id}`,
+    };
+  },
+
+  async promote_inquiry_to_opportunity(args, _ctx) {
+    const id = Number(args?.inquiryId);
+    if (!Number.isFinite(id)) return { error: "inquiryId required." };
+    const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, id));
+    if (!inq) return { error: `Inquiry ${id} not found.` };
+    if (inq.opportunityId) {
+      return {
+        ok: true,
+        alreadyLinked: true,
+        opportunityId: inq.opportunityId,
+        message: `Inquiry already linked to opportunity #${inq.opportunityId}.`,
+        link: `/opportunities/${inq.opportunityId}`,
+      };
+    }
+    const [existingClient] = await db
+      .select()
+      .from(clients)
+      .where(and(eq(clients.email, inq.email), isNull(clients.deletedAt)))
+      .limit(1);
+    const billing: any = inq.billingAddress || {};
+    const client =
+      existingClient ??
+      (
+        await db
+          .insert(clients)
+          .values({
+            firstName: inq.firstName,
+            lastName: inq.lastName,
+            email: inq.email,
+            phone: inq.phone || undefined,
+            company: inq.companyName || undefined,
+            address: billing?.street || undefined,
+            city: billing?.city || undefined,
+            state: billing?.state || undefined,
+            zip: billing?.zip || undefined,
+            type: "prospect",
+          })
+          .returning()
+      )[0];
+    const [opp] = await db
+      .insert(opportunities)
+      .values({
+        clientId: client.id,
+        firstName: inq.firstName,
+        lastName: inq.lastName,
+        email: inq.email,
+        phone: inq.phone || undefined,
+        eventType: inq.eventType,
+        eventDate: inq.eventDate,
+        guestCount: inq.guestCount,
+        venue: inq.venueName || undefined,
+        notes: [
+          inq.specialRequests,
+          inq.menuTheme ? `Menu: ${inq.menuTheme} (${inq.menuTier ?? ""})` : null,
+          `[Promoted from inquiry #${inq.id} via chat agent]`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        status: "qualified",
+        opportunitySource: inq.source || "website",
+      } as any)
+      .returning();
+    await db
+      .update(inquiries)
+      .set({ opportunityId: opp.id, updatedAt: new Date() })
+      .where(eq(inquiries.id, id));
+    return {
+      ok: true,
+      clientId: client.id,
+      opportunityId: opp.id,
+      message: `Created opportunity #${opp.id} for ${inq.firstName} ${inq.lastName}.`,
+      link: `/opportunities/${opp.id}`,
+    };
+  },
+
+  async create_quote_from_inquiry(args, _ctx) {
+    const id = Number(args?.inquiryId);
+    if (!Number.isFinite(id)) return { error: "inquiryId required." };
+    const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, id));
+    if (!inq) return { error: `Inquiry ${id} not found.` };
+    if (inq.quoteId) {
+      return {
+        ok: true,
+        alreadyDrafted: true,
+        quoteId: inq.quoteId,
+        message: `Inquiry already has quote #${inq.quoteId}.`,
+        link: `/quotes/${inq.quoteId}`,
+      };
+    }
+    // Ensure opportunity + client exist (reuse the promote logic inline).
+    let clientId: number;
+    let opportunityId: number;
+    if (inq.opportunityId) {
+      const [opp] = await db
+        .select()
+        .from(opportunities)
+        .where(eq(opportunities.id, inq.opportunityId));
+      if (!opp) return { error: `Linked opportunity ${inq.opportunityId} missing.` };
+      opportunityId = opp.id;
+      clientId = opp.clientId!;
+    } else {
+      const promoted: any = await toolHandlers.promote_inquiry_to_opportunity(
+        { inquiryId: id },
+        _ctx,
+      );
+      if (promoted?.error) return promoted;
+      clientId = promoted.clientId;
+      opportunityId = promoted.opportunityId;
+    }
+    const menuTheme = args?.menuTheme || inq.menuTheme;
+    const menuTier = args?.menuTier || inq.menuTier;
+    const proposal: any = {
+      firstName: inq.firstName,
+      lastName: inq.lastName,
+      eventType: inq.eventType,
+      eventDate: inq.eventDate,
+      guestCount: inq.guestCount,
+      menuTheme,
+      menuTier,
+      serviceType: inq.serviceType,
+      serviceStyle: inq.serviceStyle,
+      specialRequests: inq.specialRequests,
+    };
+    const [draft] = await db
+      .insert(quotes)
+      .values({
+        clientId,
+        opportunityId,
+        eventType: inq.eventType,
+        eventDate: inq.eventDate,
+        guestCount: inq.guestCount,
+        venue: inq.venueName || null,
+        menuTheme,
+        menuTier,
+        status: "draft",
+        autoGenerated: false,
+        proposal,
+        subtotal: inq.estimatedSubtotalCents ?? 0,
+        serviceFee: inq.estimatedServiceFeeCents ?? 0,
+        tax: inq.estimatedTaxCents ?? 0,
+        total: inq.estimatedTotalCents ?? 0,
+        notes: `[Drafted from inquiry #${inq.id} via chat agent]`,
+      } as any)
+      .returning();
+    await db
+      .update(inquiries)
+      .set({ quoteId: draft.id, updatedAt: new Date() })
+      .where(eq(inquiries.id, id));
+    return {
+      ok: true,
+      quoteId: draft.id,
+      opportunityId,
+      clientId,
+      message: `Drafted quote #${draft.id}. Review it, then tell me to send it.`,
+      link: `/quotes/${draft.id}`,
+    };
+  },
+
+  async get_client_full_history(args, _ctx) {
+    let clientId = Number(args?.clientId);
+    if (!Number.isFinite(clientId) && args?.email) {
+      const [row] = await db
+        .select({ id: clients.id })
+        .from(clients)
+        .where(and(eq(clients.email, String(args.email).toLowerCase()), isNull(clients.deletedAt)))
+        .limit(1);
+      if (!row) return { error: `No client found for email ${args.email}.` };
+      clientId = row.id;
+    }
+    if (!Number.isFinite(clientId)) return { error: "clientId or email required." };
+    const [client] = await db.select().from(clients).where(eq(clients.id, clientId));
+    if (!client) return { error: `Client ${clientId} not found.` };
+    // Inquiries don't have a direct clientId column — match by email (same
+    // shape clients.email uses). Matches the admin's "everyone named X" view.
+    const [inqRows, oppRows, quoteRows, eventRows, commRows] = await Promise.all([
+      db
+        .select()
+        .from(inquiries)
+        .where(sql`lower(${inquiries.email}) = ${String(client.email).toLowerCase()}`),
+      db.select().from(opportunities).where(eq(opportunities.clientId, clientId)),
+      db.select().from(quotes).where(eq(quotes.clientId, clientId)),
+      db.select().from(events).where(eq(events.clientId, clientId)),
+      db
+        .select()
+        .from(communications)
+        .where(eq(communications.clientId, clientId))
+        .orderBy(sql`${communications.timestamp} DESC`)
+        .limit(25),
+    ]);
+    return {
+      client: {
+        id: client.id,
+        name: `${client.firstName} ${client.lastName}`.trim(),
+        email: client.email,
+        phone: client.phone,
+        company: client.company,
+        type: client.type,
+        link: `/clients/${client.id}`,
+      },
+      counts: {
+        inquiries: inqRows.length,
+        opportunities: oppRows.length,
+        quotes: quoteRows.length,
+        events: eventRows.length,
+        communications: commRows.length,
+      },
+      inquiries: inqRows.map((i) => ({
+        id: i.id,
+        date: i.submittedAt || i.createdAt,
+        eventDate: i.eventDate,
+        eventType: i.eventType,
+        guestCount: i.guestCount,
+        status: i.status,
+        link: `/inquiries?id=${i.id}`,
+      })),
+      opportunities: oppRows.map((o) => ({
+        id: o.id,
+        eventDate: o.eventDate,
+        eventType: o.eventType,
+        status: o.status,
+        link: `/opportunities/${o.id}`,
+      })),
+      quotes: quoteRows.map((q) => ({
+        id: q.id,
+        status: q.status,
+        total: q.total ? `$${(q.total / 100).toFixed(2)}` : null,
+        sentAt: q.sentAt,
+        acceptedAt: q.acceptedAt,
+        link: `/quotes/${q.id}`,
+      })),
+      events: eventRows.map((e) => ({
+        id: e.id,
+        date: e.eventDate,
+        eventType: e.eventType,
+        guestCount: e.guestCount,
+        venue: e.venue,
+        status: e.status,
+        link: `/events/${e.id}`,
+      })),
+      recentCommunications: commRows.map((c) => ({
+        id: c.id,
+        when: c.timestamp,
+        type: c.type,
+        direction: c.direction,
+        subject: c.subject,
+        preview: c.bodySummary,
+      })),
+    };
+  },
 };
 
 // ============================================================================
@@ -1598,17 +2312,24 @@ You can:
 - Get per-serving and scaled recipe cost (ingredient + labor).
 - Create new menus, menu items, and base ingredients.
 - **Manage Mike's follow-up inbox** — list pending items (list_followups), draft replies
-  (draft_followup_reply), and dismiss handled items (resolve_followup). Use these when
-  the chef asks "what do I need to follow up on?", "who am I behind on?", "what's
-  urgent today?", or similar.
+  (draft_followup_reply), and dismiss handled items (resolve_followup).
+- **Act on the pipeline** — update_event (status/date/guests/venue/notes), mark_event_completed,
+  update_opportunity_status, pause_opportunity_drip / resume_opportunity_drip,
+  log_communication (record a phone call, SMS, email, or in-person chat on the timeline).
+- **Send things** — send_quote_to_customer (draft → sent + email), send_contract (status check for now).
+- **Convert inquiries** — promote_inquiry_to_opportunity, create_quote_from_inquiry (for inquiries
+  where auto-quote skipped: custom menus, big guest counts, complex events).
+- **Pull a full client file** — get_client_full_history returns inquiries + opportunities +
+  quotes + events + recent communications in one call.
 
 Rules:
 - Always call the appropriate tool for live data; never invent prices, ids, or dates.
 - If the user asks what you can do ("what can you help with", "help", "commands", "capabilities", "menu", etc.), always call list_capabilities and present the result as a short bullet list grouped by topic with 2–3 example phrases per topic.
 - Keep answers short and scannable. Prefer bullet lists or compact tables.
-- When a tool result includes a "link" field, render ids as markdown links — e.g. "Event [#42](/events/42) · Sat Apr 25, 5:30 PM". Do the same for recipes (/recipes/:id) and base ingredients (/base-ingredients).
+- When a tool result includes a "link" field, render ids as markdown links — e.g. "Event [#42](/events/42) · Sat Apr 25, 5:30 PM". Do the same for recipes (/recipes/:id), base ingredients (/base-ingredients), quotes (/quotes/:id), opportunities (/opportunities/:id), and clients (/clients/:id).
 - Format dates human-readably (e.g. "Sat Apr 25, 5:30 PM"). Money values are dollars unless noted.
-- For create_*, update_*, confirm what you just did and include the id + link.
+- For create_*, update_*, send_*, mark_*, log_* — confirm what you just did and include the id + link.
+- For destructive or customer-facing actions (send_quote_to_customer, mark_event_completed, update_opportunity_status to 'lost' or 'cancelled', or updating a confirmed event's date) — propose what you're about to do and ask the chef to confirm before firing the tool, unless they said "do it" / "go ahead" in the same turn.
 - Before calling update_ingredient_price, prefer to first show the chef find_ingredient_usage results so they know the downstream impact — unless they've already asked to just change it.
 - If a tool returns an error, tell the chef plainly and suggest the next step.
 - If the request is ambiguous (e.g. "create a menu" with no name), ask one clarifying question instead of guessing.`;
