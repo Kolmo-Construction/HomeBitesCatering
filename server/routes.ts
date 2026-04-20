@@ -1949,19 +1949,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('Menu update request body:', JSON.stringify(req.body, null, 2));
-      
+
       // Parse and validate the incoming menu data
       const updateData = insertMenuSchema.partial().parse(req.body);
-      
+
       // Serialize recipes array to JSON if present
       const dataToStore: any = {
         ...updateData,
       };
-      
+
       if (updateData.recipes) {
         dataToStore.recipes = JSON.stringify(updateData.recipes);
       }
-      
+
+      // Auto-derive themeKey when the menu is being published to the inquiry
+      // form without one. The inquiry Step 4 picker filters by themeKey, so a
+      // menu with displayOnCustomerForm=true but themeKey=null would silently
+      // fail to appear. Derive from the menu name on the first publish.
+      if (updateData.displayOnCustomerForm === true && !updateData.themeKey) {
+        const existing = await storage.getMenu(menuId);
+        if (existing && !existing.themeKey) {
+          const nameForSlug = updateData.name ?? existing.name ?? "";
+          const slug = nameForSlug
+            .toLowerCase()
+            .replace(/[\s\-]+/g, "_")
+            .replace(/[^a-z0-9_]/g, "")
+            .replace(/_+/g, "_")
+            .replace(/^_|_$/g, "");
+          if (slug) {
+            dataToStore.themeKey = slug;
+            console.log(
+              `[menus] auto-derived themeKey="${slug}" for menu #${menuId} on first publish`,
+            );
+          }
+        }
+      }
+
       const updatedMenu = await storage.updateMenu(menuId, dataToStore);
       
       if (!updatedMenu) {
