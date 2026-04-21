@@ -95,11 +95,11 @@ export default function PublicQuote() {
   }, [data]);
 
   const acceptMutation = useMutation({
-    mutationFn: async (typedName: string) => {
+    mutationFn: async (payload: { typedName: string; acceptedDocs: Array<{ docId: string; version: string }> }) => {
       const res = await fetch(`/api/public/quote/${token}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ typedName }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -208,11 +208,12 @@ export default function PublicQuote() {
     <QuoteProposalView
       proposal={data.proposal}
       quoteStatus={data.quote.status}
+      quoteToken={token}
       mode="public"
       acceptFlowState={localStatus}
       acceptedEventUrl={eventPublicUrl}
       acceptedPortalUrl={portalUrl}
-      onAccept={(typedName) => acceptMutation.mutate(typedName)}
+      onAccept={(payload) => acceptMutation.mutate(payload)}
       onDecline={(payload) => declineMutation.mutate(payload)}
       onRequestInfo={handleRequestInfo}
       infoFlowState={infoFlowState}

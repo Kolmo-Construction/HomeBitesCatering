@@ -55,7 +55,20 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
   // back to deriving from the web theme so new event types don't have to
   // maintain two color sets. A future change to `preset.theme` automatically
   // reaches the PDF when pdfBranding is absent.
-  const palette = pdfBranding?.palette ?? derivePdfPaletteFromTheme(theme);
+  const basePalette = pdfBranding?.palette ?? derivePdfPaletteFromTheme(theme);
+  // Per-quote branding overrides. Hex strings from the admin drawer. Only
+  // override the keys the admin actually set; other palette slots stay on
+  // the preset so the PDF remains coherent.
+  const branding = (proposal as any).branding as
+    | { primary?: string | null; accent?: string | null; background?: string | null }
+    | null
+    | undefined;
+  const palette = {
+    ...basePalette,
+    ...(branding?.primary ? { primary: branding.primary, headerText: branding.primary } : {}),
+    ...(branding?.accent ? { accent: branding.accent } : {}),
+    ...(branding?.background ? { background: branding.background } : {}),
+  };
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "LETTER", margin: 50 });
@@ -294,10 +307,29 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
       }
     }
 
+    // ─── Custom Sections (admin-authored free-text blocks) ─────────────────
+    const customSections = (proposal as any).customSections as
+      | Array<{ title: string; body: string }>
+      | undefined;
+    if (customSections && customSections.length > 0) {
+      for (const s of customSections) {
+        if (!s || (!s.title?.trim() && !s.body?.trim())) continue;
+        doc.moveDown(0.6);
+        if (s.title) sectionHeader(s.title);
+        if (s.body) {
+          doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText)
+            .text(s.body, LEFT + 4, doc.y, { width: W - 8, lineGap: 2 });
+        }
+      }
+    }
+
     // ─── Totals panel (accent fill) ────────────────────────────────────────
     doc.moveDown(0.4);
     const pricing = proposal.pricing;
+    const discountCents = Math.max(0, (pricing as any).discountCents || 0);
+    const discountLabel = ((pricing as any).discountLabel as string | undefined) || "Discount";
     const totalsRows: Array<[string, number, boolean]> = [];
+    if (discountCents > 0) totalsRows.push([discountLabel, -discountCents, false]);
     if (pricing.subtotalCents) totalsRows.push(["Subtotal", pricing.subtotalCents, false]);
     if (pricing.serviceFeeCents) totalsRows.push(["Service Fee", pricing.serviceFeeCents, false]);
     if (pricing.taxCents) totalsRows.push(["Tax", pricing.taxCents, false]);
@@ -321,7 +353,8 @@ export async function generateQuotePDF(proposal: Proposal, quote: any, client: a
         doc.fontSize(10).font("Helvetica").fillColor(palette.bodyText);
       }
       doc.text(label, panelX + 12, rowY, { width: panelW / 2 });
-      doc.text(formatCents(cents), panelX + panelW / 2, rowY, { width: panelW / 2 - 12, align: "right" });
+      const display = cents < 0 ? `−${formatCents(-cents)}` : formatCents(cents);
+      doc.text(display, panelX + panelW / 2, rowY, { width: panelW / 2 - 12, align: "right" });
       rowY += rowH;
     }
     doc.y = panelY + panelH + 8;

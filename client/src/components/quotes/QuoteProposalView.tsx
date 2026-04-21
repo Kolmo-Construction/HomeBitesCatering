@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import { Helmet } from "react-helmet";
-import { AcceptanceDialog } from "@/components/quotes/AcceptanceDialog";
+import { AcceptanceDialog, type AcceptedDoc } from "@/components/quotes/AcceptanceDialog";
 import homebitesLogo from "@assets/homebites-logo.avif";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,8 +86,10 @@ export interface QuoteProposalViewProps {
   // Public mode — accept/decline handlers. The component owns the decline
   // form state internally and calls onDecline({ category, notes }) when the
   // customer confirms. Category is the structured P0-3 decline reason.
-  /** Called with the typed legal name once the customer signs in the dialog. */
-  onAccept?: (typedName: string) => void;
+  /** Called with the typed legal name + accepted doc list once the customer signs. */
+  onAccept?: (payload: { typedName: string; acceptedDocs: AcceptedDoc[] }) => void;
+  /** Public view token so the terms endpoint can tailor the alcohol clause. */
+  quoteToken?: string | null;
   onDecline?: (payload: { category: DeclineCategory | null; notes: string }) => void;
   acceptFlowState?: "idle" | "accepting" | "accepted" | "declining" | "declined";
   acceptedEventUrl?: string | null;
@@ -313,6 +315,7 @@ export default function QuoteProposalView({
   site = null,
   pdfUrl = null,
   shareUrl = null,
+  quoteToken = null,
 }: QuoteProposalViewProps) {
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -395,13 +398,23 @@ export default function QuoteProposalView({
     if (!onAccept) return;
     setShowAcceptDialog(true);
   };
-  const handleAcceptConfirm = (typedName: string) => {
+  const handleAcceptConfirm = (payload: { typedName: string; acceptedDocs: AcceptedDoc[] }) => {
     setShowAcceptDialog(false);
-    onAccept?.(typedName);
+    onAccept?.(payload);
   };
 
   const preset = getEventPreset(proposal.eventType);
-  const { copy, sections } = preset;
+  const { copy: presetCopy, sections } = preset;
+  // Merge per-quote section-label overrides with preset defaults.
+  const overrides = proposal.sectionLabelOverrides ?? {};
+  const copy = {
+    ...presetCopy,
+    proposalKicker: overrides.proposalKicker || presetCopy.proposalKicker,
+    acceptCtaHeadline: overrides.acceptCtaHeadline || presetCopy.acceptCtaHeadline,
+    acceptCtaBlurb: overrides.acceptCtaBlurb || presetCopy.acceptCtaBlurb,
+    closingSignoff: overrides.closingSignoff || presetCopy.closingSignoff,
+  };
+  const discountCents = Math.max(0, proposal.pricing.discountCents ?? 0);
   const personContext = {
     firstName: proposal.firstName,
     lastName: proposal.lastName,
@@ -412,7 +425,7 @@ export default function QuoteProposalView({
   const useHearts = sections.useHeartAccents;
 
   return (
-    <PageShell mode={mode} theme={preset.theme}>
+    <PageShell mode={mode} theme={preset.theme} branding={proposal.branding ?? null}>
       <Helmet>
         <title>
           {title} · {copy.proposalKicker} · Homebites
@@ -745,6 +758,34 @@ export default function QuoteProposalView({
         );
       })()}
 
+      {/* ═══════════════ CUSTOM SECTIONS ═══════════════ */}
+      {proposal.customSections && proposal.customSections.length > 0 && (
+        <>
+          {proposal.customSections
+            .filter((s) => (s.title && s.title.trim()) || (s.body && s.body.trim()))
+            .map((s, i) => (
+              <section
+                key={s.id ?? i}
+                className="mb-8 bg-white rounded-3xl border border-[color:var(--theme-border)] shadow-sm overflow-hidden"
+              >
+                <header className="px-8 pt-8 pb-4">
+                  <h2
+                    className="font-serif text-[28px] sm:text-3xl text-stone-900 leading-tight"
+                    style={{ fontVariationSettings: "'opsz' 144" }}
+                  >
+                    {s.title || "Note"}
+                  </h2>
+                </header>
+                <div className="px-8 pb-8">
+                  <p className="text-stone-800 text-base leading-relaxed whitespace-pre-wrap">
+                    {s.body}
+                  </p>
+                </div>
+              </section>
+            ))}
+        </>
+      )}
+
       {/* ═══════════════ CHEF NOTE ═══════════════ */}
       {(() => {
         // Prefer per-quote override, else use siteConfig.chef, else skip.
@@ -856,6 +897,16 @@ export default function QuoteProposalView({
                 value={formatCents(it.price * it.quantity)}
               />
             ))}
+          {discountCents > 0 && (
+            <Row
+              label={
+                proposal.pricing.discountLabel
+                  ? `Discount · ${proposal.pricing.discountLabel}`
+                  : "Discount"
+              }
+              value={`−${formatCents(discountCents)}`}
+            />
+          )}
           {serviceFeeCents > 0 && <Row label="Service fee" value={formatCents(serviceFeeCents)} />}
           <Row label="Subtotal" value={formatCents(subtotalCents)} muted />
           <Row label="Tax" value={formatCents(taxCents)} muted />
@@ -1230,6 +1281,7 @@ export default function QuoteProposalView({
         onOpenChange={setShowAcceptDialog}
         expectedName={title || `${proposal.firstName ?? ""} ${proposal.lastName ?? ""}`.trim()}
         submitting={acceptFlowState === "accepting"}
+        quoteToken={quoteToken}
         onConfirm={handleAcceptConfirm}
       />
     </PageShell>
@@ -1242,22 +1294,31 @@ function PageShell({
   children,
   mode,
   theme,
+  branding,
 }: {
   children: React.ReactNode;
   mode: QuoteViewMode;
   theme: EventTheme;
+  branding: Proposal["branding"];
 }) {
   const themeVars = applyThemeCSS(theme);
+  // Per-quote branding overrides the preset palette. CSS vars fall back to
+  // the preset when individual keys are unset.
+  const overrideVars: Record<string, string> = {};
+  if (branding?.primary) overrideVars["--theme-primary"] = branding.primary;
+  if (branding?.accent) overrideVars["--theme-accent"] = branding.accent;
+  if (branding?.background) overrideVars["--theme-bg"] = branding.background;
+  const logoSrc = branding?.logoUrl || homebitesLogo;
   return (
     <div
       className="min-h-screen bg-[var(--theme-bg)] pb-20"
-      style={{ ...themeVars, fontFeatureSettings: '"ss01", "ss02"' }}
+      style={{ ...themeVars, ...overrideVars, fontFeatureSettings: '"ss01", "ss02"' }}
     >
       {/* Homebites branded header — rendered in both modes so the admin sees
           exactly what the customer sees (plus the preview bar below). */}
       <header className="w-full bg-white/85 backdrop-blur-sm border-b border-[color:var(--theme-border)] sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
-          <img src={homebitesLogo} alt="Homebites" className="h-10" />
+          <img src={logoSrc} alt="Homebites" className="h-10 max-w-[180px] object-contain" />
           <div>
             <p
               className="font-serif font-semibold text-lg leading-tight text-stone-900"

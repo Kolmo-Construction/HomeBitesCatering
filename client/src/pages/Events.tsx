@@ -88,6 +88,7 @@ interface EventRow {
   status: "confirmed" | "in_progress" | "in-progress" | "completed" | "cancelled";
   notes: string | null;
   completedTasks: string[] | null;
+  leftoverReleaseSignedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1097,6 +1098,34 @@ function OverviewTab({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <ChangeRequestsCard eventId={event.id} />
+      <Card
+        className={`md:col-span-2 ${
+          event.leftoverReleaseSignedAt
+            ? "border-emerald-300 bg-emerald-50/50"
+            : "border-stone-200 bg-stone-50"
+        }`}
+      >
+        <CardContent className="p-3 text-sm flex items-center justify-between gap-3">
+          <div>
+            <span className="font-semibold">Leftover food release: </span>
+            {event.leftoverReleaseSignedAt ? (
+              <span className="text-emerald-800">
+                signed on{" "}
+                {new Date(event.leftoverReleaseSignedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}{" "}
+                — staff may send leftovers home with the customer.
+              </span>
+            ) : (
+              <span className="text-stone-700">
+                not signed — do <strong>not</strong> send leftovers home; dispose on site.
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       {hasDietaryRedFlags && (
         <Card className="md:col-span-2 border-red-300 bg-red-50">
           <CardContent className="p-4">

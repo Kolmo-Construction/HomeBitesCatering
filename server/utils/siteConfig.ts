@@ -244,3 +244,39 @@ export function getTermsConfig(): TermsConfig {
     body: process.env.HOMEBITES_TERMS_BODY || DEFAULT_TERMS_V1,
   };
 }
+
+// Optional leftover-food-release waiver. Separate from the main T&Cs because
+// the customer can sign the booking WITHOUT accepting this one — if unsigned,
+// the kitchen simply does not send leftovers home with them.
+export interface LeftoverReleaseConfig {
+  version: string;
+  heading: string;
+  body: string;
+}
+
+const DEFAULT_LEFTOVER_RELEASE_V1 = `By accepting this release, I acknowledge that any leftover food taken home after the event is consumed at my own risk.
+
+1. Temperature & time. Homebites Catering prepares and serves food under safe handling standards for the duration of the event. Once food leaves the event (whether taken by me, a guest, or a designated pickup person), Homebites no longer controls its temperature, storage, or timing. Leftovers become perishable quickly and should be refrigerated within two hours of service.
+
+2. My responsibility. I am responsible for transporting, refrigerating, reheating, and consuming leftover food safely. Guests under my care are also my responsibility with respect to any leftovers they take home.
+
+3. Allergens. Leftovers are not separately labeled for allergens after service. If anyone consuming leftovers has a food allergy, I agree to confirm ingredients with a responsible member of my party — not to rely on the event menu sheet alone.
+
+4. Release. I release Homebites Catering, its staff, and its contractors from liability for any foodborne illness, allergic reaction, or other adverse outcome arising from the consumption of leftover food after it leaves the event premises.
+
+5. Opt-in. This release is optional. If I do not accept it, Homebites will not send leftover food home and will dispose of any remaining food after the event.`;
+
+export function getLeftoverReleaseConfig(): LeftoverReleaseConfig {
+  return {
+    version: process.env.HOMEBITES_LEFTOVER_RELEASE_VERSION || "v1-2026-04",
+    heading: process.env.HOMEBITES_LEFTOVER_RELEASE_HEADING || "Leftover Food Release of Liability",
+    body: process.env.HOMEBITES_LEFTOVER_RELEASE_BODY || DEFAULT_LEFTOVER_RELEASE_V1,
+  };
+}
+
+// The alcohol-service clause. Appended to the main T&Cs only when the quote
+// includes bar service — the paragraph is meaningless (and confusing) when
+// the customer isn't booking alcohol.
+export const ALCOHOL_SERVICE_CLAUSE = `ALCOHOL SERVICE POLICIES.
+Bartending attire: our bartenders wear appropriate professional attire (black pants, white or black shirt) unless otherwise requested. Special attire requests may incur an additional fee.
+Alcohol service: guests are not permitted to serve their own alcohol under any circumstance. Homebites reserves the right to refuse service to any guest who appears intoxicated. Homebites is not liable for actions of guests who obtain alcohol from unauthorized sources at the event.`;

@@ -69,19 +69,21 @@ export default function ProposalEditDrawer({
     if (open) setDraft(initialProposal);
   }, [open, initialProposal]);
 
-  // Auto-compute totals from line items + service fee + tax on every edit so
-  // the admin can just tweak prices and see the total update live.
+  // Auto-compute totals from line items + service fee - discount + tax on every
+  // edit so the admin can just tweak prices and see the total update live.
+  // Matches the server-side recompute in PATCH /api/quotes/:id/proposal.
   const computed = useMemo(() => {
     const lineSubtotal = draft.lineItems.reduce(
       (sum, it) => sum + it.price * it.quantity,
       0,
     );
+    const discount = Math.max(0, draft.pricing.discountCents ?? 0);
     const serviceFee = draft.pricing.serviceFeeCents ?? 0;
-    const subtotal = lineSubtotal + serviceFee;
+    const subtotal = Math.max(0, lineSubtotal - discount + serviceFee);
     const tax = draft.pricing.taxCents;
     const total = subtotal + tax;
-    return { subtotal, total };
-  }, [draft.lineItems, draft.pricing.serviceFeeCents, draft.pricing.taxCents]);
+    return { lineSubtotal, subtotal, total };
+  }, [draft.lineItems, draft.pricing.serviceFeeCents, draft.pricing.taxCents, draft.pricing.discountCents]);
 
   const update = <K extends keyof Proposal>(key: K, value: Proposal[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -204,10 +206,13 @@ export default function ProposalEditDrawer({
         </SheetHeader>
 
         <Tabs defaultValue="basics" className="mt-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-7 text-xs">
             <TabsTrigger value="basics">Basics</TabsTrigger>
             <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="pricing">Pricing</TabsTrigger>
+            <TabsTrigger value="copy">Copy</TabsTrigger>
+            <TabsTrigger value="brand">Brand</TabsTrigger>
+            <TabsTrigger value="terms">Terms</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
           </TabsList>
 
@@ -599,6 +604,47 @@ export default function ProposalEditDrawer({
 
             <div className="border-t border-stone-200 pt-4 space-y-3">
               <div>
+                <Label htmlFor="discount">Discount</Label>
+                <p className="text-xs text-stone-500 mb-1.5">
+                  Subtracted from the line-item total before service fee and
+                  tax. Label shows on the customer page (e.g. &ldquo;Early-bird
+                  10%&rdquo;, &ldquo;Repeat-client comp&rdquo;).
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="relative col-span-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500">
+                      $
+                    </span>
+                    <Input
+                      id="discount"
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      className="pl-7"
+                      value={centsToDollars(draft.pricing.discountCents)}
+                      onChange={(e) =>
+                        updatePricing(
+                          "discountCents",
+                          e.target.value ? dollarsToCents(e.target.value) : undefined,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      placeholder="Label (optional) — shown to customer"
+                      value={draft.pricing.discountLabel ?? ""}
+                      onChange={(e) =>
+                        updatePricing(
+                          "discountLabel",
+                          e.target.value || undefined,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
                 <Label htmlFor="serviceFee">Service fee</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500">
@@ -659,6 +705,21 @@ export default function ProposalEditDrawer({
 
             <div className="border-t border-stone-200 pt-4">
               <div className="flex justify-between text-sm text-stone-600">
+                <span>Line items</span>
+                <span className="tabular-nums">${(computed.lineSubtotal / 100).toFixed(2)}</span>
+              </div>
+              {(draft.pricing.discountCents ?? 0) > 0 && (
+                <div className="flex justify-between text-sm text-emerald-700">
+                  <span>
+                    Discount
+                    {draft.pricing.discountLabel && ` · ${draft.pricing.discountLabel}`}
+                  </span>
+                  <span className="tabular-nums">
+                    −${((draft.pricing.discountCents ?? 0) / 100).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-stone-600">
                 <span>Subtotal</span>
                 <span className="tabular-nums">${(computed.subtotal / 100).toFixed(2)}</span>
               </div>
@@ -677,7 +738,420 @@ export default function ProposalEditDrawer({
             </div>
           </TabsContent>
 
-          {/* ═══════════════ NOTES ═══════════════ */}
+          {/* ═══════════════ COPY ═══════════════ */}
+          <TabsContent value="copy" className="space-y-6 mt-5">
+            <p className="text-xs text-stone-500">
+              Override the event-preset defaults for this specific quote. Leave
+              a field blank to fall back to the preset.
+            </p>
+
+            {/* What's Included list editor */}
+            <div className="border-t border-stone-200 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label>What&rsquo;s included</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    update("whatsIncluded", [...(draft.whatsIncluded ?? []), ""])
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add line
+                </Button>
+              </div>
+              <p className="text-xs text-stone-500 mb-2">
+                Bullet list shown between the menu and the investment total.
+                Empty list falls back to the service-style default.
+              </p>
+              <div className="space-y-2">
+                {(draft.whatsIncluded ?? []).map((line, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      className="flex-1"
+                      placeholder={`Included item ${i + 1}`}
+                      value={line}
+                      onChange={(e) => {
+                        const next = [...(draft.whatsIncluded ?? [])];
+                        next[i] = e.target.value;
+                        update("whatsIncluded", next);
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        update(
+                          "whatsIncluded",
+                          (draft.whatsIncluded ?? []).filter((_, idx) => idx !== i),
+                        )
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-stone-400" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Chef note override */}
+            <div className="border-t border-stone-200 pt-4 space-y-3">
+              <Label>Chef&rsquo;s note (override)</Label>
+              <p className="text-xs text-stone-500 -mt-1">
+                Replaces the default note assembled from site config. Leave
+                blank to keep the default.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Chef first name"
+                  value={draft.chefNote?.firstName ?? ""}
+                  onChange={(e) =>
+                    update("chefNote", {
+                      ...(draft.chefNote ?? { firstName: "", role: "", message: "" }),
+                      firstName: e.target.value,
+                    })
+                  }
+                />
+                <Input
+                  placeholder="Chef role (e.g. Chef & Owner)"
+                  value={draft.chefNote?.role ?? ""}
+                  onChange={(e) =>
+                    update("chefNote", {
+                      ...(draft.chefNote ?? { firstName: "", role: "", message: "" }),
+                      role: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <Input
+                placeholder="Photo URL (optional)"
+                value={draft.chefNote?.photoUrl ?? ""}
+                onChange={(e) =>
+                  update("chefNote", {
+                    ...(draft.chefNote ?? { firstName: "", role: "", message: "" }),
+                    photoUrl: e.target.value || null,
+                  })
+                }
+              />
+              <Textarea
+                rows={4}
+                placeholder="Personal note from the chef to this customer…"
+                value={draft.chefNote?.message ?? ""}
+                onChange={(e) =>
+                  update("chefNote", {
+                    ...(draft.chefNote ?? { firstName: "", role: "", message: "" }),
+                    message: e.target.value,
+                  })
+                }
+              />
+              {draft.chefNote && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => update("chefNote", null)}
+                >
+                  Clear override
+                </Button>
+              )}
+            </div>
+
+            {/* Testimonials */}
+            <div className="border-t border-stone-200 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label>Testimonials</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    update("testimonials", [
+                      ...(draft.testimonials ?? []),
+                      { quote: "", author: "" },
+                    ])
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-stone-500 mb-2">
+                Shown above the accept CTA. Empty list hides the section.
+              </p>
+              <div className="space-y-3">
+                {(draft.testimonials ?? []).map((t, i) => (
+                  <div
+                    key={i}
+                    className="space-y-2 rounded-md border bg-stone-50 p-3"
+                  >
+                    <Textarea
+                      rows={2}
+                      placeholder="Quote"
+                      value={t.quote}
+                      onChange={(e) => {
+                        const next = [...(draft.testimonials ?? [])];
+                        next[i] = { ...next[i], quote: e.target.value };
+                        update("testimonials", next);
+                      }}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Author"
+                        value={t.author}
+                        onChange={(e) => {
+                          const next = [...(draft.testimonials ?? [])];
+                          next[i] = { ...next[i], author: e.target.value };
+                          update("testimonials", next);
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Event type (optional)"
+                          value={t.eventType ?? ""}
+                          onChange={(e) => {
+                            const next = [...(draft.testimonials ?? [])];
+                            next[i] = { ...next[i], eventType: e.target.value || undefined };
+                            update("testimonials", next);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            update(
+                              "testimonials",
+                              (draft.testimonials ?? []).filter((_, idx) => idx !== i),
+                            )
+                          }
+                        >
+                          <Trash2 className="h-4 w-4 text-stone-400" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Section-label overrides */}
+            <div className="border-t border-stone-200 pt-4 space-y-3">
+              <Label>Section labels (optional overrides)</Label>
+              <Input
+                placeholder="Proposal kicker (e.g. YOUR PROPOSAL)"
+                value={draft.sectionLabelOverrides?.proposalKicker ?? ""}
+                onChange={(e) =>
+                  update("sectionLabelOverrides", {
+                    ...(draft.sectionLabelOverrides ?? {}),
+                    proposalKicker: e.target.value || undefined,
+                  })
+                }
+              />
+              <Input
+                placeholder="Accept CTA headline"
+                value={draft.sectionLabelOverrides?.acceptCtaHeadline ?? ""}
+                onChange={(e) =>
+                  update("sectionLabelOverrides", {
+                    ...(draft.sectionLabelOverrides ?? {}),
+                    acceptCtaHeadline: e.target.value || undefined,
+                  })
+                }
+              />
+              <Textarea
+                rows={2}
+                placeholder="Accept CTA blurb"
+                value={draft.sectionLabelOverrides?.acceptCtaBlurb ?? ""}
+                onChange={(e) =>
+                  update("sectionLabelOverrides", {
+                    ...(draft.sectionLabelOverrides ?? {}),
+                    acceptCtaBlurb: e.target.value || undefined,
+                  })
+                }
+              />
+              <Input
+                placeholder="Closing sign-off (e.g. With gratitude,)"
+                value={draft.sectionLabelOverrides?.closingSignoff ?? ""}
+                onChange={(e) =>
+                  update("sectionLabelOverrides", {
+                    ...(draft.sectionLabelOverrides ?? {}),
+                    closingSignoff: e.target.value || undefined,
+                  })
+                }
+              />
+            </div>
+          </TabsContent>
+
+          {/* ═══════════════ BRAND ═══════════════ */}
+          <TabsContent value="brand" className="space-y-5 mt-5">
+            <p className="text-xs text-stone-500">
+              Override the event-preset branding for this quote. Leave blank to
+              use the preset defaults (what most quotes should do).
+            </p>
+            <div>
+              <Label htmlFor="logoUrl">Logo URL</Label>
+              <Input
+                id="logoUrl"
+                placeholder="https://…/logo.png"
+                value={draft.branding?.logoUrl ?? ""}
+                onChange={(e) =>
+                  update("branding", {
+                    ...(draft.branding ?? {}),
+                    logoUrl: e.target.value || null,
+                  })
+                }
+              />
+              {draft.branding?.logoUrl && (
+                <div className="mt-2 rounded-md border bg-stone-50 p-2 flex items-center justify-center">
+                  <img
+                    src={draft.branding.logoUrl}
+                    alt="Logo preview"
+                    className="max-h-16 object-contain"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="brandPrimary">Primary</Label>
+                <div className="flex gap-1">
+                  <Input
+                    id="brandPrimary"
+                    type="color"
+                    className="w-12 p-1 h-10 shrink-0"
+                    value={draft.branding?.primary ?? "#8B7355"}
+                    onChange={(e) =>
+                      update("branding", {
+                        ...(draft.branding ?? {}),
+                        primary: e.target.value,
+                      })
+                    }
+                  />
+                  <Input
+                    className="flex-1"
+                    placeholder="#hex"
+                    value={draft.branding?.primary ?? ""}
+                    onChange={(e) =>
+                      update("branding", {
+                        ...(draft.branding ?? {}),
+                        primary: e.target.value || null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="brandAccent">Accent</Label>
+                <div className="flex gap-1">
+                  <Input
+                    id="brandAccent"
+                    type="color"
+                    className="w-12 p-1 h-10 shrink-0"
+                    value={draft.branding?.accent ?? "#E28C0A"}
+                    onChange={(e) =>
+                      update("branding", {
+                        ...(draft.branding ?? {}),
+                        accent: e.target.value,
+                      })
+                    }
+                  />
+                  <Input
+                    className="flex-1"
+                    placeholder="#hex"
+                    value={draft.branding?.accent ?? ""}
+                    onChange={(e) =>
+                      update("branding", {
+                        ...(draft.branding ?? {}),
+                        accent: e.target.value || null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="brandBg">Background</Label>
+                <div className="flex gap-1">
+                  <Input
+                    id="brandBg"
+                    type="color"
+                    className="w-12 p-1 h-10 shrink-0"
+                    value={draft.branding?.background ?? "#FDF6E3"}
+                    onChange={(e) =>
+                      update("branding", {
+                        ...(draft.branding ?? {}),
+                        background: e.target.value,
+                      })
+                    }
+                  />
+                  <Input
+                    className="flex-1"
+                    placeholder="#hex"
+                    value={draft.branding?.background ?? ""}
+                    onChange={(e) =>
+                      update("branding", {
+                        ...(draft.branding ?? {}),
+                        background: e.target.value || null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+            {draft.branding && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => update("branding", null)}
+              >
+                Reset to preset
+              </Button>
+            )}
+          </TabsContent>
+
+          {/* ═══════════════ TERMS ═══════════════ */}
+          <TabsContent value="terms" className="space-y-4 mt-5">
+            <p className="text-xs text-stone-500">
+              Replace the default T&Cs for this specific quote (e.g. a
+              corporate MSA, wedding rider, or waiver). Leave blank to use the
+              global T&Cs from site config.
+            </p>
+            <div>
+              <Label htmlFor="termsHeading">Heading (optional)</Label>
+              <Input
+                id="termsHeading"
+                placeholder="e.g. Corporate Services Agreement"
+                value={draft.termsOverride?.heading ?? ""}
+                onChange={(e) =>
+                  update("termsOverride", {
+                    body: draft.termsOverride?.body ?? "",
+                    heading: e.target.value || null,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="termsBody">Terms body</Label>
+              <Textarea
+                id="termsBody"
+                rows={14}
+                placeholder="Paste or type the full T&Cs that this customer will accept…"
+                value={draft.termsOverride?.body ?? ""}
+                onChange={(e) =>
+                  update("termsOverride", {
+                    heading: draft.termsOverride?.heading ?? null,
+                    body: e.target.value,
+                  })
+                }
+              />
+            </div>
+            {draft.termsOverride && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => update("termsOverride", null)}
+              >
+                Reset to default T&Cs
+              </Button>
+            )}
+          </TabsContent>
+
+          {/* ═══════════════ NOTES + CUSTOM SECTIONS ═══════════════ */}
           <TabsContent value="notes" className="space-y-5 mt-5">
             <div>
               <Label htmlFor="specialRequests">Special requests</Label>
@@ -696,8 +1170,7 @@ export default function ProposalEditDrawer({
             <div>
               <Label htmlFor="customerNotes">Internal / customer notes</Label>
               <p className="text-xs text-stone-500 mb-1.5">
-                Plain-text notes. Not currently rendered on the proposal page
-                but saved alongside for your records.
+                Plain-text notes. Saved alongside for your records.
               </p>
               <Textarea
                 id="customerNotes"
@@ -705,6 +1178,71 @@ export default function ProposalEditDrawer({
                 value={draft.customerNotes ?? ""}
                 onChange={(e) => update("customerNotes", e.target.value || null)}
               />
+            </div>
+            <div className="border-t border-stone-200 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label>Custom sections</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    update("customSections", [
+                      ...(draft.customSections ?? []),
+                      { id: `cs_${Date.now()}`, title: "", body: "" },
+                    ])
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add section
+                </Button>
+              </div>
+              <p className="text-xs text-stone-500 mb-2">
+                Free-text titled blocks rendered on the customer proposal
+                between What&rsquo;s Included and the investment total.
+              </p>
+              <div className="space-y-3">
+                {(draft.customSections ?? []).map((s, i) => (
+                  <div
+                    key={s.id ?? i}
+                    className="space-y-2 rounded-md border bg-stone-50 p-3"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        className="flex-1"
+                        placeholder="Section title"
+                        value={s.title}
+                        onChange={(e) => {
+                          const next = [...(draft.customSections ?? [])];
+                          next[i] = { ...next[i], title: e.target.value };
+                          update("customSections", next);
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          update(
+                            "customSections",
+                            (draft.customSections ?? []).filter((_, idx) => idx !== i),
+                          )
+                        }
+                      >
+                        <Trash2 className="h-4 w-4 text-stone-400" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      rows={4}
+                      placeholder="Section body (supports line breaks)"
+                      value={s.body}
+                      onChange={(e) => {
+                        const next = [...(draft.customSections ?? [])];
+                        next[i] = { ...next[i], body: e.target.value };
+                        update("customSections", next);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
         </Tabs>

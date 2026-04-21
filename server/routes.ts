@@ -52,7 +52,7 @@ import {
 import { filterQuote, filterQuotes, filterMenuItem, filterMenuItems } from './utils/dataFilters';
 import { buildProposalFromInquiry, buildProposalFromQuoteAlone } from './lib/proposalFromInquiry';
 import type { Proposal } from '@shared/proposal';
-import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent, getReviewConfig, getTermsConfig } from './utils/siteConfig';
+import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent, getReviewConfig, getTermsConfig, getLeftoverReleaseConfig, ALCOHOL_SERVICE_CLAUSE } from './utils/siteConfig';
 import { createCheckoutLink, verifySquareWebhook } from './services/paymentService';
 import {
   generateContractHtml,
@@ -2280,13 +2280,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const nextVersion = (existing.currentVersion || 1) + 1;
 
+      // Recompute totals server-side to keep the pricing honest when a
+      // discount is present. The drawer already computes this for immediate
+      // feedback, but we don't trust the client-provided totals.
+      const lineSubtotal = Array.isArray(proposal.lineItems)
+        ? proposal.lineItems.reduce(
+            (sum: number, it: any) => sum + (it.price || 0) * (it.quantity || 0),
+            0,
+          )
+        : proposal.pricing.subtotalCents || 0;
+      const discount = Math.max(0, proposal.pricing.discountCents || 0);
+      const serviceFee = proposal.pricing.serviceFeeCents || 0;
+      const computedSubtotal = Math.max(0, lineSubtotal - discount + serviceFee);
+      const computedTotal = computedSubtotal + (proposal.pricing.taxCents || 0);
+
+      // Mirror the recomputed totals onto the proposal blob itself so the
+      // customer-facing view renders consistent numbers.
+      proposal.pricing.subtotalCents = computedSubtotal;
+      proposal.pricing.totalCents = computedTotal;
+
       const [updated] = await db
         .update(quotes)
         .set({
           proposal: proposal as any,
-          subtotal: proposal.pricing.subtotalCents,
+          subtotal: computedSubtotal,
           tax: proposal.pricing.taxCents,
-          total: proposal.pricing.totalCents,
+          total: computedTotal,
           guestCount: proposal.guestCount ?? null,
           eventDate: proposal.eventDate ? new Date(proposal.eventDate) : null,
           venue: proposal.venue?.name ?? null,
@@ -2712,10 +2731,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Returns the Proposal blob stored on quote.proposal — this is the
   // single source of truth for the customer-facing page.
   // Public T&Cs — served to the acceptance dialog so the client can render
-  // the exact text the customer is agreeing to. Version + body come from
-  // getTermsConfig() (env-overridable).
-  app.get('/api/public/terms', (_req: Request, res: Response) => {
-    res.status(200).json(getTermsConfig());
+  // the exact text the customer is agreeing to. Main terms + optional
+  // leftover-release waiver. Optional ?quoteId or ?token argument lets the
+  // endpoint (a) apply a per-quote T&C override and (b) include the alcohol
+  // clause only when the quote has bar service booked.
+  app.get('/api/public/terms', async (req: Request, res: Response) => {
+    try {
+      const terms = getTermsConfig();
+      const leftover = getLeftoverReleaseConfig();
+
+      let hasBarService = false;
+      let termsOverride: { heading?: string | null; body: string } | null = null;
+
+      const token = typeof req.query.token === 'string' ? req.query.token : null;
+      const quoteId = typeof req.query.quoteId === 'string' ? parseInt(req.query.quoteId, 10) : null;
+
+      let quote: any = null;
+      if (token && token.length >= 10) {
+        const rows = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+        quote = rows[0] ?? null;
+      } else if (quoteId && !isNaN(quoteId)) {
+        const rows = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+        quote = rows[0] ?? null;
+      }
+
+      if (quote?.proposal) {
+        const p: any = quote.proposal;
+        hasBarService = !!p.beverages?.hasAlcoholic;
+        if (p.termsOverride && typeof p.termsOverride.body === 'string' && p.termsOverride.body.trim().length > 0) {
+          termsOverride = {
+            heading: p.termsOverride.heading ?? null,
+            body: p.termsOverride.body,
+          };
+        }
+      }
+
+      const mainBody = termsOverride
+        ? termsOverride.body + (hasBarService ? `\n\n${ALCOHOL_SERVICE_CLAUSE}` : '')
+        : terms.body + (hasBarService ? `\n\n${ALCOHOL_SERVICE_CLAUSE}` : '');
+
+      res.status(200).json({
+        main: {
+          docId: 'terms',
+          version: termsOverride ? `custom-${terms.version}` : terms.version,
+          heading: termsOverride?.heading || terms.heading,
+          body: mainBody,
+          pdfUrl: '/api/public/terms/pdf' + (token ? `?token=${encodeURIComponent(token)}` : ''),
+        },
+        leftoverRelease: {
+          docId: 'leftover-release',
+          version: leftover.version,
+          heading: leftover.heading,
+          body: leftover.body,
+          pdfUrl: '/api/public/terms/leftover-release/pdf',
+        },
+        hasBarService,
+        // Legacy fields — kept so older AcceptanceDialog builds that still
+        // expect a flat { version, heading, body } payload don't break during
+        // a rolling deploy.
+        version: termsOverride ? `custom-${terms.version}` : terms.version,
+        heading: termsOverride?.heading || terms.heading,
+        body: mainBody,
+      });
+    } catch (err) {
+      console.error('Error serving /api/public/terms:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Simple text-to-PDF renderer for the downloadable T&C / Leftover-release
+  // PDFs linked from the AcceptanceDialog. Same source of truth as the
+  // inline agreement text — no separate lawyer PDF to keep in sync.
+  const renderTextPdf = async (opts: { heading: string; body: string; version: string }): Promise<Buffer> => {
+    const PDFDocument = (await import('pdfkit')).default;
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'LETTER', margin: 64 });
+      const chunks: Buffer[] = [];
+      doc.on('data', (c: Buffer) => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      doc.fontSize(18).font('Helvetica-Bold').text(opts.heading);
+      doc.moveDown(0.3);
+      doc.fontSize(9).font('Helvetica-Oblique').fillColor('#666')
+        .text(`Homebites Catering · Version ${opts.version}`);
+      doc.moveDown(1);
+      doc.fillColor('#111').fontSize(11).font('Helvetica');
+      // Render the body preserving paragraph breaks.
+      const paragraphs = opts.body.split(/\n\s*\n/);
+      paragraphs.forEach((p, i) => {
+        doc.text(p.trim(), { align: 'left', lineGap: 3 });
+        if (i < paragraphs.length - 1) doc.moveDown(0.7);
+      });
+      doc.end();
+    });
+  };
+
+  app.get('/api/public/terms/pdf', async (req: Request, res: Response) => {
+    try {
+      const token = typeof req.query.token === 'string' ? req.query.token : null;
+      const terms = getTermsConfig();
+
+      let hasBarService = false;
+      let body = terms.body;
+      let heading = terms.heading;
+      let version = terms.version;
+
+      if (token && token.length >= 10) {
+        const [q] = await db.select().from(quotes).where(eq(quotes.viewToken, token));
+        if (q?.proposal) {
+          const p: any = q.proposal;
+          hasBarService = !!p.beverages?.hasAlcoholic;
+          if (p.termsOverride?.body) {
+            body = p.termsOverride.body;
+            heading = p.termsOverride.heading || heading;
+            version = `custom-${terms.version}`;
+          }
+        }
+      }
+      if (hasBarService) body += `\n\n${ALCOHOL_SERVICE_CLAUSE}`;
+
+      const pdf = await renderTextPdf({ heading, body, version });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="HomeBites-Terms.pdf"');
+      res.send(pdf);
+    } catch (err) {
+      console.error('Error generating terms PDF:', err);
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  });
+
+  app.get('/api/public/terms/leftover-release/pdf', async (_req: Request, res: Response) => {
+    try {
+      const doc = getLeftoverReleaseConfig();
+      const pdf = await renderTextPdf({ heading: doc.heading, body: doc.body, version: doc.version });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="HomeBites-Leftover-Release.pdf"');
+      res.send(pdf);
+    } catch (err) {
+      console.error('Error generating leftover-release PDF:', err);
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
   });
 
   app.get('/api/public/quote/:token', async (req: Request, res: Response) => {
@@ -2822,6 +2978,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const typedName = typeof req.body?.typedName === 'string' ? req.body.typedName.trim() : '';
       const isRepeatAccept = quote.status === 'accepted';
 
+      // Array of doc acceptances the client sent. Each { docId, version }
+      // indicates which specific document the customer agreed to. The main
+      // T&Cs are implicit when an accept fires at all; the leftover-release
+      // is opt-in.
+      const acceptedDocs: Array<{ docId: string; version: string }> =
+        Array.isArray(req.body?.acceptedDocs)
+          ? req.body.acceptedDocs
+              .filter((d: any) => d && typeof d.docId === 'string' && typeof d.version === 'string')
+              .map((d: any) => ({ docId: d.docId, version: d.version }))
+          : [];
+      const acceptedLeftoverRelease = acceptedDocs.some((d) => d.docId === 'leftover-release');
+
       const now = new Date();
       const [updatedQuote] = await db
         .update(quotes)
@@ -2848,6 +3016,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .select()
             .from(clients)
             .where(eq(clients.id, quote.clientId));
+          const leftoverDoc = getLeftoverReleaseConfig();
+          const fullAcceptedDocs = [
+            { docId: 'terms', version: terms.version, snapshot: terms.body },
+            ...(acceptedLeftoverRelease
+              ? [{ docId: 'leftover-release', version: leftoverDoc.version, snapshot: leftoverDoc.body }]
+              : []),
+          ];
           await db.insert(acceptanceAuditLog).values({
             quoteId: quote.id,
             typedName,
@@ -2857,6 +3032,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tokenUsed: token,
             termsSnapshot: terms.body,
             termsVersion: terms.version,
+            acceptedDocs: fullAcceptedDocs,
+            leftoverReleaseSignedAt: acceptedLeftoverRelease ? now : null,
             acceptedAt: now,
           } as any);
         } catch (auditErr) {
@@ -2936,6 +3113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: quote.notes ?? null,
           completedTasks: [],
           viewToken: randomBytes(24).toString('base64url'),
+          leftoverReleaseSignedAt: acceptedLeftoverRelease ? now : null,
         } as any);
       }
 
@@ -2944,6 +3122,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select()
         .from(events)
         .where(eq(events.quoteId, quote.id));
+
+      // If the customer accepted the leftover-release on a re-accept (event
+      // pre-existed), stamp it now. First-time accepts already set it above.
+      if (eventForResponse && acceptedLeftoverRelease && !eventForResponse.leftoverReleaseSignedAt) {
+        await db
+          .update(events)
+          .set({ leftoverReleaseSignedAt: now, updatedAt: now })
+          .where(eq(events.id, eventForResponse.id));
+      }
 
       // P2-1: auto-create a draft contract so the admin can "Send contract"
       // without an extra click. Moved AFTER event creation so the contract's

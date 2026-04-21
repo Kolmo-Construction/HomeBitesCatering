@@ -472,6 +472,15 @@ export const acceptanceAuditLog = pgTable("acceptance_audit_log", {
   // agreed to).
   termsSnapshot: text("terms_snapshot"),
   termsVersion: text("terms_version"),
+  // Per-doc acceptance record. Shape: [{ docId, version, body? }]. Lets us
+  // support optional docs (like the leftover-food release) alongside the
+  // main T&Cs without overloading termsSnapshot/version above.
+  acceptedDocs: jsonb("accepted_docs").$type<Array<{
+    docId: string;
+    version: string;
+    snapshot?: string;
+  }>>(),
+  leftoverReleaseSignedAt: timestamp("leftover_release_signed_at"),
   acceptedAt: timestamp("accepted_at").defaultNow().notNull(),
 });
 
@@ -534,6 +543,10 @@ export const events = pgTable("events", {
   reviewRequestSentAt: timestamp("review_request_sent_at"),
   reviewLeftAt: timestamp("review_left_at"),
   referralsGenerated: integer("referrals_generated").default(0).notNull(),
+  // When the customer accepted the optional "Leftover Food Release of
+  // Liability" at sign time. Null = not signed → kitchen does not send
+  // leftovers home day-of. Checked on prep day.
+  leftoverReleaseSignedAt: timestamp("leftover_release_signed_at"),
   // P2-2: Deposit + balance payment tracking (Square Checkout)
   depositPercent: integer("deposit_percent").default(35).notNull(),
   depositAmountCents: integer("deposit_amount_cents"),

@@ -83,6 +83,10 @@ export interface ProposalPricing {
   subtotalCents: number;
   /** Service / gratuity fee in cents (optional — zero hides the line). */
   serviceFeeCents?: number;
+  /** Discount in cents (positive number). Subtracted from line-item subtotal
+   *  before service fee + tax. Optional discount label shown next to the line. */
+  discountCents?: number;
+  discountLabel?: string;
   /** Tax in cents. */
   taxCents: number;
   /** Grand total in cents. Customer-facing total. */
@@ -182,6 +186,54 @@ export interface Proposal {
     author: string;
     eventType?: string;
   }>;
+
+  // ─── Per-quote overrides ────────────────────────────────────────────────
+  // Everything below lets the admin break out of the preset/global defaults
+  // for a specific quote without forking the codebase. All optional; null/
+  // undefined means "use the preset/global default."
+
+  /** Override the logo + palette used on the public proposal + PDF. */
+  branding?: {
+    /** Absolute URL to a logo image (PNG/JPG/SVG-as-PNG). */
+    logoUrl?: string | null;
+    /** Hex colors — when set, override the event preset's palette. */
+    primary?: string | null;
+    accent?: string | null;
+    background?: string | null;
+  } | null;
+
+  /**
+   * Override the T&Cs presented at accept time. When set, replaces the
+   * global `getTermsConfig()` body entirely for this quote (the version
+   * string is prefixed with "custom-" in the audit log).
+   */
+  termsOverride?: {
+    heading?: string | null;
+    body: string;
+  } | null;
+
+  /**
+   * Free-text custom sections rendered on the public proposal between
+   * What's Included and the Investment card. Order preserved. Admin edits
+   * each as a titled textarea.
+   */
+  customSections?: Array<{
+    id?: string;
+    title: string;
+    body: string;
+  }>;
+
+  /**
+   * Per-quote copy overrides for section labels. When set, replaces the
+   * preset's copy.* field. Only fields the admin actually edited should be
+   * populated — unset keys fall back to the preset.
+   */
+  sectionLabelOverrides?: {
+    proposalKicker?: string;
+    acceptCtaHeadline?: string;
+    acceptCtaBlurb?: string;
+    closingSignoff?: string;
+  };
 }
 
 /** Build an empty proposal scaffold. */
