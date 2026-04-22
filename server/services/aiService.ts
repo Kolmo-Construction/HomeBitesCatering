@@ -1,7 +1,7 @@
 import { createChatCompletion, hasLlmProvider, LlmProvider } from "./llmClient";
 
 function providerLabel(provider: LlmProvider): string {
-  return provider === "deepseek-native" ? "DeepSeek V3 (native API)" : "DeepSeek V3 (OpenRouter free)";
+  return provider === "gemini-2.0-flash" ? "Gemini 2.0 Flash (Google direct)" : "DeepSeek V3 (native API)";
 }
 
 export class AIService {

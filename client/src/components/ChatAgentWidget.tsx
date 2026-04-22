@@ -8,6 +8,7 @@ import {
   Trash2,
   Mic,
   MicOff,
+  Brain,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -26,12 +27,10 @@ type ToolCallLog = {
 const QUICK_PROMPTS = [
   "What events do we have this week?",
   "Shopping list for my next event",
-  "What recipes use chicken?",
+  "What do you remember about our regulars?",
   "Show me vegan recipes",
   "Check recipe 12 for ingredient gaps",
 ];
-
-const STORAGE_KEY = "chatAgentHistory.v1";
 
 // Only internal path links ([text](/path)) become anchors.
 function renderMarkdown(text: string): React.ReactNode {
@@ -118,23 +117,41 @@ export default function ChatAgentWidget() {
   const [streaming, setStreaming] = useState(false);
   const [lastTools, setLastTools] = useState<ToolCallLog[] | null>(null);
   const [listening, setListening] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [memoryFlash, setMemoryFlash] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRec | null>(null);
 
   const speechSupported = getSpeechRecognitionCtor() !== null;
 
+  // Load persistent server-side history when the widget first opens.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setMessages(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-30)));
-    } catch {}
-  }, [messages]);
+    if (!user || !open || historyLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/chat-agent/history", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const rows: ChatMessage[] = (data.messages ?? [])
+          .filter(
+            (m: any) => m.role === "user" || m.role === "assistant",
+          )
+          .map((m: any) => ({ role: m.role, content: m.content }));
+        setMessages(rows);
+      } catch {
+        // best-effort; widget still works with empty history
+      } finally {
+        if (!cancelled) setHistoryLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, open, historyLoaded]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -185,20 +202,26 @@ export default function ChatAgentWidget() {
     if (!trimmed || streaming) return;
     if (listening) stopListening();
     const userMsg: ChatMessage = { role: "user", content: trimmed };
-    const historyForServer = [...messages, userMsg];
-    // Seed an empty assistant bubble we'll append chunks into.
-    setMessages([...historyForServer, { role: "assistant", content: "" }]);
+    // Optimistically render the user turn + an empty assistant bubble.
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      { role: "assistant", content: "" },
+    ]);
     setInput("");
     setStreaming(true);
     setLastTools(null);
+    setMemoryFlash(null);
 
     try {
+      // Server is the source of truth for conversation history — only the
+      // new user turn needs to be sent.
       const res = await fetch("/api/chat-agent/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          messages: historyForServer,
+          message: trimmed,
           context: { currentPath: location },
         }),
       });
@@ -237,6 +260,13 @@ export default function ChatAgentWidget() {
             });
           } else if (ev.event === "tool_call") {
             pendingToolArgs[ev.data.name] = ev.data.args;
+            // Surface memory writes immediately as a small chip.
+            if (ev.data.name === "remember_fact") {
+              const f = ev.data.args?.fact;
+              if (f) setMemoryFlash(`Remembered: ${f}`);
+            } else if (ev.data.name === "forget_fact") {
+              setMemoryFlash("Forgot a fact");
+            }
           } else if (ev.event === "tool_result") {
             toolLog.push({
               name: ev.data.name,
@@ -290,11 +320,15 @@ export default function ChatAgentWidget() {
     void send(input);
   };
 
-  const clear = () => {
+  const clear = async () => {
     setMessages([]);
     setLastTools(null);
+    setMemoryFlash(null);
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      await fetch("/api/chat-agent/history", {
+        method: "DELETE",
+        credentials: "include",
+      });
     } catch {}
   };
 
@@ -336,10 +370,11 @@ export default function ChatAgentWidget() {
                   >
                     Kitchen Assistant
                   </div>
-                  <div className="text-[11px] text-[#8B7355] tracking-wide">
+                  <div className="text-[11px] text-[#8B7355] tracking-wide flex items-center gap-1.5">
+                    <Brain className="h-3 w-3 opacity-70" />
                     {messages.length > 0
-                      ? `${messages.length} message${messages.length === 1 ? "" : "s"}`
-                      : "How can I help today?"}
+                      ? `${messages.length} message${messages.length === 1 ? "" : "s"} · memory on`
+                      : "Persistent memory · ask me anything"}
                   </div>
                 </div>
               </div>
@@ -445,6 +480,15 @@ export default function ChatAgentWidget() {
               </details>
             )}
           </div>
+
+          {memoryFlash && (
+            <div className="px-4 pb-1 pt-0">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#E28C0A]/10 border border-[#E28C0A]/30 text-[11px] text-[#8B5A0A] px-2.5 py-1">
+                <Brain className="h-3 w-3" />
+                {memoryFlash}
+              </div>
+            </div>
+          )}
 
           {/* Input — pill-shaped */}
           <form

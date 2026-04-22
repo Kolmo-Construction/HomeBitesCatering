@@ -2,14 +2,11 @@ import OpenAI from "openai";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3.1";
+const GEMINI_MODEL = "gemini-2.0-flash";
 const DEEPSEEK_NATIVE_MODEL = "deepseek-chat";
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
-
-const APP_REFERRER = "https://homebites.design";
-const APP_TITLE = "Home Bites Catering CMS";
 
 function readDeepseekKeyFile(): string | null {
   try {
@@ -26,18 +23,17 @@ function readDeepseekKeyFile(): string | null {
   }
 }
 
-const openRouterApiKey = process.env.OPENROUTER_API_KEY ?? "";
+const geminiApiKey =
+  process.env.GEMINI_API_KEY?.trim() ||
+  process.env.GOOGLE_AI_API_KEY?.trim() ||
+  "";
 const deepseekNativeApiKey =
   process.env.DEEPSEEK_API_KEY?.trim() || readDeepseekKeyFile();
 
-const openRouterClient: OpenAI | null = openRouterApiKey
+const geminiClient: OpenAI | null = geminiApiKey
   ? new OpenAI({
-      apiKey: openRouterApiKey,
-      baseURL: OPENROUTER_BASE_URL,
-      defaultHeaders: {
-        "HTTP-Referer": APP_REFERRER,
-        "X-Title": APP_TITLE,
-      },
+      apiKey: geminiApiKey,
+      baseURL: GEMINI_BASE_URL,
     })
   : null;
 
@@ -48,7 +44,7 @@ const deepseekNativeClient: OpenAI | null = deepseekNativeApiKey
     })
   : null;
 
-export type LlmProvider = "openrouter-deepseek-free" | "deepseek-native";
+export type LlmProvider = "gemini-2.0-flash" | "deepseek-native";
 
 interface ProviderAttempt {
   label: LlmProvider;
@@ -57,18 +53,18 @@ interface ProviderAttempt {
 }
 
 const providerAttempts: ProviderAttempt[] = [];
+if (geminiClient) {
+  providerAttempts.push({
+    label: "gemini-2.0-flash",
+    client: geminiClient,
+    model: GEMINI_MODEL,
+  });
+}
 if (deepseekNativeClient) {
   providerAttempts.push({
     label: "deepseek-native",
     client: deepseekNativeClient,
     model: DEEPSEEK_NATIVE_MODEL,
-  });
-}
-if (openRouterClient) {
-  providerAttempts.push({
-    label: "openrouter-deepseek-free",
-    client: openRouterClient,
-    model: OPENROUTER_MODEL,
   });
 }
 
@@ -92,7 +88,7 @@ export interface LlmChatResult {
 export class LlmUnavailableError extends Error {
   constructor() {
     super(
-      "No LLM provider configured. Set OPENROUTER_API_KEY or create a .Deepseek file at the repo root containing your DeepSeek API key.",
+      "No LLM provider configured. Set GEMINI_API_KEY (primary) and/or DEEPSEEK_API_KEY (fallback, or a .Deepseek file at the repo root).",
     );
     this.name = "LlmUnavailableError";
   }

@@ -30,7 +30,11 @@ import {
   communications,
   quotes,
   contracts,
+  // Chat brain v2 — persistent thread + long-term chef memory
+  chatMessages,
+  chefMemory,
 } from "@shared/schema";
+import { desc } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { sendEmail } from "./utils/email";
 import { quoteSentEmail } from "./utils/emailTemplates";
@@ -50,6 +54,10 @@ async function requireAdmin(userId: number | undefined): Promise<string | null> 
   return null;
 }
 
+// Primary: Gemini 2.0 Flash via Google's OpenAI-compatible endpoint (supports
+// tool/function calling). Fallback chain: DeepSeek native → OpenRouter DeepSeek.
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+const GEMINI_MODEL = "gemini-2.0-flash";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const DEEPSEEK_MODEL = "deepseek-chat";
@@ -68,11 +76,22 @@ function readDeepseekKeyFile(): string | null {
   }
 }
 
+const geminiKey =
+  process.env.GEMINI_API_KEY?.trim() ||
+  process.env.GOOGLE_AI_API_KEY?.trim() ||
+  null;
 const deepseekKey = process.env.DEEPSEEK_API_KEY?.trim() || readDeepseekKeyFile();
 const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || null;
 
 type ProviderConfig = { client: OpenAI; model: string; label: string };
 const providers: ProviderConfig[] = [];
+if (geminiKey) {
+  providers.push({
+    client: new OpenAI({ apiKey: geminiKey, baseURL: GEMINI_BASE_URL }),
+    model: GEMINI_MODEL,
+    label: "gemini-2.0-flash",
+  });
+}
 if (deepseekKey) {
   providers.push({
     client: new OpenAI({ apiKey: deepseekKey, baseURL: DEEPSEEK_BASE_URL }),
@@ -753,6 +772,76 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  // ---------------------------------------------------------------------------
+  // Long-term chef brain — facts the agent learned across sessions.
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "remember_fact",
+      description:
+        "Save a long-term fact about the chef, a client, a supplier, an ingredient, a recurring event, or a workflow preference — anything that should survive across sessions. Use proactively whenever the chef tells you something that will matter later (e.g. 'Sarah is allergic to nuts', 'we always under-order rice for groups over 50', 'Costco has been short on lamb the last 3 weeks'). Don't ask for permission — just save it and mention it briefly. Topics: client:<slug>, supplier:<name>, ingredient:<name>, recipe:<id>, ops, preference, schedule.",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: {
+            type: "string",
+            description:
+              "Bucket for recall, e.g. 'client:sarah-johnson', 'supplier:costco', 'ingredient:lamb', 'preference', 'ops'.",
+          },
+          fact: { type: "string", description: "Short, specific, useful sentence." },
+          ref: {
+            type: "object",
+            description:
+              "Optional structured pointer like {clientId: 12} or {recipeId: 47} so the fact surfaces when that entity is in view.",
+          },
+        },
+        required: ["topic", "fact"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "recall_facts",
+      description:
+        "Pull stored facts from the chef brain. Filter by topic prefix (e.g. 'client:' for all client facts), free-text search, or a structured ref. Use BEFORE answering questions about people, suppliers, recurring events, or preferences — anything where the chef expects you to remember.",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: { type: "string", description: "Exact or prefix match (e.g. 'client:sarah-johnson' or 'client:')." },
+          query: { type: "string", description: "Free-text substring on the fact body." },
+          ref: { type: "object", description: "Match facts whose ref contains these keys/values." },
+          limit: { type: "number" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_facts",
+      description:
+        "Show the chef everything I currently remember (most-recently-used first). Use when they ask 'what do you remember', 'what do you know about X', or want to audit the brain.",
+      parameters: {
+        type: "object",
+        properties: { limit: { type: "number" } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "forget_fact",
+      description:
+        "Delete a stored fact by id. Use when the chef says it's wrong or no longer applies.",
+      parameters: {
+        type: "object",
+        properties: { id: { type: "number" } },
+        required: ["id"],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -1341,6 +1430,46 @@ const toolHandlers: Record<string, ToolHandler> = {
       .where(eq(baseIngredients.id, ingredientId));
     if (!existing) return { error: `Ingredient ${ingredientId} not found.` };
 
+    // --- Impact preview: which recipes use this, and which active opps/quotes
+    // ride on those recipes? Surfaced inline so the chef sees blast radius
+    // without needing a follow-up tool call.
+    const usageRows = await db
+      .select({
+        recipeId: recipes.id,
+        recipeName: recipes.name,
+        recipeCategory: recipes.category,
+        quantity: recipeComponents.quantity,
+        unit: recipeComponents.unit,
+      })
+      .from(recipeComponents)
+      .innerJoin(recipes, eq(recipeComponents.recipeId, recipes.id))
+      .where(eq(recipeComponents.baseIngredientId, ingredientId))
+      .orderBy(asc(recipes.name))
+      .limit(50);
+
+    // Active commercial exposure: open opportunities + draft/sent quotes.
+    let activeOpps = 0;
+    let activeQuotes = 0;
+    try {
+      const [oppCount] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(opportunities)
+        .where(
+          inArray(
+            opportunities.status,
+            ["new", "qualified", "quoted", "negotiating"] as any,
+          ),
+        );
+      activeOpps = oppCount?.n ?? 0;
+      const [qCount] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(quotes)
+        .where(inArray(quotes.status, ["draft", "sent", "viewed"] as any));
+      activeQuotes = qCount?.n ?? 0;
+    } catch {
+      // If status enums shift, leave counts at 0 rather than fail the price write.
+    }
+
     const [updated] = await db
       .update(baseIngredients)
       .set({
@@ -1351,11 +1480,32 @@ const toolHandlers: Record<string, ToolHandler> = {
       .where(eq(baseIngredients.id, ingredientId))
       .returning();
 
+    const oldP = Number(existing.currentPrice ?? 0);
+    const newP = Number(updated.purchasePrice ?? 0);
+    const pctChange = oldP > 0 ? ((newP - oldP) / oldP) * 100 : null;
+
     return {
       id: updated.id,
       name: updated.name,
       oldPrice: existing.currentPrice,
       newPrice: updated.purchasePrice,
+      changePct: pctChange != null ? Number(pctChange.toFixed(1)) : null,
+      impact: {
+        recipesAffected: usageRows.length,
+        recipes: usageRows.slice(0, 20).map((r) => ({
+          id: r.recipeId,
+          name: r.recipeName,
+          category: r.recipeCategory,
+          usesPerBatch: `${r.quantity} ${r.unit}`,
+          link: `/recipes/${r.recipeId}`,
+        })),
+        activeOpportunities: activeOpps,
+        activeQuotes: activeQuotes,
+        note:
+          usageRows.length === 0
+            ? "Not used in any recipe — no downstream impact."
+            : `Updates ${usageRows.length} recipe${usageRows.length === 1 ? "" : "s"}; recompute costs on any active quotes you want repriced.`,
+      },
       link: `/base-ingredients`,
     };
   },
@@ -2295,44 +2445,162 @@ const toolHandlers: Record<string, ToolHandler> = {
       })),
     };
   },
+
+  // ---------------------------------------------------------------------------
+  // Long-term chef brain
+  // ---------------------------------------------------------------------------
+  async remember_fact({ topic, fact, ref }, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated." };
+    const t = String(topic || "").trim().toLowerCase();
+    const f = String(fact || "").trim();
+    if (!t || !f) return { error: "topic and fact are required." };
+
+    // De-dupe: if we already have an essentially-identical fact under this
+    // topic for this user, bump its lastUsedAt instead of inserting a near-dup.
+    const existing = await db
+      .select({ id: chefMemory.id, fact: chefMemory.fact })
+      .from(chefMemory)
+      .where(and(eq(chefMemory.userId, ctx.userId), eq(chefMemory.topic, t)));
+    const dupe = existing.find(
+      (e) => e.fact.trim().toLowerCase() === f.toLowerCase(),
+    );
+    if (dupe) {
+      await db
+        .update(chefMemory)
+        .set({ lastUsedAt: new Date() })
+        .where(eq(chefMemory.id, dupe.id));
+      return { id: dupe.id, topic: t, fact: f, status: "already-remembered" };
+    }
+
+    const [row] = await db
+      .insert(chefMemory)
+      .values({
+        userId: ctx.userId,
+        topic: t,
+        fact: f,
+        ref: ref ?? null,
+      })
+      .returning();
+    return { id: row.id, topic: row.topic, fact: row.fact, status: "saved" };
+  },
+
+  async recall_facts({ topic, query, ref, limit = 20 }, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated." };
+    const conds: any[] = [eq(chefMemory.userId, ctx.userId)];
+    if (topic) {
+      const t = String(topic).trim().toLowerCase();
+      // Treat trailing ':' as a prefix query (e.g. "client:" → all clients).
+      if (t.endsWith(":") || t.endsWith("*")) {
+        conds.push(ilike(chefMemory.topic, `${t.replace(/[:*]$/, "")}%`));
+      } else {
+        conds.push(eq(chefMemory.topic, t));
+      }
+    }
+    if (query) {
+      conds.push(ilike(chefMemory.fact, `%${String(query)}%`));
+    }
+    if (ref && typeof ref === "object") {
+      // Use jsonb containment so {clientId: 12} matches a richer ref.
+      conds.push(sql`${chefMemory.ref} @> ${JSON.stringify(ref)}::jsonb`);
+    }
+    const rows = await db
+      .select()
+      .from(chefMemory)
+      .where(and(...conds))
+      .orderBy(desc(chefMemory.lastUsedAt))
+      .limit(Math.min(Number(limit) || 20, 100));
+
+    // Bump lastUsedAt + useCount for the rows we just surfaced.
+    if (rows.length > 0) {
+      await db
+        .update(chefMemory)
+        .set({ lastUsedAt: new Date(), useCount: sql`${chefMemory.useCount} + 1` })
+        .where(inArray(chefMemory.id, rows.map((r) => r.id)));
+    }
+
+    return {
+      count: rows.length,
+      facts: rows.map((r) => ({
+        id: r.id,
+        topic: r.topic,
+        fact: r.fact,
+        ref: r.ref,
+        rememberedAt: r.createdAt,
+      })),
+    };
+  },
+
+  async list_facts({ limit = 50 }, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated." };
+    const rows = await db
+      .select()
+      .from(chefMemory)
+      .where(eq(chefMemory.userId, ctx.userId))
+      .orderBy(desc(chefMemory.lastUsedAt))
+      .limit(Math.min(Number(limit) || 50, 200));
+    return {
+      count: rows.length,
+      facts: rows.map((r) => ({
+        id: r.id,
+        topic: r.topic,
+        fact: r.fact,
+        ref: r.ref,
+        rememberedAt: r.createdAt,
+        useCount: r.useCount,
+      })),
+    };
+  },
+
+  async forget_fact({ id }, ctx) {
+    if (!ctx?.userId) return { error: "Not authenticated." };
+    const memId = Number(id);
+    if (!Number.isFinite(memId)) return { error: "id required." };
+    const [row] = await db
+      .select()
+      .from(chefMemory)
+      .where(and(eq(chefMemory.id, memId), eq(chefMemory.userId, ctx.userId)));
+    if (!row) return { error: `Fact ${memId} not found (or not yours).` };
+    await db.delete(chefMemory).where(eq(chefMemory.id, memId));
+    return { id: memId, topic: row.topic, fact: row.fact, status: "forgotten" };
+  },
 };
 
 // ============================================================================
 // Route handler
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are HomeBites Kitchen Assistant, an AI for the chef at a catering company.
+const SYSTEM_PROMPT = `You are the HomeBites Kitchen Brain — a senior sous-chef + ops partner for the catering team. You think like someone who has worked here for years: you remember the people, the patterns, the suppliers, the things that go wrong.
 
-You can:
-- Look up events (today, this week, any upcoming), menus, menu items, ingredients, and recipes.
-- Build an event shopping list or prep sheet for a specific event.
-- Find which recipes use a given ingredient (critical before price changes or substitutions).
-- Update an ingredient's purchase price.
-- Search recipes by dietary tags (vegan, gluten_free, etc).
-- Get per-serving and scaled recipe cost (ingredient + labor).
-- Create new menus, menu items, and base ingredients.
-- **Manage Mike's follow-up inbox** — list pending items (list_followups), draft replies
-  (draft_followup_reply), and dismiss handled items (resolve_followup).
-- **Act on the pipeline** — update_event (status/date/guests/venue/notes), mark_event_completed,
-  update_opportunity_status, pause_opportunity_drip / resume_opportunity_drip,
-  log_communication (record a phone call, SMS, email, or in-person chat on the timeline).
-- **Send things** — send_quote_to_customer (draft → sent + email), send_contract (status check for now).
-- **Convert inquiries** — promote_inquiry_to_opportunity, create_quote_from_inquiry (for inquiries
-  where auto-quote skipped: custom menus, big guest counts, complex events).
-- **Pull a full client file** — get_client_full_history returns inquiries + opportunities +
-  quotes + events + recent communications in one call.
+Voice & style:
+- Talk like a chef talks. Direct, specific, useful. No corporate hedging, no "I'd be happy to assist".
+- Short, scannable answers. Bullets and compact tables beat paragraphs.
+- Numbers, names, dates, and ids in every answer where they exist. Never invent — use a tool.
+- Use markdown links for any id you mention: events [#42](/events/42), recipes /recipes/:id, ingredients /base-ingredients, quotes /quotes/:id, opportunities /opportunities/:id, clients /clients/:id.
+- Format dates human-readably (e.g. "Sat Apr 25, 5:30 PM"). Money in dollars unless noted.
 
-Rules:
-- Always call the appropriate tool for live data; never invent prices, ids, or dates.
-- If the user asks what you can do ("what can you help with", "help", "commands", "capabilities", "menu", etc.), always call list_capabilities and present the result as a short bullet list grouped by topic with 2–3 example phrases per topic.
-- Keep answers short and scannable. Prefer bullet lists or compact tables.
-- When a tool result includes a "link" field, render ids as markdown links — e.g. "Event [#42](/events/42) · Sat Apr 25, 5:30 PM". Do the same for recipes (/recipes/:id), base ingredients (/base-ingredients), quotes (/quotes/:id), opportunities (/opportunities/:id), and clients (/clients/:id).
-- Format dates human-readably (e.g. "Sat Apr 25, 5:30 PM"). Money values are dollars unless noted.
-- For create_*, update_*, send_*, mark_*, log_* — confirm what you just did and include the id + link.
-- For destructive or customer-facing actions (send_quote_to_customer, mark_event_completed, update_opportunity_status to 'lost' or 'cancelled', or updating a confirmed event's date) — propose what you're about to do and ask the chef to confirm before firing the tool, unless they said "do it" / "go ahead" in the same turn.
-- Before calling update_ingredient_price, prefer to first show the chef find_ingredient_usage results so they know the downstream impact — unless they've already asked to just change it.
-- If a tool returns an error, tell the chef plainly and suggest the next step.
-- If the request is ambiguous (e.g. "create a menu" with no name), ask one clarifying question instead of guessing.`;
+What you can do (just ask in plain English — call list_capabilities for the full list):
+- Schedule & events: today's schedule, upcoming, prep sheets, shopping lists, update guest count / date / venue, mark complete.
+- Menus & recipes: lookup, search by dietary, per-serving cost, ingredient gaps, create new.
+- Ingredients: usage lookup, price changes (with auto blast-radius preview).
+- Pipeline: pull a full client file, promote inquiries, draft quotes, send quotes, log calls, pause drip.
+- Follow-ups inbox: list, draft replies, resolve.
+- Catalog & pricing: read for anyone, edit if admin.
+
+Memory — this is the part that makes you actually useful:
+- You have long-term memory. Use remember_fact PROACTIVELY whenever the chef tells you something that will matter next week, next month, or for that specific person/supplier/recipe. Don't ask permission; just save it and mention it in one short line ("Got it — saved that Sarah is allergic to nuts.").
+- Examples worth remembering: client preferences and allergies, supplier issues ("Costco short on lamb 3 weeks running"), recurring patterns ("we always under-order rice for groups over 50"), workflow notes ("Mike likes draft quotes Friday morning"), recipe tweaks the chef makes in his head.
+- You'll see a "Recent kitchen brain" block at the start of each conversation with the most-relevant facts. Use them naturally — don't recite the whole list, just apply what fits.
+- When the chef asks "what do you remember about X" or "what do you know about Sarah", call recall_facts (or list_facts for a full audit).
+- If a fact turns out to be wrong, call forget_fact.
+
+Behavior:
+- Always call tools for live data. Never invent prices, ids, dates, or guest counts.
+- For create/update/send/mark/log actions, confirm what you did with the id + link.
+- For customer-facing or destructive actions (send_quote_to_customer, mark_event_completed, marking an opp lost/cancelled, changing a confirmed event's date), propose first and wait for the chef to confirm — unless they said "do it" / "go ahead" in the same turn.
+- update_ingredient_price now returns its own blast-radius preview (recipes affected, active opps/quotes). Just show that to the chef after the change; you don't need a separate find_ingredient_usage round-trip.
+- If a tool errors, say so plainly and suggest the next step.
+- If the request is ambiguous, ask ONE clarifying question instead of guessing.
+- When the chef opens chat on a specific page (event/recipe/quote/opportunity/client), you'll see a "Page context" block with that entity already loaded. Use it — don't refetch unless something looks stale.`;
 
 const router = Router();
 
@@ -2341,11 +2609,181 @@ function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   return res.status(401).json({ error: "Not authenticated" });
 }
 
+// Cap how much history & how many tool rounds the agent gets per turn.
+const MAX_TOOL_ROUNDS = 20;
+const TOOL_RESULT_TRUNCATE = 60_000;
+const MAX_HISTORY_TURNS = 60; // user+assistant pairs to rehydrate
+
+// ----------------------------------------------------------------------------
+// Helpers — persistence, memory injection, page-context priming
+// ----------------------------------------------------------------------------
+
+async function loadRecentTurns(
+  userId: number,
+): Promise<OpenAI.Chat.Completions.ChatCompletionMessageParam[]> {
+  if (!userId) return [];
+  const rows = await db
+    .select()
+    .from(chatMessages)
+    .where(
+      and(
+        eq(chatMessages.userId, userId),
+        inArray(chatMessages.role, ["user", "assistant"] as any),
+      ),
+    )
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(MAX_HISTORY_TURNS * 2);
+  return rows
+    .reverse()
+    .map((r) => ({
+      role: r.role as "user" | "assistant",
+      content: r.content,
+    }));
+}
+
+async function persistMessage(
+  userId: number,
+  role: "user" | "assistant",
+  content: string,
+  pagePath?: string | null,
+) {
+  if (!userId || !content) return;
+  await db.insert(chatMessages).values({
+    userId,
+    role,
+    content,
+    pagePath: pagePath ?? null,
+  });
+}
+
+async function loadMemorySnippet(
+  userId: number,
+  pageRef?: Record<string, any> | null,
+): Promise<string> {
+  if (!userId) return "";
+  // Two passes: facts tied to the entity in view, then top recent global facts.
+  const tied = pageRef
+    ? await db
+        .select()
+        .from(chefMemory)
+        .where(
+          and(
+            eq(chefMemory.userId, userId),
+            sql`${chefMemory.ref} @> ${JSON.stringify(pageRef)}::jsonb`,
+          ),
+        )
+        .orderBy(desc(chefMemory.lastUsedAt))
+        .limit(8)
+    : [];
+  const recent = await db
+    .select()
+    .from(chefMemory)
+    .where(eq(chefMemory.userId, userId))
+    .orderBy(desc(chefMemory.lastUsedAt))
+    .limit(15);
+  // Merge, dedupe by id, cap at 20.
+  const seen = new Set<number>();
+  const merged: typeof recent = [];
+  for (const list of [tied, recent]) {
+    for (const f of list) {
+      if (seen.has(f.id)) continue;
+      seen.add(f.id);
+      merged.push(f);
+      if (merged.length >= 20) break;
+    }
+    if (merged.length >= 20) break;
+  }
+  if (merged.length === 0) return "";
+  const lines = merged.map((f) => `  • [${f.topic}] ${f.fact}`);
+  return `\n\nRecent kitchen brain (apply where relevant, don't recite):\n${lines.join("\n")}`;
+}
+
+// Detect entity ids from the URL the chef is currently on so we can preload
+// the relevant record into the prompt without burning a tool round.
+function parsePageRef(pagePath?: string | null): {
+  ref: Record<string, any> | null;
+  kind: string | null;
+  id: number | null;
+} {
+  if (!pagePath) return { ref: null, kind: null, id: null };
+  const patterns: Array<[RegExp, string, string]> = [
+    [/\/events\/(\d+)/, "event", "eventId"],
+    [/\/recipes\/(\d+)/, "recipe", "recipeId"],
+    [/\/quotes\/(\d+)/, "quote", "quoteId"],
+    [/\/opportunities\/(\d+)/, "opportunity", "opportunityId"],
+    [/\/clients\/(\d+)/, "client", "clientId"],
+  ];
+  for (const [rx, kind, key] of patterns) {
+    const m = pagePath.match(rx);
+    if (m) {
+      const id = Number(m[1]);
+      return { ref: { [key]: id }, kind, id };
+    }
+  }
+  return { ref: null, kind: null, id: null };
+}
+
+async function buildPageContext(pagePath?: string | null): Promise<string> {
+  const { kind, id } = parsePageRef(pagePath);
+  if (!kind || !id) {
+    return pagePath
+      ? `\n\nPage context: chef is on "${pagePath}".`
+      : "";
+  }
+  try {
+    if (kind === "event") {
+      const [row] = await db.select().from(events).where(eq(events.id, id));
+      if (!row) return `\n\nPage context: /events/${id} (not found).`;
+      return `\n\nPage context — Event [#${row.id}](/events/${row.id}): ${row.eventType ?? "event"} on ${row.eventDate?.toISOString?.().slice(0, 10) ?? "?"} for ${row.guestCount ?? "?"} guests, status=${row.status}, venue=${row.venue ?? "—"}, menu=${row.menuId ?? "—"}.`;
+    }
+    if (kind === "recipe") {
+      const [row] = await db.select().from(recipes).where(eq(recipes.id, id));
+      if (!row) return `\n\nPage context: /recipes/${id} (not found).`;
+      return `\n\nPage context — Recipe [#${row.id}](/recipes/${row.id}) "${row.name}", category=${row.category ?? "—"}, servings=${(row as any).servings ?? "—"}.`;
+    }
+    if (kind === "quote") {
+      const [row] = await db.select().from(quotes).where(eq(quotes.id, id));
+      if (!row) return `\n\nPage context: /quotes/${id} (not found).`;
+      return `\n\nPage context — Quote [#${row.id}](/quotes/${row.id}), status=${row.status}, opportunityId=${row.opportunityId ?? "—"}, total=${(row as any).total ?? "?"}.`;
+    }
+    if (kind === "opportunity") {
+      const [row] = await db
+        .select()
+        .from(opportunities)
+        .where(eq(opportunities.id, id));
+      if (!row) return `\n\nPage context: /opportunities/${id} (not found).`;
+      return `\n\nPage context — Opportunity [#${row.id}](/opportunities/${row.id}), status=${row.status}, clientId=${(row as any).clientId ?? "—"}, eventDate=${row.eventDate?.toISOString?.().slice(0, 10) ?? "—"}.`;
+    }
+    if (kind === "client") {
+      const [row] = await db.select().from(clients).where(eq(clients.id, id));
+      if (!row) return `\n\nPage context: /clients/${id} (not found).`;
+      const fullName = [row.firstName, row.lastName].filter(Boolean).join(" ") || "—";
+      return `\n\nPage context — Client [#${row.id}](/clients/${row.id}) ${fullName} <${row.email ?? "—"}>, type=${(row as any).clientType ?? "—"}.`;
+    }
+  } catch (err: any) {
+    return `\n\nPage context: ${pagePath} (failed to load: ${err?.message || "error"}).`;
+  }
+  return "";
+}
+
+async function buildSystemMessage(
+  userId: number,
+  pagePath?: string | null,
+): Promise<string> {
+  const todayLine = `\n\nToday's date is ${new Date().toISOString().slice(0, 10)} (server time).`;
+  const { ref } = parsePageRef(pagePath);
+  const [pageCtx, memSnippet] = await Promise.all([
+    buildPageContext(pagePath),
+    loadMemorySnippet(userId, ref),
+  ]);
+  return SYSTEM_PROMPT + todayLine + pageCtx + memSnippet;
+}
+
 router.post("/", isAuthenticated, async (req: Request, res: Response) => {
   if (providers.length === 0) {
     return res.status(503).json({
       error:
-        "No LLM provider configured. Set DEEPSEEK_API_KEY or OPENROUTER_API_KEY, or place a .Deepseek file at the repo root.",
+        "No LLM provider configured. Set GEMINI_API_KEY (primary) or DEEPSEEK_API_KEY / OPENROUTER_API_KEY as fallback.",
     });
   }
 
@@ -2359,28 +2797,32 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
     return res.status(400).json({ error: "message or messages required" });
   }
 
-  // Build the conversation with a live context note appended to the system prompt.
-  const contextLine = schema.context?.currentPath
-    ? `\n\nContext: the chef is currently on the page "${schema.context.currentPath}". If their question refers to "this event/recipe/ingredient", try to resolve ids from that path first.`
-    : "";
-  const todayLine = `\n\nToday's date is ${new Date().toISOString().slice(0, 10)} (server time).`;
+  const userId: number = (req.session as any)?.userId ?? 0;
+  const pagePath = schema.context?.currentPath ?? null;
+
+  // Server is the source of truth for conversation history. The client may
+  // still send a `messages` array (older widgets), but we prefer the DB.
+  const systemContent = await buildSystemMessage(userId, pagePath);
+  const dbHistory = await loadRecentTurns(userId);
   const history: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT + todayLine + contextLine },
+    { role: "system", content: systemContent },
+    ...dbHistory,
   ];
-  if (schema.messages) {
-    for (const m of schema.messages) {
-      if (m.role === "user" || m.role === "assistant") {
-        history.push({ role: m.role, content: m.content });
-      }
-    }
+
+  // If the client sent a fresh `message`, append it & persist.
+  // (When a client only sends `messages`, treat the last user one as the new turn.)
+  let newUserMessage = schema.message?.trim() || "";
+  if (!newUserMessage && schema.messages?.length) {
+    const last = schema.messages[schema.messages.length - 1];
+    if (last?.role === "user") newUserMessage = last.content?.trim() || "";
   }
-  if (schema.message) {
-    history.push({ role: "user", content: schema.message });
+  if (newUserMessage) {
+    history.push({ role: "user", content: newUserMessage });
+    await persistMessage(userId, "user", newUserMessage, pagePath);
   }
 
-  const toolCtx: ToolContext = { userId: (req.session as any)?.userId ?? 0 };
+  const toolCtx: ToolContext = { userId };
   const toolLog: Array<{ name: string; args: any; resultPreview: string }> = [];
-  const MAX_TOOL_ROUNDS = 6;
 
   try {
     let finalContent = "";
@@ -2432,7 +2874,10 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
               messages.push({
                 role: "tool",
                 tool_call_id: call.id,
-                content: serialized.length > 12000 ? serialized.slice(0, 12000) + "…(truncated)" : serialized,
+                content:
+                  serialized.length > TOOL_RESULT_TRUNCATE
+                    ? serialized.slice(0, TOOL_RESULT_TRUNCATE) + "…(truncated)"
+                    : serialized,
               });
             }
           } else {
@@ -2445,6 +2890,9 @@ router.post("/", isAuthenticated, async (req: Request, res: Response) => {
           finalContent = "I ran out of steps while handling that. Try rephrasing or narrowing the request.";
         }
         usedProvider = provider.label;
+        if (finalContent) {
+          await persistMessage(userId, "assistant", finalContent, pagePath);
+        }
         return res.json({ reply: finalContent, provider: usedProvider, toolCalls: toolLog });
       } catch (err: any) {
         console.warn(`[chat-agent] provider ${provider.label} failed:`, err?.message || err);
@@ -2504,25 +2952,28 @@ router.post("/stream", isAuthenticated, async (req: Request, res: Response) => {
   res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering
   res.flushHeaders?.();
 
-  const contextLine = schema.context?.currentPath
-    ? `\n\nContext: the chef is currently on the page "${schema.context.currentPath}". If their question refers to "this event/recipe/ingredient", try to resolve ids from that path first.`
-    : "";
-  const todayLine = `\n\nToday's date is ${new Date().toISOString().slice(0, 10)} (server time).`;
-  const history: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT + todayLine + contextLine },
-  ];
-  if (schema.messages) {
-    for (const m of schema.messages) {
-      if (m.role === "user" || m.role === "assistant") {
-        history.push({ role: m.role, content: m.content });
-      }
-    }
-  }
-  if (schema.message) history.push({ role: "user", content: schema.message });
+  const userId: number = (req.session as any)?.userId ?? 0;
+  const pagePath = schema.context?.currentPath ?? null;
 
-  const toolCtx: ToolContext = { userId: (req.session as any)?.userId ?? 0 };
+  const systemContent = await buildSystemMessage(userId, pagePath);
+  const dbHistory = await loadRecentTurns(userId);
+  const history: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemContent },
+    ...dbHistory,
+  ];
+
+  let newUserMessage = schema.message?.trim() || "";
+  if (!newUserMessage && schema.messages?.length) {
+    const last = schema.messages[schema.messages.length - 1];
+    if (last?.role === "user") newUserMessage = last.content?.trim() || "";
+  }
+  if (newUserMessage) {
+    history.push({ role: "user", content: newUserMessage });
+    await persistMessage(userId, "user", newUserMessage, pagePath);
+  }
+
+  const toolCtx: ToolContext = { userId };
   const toolLog: Array<{ name: string; args: any; resultPreview: string }> = [];
-  const MAX_TOOL_ROUNDS = 6;
 
   let clientClosed = false;
   req.on("close", () => {
@@ -2625,13 +3076,17 @@ router.post("/stream", isAuthenticated, async (req: Request, res: Response) => {
                 role: "tool",
                 tool_call_id: t.id || "",
                 content:
-                  serialized.length > 12000
-                    ? serialized.slice(0, 12000) + "…(truncated)"
+                  serialized.length > TOOL_RESULT_TRUNCATE
+                    ? serialized.slice(0, TOOL_RESULT_TRUNCATE) + "…(truncated)"
                     : serialized,
               });
             }
           } else {
             // Pure-text response — we already streamed chunks above.
+            // Persist the assembled assistant text so the next turn sees it.
+            if (textBuffer.trim()) {
+              await persistMessage(userId, "assistant", textBuffer, pagePath);
+            }
             finished = true;
           }
         }
@@ -2666,6 +3121,63 @@ router.get("/status", (_req, res) => {
     providers: providers.map((p) => p.label),
     toolCount: toolDefs.length,
   });
+});
+
+// Persistent thread — load this user's recent chat history.
+router.get("/history", isAuthenticated, async (req: Request, res: Response) => {
+  const userId: number = (req.session as any)?.userId ?? 0;
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const limitParam = Number(req.query.limit ?? MAX_HISTORY_TURNS * 2);
+  const limit = Math.min(Math.max(limitParam, 1), 200);
+  const rows = await db
+    .select({
+      id: chatMessages.id,
+      role: chatMessages.role,
+      content: chatMessages.content,
+      pagePath: chatMessages.pagePath,
+      createdAt: chatMessages.createdAt,
+    })
+    .from(chatMessages)
+    .where(
+      and(
+        eq(chatMessages.userId, userId),
+        inArray(chatMessages.role, ["user", "assistant"] as any),
+      ),
+    )
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit);
+  res.json({ messages: rows.reverse() });
+});
+
+router.delete("/history", isAuthenticated, async (req: Request, res: Response) => {
+  const userId: number = (req.session as any)?.userId ?? 0;
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  await db.delete(chatMessages).where(eq(chatMessages.userId, userId));
+  res.json({ ok: true });
+});
+
+// Long-term chef brain — list / delete facts for the chef's audit panel.
+router.get("/memory", isAuthenticated, async (req: Request, res: Response) => {
+  const userId: number = (req.session as any)?.userId ?? 0;
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const rows = await db
+    .select()
+    .from(chefMemory)
+    .where(eq(chefMemory.userId, userId))
+    .orderBy(desc(chefMemory.lastUsedAt))
+    .limit(200);
+  res.json({ facts: rows });
+});
+
+router.delete("/memory/:id", isAuthenticated, async (req: Request, res: Response) => {
+  const userId: number = (req.session as any)?.userId ?? 0;
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "bad id" });
+  await db
+    .delete(chefMemory)
+    .where(and(eq(chefMemory.id, id), eq(chefMemory.userId, userId)));
+  res.json({ ok: true });
 });
 
 export default router;

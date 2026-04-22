@@ -2016,5 +2016,50 @@ export const insertPricingConfigSchema = createInsertSchema(pricingConfig).omit(
   updatedAt: true,
 });
 
+// =============================================================================
+// Kitchen chat agent — persistent thread + long-term chef memory
+// =============================================================================
+
+// Per-user persistent conversation. One row = one assistant/user/tool turn.
+// We keep tool messages too so the agent can reason over its prior tool output
+// when the chef returns to a thread later.
+export const chatMessageRoleEnum = pgEnum("chat_message_role", [
+  "user",
+  "assistant",
+  "tool",
+  "system",
+]);
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: chatMessageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  // Tool-call metadata — null for plain user/assistant messages.
+  // For role=assistant: array of {id,name,arguments} when the model called tools.
+  // For role=tool: {tool_call_id, name} so we can rehydrate OpenAI-style messages.
+  toolPayload: jsonb("tool_payload"),
+  // Snapshot of the page the chef was on when sending — used to recall context.
+  pagePath: text("page_path"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Long-term chef brain. Free-form facts the agent learned about people,
+// preferences, suppliers, recurring jobs, etc. `topic` lets us bucket recall
+// (e.g. "client:sarah-johnson", "supplier:costco", "preference", "ops").
+export const chefMemory = pgTable("chef_memory", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  topic: text("topic").notNull(),
+  fact: text("fact").notNull(),
+  // Optional structured pointer — e.g. {"clientId": 12} or {"recipeId": 47} —
+  // so we can pull related facts when the chef opens that entity.
+  ref: jsonb("ref"),
+  // Bumped every time the agent recalls this fact; used to surface "hot" memory.
+  lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
+  useCount: integer("use_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type PricingConfig = typeof pricingConfig.$inferSelect;
 export type InsertPricingConfig = z.infer<typeof insertPricingConfigSchema>;
