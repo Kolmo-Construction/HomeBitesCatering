@@ -33,6 +33,8 @@ import {
   // Chat brain v2 — persistent thread + long-term chef memory
   chatMessages,
   chefMemory,
+  // Raw lead intake (pre-inquiry)
+  rawLeads,
 } from "@shared/schema";
 import { desc } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
@@ -2712,6 +2714,9 @@ function parsePageRef(pagePath?: string | null): {
     [/\/quotes\/(\d+)/, "quote", "quoteId"],
     [/\/opportunities\/(\d+)/, "opportunity", "opportunityId"],
     [/\/clients\/(\d+)/, "client", "clientId"],
+    [/\/raw-leads\/(\d+)/, "rawLead", "rawLeadId"],
+    [/\/inquiries\/(\d+)/, "inquiry", "inquiryId"],
+    [/\/leads\/(\d+)/, "inquiry", "inquiryId"],
   ];
   for (const [rx, kind, key] of patterns) {
     const m = pagePath.match(rx);
@@ -2759,6 +2764,52 @@ async function buildPageContext(pagePath?: string | null): Promise<string> {
       if (!row) return `\n\nPage context: /clients/${id} (not found).`;
       const fullName = [row.firstName, row.lastName].filter(Boolean).join(" ") || "—";
       return `\n\nPage context — Client [#${row.id}](/clients/${row.id}) ${fullName} <${row.email ?? "—"}>, type=${(row as any).clientType ?? "—"}.`;
+    }
+    if (kind === "rawLead") {
+      const [row] = await db.select().from(rawLeads).where(eq(rawLeads.id, id));
+      if (!row) return `\n\nPage context: /raw-leads/${id} (not found).`;
+      // Look up the linked inquiry (if any) so the agent can chain to a quote.
+      const linkedInquiries = await db
+        .select({
+          id: inquiries.id,
+          status: inquiries.status,
+          eventType: inquiries.eventType,
+          eventDate: inquiries.eventDate,
+          guestCount: inquiries.guestCount,
+        })
+        .from(inquiries)
+        .where(eq(inquiries.rawLeadId, id))
+        .limit(5);
+      const lines = [
+        `\n\nPage context — Raw lead [#${row.id}](/raw-leads/${row.id}):`,
+        `  source=${row.source ?? "—"}, status=${row.status}, received=${row.receivedAt?.toISOString?.().slice(0, 10) ?? "—"}`,
+        `  prospect: ${row.extractedProspectName ?? "—"} <${row.extractedProspectEmail ?? "—"}> ${row.extractedProspectPhone ? `· ${row.extractedProspectPhone}` : ""}`,
+        `  event: ${row.extractedEventType ?? "?"} on ${row.extractedEventDate ?? "?"}, ${row.extractedGuestCount ?? "?"} guests, venue=${row.extractedVenue ?? "—"}`,
+        `  AI quality=${row.aiOverallLeadQuality ?? "—"}, urgency=${row.aiUrgencyScore ?? "—"}, suggested next step: ${row.aiSuggestedNextStep ?? "—"}`,
+        `  summary: ${row.extractedMessageSummary ?? row.eventSummary ?? "—"}`,
+        `  linked opportunity: ${row.createdOpportunityId ? `[#${row.createdOpportunityId}](/opportunities/${row.createdOpportunityId})` : "none yet"}`,
+        `  linked inquiries: ${linkedInquiries.length === 0 ? "none yet" : linkedInquiries.map((i) => `[#${i.id}](/inquiries/${i.id}) (${i.status})`).join(", ")}`,
+      ];
+      // Workflow hint so the agent knows the chain instead of asking for ids.
+      const hasInquiry = linkedInquiries.length > 0;
+      const hasOpp = !!row.createdOpportunityId;
+      lines.push(
+        hasInquiry
+          ? `  → To draft a quote, call create_quote_from_inquiry with inquiryId=${linkedInquiries[0].id}.`
+          : hasOpp
+            ? `  → No inquiry yet, but opportunity #${row.createdOpportunityId} exists. Use create_quote_from_inquiry only after an inquiry is created from this raw lead, or work directly off the opportunity.`
+            : `  → No inquiry/opportunity yet. To draft a quote: first promote this raw lead to an inquiry via the /raw-leads UI (no agent tool yet for that conversion), then call create_quote_from_inquiry. Tell the chef this and offer to draft a follow-up email instead if they want to act now.`,
+      );
+      return lines.join("\n");
+    }
+    if (kind === "inquiry") {
+      const [row] = await db.select().from(inquiries).where(eq(inquiries.id, id));
+      if (!row) return `\n\nPage context: inquiry/lead ${id} (not found).`;
+      const fullName = [row.firstName, row.lastName].filter(Boolean).join(" ") || "—";
+      const eventDateStr = row.eventDate
+        ? new Date(row.eventDate as any).toISOString().slice(0, 10)
+        : "?";
+      return `\n\nPage context — Inquiry [#${row.id}](/inquiries/${row.id}): ${row.eventType ?? "?"} on ${eventDateStr} for ${row.guestCount ?? "?"} guests, status=${row.status}, menuTheme=${row.menuTheme ?? "—"}, menuTier=${row.menuTier ?? "—"}, contact=${fullName} <${row.email ?? "—"}> ${row.phone ? `· ${row.phone}` : ""}. To draft a quote from this, call create_quote_from_inquiry with inquiryId=${row.id}.`;
     }
   } catch (err: any) {
     return `\n\nPage context: ${pagePath} (failed to load: ${err?.message || "error"}).`;
