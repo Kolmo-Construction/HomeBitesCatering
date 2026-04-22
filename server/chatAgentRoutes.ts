@@ -775,6 +775,24 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     },
   },
   // ---------------------------------------------------------------------------
+  // Raw-lead → inquiry conversion (the missing link before create_quote_from_inquiry)
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "convert_raw_lead_to_inquiry",
+      description:
+        "Promote a raw lead (an email/form intake that hasn't been qualified yet) into a structured inquiry that can be quoted. Idempotent — if this raw lead has already been promoted, returns the existing inquiry. Use this when the chef is on a /raw-leads/:id page and asks to draft a quote, or says 'convert this lead' / 'promote this'. After conversion, immediately call create_quote_from_inquiry with the returned inquiry.id to draft the quote in one go.",
+      parameters: {
+        type: "object",
+        properties: {
+          rawLeadId: { type: "number", description: "Id of the raw lead to promote." },
+        },
+        required: ["rawLeadId"],
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
   // Long-term chef brain — facts the agent learned across sessions.
   // ---------------------------------------------------------------------------
   {
@@ -2449,6 +2467,97 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   // ---------------------------------------------------------------------------
+  // Raw-lead → inquiry conversion
+  // ---------------------------------------------------------------------------
+  async convert_raw_lead_to_inquiry({ rawLeadId }) {
+    const id = Number(rawLeadId);
+    if (!Number.isFinite(id)) return { error: "rawLeadId required." };
+
+    const [lead] = await db.select().from(rawLeads).where(eq(rawLeads.id, id));
+    if (!lead) return { error: `Raw lead ${id} not found.` };
+
+    // Idempotent — if already promoted, return the existing inquiry.
+    const existing = await db
+      .select()
+      .from(inquiries)
+      .where(eq(inquiries.rawLeadId, id))
+      .limit(1);
+    if (existing.length > 0) {
+      const i = existing[0];
+      return {
+        inquiry: {
+          id: i.id,
+          status: i.status,
+          eventType: i.eventType,
+          eventDate: i.eventDate,
+          guestCount: i.guestCount,
+          link: `/inquiries/${i.id}`,
+        },
+        alreadyExisted: true,
+        message: `Raw lead #${id} was already promoted to inquiry #${i.id}.`,
+      };
+    }
+
+    // Split prospect name into first/last (mirror the UI endpoint's logic).
+    let firstName = "Unknown";
+    let lastName = "Contact";
+    if (lead.extractedProspectName) {
+      const parts = lead.extractedProspectName.trim().split(/\s+/);
+      if (parts[0]) firstName = parts[0];
+      if (parts.length > 1) lastName = parts.slice(1).join(" ");
+    }
+
+    let eventDate: Date | null = null;
+    if (lead.extractedEventDate) {
+      const parsed = new Date(lead.extractedEventDate);
+      if (!isNaN(parsed.getTime())) eventDate = parsed;
+    }
+
+    const [inquiry] = await db
+      .insert(inquiries)
+      .values({
+        firstName,
+        lastName,
+        email: lead.extractedProspectEmail || "unknown@example.com",
+        phone: lead.extractedProspectPhone || null,
+        eventType: lead.extractedEventType || "other",
+        eventDate,
+        guestCount:
+          lead.extractedGuestCount && lead.extractedGuestCount > 0
+            ? lead.extractedGuestCount
+            : 1,
+        venueName: lead.extractedVenue || null,
+        specialRequests: lead.extractedMessageSummary || lead.eventSummary || null,
+        internalNotes: lead.notes || null,
+        source: lead.leadSourcePlatform || lead.source || "promoted_from_lead",
+        status: "draft",
+        rawLeadId: lead.id,
+      } as any)
+      .returning();
+
+    await db
+      .update(rawLeads)
+      .set({ status: "qualified", updatedAt: new Date() })
+      .where(eq(rawLeads.id, id));
+
+    return {
+      inquiry: {
+        id: inquiry.id,
+        status: inquiry.status,
+        eventType: inquiry.eventType,
+        eventDate: inquiry.eventDate,
+        guestCount: inquiry.guestCount,
+        firstName: inquiry.firstName,
+        lastName: inquiry.lastName,
+        email: inquiry.email,
+        link: `/inquiries/${inquiry.id}`,
+      },
+      alreadyExisted: false,
+      message: `Promoted raw lead #${id} → inquiry #${inquiry.id}. Now call create_quote_from_inquiry with inquiryId=${inquiry.id} to draft the quote.`,
+    };
+  },
+
+  // ---------------------------------------------------------------------------
   // Long-term chef brain
   // ---------------------------------------------------------------------------
   async remember_fact({ topic, fact, ref }, ctx) {
@@ -2796,9 +2905,7 @@ async function buildPageContext(pagePath?: string | null): Promise<string> {
       lines.push(
         hasInquiry
           ? `  → To draft a quote, call create_quote_from_inquiry with inquiryId=${linkedInquiries[0].id}.`
-          : hasOpp
-            ? `  → No inquiry yet, but opportunity #${row.createdOpportunityId} exists. Use create_quote_from_inquiry only after an inquiry is created from this raw lead, or work directly off the opportunity.`
-            : `  → No inquiry/opportunity yet. To draft a quote: first promote this raw lead to an inquiry via the /raw-leads UI (no agent tool yet for that conversion), then call create_quote_from_inquiry. Tell the chef this and offer to draft a follow-up email instead if they want to act now.`,
+          : `  → No inquiry yet. To draft a quote in one go: call convert_raw_lead_to_inquiry with rawLeadId=${row.id} (idempotent), then call create_quote_from_inquiry with the returned inquiry.id. If the chef just says "create a quote", do both calls back-to-back and confirm the result.`,
       );
       return lines.join("\n");
     }
