@@ -38,11 +38,17 @@ import {
 } from "@shared/schema";
 import { desc } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
-import { sendEmail } from "./utils/email";
-import { quoteSentEmail } from "./utils/emailTemplates";
+import { sendEmail, sendEmailInBackground } from "./utils/email";
+import { quoteSentEmail, contractSentCustomerEmail } from "./utils/emailTemplates";
 import { calculateShoppingListForInquiry } from "./utils/shoppingList";
 import { getRecipeCostBreakdown } from "./utils/menuMargin";
 import { storage } from "./storage";
+import {
+  generateContractHtml,
+  sendContractForSignature,
+} from "./services/contractService";
+import { getDepositPercent, getSiteConfig } from "./utils/siteConfig";
+import { tastings, promoCodes } from "@shared/schema";
 
 // Gate: pricing writes require admin role. Chef/user accounts can still read
 // via list_catalog_items and get_pricing_config.
@@ -793,6 +799,268 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     },
   },
   // ---------------------------------------------------------------------------
+  // Reporting / analytics — the chef's "how are we doing?" panel
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "get_funnel_report",
+      description:
+        "Funnel snapshot: counts of opportunities by status, quotes by status, and events by status — current month + last month for comparison. Use for 'how's the pipeline looking', 'what's our funnel', 'show me this month vs last'.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_revenue_summary",
+      description:
+        "Booked revenue (sum of accepted-quote totals, in dollars) over a period. Defaults to YTD. Use for 'how much have we booked', 'revenue this month', 'YTD numbers'.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: {
+            type: "string",
+            enum: ["month", "quarter", "ytd", "all"],
+            description: "Defaults to 'ytd'.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_pipeline_health",
+      description:
+        "Find deals that are stuck — open opportunities with no progress in N days, plus quotes that were sent but not viewed/accepted. Use for 'what's stalled', 'who haven't I followed up with', 'where are we leaving money on the table'.",
+      parameters: {
+        type: "object",
+        properties: {
+          stalledDays: { type: "number", description: "Days since last update to count as stalled. Default 14." },
+        },
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Tastings — admin booking & lifecycle (no UI endpoint exists for these)
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "list_tastings",
+      description:
+        "List tastings, filterable by status and date window. Use for 'do we have tastings booked', 'who's coming in this week', 'show me upcoming tastings'.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: {
+            type: "array",
+            items: { type: "string", enum: ["scheduled", "completed", "cancelled", "no_show"] },
+          },
+          fromDate: { type: "string", description: "ISO date — only tastings on/after this date." },
+          toDate: { type: "string", description: "ISO date — only tastings on/before this date." },
+          limit: { type: "number" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_tasting",
+      description: "Full details for one tasting (contact info, payment, links).",
+      parameters: {
+        type: "object",
+        properties: { id: { type: "number" } },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_tasting",
+      description:
+        "Manually book a tasting (bypasses Cal.com / public form). Use when the chef booked a tasting via phone/email and wants it on the books. NOTE: this won't create a Cal.com event — for online-bookable tastings the customer should use the public booking form.",
+      parameters: {
+        type: "object",
+        properties: {
+          scheduledAt: { type: "string", description: "ISO datetime, e.g. '2026-05-12T18:00:00'." },
+          firstName: { type: "string" },
+          lastName: { type: "string" },
+          email: { type: "string" },
+          phone: { type: "string" },
+          guestCount: { type: "number", description: "Default 2." },
+          opportunityId: { type: "number" },
+          clientId: { type: "number" },
+          quoteId: { type: "number" },
+          notes: { type: "string" },
+          totalPriceCents: { type: "number", description: "Default 12500 ($125)." },
+        },
+        required: ["scheduledAt"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reschedule_tasting",
+      description:
+        "Move a tasting to a new datetime. CAVEAT: if the tasting was booked via Cal.com (calBookingId set), this won't update the Cal.com event — only the agent's record. Tell the chef so they can update Cal.com manually.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          scheduledAt: { type: "string", description: "New ISO datetime." },
+        },
+        required: ["id", "scheduledAt"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_tasting",
+      description:
+        "Mark a tasting cancelled (or no_show after the fact). CAVEAT: doesn't cancel the Cal.com event if one is linked.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          reason: { type: "string" },
+          status: { type: "string", enum: ["cancelled", "no_show"], description: "Default 'cancelled'." },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_tasting_conflicts",
+      description:
+        "Check whether any other tasting is already scheduled in a window around a given datetime (default ±90 minutes). Use before creating or rescheduling.",
+      parameters: {
+        type: "object",
+        properties: {
+          scheduledAt: { type: "string", description: "ISO datetime to check around." },
+          windowMinutes: { type: "number", description: "Default 90." },
+        },
+        required: ["scheduledAt"],
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Generic email send — not just quote/contract templates
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "send_customer_email",
+      description:
+        "Send a free-form email to a customer (any address). Auto-logs to the timeline. Use for venue coordination, follow-ups outside the quote/contract flow, or 'just email Sarah and ask if she's still interested'. Provide html (or text) and ideally clientId/opportunityId so it threads to the right record.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "Recipient email address." },
+          subject: { type: "string" },
+          html: { type: "string", description: "HTML body. If only `text` is provided, it'll be wrapped in <pre>." },
+          text: { type: "string", description: "Plain-text body (used if html omitted)." },
+          opportunityId: { type: "number" },
+          clientId: { type: "number" },
+        },
+        required: ["to", "subject"],
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Promo codes
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "list_promo_codes",
+      description: "Show all promo codes (with usage + validity).",
+      parameters: {
+        type: "object",
+        properties: {
+          activeOnly: { type: "boolean" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_promo_code",
+      description:
+        "Mint a new promo code. Code is uppercased and must be unique. Use for 'create a 10% referral code', 'spin up a holiday discount'.",
+      parameters: {
+        type: "object",
+        properties: {
+          code: { type: "string", description: "Uppercased automatically." },
+          discountPercent: { type: "number", description: "0–100." },
+          description: { type: "string" },
+          maxUses: { type: "number" },
+          validFrom: { type: "string", description: "ISO date." },
+          validUntil: { type: "string", description: "ISO date." },
+        },
+        required: ["code", "discountPercent"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "apply_promo_code_to_inquiry",
+      description:
+        "Attach a promo code to an inquiry (snapshots the discount % so it survives even if the code changes later).",
+      parameters: {
+        type: "object",
+        properties: {
+          inquiryId: { type: "number" },
+          code: { type: "string", description: "Code (case-insensitive); will resolve to id." },
+        },
+        required: ["inquiryId", "code"],
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Quote update — narrow safe surface
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "update_quote",
+      description:
+        "Update internal-only fields on a quote (notes for now). Pricing, line items, totals, sent/accepted timestamps are NOT editable here — those need the admin UI to keep audit + customer-facing state correct.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          notes: { type: "string", description: "Internal notes (not shown to the customer)." },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Unmatched communications inbox
+  // ---------------------------------------------------------------------------
+  {
+    type: "function",
+    function: {
+      name: "list_unmatched_communications",
+      description:
+        "List incoming emails/SMS/etc that couldn't be auto-matched to a client or opportunity. Use for 'anything new in unmatched', 'who came in that we don't know'.",
+      parameters: {
+        type: "object",
+        properties: { limit: { type: "number" } },
+      },
+    },
+  },
+  // ---------------------------------------------------------------------------
   // Long-term chef brain — facts the agent learned across sessions.
   // ---------------------------------------------------------------------------
   {
@@ -1477,7 +1745,7 @@ const toolHandlers: Record<string, ToolHandler> = {
         .where(
           inArray(
             opportunities.status,
-            ["new", "qualified", "quoted", "negotiating"] as any,
+            ["new", "contacted", "qualified", "proposal"] as any,
           ),
         );
       activeOpps = oppCount?.n ?? 0;
@@ -2193,25 +2461,111 @@ const toolHandlers: Record<string, ToolHandler> = {
         error: `Quote ${id} hasn't been accepted yet (status='${quote.status}'). Contracts only go out after acceptance.`,
       };
     }
-    const [existing] = await db
+    const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+    if (!client?.email) return { error: `Client for quote ${id} has no email on file.` };
+
+    // 1. Ensure (or create) the contract row.
+    let [existing] = await db
       .select()
       .from(contracts)
       .where(eq(contracts.quoteId, id));
     if (!existing) {
-      return {
-        error: `No contract row exists for quote ${id}. Open the quote in the admin and hit 'Send Contract' there — the agent can't mint and send in one step yet.`,
-      };
+      const [ev] = await db.select().from(events).where(eq(events.quoteId, id));
+      const [inserted] = await db
+        .insert(contracts)
+        .values({
+          clientId: client.id,
+          quoteId: quote.id,
+          eventId: ev?.id ?? null,
+          status: "draft",
+          contractSnapshot: quote.proposal,
+        } as any)
+        .returning();
+      existing = inserted;
     }
     if (existing.status === "sent" || existing.sentAt) {
       return {
         ok: true,
         id: existing.id,
-        message: `Contract #${existing.id} already sent for quote ${id}.`,
+        alreadySent: true,
+        message: `Contract #${existing.id} was already sent for quote ${id}.`,
         link: `/quotes/${id}`,
       };
     }
+
+    // 2. Generate HTML + send via BoldSign (or skip cleanly if unconfigured).
+    const depositPercent = getDepositPercent();
+    const html = generateContractHtml({
+      clientName: `${client.firstName} ${client.lastName || ""}`.trim(),
+      clientEmail: client.email,
+      eventType: quote.eventType,
+      eventDate: quote.eventDate,
+      guestCount: quote.guestCount,
+      venue: quote.venue,
+      totalCents: quote.total,
+      depositPercent,
+      proposal: (quote.proposal as any) || null,
+    });
+    const site = getSiteConfig();
+    const result = await sendContractForSignature({
+      contractId: existing.id,
+      title: `${site.businessName} — ${quote.eventType.replace(/_/g, " ")} Contract`,
+      message: `Please review and sign your catering contract with ${site.businessName}.`,
+      signerName: `${client.firstName} ${client.lastName || ""}`.trim() || "Client",
+      signerEmail: client.email,
+      documentHtml: html,
+    });
+
+    if (result.skipped) {
+      await db
+        .update(contracts)
+        .set({ status: "sent", sentAt: new Date(), updatedAt: new Date() })
+        .where(eq(contracts.id, existing.id));
+      return {
+        ok: true,
+        id: existing.id,
+        skipped: true,
+        message: `BOLDSIGN_API_KEY isn't set, so the contract was marked sent but no e-sign email went out. Configure BoldSign or send the HTML manually.`,
+        link: `/quotes/${id}`,
+      };
+    }
+    if (!result.sent) {
+      return { error: result.error || "BoldSign send failed." };
+    }
+
+    await db
+      .update(contracts)
+      .set({
+        status: "sent",
+        sentAt: new Date(),
+        providerDocId: result.providerDocId || null,
+        signingUrl: result.signingUrl || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(contracts.id, existing.id));
+
+    // Customer-facing confirmation email (in addition to BoldSign's own).
+    const tpl = contractSentCustomerEmail({
+      customerFirstName: client.firstName || "there",
+      eventType: quote.eventType,
+      signingUrl: result.signingUrl ?? null,
+    });
+    sendEmailInBackground({
+      to: client.email,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+      clientId: client.id,
+      opportunityId: quote.opportunityId,
+      templateKey: "contract_sent_customer",
+    });
+
     return {
-      error: `Contract #${existing.id} is in '${existing.status}'. Use the admin quote page to trigger the BoldSign send — the signature flow needs a real request context.`,
+      ok: true,
+      id: existing.id,
+      providerDocId: result.providerDocId,
+      signingUrl: result.signingUrl,
+      message: `Contract #${existing.id} sent to ${client.email} via BoldSign.`,
       link: `/quotes/${id}`,
     };
   },
@@ -2390,7 +2744,7 @@ const toolHandlers: Record<string, ToolHandler> = {
     if (!client) return { error: `Client ${clientId} not found.` };
     // Inquiries don't have a direct clientId column — match by email (same
     // shape clients.email uses). Matches the admin's "everyone named X" view.
-    const [inqRows, oppRows, quoteRows, eventRows, commRows] = await Promise.all([
+    const [inqRows, oppRows, quoteRows, eventRows, commRows, tastingRows] = await Promise.all([
       db
         .select()
         .from(inquiries)
@@ -2404,6 +2758,11 @@ const toolHandlers: Record<string, ToolHandler> = {
         .where(eq(communications.clientId, clientId))
         .orderBy(sql`${communications.timestamp} DESC`)
         .limit(25),
+      db
+        .select()
+        .from(tastings)
+        .where(eq(tastings.clientId, clientId))
+        .orderBy(sql`${tastings.scheduledAt} DESC`),
     ]);
     return {
       client: {
@@ -2420,8 +2779,17 @@ const toolHandlers: Record<string, ToolHandler> = {
         opportunities: oppRows.length,
         quotes: quoteRows.length,
         events: eventRows.length,
+        tastings: tastingRows.length,
         communications: commRows.length,
       },
+      tastings: tastingRows.map((t) => ({
+        id: t.id,
+        date: t.scheduledAt,
+        guestCount: t.guestCount,
+        status: t.status,
+        paid: !!t.paidAt,
+        link: `/tasting/${t.id}`,
+      })),
       inquiries: inqRows.map((i) => ({
         id: i.id,
         date: i.submittedAt || i.createdAt,
@@ -2554,6 +2922,539 @@ const toolHandlers: Record<string, ToolHandler> = {
       },
       alreadyExisted: false,
       message: `Promoted raw lead #${id} → inquiry #${inquiry.id}. Now call create_quote_from_inquiry with inquiryId=${inquiry.id} to draft the quote.`,
+    };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Reporting / analytics
+  // ---------------------------------------------------------------------------
+  async get_funnel_report() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const groupBy = async (
+      table: any,
+      statusCol: any,
+      dateCol: any,
+      from: Date,
+      to: Date | null,
+    ) => {
+      const conds: any[] = [gte(dateCol, from)];
+      if (to) conds.push(lte(dateCol, to));
+      const rows = await db
+        .select({
+          status: statusCol,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(table)
+        .where(and(...conds))
+        .groupBy(statusCol);
+      const out: Record<string, number> = {};
+      for (const r of rows) out[String(r.status)] = r.n;
+      return out;
+    };
+
+    const [oppCur, oppPrev, qCur, qPrev, evCur, evPrev] = await Promise.all([
+      groupBy(opportunities, opportunities.status, opportunities.createdAt, startOfMonth, null),
+      groupBy(opportunities, opportunities.status, opportunities.createdAt, startOfLastMonth, endOfLastMonth),
+      groupBy(quotes, quotes.status, quotes.createdAt, startOfMonth, null),
+      groupBy(quotes, quotes.status, quotes.createdAt, startOfLastMonth, endOfLastMonth),
+      groupBy(events, events.status, events.createdAt, startOfMonth, null),
+      groupBy(events, events.status, events.createdAt, startOfLastMonth, endOfLastMonth),
+    ]);
+
+    return {
+      thisMonth: { opportunities: oppCur, quotes: qCur, events: evCur },
+      lastMonth: { opportunities: oppPrev, quotes: qPrev, events: evPrev },
+      note: "Counts grouped by status, scoped to records created in each month.",
+    };
+  },
+
+  async get_revenue_summary({ period = "ytd" } = {}) {
+    const now = new Date();
+    let from: Date | null = null;
+    if (period === "month") from = new Date(now.getFullYear(), now.getMonth(), 1);
+    else if (period === "quarter") from = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    else if (period === "ytd") from = new Date(now.getFullYear(), 0, 1);
+    // 'all' → from stays null
+
+    const conds: any[] = [eq(quotes.status, "accepted" as any)];
+    if (from) conds.push(gte(quotes.acceptedAt, from));
+
+    const [agg] = await db
+      .select({
+        n: sql<number>`count(*)::int`,
+        totalCents: sql<number>`coalesce(sum(${quotes.total}), 0)::bigint`,
+      })
+      .from(quotes)
+      .where(and(...conds));
+
+    const cents = Number(agg?.totalCents ?? 0);
+    return {
+      period,
+      since: from ? from.toISOString().slice(0, 10) : "all-time",
+      acceptedQuotes: agg?.n ?? 0,
+      bookedRevenue: `$${(cents / 100).toFixed(2)}`,
+      bookedRevenueCents: cents,
+    };
+  },
+
+  async get_pipeline_health({ stalledDays = 14 } = {}) {
+    const cutoff = new Date(Date.now() - Number(stalledDays) * 24 * 60 * 60 * 1000);
+
+    const [stalledOpps, sentNotViewed, viewedNotAccepted] = await Promise.all([
+      db
+        .select({
+          id: opportunities.id,
+          status: opportunities.status,
+          firstName: opportunities.firstName,
+          lastName: opportunities.lastName,
+          eventDate: opportunities.eventDate,
+          updatedAt: opportunities.updatedAt,
+        })
+        .from(opportunities)
+        .where(
+          and(
+            inArray(opportunities.status, ["new", "contacted", "qualified", "proposal"] as any),
+            lte(opportunities.updatedAt, cutoff),
+          ),
+        )
+        .orderBy(asc(opportunities.updatedAt))
+        .limit(25),
+      db
+        .select({
+          id: quotes.id,
+          status: quotes.status,
+          sentAt: quotes.sentAt,
+          total: quotes.total,
+        })
+        .from(quotes)
+        .where(and(eq(quotes.status, "sent" as any), lte(quotes.sentAt, cutoff)))
+        .orderBy(asc(quotes.sentAt))
+        .limit(25),
+      db
+        .select({
+          id: quotes.id,
+          status: quotes.status,
+          viewedAt: quotes.viewedAt,
+          total: quotes.total,
+        })
+        .from(quotes)
+        .where(and(eq(quotes.status, "viewed" as any), lte(quotes.viewedAt, cutoff)))
+        .orderBy(asc(quotes.viewedAt))
+        .limit(25),
+    ]);
+
+    return {
+      stalledDays: Number(stalledDays),
+      stalledOpportunities: stalledOpps.map((o) => ({
+        id: o.id,
+        name: `${o.firstName} ${o.lastName}`.trim(),
+        status: o.status,
+        eventDate: o.eventDate,
+        lastTouched: o.updatedAt,
+        link: `/opportunities/${o.id}`,
+      })),
+      quotesSentNoOpen: sentNotViewed.map((q) => ({
+        id: q.id,
+        sentAt: q.sentAt,
+        total: q.total ? `$${(q.total / 100).toFixed(2)}` : null,
+        link: `/quotes/${q.id}`,
+      })),
+      quotesViewedNoAccept: viewedNotAccepted.map((q) => ({
+        id: q.id,
+        viewedAt: q.viewedAt,
+        total: q.total ? `$${(q.total / 100).toFixed(2)}` : null,
+        link: `/quotes/${q.id}`,
+      })),
+    };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Tastings
+  // ---------------------------------------------------------------------------
+  async list_tastings({ status, fromDate, toDate, limit = 25 } = {}) {
+    const conds: any[] = [];
+    if (Array.isArray(status) && status.length > 0) {
+      conds.push(inArray(tastings.status, status as any));
+    }
+    if (fromDate) {
+      const d = new Date(fromDate);
+      if (!isNaN(d.getTime())) conds.push(gte(tastings.scheduledAt, d));
+    }
+    if (toDate) {
+      const d = new Date(toDate);
+      if (!isNaN(d.getTime())) conds.push(lte(tastings.scheduledAt, d));
+    }
+    const rows = await db
+      .select()
+      .from(tastings)
+      .where(conds.length > 0 ? and(...conds) : undefined)
+      .orderBy(asc(tastings.scheduledAt))
+      .limit(Math.min(Number(limit) || 25, 100));
+    return {
+      count: rows.length,
+      tastings: rows.map((t) => ({
+        id: t.id,
+        scheduledAt: t.scheduledAt,
+        guestCount: t.guestCount,
+        status: t.status,
+        contact: [t.firstName, t.lastName].filter(Boolean).join(" ") || "—",
+        email: t.email,
+        phone: t.phone,
+        paid: !!t.paidAt,
+        opportunityId: t.opportunityId,
+        clientId: t.clientId,
+        link: `/tasting/${t.id}`,
+      })),
+    };
+  },
+
+  async get_tasting({ id }) {
+    const tid = Number(id);
+    if (!Number.isFinite(tid)) return { error: "id required." };
+    const [row] = await db.select().from(tastings).where(eq(tastings.id, tid));
+    if (!row) return { error: `Tasting ${tid} not found.` };
+    return {
+      id: row.id,
+      scheduledAt: row.scheduledAt,
+      guestCount: row.guestCount,
+      status: row.status,
+      contact: {
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        phone: row.phone,
+      },
+      pricing: {
+        perGuestCents: row.pricePerGuestCents,
+        totalCents: row.totalPriceCents,
+      },
+      payment: {
+        paid: !!row.paidAt,
+        paidAt: row.paidAt,
+        squarePaymentLinkUrl: row.squarePaymentLinkUrl,
+      },
+      links: {
+        opportunityId: row.opportunityId,
+        clientId: row.clientId,
+        quoteId: row.quoteId,
+        calBookingId: row.calBookingId,
+      },
+      notes: row.notes,
+      link: `/tasting/${row.id}`,
+    };
+  },
+
+  async create_tasting(args) {
+    if (!args?.scheduledAt) return { error: "scheduledAt required." };
+    const when = new Date(args.scheduledAt);
+    if (isNaN(when.getTime())) return { error: `Invalid scheduledAt: ${args.scheduledAt}` };
+    const [row] = await db
+      .insert(tastings)
+      .values({
+        scheduledAt: when,
+        firstName: args.firstName ?? null,
+        lastName: args.lastName ?? null,
+        email: args.email ?? null,
+        phone: args.phone ?? null,
+        guestCount: Number(args.guestCount ?? 2),
+        opportunityId: args.opportunityId ?? null,
+        clientId: args.clientId ?? null,
+        quoteId: args.quoteId ?? null,
+        notes: args.notes ?? null,
+        totalPriceCents: Number(args.totalPriceCents ?? 12500),
+      } as any)
+      .returning();
+    return {
+      id: row.id,
+      scheduledAt: row.scheduledAt,
+      message: `Tasting #${row.id} booked for ${when.toISOString().slice(0, 16).replace("T", " ")}.`,
+      link: `/tasting/${row.id}`,
+    };
+  },
+
+  async reschedule_tasting({ id, scheduledAt }) {
+    const tid = Number(id);
+    if (!Number.isFinite(tid)) return { error: "id required." };
+    const when = new Date(scheduledAt);
+    if (isNaN(when.getTime())) return { error: `Invalid scheduledAt: ${scheduledAt}` };
+    const [existing] = await db.select().from(tastings).where(eq(tastings.id, tid));
+    if (!existing) return { error: `Tasting ${tid} not found.` };
+    const [row] = await db
+      .update(tastings)
+      .set({ scheduledAt: when, updatedAt: new Date() })
+      .where(eq(tastings.id, tid))
+      .returning();
+    return {
+      id: row.id,
+      from: existing.scheduledAt,
+      to: row.scheduledAt,
+      calCaveat: existing.calBookingId
+        ? "This tasting was originally booked via Cal.com — the Cal.com event was NOT updated. Update it manually if needed."
+        : null,
+      link: `/tasting/${row.id}`,
+    };
+  },
+
+  async cancel_tasting({ id, reason, status = "cancelled" }) {
+    const tid = Number(id);
+    if (!Number.isFinite(tid)) return { error: "id required." };
+    const [existing] = await db.select().from(tastings).where(eq(tastings.id, tid));
+    if (!existing) return { error: `Tasting ${tid} not found.` };
+    const newStatus = status === "no_show" ? "no_show" : "cancelled";
+    const noteSuffix = reason ? `\n[cancel reason: ${reason}]` : "";
+    const [row] = await db
+      .update(tastings)
+      .set({
+        status: newStatus as any,
+        notes: existing.notes ? existing.notes + noteSuffix : noteSuffix.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(tastings.id, tid))
+      .returning();
+    return {
+      id: row.id,
+      status: row.status,
+      calCaveat: existing.calBookingId
+        ? "This tasting was originally booked via Cal.com — the Cal.com event was NOT cancelled. Cancel it manually if needed."
+        : null,
+      link: `/tasting/${row.id}`,
+    };
+  },
+
+  async find_tasting_conflicts({ scheduledAt, windowMinutes = 90 }) {
+    const when = new Date(scheduledAt);
+    if (isNaN(when.getTime())) return { error: `Invalid scheduledAt: ${scheduledAt}` };
+    const w = Number(windowMinutes) || 90;
+    const lo = new Date(when.getTime() - w * 60 * 1000);
+    const hi = new Date(when.getTime() + w * 60 * 1000);
+    const rows = await db
+      .select({
+        id: tastings.id,
+        scheduledAt: tastings.scheduledAt,
+        firstName: tastings.firstName,
+        lastName: tastings.lastName,
+        status: tastings.status,
+      })
+      .from(tastings)
+      .where(
+        and(
+          inArray(tastings.status, ["scheduled"] as any),
+          gte(tastings.scheduledAt, lo),
+          lte(tastings.scheduledAt, hi),
+        ),
+      )
+      .orderBy(asc(tastings.scheduledAt));
+    return {
+      window: `±${w} min around ${when.toISOString()}`,
+      conflicts: rows.map((r) => ({
+        id: r.id,
+        when: r.scheduledAt,
+        contact: [r.firstName, r.lastName].filter(Boolean).join(" ") || "—",
+        link: `/tasting/${r.id}`,
+      })),
+      hasConflict: rows.length > 0,
+    };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Generic email send
+  // ---------------------------------------------------------------------------
+  async send_customer_email({ to, subject, html, text, opportunityId, clientId }) {
+    if (!to || !subject) return { error: "to and subject required." };
+    if (!html && !text) return { error: "Provide html or text body." };
+    const finalHtml =
+      html ??
+      `<pre style="font-family:inherit;white-space:pre-wrap;">${String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")}</pre>`;
+    const result = await sendEmail({
+      to,
+      subject,
+      html: finalHtml,
+      text: text ?? undefined,
+      clientId: clientId ? Number(clientId) : undefined,
+      opportunityId: opportunityId ? Number(opportunityId) : undefined,
+      templateKey: "agent_freeform",
+    });
+    if (result.skipped) {
+      return {
+        ok: false,
+        skipped: true,
+        message: "Email not sent — outbound mail is unconfigured (RESEND_API_KEY/SMTP missing). The message was not logged.",
+      };
+    }
+    if (!result.sent) {
+      return { ok: false, error: result.error || "Email send failed." };
+    }
+    return {
+      ok: true,
+      messageId: result.messageId,
+      message: `Email sent to ${to}.`,
+    };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Promo codes
+  // ---------------------------------------------------------------------------
+  async list_promo_codes({ activeOnly = false } = {}) {
+    const conds: any[] = [];
+    if (activeOnly) conds.push(eq(promoCodes.isActive, true));
+    const rows = await db
+      .select()
+      .from(promoCodes)
+      .where(conds.length > 0 ? and(...conds) : undefined)
+      .orderBy(desc(promoCodes.createdAt))
+      .limit(100);
+    const now = new Date();
+    return {
+      count: rows.length,
+      codes: rows.map((r) => {
+        const expired = r.validUntil ? new Date(r.validUntil) < now : false;
+        const exhausted = r.maxUses != null && r.currentUses >= r.maxUses;
+        return {
+          id: r.id,
+          code: r.code,
+          discountPercent: Number(r.discountPercent),
+          description: r.description,
+          uses: `${r.currentUses}${r.maxUses ? ` / ${r.maxUses}` : ""}`,
+          validFrom: r.validFrom,
+          validUntil: r.validUntil,
+          isActive: r.isActive,
+          state: !r.isActive ? "disabled" : expired ? "expired" : exhausted ? "exhausted" : "live",
+        };
+      }),
+    };
+  },
+
+  async create_promo_code({ code, discountPercent, description, maxUses, validFrom, validUntil }) {
+    const c = String(code || "").trim().toUpperCase();
+    if (!c) return { error: "code required." };
+    const pct = Number(discountPercent);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      return { error: "discountPercent must be 0–100." };
+    }
+    const existing = await db
+      .select({ id: promoCodes.id })
+      .from(promoCodes)
+      .where(eq(promoCodes.code, c))
+      .limit(1);
+    if (existing.length > 0) {
+      return { error: `Promo code "${c}" already exists (id ${existing[0].id}).` };
+    }
+    const [row] = await db
+      .insert(promoCodes)
+      .values({
+        code: c,
+        discountPercent: pct.toFixed(2) as any,
+        description: description ?? null,
+        maxUses: maxUses ? Number(maxUses) : null,
+        validFrom: validFrom ? new Date(validFrom) : null,
+        validUntil: validUntil ? new Date(validUntil) : null,
+      } as any)
+      .returning();
+    return {
+      id: row.id,
+      code: row.code,
+      discountPercent: Number(row.discountPercent),
+      message: `Created promo code "${row.code}" — ${row.discountPercent}% off.`,
+    };
+  },
+
+  async apply_promo_code_to_inquiry({ inquiryId, code }) {
+    const iid = Number(inquiryId);
+    if (!Number.isFinite(iid)) return { error: "inquiryId required." };
+    const c = String(code || "").trim().toUpperCase();
+    if (!c) return { error: "code required." };
+    const [promo] = await db
+      .select()
+      .from(promoCodes)
+      .where(eq(promoCodes.code, c));
+    if (!promo) return { error: `Promo code "${c}" not found.` };
+    if (!promo.isActive) return { error: `Promo code "${c}" is disabled.` };
+    if (promo.validUntil && new Date(promo.validUntil) < new Date()) {
+      return { error: `Promo code "${c}" expired on ${new Date(promo.validUntil).toISOString().slice(0, 10)}.` };
+    }
+    if (promo.maxUses != null && promo.currentUses >= promo.maxUses) {
+      return { error: `Promo code "${c}" has hit its max uses (${promo.maxUses}).` };
+    }
+    const [inq] = await db.select().from(inquiries).where(eq(inquiries.id, iid));
+    if (!inq) return { error: `Inquiry ${iid} not found.` };
+    await db
+      .update(inquiries)
+      .set({
+        promoCodeId: promo.id,
+        discountPercent: promo.discountPercent,
+      })
+      .where(eq(inquiries.id, iid));
+    return {
+      inquiryId: iid,
+      promoCode: promo.code,
+      discountPercent: Number(promo.discountPercent),
+      message: `Applied "${promo.code}" (${promo.discountPercent}% off) to inquiry #${iid}.`,
+      link: `/inquiries/${iid}`,
+    };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Quote update — narrow safe surface
+  // ---------------------------------------------------------------------------
+  async update_quote({ id, notes }) {
+    const qid = Number(id);
+    if (!Number.isFinite(qid)) return { error: "id required." };
+    const [existing] = await db.select().from(quotes).where(eq(quotes.id, qid));
+    if (!existing) return { error: `Quote ${qid} not found.` };
+    const patch: any = { updatedAt: new Date() };
+    if (typeof notes === "string") patch.notes = notes;
+    if (Object.keys(patch).length === 1) {
+      return { error: "Nothing to update — only `notes` is editable via this tool." };
+    }
+    const [row] = await db
+      .update(quotes)
+      .set(patch)
+      .where(eq(quotes.id, qid))
+      .returning();
+    return {
+      id: row.id,
+      status: row.status,
+      notes: row.notes,
+      message: `Quote #${row.id} updated.`,
+      link: `/quotes/${row.id}`,
+    };
+  },
+
+  // ---------------------------------------------------------------------------
+  // Unmatched comms inbox
+  // ---------------------------------------------------------------------------
+  async list_unmatched_communications({ limit = 25 } = {}) {
+    const rows = await db
+      .select({
+        id: communications.id,
+        timestamp: communications.timestamp,
+        type: communications.type,
+        direction: communications.direction,
+        fromAddress: communications.fromAddress,
+        subject: communications.subject,
+        preview: communications.bodySummary,
+      })
+      .from(communications)
+      .where(and(isNull(communications.clientId), isNull(communications.opportunityId)))
+      .orderBy(sql`${communications.timestamp} DESC`)
+      .limit(Math.min(Number(limit) || 25, 100));
+    return {
+      count: rows.length,
+      items: rows.map((c) => ({
+        id: c.id,
+        when: c.timestamp,
+        type: c.type,
+        direction: c.direction,
+        from: c.fromAddress,
+        subject: c.subject,
+        preview: c.preview,
+      })),
     };
   },
 
@@ -2693,7 +3594,14 @@ What you can do (just ask in plain English — call list_capabilities for the fu
 - Schedule & events: today's schedule, upcoming, prep sheets, shopping lists, update guest count / date / venue, mark complete.
 - Menus & recipes: lookup, search by dietary, per-serving cost, ingredient gaps, create new.
 - Ingredients: usage lookup, price changes (with auto blast-radius preview).
-- Pipeline: pull a full client file, promote inquiries, draft quotes, send quotes, log calls, pause drip.
+- Pipeline: full client file (incl. tastings), promote inquiries, draft quotes, send quotes, send contracts via BoldSign, log calls, pause drip.
+- Raw leads: convert raw lead → inquiry → quote in one chain.
+- Tastings: list, book, reschedule, cancel, find conflicts (heads-up: Cal.com bookings need manual sync on reschedule/cancel).
+- Reporting: funnel snapshot, booked revenue by period, pipeline-health (stalled deals, sent-but-unviewed quotes).
+- Promo codes: list, create, apply to inquiry.
+- Email: free-form send to anyone (auto-logged to timeline).
+- Update quote: notes only via agent (pricing/state requires admin UI).
+- Unmatched comms inbox: list incoming messages we couldn't auto-link.
 - Follow-ups inbox: list, draft replies, resolve.
 - Catalog & pricing: read for anyone, edit if admin.
 
@@ -2826,6 +3734,7 @@ function parsePageRef(pagePath?: string | null): {
     [/\/raw-leads\/(\d+)/, "rawLead", "rawLeadId"],
     [/\/inquiries\/(\d+)/, "inquiry", "inquiryId"],
     [/\/leads\/(\d+)/, "inquiry", "inquiryId"],
+    [/\/menus\/(\d+)/, "menu", "menuId"],
   ];
   for (const [rx, kind, key] of patterns) {
     const m = pagePath.match(rx);
@@ -2840,6 +3749,25 @@ function parsePageRef(pagePath?: string | null): {
 async function buildPageContext(pagePath?: string | null): Promise<string> {
   const { kind, id } = parsePageRef(pagePath);
   if (!kind || !id) {
+    // Hint for common list pages so the agent reaches for the right tool.
+    if (pagePath?.startsWith("/follow-ups")) {
+      return `\n\nPage context: chef is on the follow-ups inbox. Default to list_followups when they ask "what's next" or "what's on my plate".`;
+    }
+    if (pagePath?.startsWith("/unmatched")) {
+      return `\n\nPage context: chef is on the unmatched-communications triage view. Use list_unmatched_communications when they ask about pending unmatched emails.`;
+    }
+    if (pagePath?.startsWith("/users")) {
+      return `\n\nPage context: chef is on the team/users page. Admin-only — be careful with any user-related actions.`;
+    }
+    if (pagePath?.startsWith("/calendar")) {
+      return `\n\nPage context: chef is on the calendar. Default to list_events_this_week or today_schedule when they ask "what's coming up".`;
+    }
+    if (pagePath?.startsWith("/reports") || pagePath?.startsWith("/dashboard")) {
+      return `\n\nPage context: chef is on the reports/dashboard view. Reach for get_funnel_report, get_revenue_summary, or get_pipeline_health when they ask about performance.`;
+    }
+    if (pagePath?.startsWith("/tasting")) {
+      return `\n\nPage context: chef is on a tastings page. Default to list_tastings when they ask "who's coming in" or "do we have tastings booked".`;
+    }
     return pagePath
       ? `\n\nPage context: chef is on "${pagePath}".`
       : "";
@@ -2908,6 +3836,11 @@ async function buildPageContext(pagePath?: string | null): Promise<string> {
           : `  → No inquiry yet. To draft a quote in one go: call convert_raw_lead_to_inquiry with rawLeadId=${row.id} (idempotent), then call create_quote_from_inquiry with the returned inquiry.id. If the chef just says "create a quote", do both calls back-to-back and confirm the result.`,
       );
       return lines.join("\n");
+    }
+    if (kind === "menu") {
+      const [row] = await db.select().from(menus).where(eq(menus.id, id));
+      if (!row) return `\n\nPage context: /menus/${id} (not found).`;
+      return `\n\nPage context — Menu [#${row.id}](/menus/${row.id}) "${row.name}", theme=${(row as any).theme ?? "—"}, tier=${(row as any).tier ?? "—"}.`;
     }
     if (kind === "inquiry") {
       const [row] = await db.select().from(inquiries).where(eq(inquiries.id, id));
