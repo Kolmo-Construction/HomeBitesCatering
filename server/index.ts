@@ -5,6 +5,7 @@ import ingredientRoutes from "./ingredientRoutes";
 import quoteRoutes, { inquiryRouter } from "./quoteRoutes";
 import chatAgentRouter from "./chatAgentRoutes";
 import catalogRouter from "./catalogRoutes";
+import socialRouter from "./socialRoutes";
 import {
   getWeddingMenuThemes,
   getMenuItemsByCategory,
@@ -13,6 +14,7 @@ import {
 } from "./menuQuestionnaireRoutes";
 import { setupVite, serveStatic, log } from "./vite";
 import { registerScheduledJobs } from "./jobs/scheduler";
+import { registerSeoRoutes } from "./seoRoutes";
 
 const app = express();
 // Capture raw body for webhook signature verification (Cal.com, Stripe, etc.).
@@ -73,12 +75,21 @@ app.use((req, res, next) => {
 
   // Catalog (appetizers / desserts / equipment / pricing config)
   app.use('/api/catalog', catalogRouter);
+
+  // Social publishing (Buffer-backed: Instagram + Facebook)
+  app.use('/api/social', socialRouter);
   
   // Register menu questionnaire routes for rich menu data integration
   app.get('/api/questionnaire/wedding-menu-themes', getWeddingMenuThemes);
   app.get('/api/questionnaire/menu-items', getMenuItemsByCategory);
   app.post('/api/questionnaire/menu-items-by-ids', getMenuItemsByIds);
   app.get('/api/questionnaire/dietary-recommendations', getDietaryRecommendations);
+
+  // GEO / SEO: robots.txt, sitemap.xml, llms.txt. MUST be registered before
+  // the vite / serveStatic catch-all below — otherwise the SPA's index.html
+  // swallows these requests and AI crawlers receive HTML when they ask for
+  // text/xml, silently failing every GEO signal we care about.
+  registerSeoRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

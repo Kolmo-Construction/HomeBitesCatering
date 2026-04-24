@@ -49,6 +49,14 @@ import {
 } from "./services/contractService";
 import { getDepositPercent, getSiteConfig } from "./utils/siteConfig";
 import { tastings, promoCodes } from "@shared/schema";
+import {
+  listIgFbProfiles,
+  listPending as listBufferPending,
+  listSent as listBufferSent,
+  createPost as createBufferPost,
+  deleteUpdate as deleteBufferUpdate,
+  type MediaKind,
+} from "./services/bufferService";
 
 // Gate: pricing writes require admin role. Chef/user accounts can still read
 // via list_catalog_items and get_pricing_config.
@@ -1130,6 +1138,94 @@ const toolDefs: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  // ---- Social publishing (Instagram + Facebook via Buffer) ----
+  {
+    type: "function",
+    function: {
+      name: "list_social_profiles",
+      description:
+        "List the Instagram and Facebook profiles connected to our Buffer account. Returns each profile's id, service (instagram|facebook), and username. Use this first when the admin asks to post — they'll tell you which channel(s), and you'll need the ids for create_social_post.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_social_queue",
+      description:
+        "List scheduled / pending / draft posts for a specific social profile. Use this to answer 'what's queued up for Instagram?' or 'when is the next post going out on Facebook?'.",
+      parameters: {
+        type: "object",
+        properties: {
+          profileId: {
+            type: "string",
+            description: "Buffer profile id (from list_social_profiles).",
+          },
+          kind: {
+            type: "string",
+            enum: ["pending", "sent"],
+            description: "pending (default) returns the upcoming queue; sent returns recent history.",
+          },
+        },
+        required: ["profileId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_social_post",
+      description:
+        "Create a social post via Buffer. SAFETY: the agent can ONLY save drafts — Mike approves and posts from the Admin UI (/social). Use this when the admin asks you to draft an Instagram or Facebook post. Media is optional for Facebook but required for Instagram feed/reels. Carousel supports 2-10 images. Videos/reels need a thumbnail URL.",
+      parameters: {
+        type: "object",
+        properties: {
+          profileIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "Buffer profile ids (from list_social_profiles). Can target multiple channels in one post.",
+          },
+          text: { type: "string", description: "Post caption / body." },
+          media: {
+            type: "object",
+            description: "Optional media attachment. Omit for text-only FB posts; IG posts need media.",
+            properties: {
+              kind: {
+                type: "string",
+                enum: ["image", "carousel", "video", "reel"],
+              },
+              urls: {
+                type: "array",
+                items: { type: "string" },
+                description: "Public URLs. image=1, carousel=2-10 images, video=1 video, reel=1 video.",
+              },
+              thumbnailUrl: {
+                type: "string",
+                description: "Required for video and reel.",
+              },
+            },
+            required: ["kind", "urls"],
+          },
+        },
+        required: ["profileIds", "text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_social_post",
+      description:
+        "Delete a pending / scheduled / draft social post by its Buffer update id. Use when the admin says 'cancel the Tuesday post' or 'drop that draft'. Sent posts cannot be deleted (they're already live on IG/FB).",
+      parameters: {
+        type: "object",
+        properties: {
+          updateId: { type: "string" },
+        },
+        required: ["updateId"],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -1212,6 +1308,17 @@ const toolHandlers: Record<string, ToolHandler> = {
             "draft a quote for inquiry 58 at Silver Italian",
             "walk me through Sarah Johnson's full history",
           ],
+        },
+        {
+          name: "Social publishing — Instagram + Facebook (agent drafts only)",
+          examples: [
+            "which IG / FB accounts do we have connected?",
+            "what's queued up on Instagram this week?",
+            "draft an IG post for this weekend's wedding (I'll add the photo)",
+            "draft a FB carousel showing our top 3 menus",
+            "cancel that Tuesday draft",
+          ],
+          note: "I can save drafts. Mike publishes them from /social.",
         },
       ],
       tips: [
@@ -3575,6 +3682,118 @@ const toolHandlers: Record<string, ToolHandler> = {
     await db.delete(chefMemory).where(eq(chefMemory.id, memId));
     return { id: memId, topic: row.topic, fact: row.fact, status: "forgotten" };
   },
+
+  // ---- Social publishing (Buffer: Instagram + Facebook) --------------------
+
+  async list_social_profiles() {
+    try {
+      const profiles = await listIgFbProfiles();
+      if (profiles.length === 0) {
+        return {
+          profiles: [],
+          note: "No Instagram or Facebook profiles are connected in Buffer yet. Connect them at buffer.com/app.",
+        };
+      }
+      return {
+        profiles: profiles.map((p) => ({
+          id: p.id,
+          service: p.service,
+          username: p.formattedUsername || p.serviceUsername,
+          serviceType: p.serviceType,
+        })),
+      };
+    } catch (err: any) {
+      return { error: err?.message || "Failed to reach Buffer." };
+    }
+  },
+
+  async list_social_queue({ profileId, kind = "pending" }) {
+    if (!profileId) return { error: "profileId required — call list_social_profiles first." };
+    try {
+      const updates =
+        kind === "sent"
+          ? await listBufferSent(String(profileId), { count: 25 })
+          : await listBufferPending(String(profileId));
+      return {
+        count: updates.length,
+        updates: updates.map((u) => ({
+          id: u.id,
+          status: u.status,
+          text: u.text,
+          scheduledAt: u.scheduledAt,
+          sentAt: u.sentAt,
+          serviceLink: u.serviceLink,
+        })),
+      };
+    } catch (err: any) {
+      return { error: err?.message || "Failed to reach Buffer." };
+    }
+  },
+
+  async create_social_post({ profileIds, text, media }, ctx) {
+    // Admin-gate the agent-driven path even though the route is admin-only:
+    // belt-and-suspenders, because chef users can hit this tool too.
+    const adminErr = await requireAdmin(ctx?.userId);
+    if (adminErr) return { error: adminErr };
+
+    if (!Array.isArray(profileIds) || profileIds.length === 0) {
+      return { error: "profileIds[] required (use list_social_profiles to find them)." };
+    }
+    if (typeof text !== "string") return { error: "text required." };
+
+    // Normalize media shape
+    let normalizedMedia:
+      | { kind: MediaKind; urls: string[]; thumbnailUrl?: string }
+      | undefined;
+    if (media) {
+      const validKinds: MediaKind[] = ["image", "carousel", "video", "reel"];
+      if (!validKinds.includes(media.kind)) {
+        return { error: "media.kind must be one of image|carousel|video|reel." };
+      }
+      if (!Array.isArray(media.urls) || media.urls.length === 0) {
+        return { error: "media.urls[] required." };
+      }
+      normalizedMedia = {
+        kind: media.kind,
+        urls: media.urls.map(String),
+        thumbnailUrl: media.thumbnailUrl ? String(media.thumbnailUrl) : undefined,
+      };
+    }
+
+    try {
+      const result = await createBufferPost({
+        profileIds: profileIds.map(String),
+        text,
+        media: normalizedMedia,
+        // Agent path is ALWAYS draft — admin reviews in the /social UI before publishing.
+        draft: true,
+      });
+      return {
+        status: "draft_created",
+        note: "Draft saved to Buffer. Mike can review and publish from /social.",
+        updates: result.updates.map((u) => ({
+          id: u.id,
+          profileId: u.profileId,
+          status: u.status,
+          text: u.text,
+        })),
+      };
+    } catch (err: any) {
+      return { error: err?.message || "Buffer rejected the post." };
+    }
+  },
+
+  async delete_social_post({ updateId }, ctx) {
+    const adminErr = await requireAdmin(ctx?.userId);
+    if (adminErr) return { error: adminErr };
+    if (!updateId) return { error: "updateId required." };
+    try {
+      const result = await deleteBufferUpdate(String(updateId));
+      return { updateId: String(updateId), ...result };
+    } catch (err: any) {
+      return { error: err?.message || "Buffer rejected the delete." };
+    }
+  },
 };
 
 // ============================================================================
@@ -3604,6 +3823,7 @@ What you can do (just ask in plain English — call list_capabilities for the fu
 - Unmatched comms inbox: list incoming messages we couldn't auto-link.
 - Follow-ups inbox: list, draft replies, resolve.
 - Catalog & pricing: read for anyone, edit if admin.
+- Social publishing (IG + FB via Buffer): list connected profiles, view the queue, draft posts (image, carousel, video, reel), delete drafts. The agent ONLY saves drafts — Mike publishes from /social.
 
 Memory — this is the part that makes you actually useful:
 - You have long-term memory. Use remember_fact PROACTIVELY whenever the chef tells you something that will matter next week, next month, or for that specific person/supplier/recipe. Don't ask permission; just save it and mention it in one short line ("Got it — saved that Sarah is allergic to nuts.").
