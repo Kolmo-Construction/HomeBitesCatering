@@ -7,7 +7,7 @@ export default function AccountSecurity() {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Account security</h1>
+        <h1 className="text-2xl font-bold text-gray-900">My account</h1>
         <p className="text-gray-600 mt-1">
           Signed in as <strong>{user?.username}</strong> ({user?.email}).
         </p>

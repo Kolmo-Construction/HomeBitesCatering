@@ -36,6 +36,7 @@ import {
   ChevronRight,
   ShoppingBasket,
   ChefHat,
+  User,
   UserCog,
   MessageSquareQuote,
   DollarSign,
@@ -128,7 +129,7 @@ const ALL_NAV: NavItem[] = [
     icon: Settings,
     submenu: [
       { name: "Users", href: "/users", icon: UserCog, adminOnly: true },
-      { name: "My security", href: "/account/security", icon: UserCog },
+      { name: "My account", href: "/account/security", icon: User },
       { name: "Settings", href: "/settings", icon: Settings },
     ],
   },
