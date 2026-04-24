@@ -7,6 +7,22 @@ import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import session from "express-session";
+import rateLimit from "express-rate-limit";
+import { hashPassword, verifyPassword, passwordSchema, dummyVerify } from "./utils/passwords";
+import { createAuthToken, consumeAuthToken, peekAuthToken, invalidateSessionsForUser } from "./auth/passwordReset";
+import { logAuthEvent } from "./utils/authAudit";
+import { users as usersTable, userMfa } from "@shared/schema";
+import {
+  generateEnrollment,
+  verifyCode,
+  encryptSecret,
+  decryptSecret,
+  generateRecoveryCodes,
+  hashRecoveryCodes,
+  consumeRecoveryCode,
+  isUserEnrolled,
+  getEnrolledSecret,
+} from "./auth/mfa";
 import { eq, and, isNull, inArray, or, desc } from "drizzle-orm"; // For equality operations
 import Anthropic from "@anthropic-ai/sdk";
 import pgSession from 'connect-pg-simple';
@@ -54,6 +70,7 @@ import { buildProposalFromInquiry, buildProposalFromQuoteAlone } from './lib/pro
 import type { Proposal } from '@shared/proposal';
 import { getSiteConfig, getEmailConfig, getCalComConfig, getSquareConfig, getBoldSignConfig, getDepositPercent, getReviewConfig, getTermsConfig, getLeftoverReleaseConfig, ALCOHOL_SERVICE_CLAUSE } from './utils/siteConfig';
 import { createCheckoutLink, verifySquareWebhook } from './services/paymentService';
+import { ensureEventDepositCheckout, ensureEventBalanceCheckout } from './services/eventInvoicing';
 import {
   generateContractHtml,
   sendContractForSignature,
@@ -108,6 +125,10 @@ import {
   balanceRequestCustomerEmail,
   paymentReceivedCustomerEmail,
   paymentReceivedOwnerEmail,
+  passwordResetRequestedEmail,
+  usernameReminderEmail,
+  passwordChangedEmail,
+  userInvitedEmail,
   type ReminderKind,
 } from './utils/emailTemplates';
 
@@ -300,23 +321,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Replit uses HTTPS for all published apps, so we use secure cookies
   // In development (with REPL_ID), we allow non-secure for localhost
   const isProduction = !process.env.REPL_ID || process.env.NODE_ENV === 'production';
-  
+
+  // Fail fast in prod if no session secret — falling back to a hardcoded
+  // value would let anyone forge sessions against a known key.
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret) {
+    if (isProduction) {
+      throw new Error("SESSION_SECRET must be set in production");
+    }
+    console.warn("[session] SESSION_SECRET not set — using dev fallback. DO NOT deploy like this.");
+  }
+
   app.use(session({
     store: new PgStore({
       conString: process.env.DATABASE_URL,
       tableName: 'sessions',
       createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET || 'super-secret-key',
+    secret: sessionSecret || 'dev-only-insecure-fallback',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-      secure: 'auto',
+    cookie: {
+      secure: isProduction,
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours sliding
     }
   }));
+
+  // Rate limits for auth endpoints. express-rate-limit keys by IP by default;
+  // login also gets a second limiter keyed by (ip + username) so a single
+  // attacker can't spread guesses across many usernames under the IP bucket,
+  // and a single target username can't be hammered from many IPs either.
+  const loginIpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { message: 'Too many login attempts from this IP. Try again in a few minutes.' },
+  });
+  const loginUserLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+      const username = typeof req.body?.username === 'string' ? req.body.username.toLowerCase() : '';
+      return `${req.ip}::${username}`;
+    },
+    message: { message: 'Too many login attempts for this account. Try again in a few minutes.' },
+  });
 
   // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -329,12 +383,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(500).json({ error: 'Internal Server Error' });
   });
 
+  // Absolute max session lifetime. Independent of the 24h rolling cookie —
+  // even if the user keeps using the app, sessions older than this are
+  // forcibly destroyed so a long-lived stolen cookie eventually dies.
+  const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.session.userId) {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    // Backfill issuedAt on legacy sessions so this check doesn't immediately
+    // boot anyone who was logged in before the field existed.
+    if (!req.session.issuedAt) {
+      req.session.issuedAt = Date.now();
       return next();
     }
-    return res.status(401).json({ message: 'Not authenticated' });
+    if (Date.now() - req.session.issuedAt > SESSION_MAX_AGE_MS) {
+      req.session.destroy(() => {
+        return res.status(401).json({ message: 'Session expired. Please sign in again.' });
+      });
+      return;
+    }
+    return next();
   };
 
   // Lazy role lookup — returns req.session.userRole if cached, else fetches
@@ -374,73 +445,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // ===== Auth Routes =====
-  
-  // Register a new user
-  app.post('/api/auth/register', async (req: Request, res: Response) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
-      
-      const newUser = await storage.createUser({
-        ...userData,
-        password: hashedPassword
-      });
-      
-      // Don't return the password
-      const { password: _, ...userWithoutPassword } = newUser;
-      
-      res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      console.error('Error registering user:', error);
-      
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
-      }
-      
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  // Login
-  app.post('/api/auth/login', async (req: Request, res: Response) => {
+
+  // Login — rate-limited per IP and per (IP, username). Runs a dummy bcrypt
+  // compare on unknown usernames so response time doesn't leak existence.
+  // Account-lockout thresholds. Tuned so a human fat-fingering their password
+  // a handful of times won't get locked, but an online guessing attack hits
+  // the wall fast. 10 failures in 15 minutes → 15 min lock.
+  const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
+  const LOCKOUT_THRESHOLD = 10;
+  const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+  app.post('/api/auth/login', loginIpLimiter, loginUserLimiter, async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
-      
-      if (!username || !password) {
+
+      if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
         return res.status(400).json({ message: 'Username and password are required' });
       }
-      
+
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user) {
+        await dummyVerify();
+        logAuthEvent('login_failure', null, req, { username, reason: 'unknown_user' });
         return res.status(401).json({ message: 'Invalid credentials' });
       }
-      
-      const passwordMatch = await bcrypt.compare(password, user.password);
-      
+
+      // Locked account short-circuits the password check. We still return
+      // 423 with a generic message — don't tell an attacker mid-lockout that
+      // they happen to have the right password.
+      const now = new Date();
+      if (user.lockedUntil && user.lockedUntil > now) {
+        logAuthEvent('login_failure', user.id, req, { reason: 'locked' });
+        return res.status(423).json({
+          message: 'Account is temporarily locked due to repeated failed sign-ins. Try again later or use "Forgot password".',
+        });
+      }
+
+      const passwordMatch = await verifyPassword(password, user.password);
+
       if (!passwordMatch) {
+        // Reset the failure counter if the trailing window has elapsed.
+        const withinWindow =
+          user.lastFailedLoginAt && (now.getTime() - user.lastFailedLoginAt.getTime()) < LOCKOUT_WINDOW_MS;
+        const nextCount = withinWindow ? (user.failedLoginCount ?? 0) + 1 : 1;
+        const shouldLock = nextCount >= LOCKOUT_THRESHOLD;
+
+        await db
+          .update(usersTable)
+          .set({
+            failedLoginCount: nextCount,
+            lastFailedLoginAt: now,
+            lockedUntil: shouldLock ? new Date(now.getTime() + LOCKOUT_DURATION_MS) : user.lockedUntil,
+          })
+          .where(eq(usersTable.id, user.id));
+
+        logAuthEvent('login_failure', user.id, req, { count: nextCount, locked: shouldLock });
+        if (shouldLock) {
+          logAuthEvent('user_locked', user.id, req, { until: new Date(now.getTime() + LOCKOUT_DURATION_MS) });
+        }
+
         return res.status(401).json({ message: 'Invalid credentials' });
       }
-      
-      // Set the user id and role in the session. The role is cached here so
-      // endpoints that read req.session.userRole directly don't have to
-      // round-trip to the DB on every request. Any role change requires the
-      // user to log out and back in — acceptable trade-off for SSR/perf.
+
+      // Success — clear the counters so a later password typo doesn't count
+      // against a trailing run of old failures.
+      if ((user.failedLoginCount ?? 0) > 0 || user.lockedUntil || user.lastFailedLoginAt) {
+        await db
+          .update(usersTable)
+          .set({ failedLoginCount: 0, lockedUntil: null, lastFailedLoginAt: null })
+          .where(eq(usersTable.id, user.id));
+      }
+
+      // If the user has 2FA enrolled, defer session promotion until they
+      // pass the TOTP challenge. The caller gets { mfaRequired: true } and
+      // must follow up with POST /api/auth/mfa/challenge.
+      const mfaEnrolled = await isUserEnrolled(user.id);
+      if (mfaEnrolled) {
+        req.session.mfaPendingUserId = user.id;
+        req.session.mfaPendingSetAt = Date.now();
+        req.session.save((err) => {
+          if (err) {
+            console.error('Error saving pending mfa session:', err);
+            return res.status(500).json({ message: 'Server error' });
+          }
+          res.status(200).json({ mfaRequired: true });
+        });
+        return;
+      }
+
       req.session.userId = user.id;
       req.session.userRole = user.role;
-      
+      req.session.issuedAt = Date.now();
+
       // Save the session explicitly before responding
       req.session.save((err) => {
         if (err) {
           console.error('Error saving session:', err);
           return res.status(500).json({ message: 'Server error' });
         }
-        
-        // Don't return the password
+
+        logAuthEvent('login_success', user.id, req);
         const { password: _, ...userWithoutPassword } = user;
-        
         res.status(200).json(userWithoutPassword);
       });
     } catch (error) {
@@ -474,18 +580,523 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Logout
   app.post('/api/auth/logout', (req: Request, res: Response) => {
+    const userId = req.session.userId ?? null;
     req.session.destroy((err) => {
       if (err) {
         console.error('Error destroying session:', err);
         return res.status(500).json({ message: 'Server error' });
       }
-      
+      if (userId) logAuthEvent('logout', userId, req);
       res.status(200).json({ message: 'Logged out successfully' });
     });
   });
-  
+
+  // ===== Auth Recovery (forgot password / username, reset) =====
+
+  // Rate limits for recovery endpoints. Tighter than login because these
+  // trigger outbound emails — we don't want to turn this into a spam relay.
+  const recoveryIpLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { message: 'Too many requests. Try again in an hour.' },
+  });
+
+  const RESET_TOKEN_TTL_MINUTES = 60;
+
+  // Always returns 204 regardless of whether the email matches a user. This
+  // prevents enumeration of valid accounts via the forgot-password form.
+  app.post('/api/auth/forgot-password', recoveryIpLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body ?? {};
+      if (typeof email !== 'string' || !email.includes('@')) {
+        return res.status(204).end();
+      }
+
+      const user = await storage.getUserByEmail(email.trim().toLowerCase());
+      if (user) {
+        const ip = (req.ip || req.socket.remoteAddress || null) as string | null;
+        const { token } = await createAuthToken({
+          userId: user.id,
+          purpose: 'password_reset',
+          ip,
+          ttlMs: RESET_TOKEN_TTL_MINUTES * 60 * 1000,
+        });
+
+        const base = getEmailConfig().publicBaseUrl.replace(/\/$/, '');
+        const resetUrl = `${base}/reset-password?token=${encodeURIComponent(token)}`;
+
+        const tpl = passwordResetRequestedEmail({
+          firstName: user.firstName,
+          resetUrl,
+          expiresInMinutes: RESET_TOKEN_TTL_MINUTES,
+          ipAddress: ip,
+        });
+
+        sendEmailInBackground({
+          to: user.email,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+          templateKey: 'password_reset_requested',
+        });
+
+        logAuthEvent('password_reset_requested', user.id, req);
+      }
+
+      return res.status(204).end();
+    } catch (error) {
+      console.error('Error handling forgot-password:', error);
+      // Still return 204 — don't leak whether processing errored for a real user.
+      return res.status(204).end();
+    }
+  });
+
+  // Peek at a reset token to show the username on the reset page. Does not
+  // consume the token. Returns 404 for invalid/expired/used tokens.
+  app.get('/api/auth/reset-token/:token', async (req: Request, res: Response) => {
+    try {
+      const peek = await peekAuthToken({ token: req.params.token, purpose: 'password_reset' });
+      if (!peek) return res.status(404).json({ message: 'Invalid or expired token' });
+
+      const user = await storage.getUser(peek.userId);
+      if (!user) return res.status(404).json({ message: 'Invalid or expired token' });
+
+      return res.status(200).json({ valid: true, username: user.username });
+    } catch (error) {
+      console.error('Error peeking reset token:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Consume a reset token and set a new password. Invalidates all existing
+  // sessions for the account so an attacker with a stolen cookie is kicked
+  // out at the same time the legit user regains control.
+  const resetPasswordSchema = z.object({
+    token: z.string().min(10),
+    newPassword: passwordSchema,
+  }).strict();
+
+  app.post('/api/auth/reset-password', recoveryIpLimiter, async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = resetPasswordSchema.parse(req.body);
+
+      const consumed = await consumeAuthToken({ token, purpose: 'password_reset' });
+      if (!consumed) {
+        return res.status(400).json({ message: 'Invalid or expired token' });
+      }
+
+      const user = await storage.getUser(consumed.userId);
+      if (!user) {
+        return res.status(400).json({ message: 'Invalid or expired token' });
+      }
+
+      const hashed = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashed, passwordChangedAt: new Date() } as any);
+      await invalidateSessionsForUser(user.id);
+
+      logAuthEvent('password_reset_consumed', user.id, req);
+      logAuthEvent('password_changed', user.id, req, { via: 'reset' });
+
+      const ip = (req.ip || req.socket.remoteAddress || null) as string | null;
+      const tpl = passwordChangedEmail({
+        firstName: user.firstName,
+        when: new Date(),
+        ipAddress: ip,
+      });
+      sendEmailInBackground({
+        to: user.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        templateKey: 'password_changed',
+      });
+
+      return res.status(200).json({ message: 'Password updated. Please sign in with your new password.' });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Forgot-username: always 204. If a user with that email exists, email
+  // them the username.
+  app.post('/api/auth/forgot-username', recoveryIpLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body ?? {};
+      if (typeof email !== 'string' || !email.includes('@')) {
+        return res.status(204).end();
+      }
+
+      const user = await storage.getUserByEmail(email.trim().toLowerCase());
+      if (user) {
+        const base = getEmailConfig().publicBaseUrl.replace(/\/$/, '');
+        const tpl = usernameReminderEmail({
+          firstName: user.firstName,
+          username: user.username,
+          loginUrl: `${base}/`,
+        });
+        sendEmailInBackground({
+          to: user.email,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+          templateKey: 'username_reminder',
+        });
+      }
+
+      return res.status(204).end();
+    } catch (error) {
+      console.error('Error handling forgot-username:', error);
+      return res.status(204).end();
+    }
+  });
+
+  // ===== MFA (TOTP) =====
+
+  const MFA_PENDING_TTL_MS = 5 * 60 * 1000;
+
+  // Complete a two-step login. Callable only with a valid mfaPendingUserId
+  // in the session (set by /api/auth/login when the user has MFA enrolled).
+  app.post('/api/auth/mfa/challenge', async (req: Request, res: Response) => {
+    try {
+      const pendingId = req.session.mfaPendingUserId;
+      const pendingSetAt = req.session.mfaPendingSetAt ?? 0;
+      if (!pendingId || Date.now() - pendingSetAt > MFA_PENDING_TTL_MS) {
+        // Clear stale pending state so a second attempt starts fresh.
+        req.session.mfaPendingUserId = undefined;
+        req.session.mfaPendingSetAt = undefined;
+        return res.status(401).json({ message: 'MFA challenge expired — please sign in again.' });
+      }
+
+      const { code, recoveryCode } = req.body ?? {};
+      if (typeof code !== 'string' && typeof recoveryCode !== 'string') {
+        return res.status(400).json({ message: 'Code or recovery code is required' });
+      }
+
+      let ok = false;
+      if (typeof code === 'string' && code.trim()) {
+        const secret = await getEnrolledSecret(pendingId);
+        if (secret) ok = verifyCode(secret, code);
+      }
+      if (!ok && typeof recoveryCode === 'string' && recoveryCode.trim()) {
+        ok = await consumeRecoveryCode(pendingId, recoveryCode.trim());
+      }
+
+      if (!ok) {
+        logAuthEvent('login_failure', pendingId, req, { reason: 'mfa_invalid' });
+        return res.status(401).json({ message: 'Invalid code' });
+      }
+
+      const user = await storage.getUser(pendingId);
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.issuedAt = Date.now();
+      req.session.mfaPendingUserId = undefined;
+      req.session.mfaPendingSetAt = undefined;
+
+      req.session.save((err) => {
+        if (err) {
+          console.error('Error saving post-mfa session:', err);
+          return res.status(500).json({ message: 'Server error' });
+        }
+        logAuthEvent('login_success', user.id, req, { mfa: true });
+        const { password: _, ...userWithoutPassword } = user;
+        res.status(200).json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error('Error in mfa challenge:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Start enrollment: generate a fresh secret + QR, stash in session until
+  // the user proves they scanned it by POSTing a valid code.
+  app.post('/api/auth/mfa/setup', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ message: 'Not authenticated' });
+
+      if (await isUserEnrolled(user.id)) {
+        return res.status(400).json({ message: 'MFA already enrolled. Disable it first to re-enroll.' });
+      }
+
+      const { secret, otpauth, qrDataUrl } = await generateEnrollment({
+        username: user.email,
+        issuer: 'Home Bites',
+      });
+      req.session.mfaPendingSecret = secret;
+      req.session.save(() => {
+        res.status(200).json({ secret, otpauth, qrDataUrl });
+      });
+    } catch (error: any) {
+      console.error('Error starting MFA setup:', error);
+      res.status(500).json({ message: error?.message || 'Server error' });
+    }
+  });
+
+  // Finish enrollment: verify the code, persist encrypted secret + hashed
+  // recovery codes, return plaintext recovery codes once.
+  app.post('/api/auth/mfa/verify-enrollment', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ message: 'Not authenticated' });
+
+      const secret = req.session.mfaPendingSecret;
+      if (!secret) return res.status(400).json({ message: 'No pending enrollment. Start setup again.' });
+
+      const { code } = req.body ?? {};
+      if (typeof code !== 'string' || !verifyCode(secret, code)) {
+        return res.status(400).json({ message: 'Invalid code. Try again.' });
+      }
+
+      const recoveryPlain = generateRecoveryCodes();
+      const recoveryHashed = await hashRecoveryCodes(recoveryPlain);
+
+      await db.insert(userMfa).values({
+        userId: user.id,
+        secretEncrypted: encryptSecret(secret),
+        recoveryCodesHashed: recoveryHashed,
+      });
+
+      req.session.mfaPendingSecret = undefined;
+      req.session.save(() => {
+        logAuthEvent('mfa_enrolled', user.id, req);
+        res.status(200).json({ recoveryCodes: recoveryPlain });
+      });
+    } catch (error: any) {
+      console.error('Error verifying MFA enrollment:', error);
+      res.status(500).json({ message: error?.message || 'Server error' });
+    }
+  });
+
+  // Disable MFA. Requires the current password AND a valid TOTP/recovery
+  // code so neither factor alone lets an attacker turn it off.
+  app.post('/api/auth/mfa/disable', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ message: 'Not authenticated' });
+
+      const { currentPassword, code, recoveryCode } = req.body ?? {};
+      if (typeof currentPassword !== 'string' || !(await verifyPassword(currentPassword, user.password))) {
+        return res.status(401).json({ message: 'Current password is incorrect' });
+      }
+
+      let ok = false;
+      if (typeof code === 'string') {
+        const secret = await getEnrolledSecret(user.id);
+        if (secret) ok = verifyCode(secret, code);
+      }
+      if (!ok && typeof recoveryCode === 'string') {
+        ok = await consumeRecoveryCode(user.id, recoveryCode);
+      }
+      if (!ok) return res.status(400).json({ message: 'Invalid MFA code' });
+
+      await db.delete(userMfa).where(eq(userMfa.userId, user.id));
+      logAuthEvent('mfa_disabled', user.id, req);
+      res.status(200).json({ message: 'MFA disabled' });
+    } catch (error) {
+      console.error('Error disabling MFA:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Status endpoint so the UI can show enrolled/not enrolled.
+  app.get('/api/auth/mfa/status', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const enrolled = await isUserEnrolled(req.session.userId!);
+      res.status(200).json({ enrolled });
+    } catch (error) {
+      console.error('Error getting MFA status:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // ===== Invite flow =====
+
+  const INVITE_TTL_DAYS = 7;
+
+  // Admin creates a placeholder user + invite token. The user's password is
+  // a random 64-char string they'll never need — they set their real one
+  // when accepting. Username is also a placeholder until accept-invite picks
+  // a real one.
+  const inviteUserSchema = z.object({
+    email: z.string().email(),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    role: z.enum(['admin', 'user', 'client']).default('user'),
+    phone: z.string().optional(),
+  }).strict();
+
+  app.post('/api/users/invite', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const data = inviteUserSchema.parse(req.body);
+
+      // Avoid re-creating a user that's already here. If they exist,
+      // return 409 rather than silently overwriting.
+      const existing = await storage.getUserByEmail(data.email.toLowerCase());
+      if (existing) {
+        return res.status(409).json({ message: 'A user with that email already exists' });
+      }
+
+      // Username collision is a concern — use a random placeholder so two
+      // pending invites for "J Smith" don't clash. The real username is
+      // chosen at accept time.
+      const placeholderUsername = `invite_${randomBytes(8).toString('hex')}`;
+      const placeholderPassword = randomBytes(32).toString('base64');
+      const hashed = await hashPassword(placeholderPassword + 'A1'); // satisfy strength check
+
+      const newUser = await storage.createUser({
+        username: placeholderUsername,
+        password: hashed,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email.toLowerCase(),
+        phone: data.phone ?? null,
+        role: data.role,
+      } as any);
+
+      const { token } = await createAuthToken({
+        userId: newUser.id,
+        purpose: 'invite',
+        ip: (req.ip || null) as string | null,
+        ttlMs: INVITE_TTL_DAYS * 24 * 60 * 60 * 1000,
+      });
+
+      const inviter = await storage.getUser(req.session.userId!);
+      const base = getEmailConfig().publicBaseUrl.replace(/\/$/, '');
+      const acceptUrl = `${base}/accept-invite?token=${encodeURIComponent(token)}`;
+
+      const tpl = userInvitedEmail({
+        firstName: data.firstName,
+        inviterName: inviter ? `${inviter.firstName} ${inviter.lastName}`.trim() || inviter.username : 'An admin',
+        acceptUrl,
+        expiresInDays: INVITE_TTL_DAYS,
+      });
+      sendEmailInBackground({
+        to: data.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        templateKey: 'user_invited',
+      });
+
+      logAuthEvent('role_changed', newUser.id, req, { via: 'invite', to: data.role, actorId: req.session.userId });
+      res.status(201).json({ id: newUser.id, email: data.email });
+    } catch (error) {
+      console.error('Error inviting user:', error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Peek at invite token to show the email on the accept page.
+  app.get('/api/auth/invite/:token', async (req: Request, res: Response) => {
+    const peek = await peekAuthToken({ token: req.params.token, purpose: 'invite' });
+    if (!peek) return res.status(404).json({ message: 'Invalid or expired invite' });
+    const user = await storage.getUser(peek.userId);
+    if (!user) return res.status(404).json({ message: 'Invalid or expired invite' });
+    res.status(200).json({
+      valid: true,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
+  });
+
+  // Consume invite: pick a real username + password. Rate-limited like the
+  // other recovery endpoints.
+  const acceptInviteSchema = z.object({
+    token: z.string().min(10),
+    username: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/, 'Username contains invalid characters'),
+    password: passwordSchema,
+  }).strict();
+
+  app.post('/api/auth/accept-invite', recoveryIpLimiter, async (req: Request, res: Response) => {
+    try {
+      const { token, username, password } = acceptInviteSchema.parse(req.body);
+
+      // Username uniqueness — don't consume the token if the chosen
+      // username is taken, or the user loses their invite.
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(409).json({ message: 'That username is taken. Try another.' });
+      }
+
+      const consumed = await consumeAuthToken({ token, purpose: 'invite' });
+      if (!consumed) return res.status(400).json({ message: 'Invalid or expired invite' });
+
+      const user = await storage.getUser(consumed.userId);
+      if (!user) return res.status(400).json({ message: 'Invalid or expired invite' });
+
+      const hashed = await hashPassword(password);
+      await storage.updateUser(user.id, {
+        username,
+        password: hashed,
+        passwordChangedAt: new Date(),
+      } as any);
+
+      // Auto-sign in — invite accept is proof of email ownership + password
+      // choice, which is stronger than a regular login.
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.issuedAt = Date.now();
+      req.session.save(() => {
+        logAuthEvent('login_success', user.id, req, { via: 'invite' });
+        res.status(200).json({ id: user.id, username, role: user.role });
+      });
+    } catch (error) {
+      console.error('Error accepting invite:', error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // ===== User Routes =====
-  
+
+  // Admin user-create (was the public /api/auth/register). Admin-only, admin
+  // picks the role. Password is validated against passwordSchema.
+  const adminCreateUserSchema = insertUserSchema.extend({
+    password: passwordSchema,
+    role: z.enum(['admin', 'user', 'client']).default('user'),
+  });
+
+  app.post('/api/users', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userData = adminCreateUserSchema.parse(req.body);
+
+      const hashedPassword = await hashPassword(userData.password);
+
+      const newUser = await storage.createUser({
+        ...userData,
+        password: hashedPassword,
+      });
+
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error creating user:', error);
+
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Get all users (admin only)
   app.get('/api/users', isAdmin, async (req: Request, res: Response) => {
     try {
@@ -529,35 +1140,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Whitelisted profile fields a user may set on themselves. Role and
+  // password are deliberately excluded — admins change role through the
+  // admin branch below, and passwords go through change-password or the
+  // reset-token flow so we always require proof of identity.
+  const selfUpdateSchema = z.object({
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+  }).strict();
+
+  // Admins can additionally change role. Still no password here — admin
+  // password changes go through /api/users/:id/change-password with the
+  // admin override path.
+  const adminUpdateSchema = selfUpdateSchema.extend({
+    role: z.enum(['admin', 'user', 'client']).optional(),
+  }).strict();
+
   // Update a user (admin or self)
   app.patch('/api/users/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      
+
       if (isNaN(userId)) {
         return res.status(400).json({ message: 'Invalid user ID' });
       }
-      
-      // Only admins can update other users
-      if (userId !== req.session.userId) {
-        const currentUser = await storage.getUser(req.session.userId!);
 
-        if (!currentUser || currentUser.role !== 'admin') {
-          return res.status(403).json({ message: 'Insufficient permissions' });
-        }
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser) {
+        return res.status(401).json({ message: 'Not authenticated' });
       }
-      
-      const updateData = req.body;
 
-      // Prevent users from changing their own role
-      if (userId === req.session.userId) {
-        const currentUser = await storage.getUser(req.session.userId);
-        if (currentUser && currentUser.role !== 'admin' && updateData.role) {
-          return res.status(403).json({ message: 'You cannot change your own role' });
-        }
+      const isSelf = userId === req.session.userId;
+      const isActingAdmin = currentUser.role === 'admin';
 
-        // Prevent last admin from changing their role
-        if (currentUser && currentUser.role === 'admin' && updateData.role !== 'admin') {
+      if (!isSelf && !isActingAdmin) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+
+      // Pick the right schema: non-admins updating themselves can't touch role.
+      const schema = isActingAdmin ? adminUpdateSchema : selfUpdateSchema;
+      const updateData = schema.parse(req.body);
+
+      // Prevent the last admin from being demoted — belt-and-suspenders even
+      // though the admin UI tries to guard this too.
+      if (isActingAdmin && 'role' in updateData && updateData.role && updateData.role !== 'admin') {
+        const target = await storage.getUser(userId);
+        if (target && target.role === 'admin') {
           const allUsers = await storage.listUsers();
           const adminCount = allUsers.filter(u => u.role === 'admin').length;
           if (adminCount <= 1) {
@@ -566,28 +1196,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // If password is being updated, hash it
-      if (updateData.password) {
-        updateData.password = await bcrypt.hash(updateData.password, 10);
-      }
-
+      const before = await storage.getUser(userId);
       const updatedUser = await storage.updateUser(userId, updateData);
-      
+
       if (!updatedUser) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
-      // Don't return the password
+
+      if (before && 'role' in updateData && updateData.role && before.role !== updateData.role) {
+        logAuthEvent('role_changed', userId, req, {
+          from: before.role,
+          to: updateData.role,
+          actorId: req.session.userId,
+        });
+      }
+
       const { password, ...userWithoutPassword } = updatedUser;
-      
+
       res.status(200).json(userWithoutPassword);
     } catch (error) {
       console.error('Error updating user:', error);
-      
+
       if (error instanceof ZodError) {
         return res.status(400).json({ message: 'Invalid data', errors: error.errors });
       }
-      
+
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Admin unlock. Clears lockout state so a user can try again without
+  // waiting out the timer. Not rate-limited — admin session is already
+  // gated, and this is a rare human-triggered action.
+  app.post('/api/users/:id/unlock', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+      const target = await storage.getUser(userId);
+      if (!target) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await db
+        .update(usersTable)
+        .set({ failedLoginCount: 0, lockedUntil: null, lastFailedLoginAt: null })
+        .where(eq(usersTable.id, userId));
+
+      logAuthEvent('user_unlocked', userId, req, { actorId: req.session.userId });
+      res.status(200).json({ message: 'User unlocked' });
+    } catch (error) {
+      console.error('Error unlocking user:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Change password — self-service requires the current password to prove
+  // the actor owns the account (stolen-session mitigation). Admins can also
+  // use this endpoint to reset another user's password without knowing the
+  // current one; they still need to be logged in as admin.
+  const changePasswordSchema = z.object({
+    currentPassword: z.string().optional(),
+    newPassword: passwordSchema,
+  }).strict();
+
+  app.post('/api/users/:id/change-password', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const isSelf = userId === req.session.userId;
+      const isActingAdmin = currentUser.role === 'admin';
+
+      if (!isSelf && !isActingAdmin) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+
+      const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+      const target = await storage.getUser(userId);
+      if (!target) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Self-change requires proof of current password. Admin override
+      // (admin changing someone else's password) skips this because the
+      // admin wouldn't know it — that's the whole point of a reset.
+      if (isSelf) {
+        if (!currentPassword) {
+          return res.status(400).json({ message: 'Current password is required' });
+        }
+        const match = await verifyPassword(currentPassword, target.password);
+        if (!match) {
+          return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+      }
+
+      const hashed = await hashPassword(newPassword);
+      await storage.updateUser(userId, { password: hashed, passwordChangedAt: new Date() } as any);
+
+      logAuthEvent('password_changed', userId, req, {
+        via: isSelf ? 'self' : 'admin_override',
+        actorId: req.session.userId,
+      });
+
+      res.status(200).json({ message: 'Password updated' });
+    } catch (error) {
+      console.error('Error changing password:', error);
+
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: 'Invalid data', errors: error.errors });
+      }
+
       res.status(500).json({ message: 'Server error' });
     }
   });
@@ -2495,6 +3223,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .returning();
       }
 
+      // Auto-fire 35% deposit invoice. Idempotent inside the helper — no-op if a
+      // link/payment already exists. Fire-and-forget so the admin response isn't
+      // blocked on Square's HTTP roundtrip.
+      if (createdEvent?.id) {
+        const evId = createdEvent.id;
+        ensureEventDepositCheckout(evId)
+          .then((r) => {
+            if (r.error && r.error !== 'already paid') {
+              console.warn(`[invoicing] auto-deposit on accept (quote ${quoteId}, event ${evId}): ${r.error}`);
+            }
+          })
+          .catch((err) => console.error(`[invoicing] auto-deposit on accept failed (event ${evId}):`, err));
+      }
+
       return res.status(200).json({
         message: existingEvent
           ? 'Quote re-accepted; existing event retained'
@@ -3139,6 +3881,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await ensureContractForQuote(quote.id);
       } catch (contractErr) {
         console.warn(`[p2-1] failed to auto-create contract for quote ${quote.id}:`, contractErr);
+      }
+
+      // Auto-fire 35% deposit invoice on customer accept. Idempotent inside the
+      // helper. Fire-and-forget so the customer redirect isn't blocked on
+      // Square's HTTP roundtrip — the deposit email + payment link arrive
+      // moments after the portal lands.
+      if (eventForResponse?.id) {
+        const evId = eventForResponse.id;
+        ensureEventDepositCheckout(evId)
+          .then((r) => {
+            if (r.error && r.error !== 'already paid') {
+              console.warn(`[invoicing] auto-deposit on public accept (quote ${quote.id}, event ${evId}): ${r.error}`);
+            }
+          })
+          .catch((err) => console.error(`[invoicing] auto-deposit on public accept failed (event ${evId}):`, err));
       }
 
       // Mint a portal magic-link token so the customer can land directly in
@@ -4369,132 +5126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   // P2-1: Contracts — BoldSign e-signature flow
   // ============================================================================
-
-  // Helper: fire the deposit checkout link for an event (used by the contract
-  // signed webhook, and also callable manually by admin via /api/events/:id/deposit/checkout).
-  async function ensureEventDepositCheckout(eventId: number): Promise<{ url: string | null; error?: string }> {
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId));
-    if (!ev) return { url: null, error: "event not found" };
-    if (ev.depositPaidAt) return { url: ev.depositSquarePaymentLinkUrl, error: "already paid" };
-    if (ev.depositSquarePaymentLinkUrl) return { url: ev.depositSquarePaymentLinkUrl };
-
-    const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
-    const [est] = ev.quoteId
-      ? await db.select().from(quotes).where(eq(quotes.id, ev.quoteId))
-      : [null as any];
-    if (!est) return { url: null, error: "no quote — cannot determine amount" };
-
-    const depositPercent = ev.depositPercent ?? getDepositPercent();
-    const depositCents = Math.round((est.total * depositPercent) / 100);
-
-    const emailCfg = getEmailConfig();
-    const customerName = client ? `${client.firstName} ${client.lastName || ""}`.trim() : "Client";
-    const link = await createCheckoutLink({
-      amountCents: depositCents,
-      name: `Home Bites ${est.eventType.replace(/_/g, " ")} — Deposit`,
-      note: `${depositPercent}% deposit for ${ev.eventType} on ${new Date(ev.eventDate).toLocaleDateString()}`,
-      redirectUrl: `${emailCfg.publicBaseUrl.replace(/\/$/, "")}/event/${ev.viewToken || ev.id}?paid=deposit`,
-      referenceId: `event-deposit-${eventId}`,
-      email: client?.email ?? null,
-      phone: client?.phone ?? null,
-    });
-    if (link.skipped) return { url: null, error: "square not configured" };
-    if (!link.created || !link.paymentLinkUrl) return { url: null, error: link.error || "link failed" };
-
-    await db
-      .update(events)
-      .set({
-        depositAmountCents: depositCents,
-        depositSquarePaymentLinkId: link.paymentLinkId || null,
-        depositSquarePaymentLinkUrl: link.paymentLinkUrl,
-        depositSquareOrderId: link.orderId || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(events.id, eventId));
-
-    // Fire customer email with deposit link
-    if (client?.email) {
-      const tpl = depositRequestCustomerEmail({
-        customerFirstName: client.firstName || "there",
-        eventType: ev.eventType,
-        eventDate: ev.eventDate,
-        depositCents,
-        paymentUrl: link.paymentLinkUrl,
-      });
-      sendEmailInBackground({
-        to: client.email,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-        clientId: client.id,
-        eventId,
-        templateKey: "deposit_request_customer",
-      });
-    }
-    return { url: link.paymentLinkUrl };
-  }
-
-  async function ensureEventBalanceCheckout(eventId: number): Promise<{ url: string | null; error?: string }> {
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId));
-    if (!ev) return { url: null, error: "event not found" };
-    if (ev.balancePaidAt) return { url: ev.balanceSquarePaymentLinkUrl, error: "already paid" };
-    if (ev.balanceSquarePaymentLinkUrl) return { url: ev.balanceSquarePaymentLinkUrl };
-
-    const [client] = await db.select().from(clients).where(eq(clients.id, ev.clientId));
-    const [est] = ev.quoteId
-      ? await db.select().from(quotes).where(eq(quotes.id, ev.quoteId))
-      : [null as any];
-    if (!est) return { url: null, error: "no quote — cannot determine balance" };
-
-    const depositPercent = ev.depositPercent ?? getDepositPercent();
-    const depositCents = ev.depositAmountCents ?? Math.round((est.total * depositPercent) / 100);
-    const balanceCents = Math.max(0, est.total - depositCents);
-
-    const emailCfg = getEmailConfig();
-    const link = await createCheckoutLink({
-      amountCents: balanceCents,
-      name: `Home Bites ${est.eventType.replace(/_/g, " ")} — Balance`,
-      note: `Final balance for ${ev.eventType} on ${new Date(ev.eventDate).toLocaleDateString()}`,
-      redirectUrl: `${emailCfg.publicBaseUrl.replace(/\/$/, "")}/event/${ev.viewToken || ev.id}?paid=balance`,
-      referenceId: `event-balance-${eventId}`,
-      email: client?.email ?? null,
-      phone: client?.phone ?? null,
-    });
-    if (link.skipped) return { url: null, error: "square not configured" };
-    if (!link.created || !link.paymentLinkUrl) return { url: null, error: link.error || "link failed" };
-
-    await db
-      .update(events)
-      .set({
-        balanceAmountCents: balanceCents,
-        balanceSquarePaymentLinkId: link.paymentLinkId || null,
-        balanceSquarePaymentLinkUrl: link.paymentLinkUrl,
-        balanceSquareOrderId: link.orderId || null,
-        balanceRequestedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(events.id, eventId));
-
-    if (client?.email) {
-      const tpl = balanceRequestCustomerEmail({
-        customerFirstName: client.firstName || "there",
-        eventType: ev.eventType,
-        eventDate: ev.eventDate,
-        balanceCents,
-        paymentUrl: link.paymentLinkUrl,
-      });
-      sendEmailInBackground({
-        to: client.email,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-        clientId: client.id,
-        eventId,
-        templateKey: "balance_request_customer",
-      });
-    }
-    return { url: link.paymentLinkUrl };
-  }
 
   // Admin: create-or-reuse a draft contract for an quote. Auto-called on
   // quote accept (no-op if one exists), and also callable manually.

@@ -59,6 +59,18 @@ import UnmatchedInbox from "@/pages/UnmatchedInbox";
 // Admin catalog + pricing-config editor
 import Catalog from "@/pages/Catalog";
 
+// Admin social publishing (Buffer-backed IG + FB)
+import SocialPage from "@/pages/social";
+
+// Public auth recovery flows (no login required)
+import ForgotPassword from "@/pages/forgot-password";
+import ForgotUsername from "@/pages/forgot-username";
+import ResetPassword from "@/pages/reset-password";
+import AcceptInvite from "@/pages/accept-invite";
+
+// Authed account-security page (password change + MFA)
+import AccountSecurity from "@/pages/account-security";
+
 import Layout from "@/components/layout/Layout"; // Assuming this path is correct
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext"; // Assuming this path is correct
 
@@ -110,8 +122,42 @@ function AppContent() {
     );
   }
 
-  // If user is not logged in and not accessing a public form, show Login
+  // If user is not logged in and not accessing a public form, show Login —
+  // but first route to the recovery pages if that's where they are. These
+  // need to work without an auth session.
   if (!user) {
+    if (location === "/forgot-password") {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Toaster />
+          <ForgotPassword />
+        </div>
+      );
+    }
+    if (location === "/forgot-username") {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Toaster />
+          <ForgotUsername />
+        </div>
+      );
+    }
+    if (location === "/reset-password") {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Toaster />
+          <ResetPassword />
+        </div>
+      );
+    }
+    if (location === "/accept-invite") {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Toaster />
+          <AcceptInvite />
+        </div>
+      );
+    }
     return (
         <div className="min-h-screen bg-gray-50">
             <Toaster />
@@ -180,12 +226,14 @@ function AppContent() {
           <Route path="/menus/:id/edit" component={Menus} />
           <Route path="/calendar" component={Calendar} />
           <Route path="/settings" component={Settings} />
+          <Route path="/account/security" component={AccountSecurity} />
           <Route path="/users" component={Users} />
           <Route path="/raw-leads" component={RawLeadsPage} />
           <Route path="/raw-leads/new" component={RawLeadFormPage} />
           <Route path="/raw-leads/:id" component={RawLeadDetailPage} />
           <Route path="/inquiries" component={Inquiries} />
           <Route path="/catalog" component={Catalog} />
+          <Route path="/social" component={SocialPage} />
           <Route path="/events" component={Events} />
           <Route path="/events/:id" component={Events} />
           <Route path="/dietary-demo" component={DietaryDemo} />

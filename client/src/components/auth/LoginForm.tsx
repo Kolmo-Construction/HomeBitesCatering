@@ -117,12 +117,8 @@ export default function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="text-center text-sm text-gray-500">
-        <div className="w-full">
-          <p>For demo purposes, use:</p>
-          <p>Username: <span className="font-medium">admin</span> / Password: <span className="font-medium">admin123</span></p>
-        </div>
-      </CardFooter>
+      <CardFooter />
+
     </Card>
   );
 }

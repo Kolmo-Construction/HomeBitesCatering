@@ -11,6 +11,7 @@ export function useAuth() {
       loading: false,
       error: null,
       login: async () => { throw new Error("Auth provider not initialized"); },
+      completeMfa: async () => { throw new Error("Auth provider not initialized"); },
       logout: async () => { throw new Error("Auth provider not initialized"); }
     };
   }

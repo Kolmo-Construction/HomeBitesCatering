@@ -19,7 +19,11 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuthContext();
+  // MFA challenge step — shown after password succeeds for enrolled users.
+  const [mfaStep, setMfaStep] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
+  const { login, completeMfa } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,17 +31,54 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setIsLoading(true);
 
     try {
-      await login(username, password);
+      const result = await login(username, password);
+      if (result && (result as any).mfaRequired) {
+        setMfaStep(true);
+        return;
+      }
       if (onLoginSuccess) {
         onLoginSuccess(true);
       }
     } catch (error) {
       console.error('Login error:', error);
-      setLoginError(error instanceof Error ? error.message : 'An error occurred during login. Please try again.');
+      setLoginError(formatLoginError(error));
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setIsLoading(true);
+    try {
+      await completeMfa(useRecovery ? { recoveryCode: mfaCode } : { code: mfaCode });
+      if (onLoginSuccess) onLoginSuccess(true);
+    } catch (error) {
+      setLoginError(formatLoginError(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // apiRequest throws `Error("${status}: ${responseText}")`, so we peel off
+  // the prefix and try to pull the server's `message` field out of the JSON.
+  function formatLoginError(error: unknown): string {
+    if (!(error instanceof Error)) return 'An error occurred during login. Please try again.';
+    const match = error.message.match(/^(\d{3}):\s*(.*)$/s);
+    if (!match) return error.message;
+    const [, status, body] = match;
+    let serverMessage = body;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && typeof parsed.message === 'string') serverMessage = parsed.message;
+    } catch { /* body wasn't JSON */ }
+    if (status === '429') {
+      return serverMessage || 'Too many login attempts. Please wait a few minutes and try again.';
+    }
+    if (status === '401') return 'Invalid username or password.';
+    return serverMessage || 'An error occurred during login. Please try again.';
+  }
 
   return (
     <div className="min-h-screen flex bg-white">
@@ -106,56 +147,103 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               </div>
             )}
 
-            {/* Login Form */}
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Username</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] h-5 w-5" />
-                  <input 
-                    type="text" 
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] transition-colors bg-white" 
-                    placeholder="admin"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+            {mfaStep ? (
+              <form className="space-y-5" onSubmit={handleMfaSubmit}>
+                <p className="text-sm text-gray-600 text-center">
+                  Enter the 6-digit code from your authenticator app.
+                </p>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    {useRecovery ? "Recovery code" : "Authenticator code"}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode={useRecovery ? "text" : "numeric"}
+                    autoComplete="one-time-code"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] bg-white text-center tracking-widest"
+                    placeholder={useRecovery ? "xxxxx-xxxxx" : "123 456"}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value)}
                     required
                   />
                 </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] h-5 w-5" />
-                  <input 
-                    type="password" 
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] transition-colors bg-white" 
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                <button
+                  type="submit"
+                  className="w-full bg-[#8B7355] hover:bg-[#6B5345] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-60"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Verifying..." : "Verify"}
+                </button>
+                <div className="text-center text-sm pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setUseRecovery(!useRecovery); setMfaCode(""); }}
+                    className="text-[#8B7355] font-semibold hover:text-[#E28C0A]"
+                  >
+                    {useRecovery ? "Use authenticator code" : "Use a recovery code"}
+                  </button>
                 </div>
-              </div>
+              </form>
+            ) : (
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                {/* Username */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">Username</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] h-5 w-5" />
+                    <input
+                      type="text"
+                      className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] transition-colors bg-white"
+                      placeholder="your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
 
-              {/* Sign In Button */}
-              <button 
-                type="submit"
-                className="w-full bg-[#8B7355] hover:bg-[#6B5345] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-7"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    Signing In...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
-              </button>
-            </form>
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7355] h-5 w-5" />
+                    <input
+                      type="password"
+                      className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#8B7355] transition-colors bg-white"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Sign In Button */}
+                <button
+                  type="submit"
+                  className="w-full bg-[#8B7355] hover:bg-[#6B5345] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-7"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      Signing In...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </button>
+                <div className="text-center text-sm pt-2">
+                  <a href="/forgot-password" className="text-[#8B7355] font-semibold hover:text-[#E28C0A]">
+                    Forgot password?
+                  </a>
+                  <span className="mx-2 text-gray-400">·</span>
+                  <a href="/forgot-username" className="text-[#8B7355] font-semibold hover:text-[#E28C0A]">
+                    Forgot username?
+                  </a>
+                </div>
+              </form>
+            )}
           </div>
 
           {/* Footer */}

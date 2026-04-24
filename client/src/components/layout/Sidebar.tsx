@@ -28,7 +28,6 @@ import {
   FileText,
   Calendar,
   CalendarCheck,
-  BarChart2,
   Settings,
   ExternalLink,
   Inbox,
@@ -128,8 +127,8 @@ const ALL_NAV: NavItem[] = [
     href: "/admin",
     icon: Settings,
     submenu: [
-      { name: "Reports", href: "/reports", icon: BarChart2 },
       { name: "Users", href: "/users", icon: UserCog, adminOnly: true },
+      { name: "My security", href: "/account/security", icon: UserCog },
       { name: "Settings", href: "/settings", icon: Settings },
     ],
   },
@@ -212,8 +211,8 @@ function SortableNavItem({
             className={cn(
               "flex items-center justify-between p-2 rounded-lg transition cursor-pointer",
               isActive
-                ? "text-neutral-900 bg-neutral-200"
-                : "text-neutral-700 hover:bg-neutral-200"
+                ? "text-neutral-900 bg-neutral-200 dark:text-neutral-50 dark:bg-neutral-700"
+                : "text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
             )}
           >
             <div className="flex items-center flex-1 min-w-0">
@@ -224,7 +223,7 @@ function SortableNavItem({
                 className="hidden md:flex items-center mr-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
-                <GripVertical className="w-3.5 h-3.5 text-neutral-400" />
+                <GripVertical className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-600" />
               </div>
               <item.icon className={cn("w-5 h-5 text-center shrink-0", iconMarginCls)} />
               <span className={cn("truncate", labelCls)}>{item.name}</span>
@@ -242,9 +241,9 @@ function SortableNavItem({
             </div>
             <div className={mdBlockCls}>
               {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-neutral-500" />
+                <ChevronDown className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-neutral-500" />
+                <ChevronRight className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
               )}
             </div>
           </div>
@@ -262,8 +261,8 @@ function SortableNavItem({
                         className={cn(
                           "flex items-center p-2 rounded-lg transition cursor-pointer",
                           isSubActive
-                            ? "text-neutral-900 bg-neutral-200"
-                            : "text-neutral-700 hover:bg-neutral-200"
+                            ? "text-neutral-900 bg-neutral-200 dark:text-neutral-50 dark:bg-neutral-700"
+                            : "text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
                         )}
                       >
                         <subItem.icon className={cn("w-4 h-4 text-center", iconMarginCls)} />
@@ -291,7 +290,7 @@ function SortableNavItem({
             {...listeners}
             className="hidden md:flex items-center mr-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 top-1/2 -translate-y-1/2 z-10 pl-1"
           >
-            <GripVertical className="w-3.5 h-3.5 text-neutral-400" />
+            <GripVertical className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-600" />
           </div>
           <Link to={item.href} className="flex-1" onClick={onNavigate}>
             <div
@@ -299,8 +298,8 @@ function SortableNavItem({
                 "flex items-center p-2 rounded-lg transition cursor-pointer",
                 pillPadCls,
                 isActive
-                  ? "text-neutral-900 bg-neutral-200"
-                  : "text-neutral-700 hover:bg-neutral-200"
+                  ? "text-neutral-900 bg-neutral-200 dark:text-neutral-50 dark:bg-neutral-700"
+                  : "text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
               )}
             >
               <item.icon className={cn("w-5 h-5 text-center shrink-0", iconMarginCls)} />
@@ -456,7 +455,7 @@ export default function Sidebar({
 
   return (
     <aside className={cn(
-      "bg-white shadow-md h-[calc(100vh-4rem)] flex flex-col",
+      "bg-white dark:bg-neutral-900 dark:text-neutral-100 shadow-md h-[calc(100vh-4rem)] flex flex-col",
       forceExpanded ? "w-64" : "w-16 md:w-64",
     )}>
       <nav className="p-4 flex-1 overflow-y-auto">
@@ -499,12 +498,12 @@ export default function Sidebar({
           </SortableContext>
         </DndContext>
       </nav>
-      <div className="p-4 border-t border-neutral-200 space-y-2">
+      <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
         {isCustomOrder && (
           <button
             onClick={handleReset}
             className={cn(
-              "items-center w-full p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition text-sm",
+              "items-center w-full p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition text-sm",
               forceExpanded ? "flex" : "hidden md:flex",
             )}
           >
@@ -516,7 +515,7 @@ export default function Sidebar({
           href="https://www.homebites.net/"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center p-2 text-neutral-700 hover:bg-neutral-200 rounded-lg transition"
+          className="flex items-center p-2 text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800 rounded-lg transition"
         >
           <ExternalLink className={cn("w-5 h-5 text-center", forceExpanded ? "mr-3" : "md:mr-3")} />
           <span className={forceExpanded ? "inline" : "hidden md:inline"}>Visit Website</span>

@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Unlock } from 'lucide-react';
 
 interface User {
   id: number;
@@ -18,15 +18,17 @@ interface User {
   email: string;
   role: string;
   createdAt: string;
+  lockedUntil?: string | null;
 }
 
 interface UserListProps {
   users: User[];
   onEdit: (user: User) => void;
   onDelete: (userId: number) => void;
+  onUnlock?: (userId: number) => void;
 }
 
-export function UserList({ users, onEdit, onDelete }: UserListProps) {
+export function UserList({ users, onEdit, onDelete, onUnlock }: UserListProps) {
   const getRoleBadgeVariant = (role: string): "default" | "destructive" | "secondary" | "outline" => {
     switch (role) {
       case 'admin':
@@ -82,6 +84,16 @@ export function UserList({ users, onEdit, onDelete }: UserListProps) {
               {new Date(user.createdAt).toLocaleDateString()}
             </TableCell>
             <TableCell className="text-right">
+              {user.lockedUntil && new Date(user.lockedUntil) > new Date() && onUnlock && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title={`Locked until ${new Date(user.lockedUntil).toLocaleString()}`}
+                  onClick={() => onUnlock(user.id)}
+                >
+                  <Unlock className="h-4 w-4 text-amber-600" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

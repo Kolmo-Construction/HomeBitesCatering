@@ -7,6 +7,16 @@ declare module 'express-session' {
     userId?: number;
     userRole?: string;
     userFullData?: any;
+    issuedAt?: number;
+    // Two-step login: when a user with MFA enrolled enters correct password,
+    // we stash their id here instead of promoting to `userId` until they
+    // complete the MFA challenge.
+    mfaPendingUserId?: number;
+    mfaPendingSetAt?: number;
+    // Ephemeral secret while setting up MFA for the first time. Only set
+    // between /mfa/setup and /mfa/verify-enrollment; persisted to the DB
+    // (encrypted) once the user proves they have the secret in their app.
+    mfaPendingSecret?: string;
   }
 }
 

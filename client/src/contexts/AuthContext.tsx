@@ -14,7 +14,11 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  // Returns { mfaRequired: true } when the account has MFA enrolled and the
+  // caller must follow up with completeMfa(). Otherwise returns void once
+  // the user is fully signed in.
+  login: (username: string, password: string) => Promise<{ mfaRequired?: boolean } | void>;
+  completeMfa: (args: { code?: string; recoveryCode?: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -50,13 +54,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiRequest('POST', '/api/auth/login', { username, password });
+      const data = await response.json();
+      if (data?.mfaRequired) {
+        return { mfaRequired: true as const };
+      }
+      setUser(data);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unknown error during login');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completeMfa = async (args: { code?: string; recoveryCode?: string }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiRequest('POST', '/api/auth/mfa/challenge', args);
       const userData = await response.json();
       setUser(userData);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Unknown error during login');
+      setError(error instanceof Error ? error.message : 'Unknown error during MFA');
       throw error;
     } finally {
       setLoading(false);
@@ -82,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     login,
+    completeMfa,
     logout
   };
 

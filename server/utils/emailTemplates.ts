@@ -1288,3 +1288,126 @@ Either way, thank you again. We'd love to cook for you again someday.
 
   return { subject, html, text };
 }
+
+// ─── Auth: password reset, username reminder, password changed ────────────────
+//
+// Staff-facing (admins/chefs using the CMS). Tone is shorter and more
+// functional than the celebration-copy customer templates above.
+
+export function passwordResetRequestedEmail(args: {
+  firstName: string;
+  resetUrl: string;
+  expiresInMinutes: number;
+  ipAddress?: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const subject = `Reset your ${config.businessName} password`;
+  const ipLine = args.ipAddress
+    ? paragraph(`This request came from <strong>${args.ipAddress}</strong>. If that wasn&rsquo;t you, you can ignore this email — your password won&rsquo;t change.`)
+    : paragraph(`If you didn&rsquo;t request this, you can ignore this email — your password won&rsquo;t change.`);
+
+  const html = layout(
+    `${heading(`Reset your password`)}
+     ${paragraph(`Hi ${args.firstName},`)}
+     ${paragraph(`Use the button below to pick a new password. This link expires in <strong>${args.expiresInMinutes} minutes</strong> and can only be used once.`)}
+     ${btn("Reset password", args.resetUrl)}
+     ${paragraph(`Or paste this link into your browser:<br/><a href="${args.resetUrl}" style="color:#9a7d3d;word-break:break-all;">${args.resetUrl}</a>`)}
+     ${ipLine}`,
+    `Reset your password — link expires in ${args.expiresInMinutes} minutes.`
+  );
+
+  const text = `Hi ${args.firstName},
+
+Use this link to pick a new password (expires in ${args.expiresInMinutes} minutes, single-use):
+
+${args.resetUrl}
+
+If you didn't request this, ignore this email — your password won't change.`;
+
+  return { subject, html, text };
+}
+
+export function usernameReminderEmail(args: {
+  firstName: string;
+  username: string;
+  loginUrl: string;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const subject = `Your ${config.businessName} username`;
+
+  const html = layout(
+    `${heading(`Your username`)}
+     ${paragraph(`Hi ${args.firstName},`)}
+     ${paragraph(`Your username is <strong>${args.username}</strong>.`)}
+     ${btn("Go to sign in", args.loginUrl)}
+     ${paragraph(`If you also need a new password, use the &ldquo;Forgot password&rdquo; link on the sign-in page.`)}`,
+    `Your username is ${args.username}.`
+  );
+
+  const text = `Hi ${args.firstName},
+
+Your username is: ${args.username}
+
+Sign in at ${args.loginUrl}. If you also need a new password, use "Forgot password" on that page.`;
+
+  return { subject, html, text };
+}
+
+export function passwordChangedEmail(args: {
+  firstName: string;
+  when: Date;
+  ipAddress?: string | null;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const subject = `Your ${config.businessName} password was changed`;
+  const whenStr = args.when.toLocaleString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+  const ipLine = args.ipAddress ? ` from <strong>${args.ipAddress}</strong>` : ``;
+
+  const html = layout(
+    `${heading(`Password changed`)}
+     ${paragraph(`Hi ${args.firstName},`)}
+     ${paragraph(`Your ${config.businessName} password was changed on <strong>${whenStr}</strong>${ipLine}.`)}
+     ${paragraph(`If this was you, no action needed. If it wasn&rsquo;t, reply to this email or call us immediately so we can lock the account.`)}`,
+    `Security notice: your password was just changed.`
+  );
+
+  const text = `Hi ${args.firstName},
+
+Your ${config.businessName} password was changed on ${whenStr}${args.ipAddress ? ` from ${args.ipAddress}` : ""}.
+
+If this wasn't you, reply to this email or call us right away.`;
+
+  return { subject, html, text };
+}
+
+export function userInvitedEmail(args: {
+  firstName: string;
+  inviterName: string;
+  acceptUrl: string;
+  expiresInDays: number;
+}): TemplateResult {
+  const config = getSiteConfig();
+  const subject = `You're invited to ${config.businessName}`;
+
+  const html = layout(
+    `${heading(`Welcome to ${config.businessName}`)}
+     ${paragraph(`Hi ${args.firstName},`)}
+     ${paragraph(`${args.inviterName} invited you to join the ${config.businessName} team. Use the link below to pick a username and password — the invite expires in <strong>${args.expiresInDays} days</strong>.`)}
+     ${btn("Accept invitation", args.acceptUrl)}
+     ${paragraph(`If you weren&rsquo;t expecting this, you can safely ignore it.`)}`,
+    `${args.inviterName} invited you to ${config.businessName}.`
+  );
+
+  const text = `Hi ${args.firstName},
+
+${args.inviterName} invited you to join the ${config.businessName} team. Accept and set your password here (expires in ${args.expiresInDays} days):
+
+${args.acceptUrl}
+
+If you weren't expecting this, you can ignore this email.`;
+
+  return { subject, html, text };
+}

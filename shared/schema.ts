@@ -123,6 +123,50 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   phone: text("phone"),
   role: text("role").default("user").notNull(), // admin, user (read-only), client
+  // Timestamp of the last successful password change. Used to invalidate
+  // older sessions after a reset and to flag seed-admin accounts that still
+  // have their initial password. Nullable for legacy rows.
+  passwordChangedAt: timestamp("password_changed_at"),
+  // P2b: failed login tracking. Count resets on success; if count >= N in
+  // the trailing window, we set lockedUntil and short-circuit subsequent
+  // attempts with 423.
+  failedLoginCount: integer("failed_login_count").default(0).notNull(),
+  lockedUntil: timestamp("locked_until"),
+  lastFailedLoginAt: timestamp("last_failed_login_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// P2c: one row per user that enrolled in TOTP 2FA. Secret is encrypted
+// with MFA_ENCRYPTION_KEY (AES-256-GCM) so a DB dump alone doesn't let an
+// attacker generate codes. Recovery codes are hashed individually.
+export const userMfa = pgTable("user_mfa", {
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).primaryKey(),
+  secretEncrypted: text("secret_encrypted").notNull(),
+  recoveryCodesHashed: text("recovery_codes_hashed").array().notNull(),
+  enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
+// Single-use tokens for password reset, invite, and email-change flows.
+// `purpose` distinguishes them so the same table can back all three without
+// accidentally letting a reset token be consumed as an invite (or vice versa).
+// tokenHash stores the sha256 of the plaintext token — the plaintext is only
+// ever in the email link, never persisted.
+export const authTokenPurposeEnum = pgEnum("auth_token_purpose", [
+  'password_reset', 'invite', 'email_change'
+]);
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  purpose: authTokenPurposeEnum("purpose").notNull().default('password_reset'),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  requestedIp: text("requested_ip"),
+  // Free-form payload for purpose-specific data (pending email address for
+  // email_change, invite role, etc). Keep it small.
+  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -494,8 +538,14 @@ export const clientSessions = pgTable("client_sessions", {
 });
 
 // Tier 4: Audit Log — tracks every create/update/delete across core entities
+// P2a extends this with auth-specific events so security history lives in
+// the same table instead of a parallel audit system.
 export const auditLogActionEnum = pgEnum("audit_log_action", [
-  'created', 'updated', 'deleted', 'restored', 'merged'
+  'created', 'updated', 'deleted', 'restored', 'merged',
+  'login_success', 'login_failure', 'logout',
+  'password_changed', 'password_reset_requested', 'password_reset_consumed',
+  'role_changed', 'user_locked', 'user_unlocked',
+  'mfa_enrolled', 'mfa_disabled'
 ]);
 
 export const auditLog = pgTable("audit_log", {

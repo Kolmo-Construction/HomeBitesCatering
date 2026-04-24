@@ -48,25 +48,48 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const method = isEdit ? 'PATCH' : 'POST';
-      const url = isEdit ? `/api/users/${user.id}` : '/api/auth/register';
+      if (isEdit) {
+        // PATCH only touches profile fields + role; password (if provided)
+        // goes through the dedicated change-password endpoint so the server
+        // can enforce strength rules and audit it separately.
+        const { password, username, ...profile } = data;
+        const patchRes = await fetch(`/api/users/${user.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile),
+          credentials: 'include',
+        });
+        if (!patchRes.ok) {
+          const error = await patchRes.json();
+          throw new Error(error.message || 'Failed to update user');
+        }
 
-      // Don't send empty password on edit
-      const payload = { ...data };
-      if (isEdit && !payload.password) {
-        delete payload.password;
+        if (password) {
+          const pwRes = await fetch(`/api/users/${user.id}/change-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword: password }),
+            credentials: 'include',
+          });
+          if (!pwRes.ok) {
+            const error = await pwRes.json();
+            throw new Error(error.message || 'Failed to change password');
+          }
+        }
+
+        return patchRes.json();
       }
 
-      const response = await fetch(url, {
-        method,
+      const response = await fetch('/api/users', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(data),
         credentials: 'include',
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to save user');
+        throw new Error(error.message || 'Failed to create user');
       }
 
       return response.json();
