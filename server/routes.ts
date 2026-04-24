@@ -7,7 +7,7 @@ import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import session from "express-session";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { hashPassword, verifyPassword, passwordSchema, dummyVerify } from "./utils/passwords";
 import { createAuthToken, consumeAuthToken, peekAuthToken, invalidateSessionsForUser } from "./auth/passwordReset";
 import { logAuthEvent } from "./utils/authAudit";
@@ -365,9 +365,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     limit: 10,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => {
+    keyGenerator: (req, res) => {
+      // ipKeyGenerator normalizes IPv6 so users behind the same /64 share a
+      // bucket — without it, v8 errors out at boot (ERR_ERL_KEY_GEN_IPV6).
       const username = typeof req.body?.username === 'string' ? req.body.username.toLowerCase() : '';
-      return `${req.ip}::${username}`;
+      return `${ipKeyGenerator(req.ip ?? '')}::${username}`;
     },
     message: { message: 'Too many login attempts for this account. Try again in a few minutes.' },
   });
