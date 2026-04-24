@@ -45,10 +45,7 @@ export function registerScheduledJobs(): void {
     `[scheduler] registered: recipe link audit every 8 hours → ${RECIPE_AUDIT_RECIPIENT}`,
   );
 
-  // Kick off an immediate run on boot so the first report lands right away
-  // rather than waiting until the next 8-hour boundary. Fire-and-forget so
-  // a slow audit never blocks the listening server.
-  runAndEmailRecipeLinkAudit(RECIPE_AUDIT_RECIPIENT).catch((err) =>
-    console.error("[scheduler] initial recipe link audit failed:", err),
-  );
+  // No boot-kick: Railway redeploys on every push to main, so running the
+  // audit immediately would email on every deploy AND burn log quota on
+  // unit-conversion warnings. Jobs only fire on their cron schedule.
 }
