@@ -17,6 +17,10 @@ import { registerScheduledJobs } from "./jobs/scheduler";
 import { registerSeoRoutes } from "./seoRoutes";
 
 const app = express();
+// Railway terminates TLS upstream, so the request hits Node as HTTP. Without
+// this, req.secure is false and express-session refuses to send a `secure`
+// cookie — which silently kills login (200 OK, no Set-Cookie header).
+app.set('trust proxy', 1);
 // Capture raw body for webhook signature verification (Cal.com, Stripe, etc.).
 // `verify` is called before JSON parsing so we can store the untouched bytes.
 app.use(
